@@ -34,6 +34,9 @@ import { WorkflowsModule } from './workflows/workflows.module';
 import { ForecastModule } from './forecast/forecast.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { FormsModule } from './forms/forms.module';
+import { QuickBooksModule } from './quickbooks/quickbooks.module';
+import { TimeTrackingModule } from './time-tracking/time-tracking.module';
+import { BottleneckModule } from './bottleneck/bottleneck.module';
 
 @Module({
   imports: [
@@ -72,6 +75,9 @@ import { FormsModule } from './forms/forms.module';
     ForecastModule,
     ContactsModule,
     FormsModule,
+    QuickBooksModule,
+    TimeTrackingModule,
+    BottleneckModule,
   ],
   providers: [
     {

@@ -170,6 +170,7 @@ model Client {
   industry             String
   lifetimeRevenue      Float      @default(0)
   status               String     @default("Active")
+  qbCustomerId         String?    // QuickBooks Customer ID
   healthScore          Int?
   aiHealthSummary      String?
   aiUpsellStrategy     String?
@@ -228,6 +229,8 @@ model Project {
   lead              Lead?                  @relation(fields: [leadId], references: [id])
   projectManager    User?                  @relation("ProjectManagement", fields: [projectManagerId], references: [id])
   qs                User?                  @relation("ProjectQSAssignments", fields: [qsId], references: [id])
+  timeEntries       TimeEntry[]            @relation("ProjectTimeEntries")
+  budget            ProjectBudget?         @relation("ProjectBudget")
 
   @@index([clientId])
   @@index([leadId])
@@ -304,6 +307,8 @@ model User {
   quotes                  Quote[]                 @relation("QuoteCreation")
   workflowRules           WorkflowRule[]          @relation("WorkflowRuleCreation")
   leadForms               LeadForm[]              @relation("LeadFormAssignments")
+  timeEntries             TimeEntry[]             @relation("UserTimeEntries")
+  userRates               UserRate[]              @relation("UserRates")
   projectStatusChanges    ProjectStatusHistory[]  @relation("ProjectStatusChanges")
   designedProjects        Project[]               @relation("ProjectDesignerAssignments")
   managedProjects         Project[]               @relation("ProjectManagement")
@@ -542,6 +547,8 @@ model Quote {
   acceptedAt         DateTime?
   rejectedAt         DateTime?
   rejectionReason    String?
+  qbInvoiceId        String?         // QuickBooks Invoice ID
+  qbPaymentStatus    String?         // "unpaid" | "paid" | "partial" | "voided"
   createdById        String
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
@@ -758,4 +765,120 @@ model LeadFormSubmission {
   @@index([formId])
   @@index([submittedAt])
   @@map("lead_form_submissions")
+}
+
+// ─── QuickBooks Integration ────────────────────────────────────────────────
+
+model QuickBooksConnection {
+  id          String    @id @default(uuid())
+  realmId     String    @unique
+  accessToken String    @db.Text
+  refreshToken String   @db.Text
+  tokenExpiry DateTime
+  companyName String?
+  connectedAt DateTime  @default(now())
+  lastSyncAt  DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("quickbooks_connections")
+}
+
+model QuickBooksSync {
+  id           String   @id @default(uuid())
+  direction    String   // "QB_TO_CRM" | "CRM_TO_QB"
+  entityType   String   // "Customer" | "Invoice" | "Payment"
+  externalId   String?  // QB entity ID
+  internalId   String?  // CRM entity ID
+  status       String   // "success" | "error" | "skipped"
+  errorMessage String?  @db.Text
+  syncedAt     DateTime @default(now())
+
+  @@index([entityType, direction])
+  @@index([syncedAt])
+  @@map("quickbooks_syncs")
+}
+
+// ─── Time Tracking ────────────────────────────────────────────────────────────
+
+model TimeEntry {
+  id          String    @id @default(uuid())
+  userId      String
+  projectId   String?
+  taskId      String?
+  date        DateTime
+  hours       Float
+  description String?   @db.Text
+  billable    Boolean   @default(true)
+  hourlyRate  Float?
+  totalCost   Float?
+  source      String    @default("manual") // "manual" | "timer" | "imported"
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user    User     @relation("UserTimeEntries", fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation("ProjectTimeEntries", fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([date])
+  @@map("time_entries")
+}
+
+model UserRate {
+  id            String    @id @default(uuid())
+  userId        String
+  rate          Float
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  type          String    @default("internal") // "internal" | "billing"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user User @relation("UserRates", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_rates")
+}
+
+model ProjectBudget {
+  id              String   @id @default(uuid())
+  projectId       String   @unique
+  budgetedHours   Float    @default(0)
+  budgetedCost    Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project Project @relation("ProjectBudget", fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_budgets")
+}
+
+// ─── Bottleneck Analytics ─────────────────────────────────────────────────────
+
+model AnalyticsSnapshot {
+  id           String   @id @default(uuid())
+  snapshotDate DateTime @default(now())
+  entityType   String   // "stage" | "project" | "user" | "resource"
+  entityId     String?
+  metric       String   // e.g. "dwell_days" | "overdue_count" | "completion_rate"
+  value        Float
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([entityType, metric])
+  @@index([snapshotDate])
+  @@map("analytics_snapshots")
+}
+
+model AIAnalyticsReport {
+  id          String   @id @default(uuid())
+  reportType  String   @default("bottleneck")
+  content     String   @db.Text
+  rawData     Json?
+  generatedAt DateTime @default(now())
+
+  @@index([reportType, generatedAt])
+  @@map("ai_analytics_reports")
 }

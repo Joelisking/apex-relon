@@ -37,6 +37,9 @@ import {
   SlidersHorizontal,
   Zap,
   FormInput,
+  BookOpen,
+  Clock,
+  TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import {
@@ -185,6 +188,16 @@ const mainNavItems: Array<{
     icon: BarChart3,
     permission: 'reports:view',
   },
+  {
+    title: 'Time Tracking',
+    href: '/time-tracking',
+    icon: Clock,
+  },
+  {
+    title: 'Analytics',
+    href: '/analytics',
+    icon: TrendingUp,
+  },
 ];
 
 const adminSubItems: Array<{
@@ -269,6 +282,12 @@ const adminSubItems: Array<{
     title: 'Lead Forms',
     href: '/admin/lead-forms',
     icon: FormInput,
+    permission: 'settings:manage',
+  },
+  {
+    title: 'QuickBooks',
+    href: '/admin/quickbooks',
+    icon: BookOpen,
     permission: 'settings:manage',
   },
   {
@@ -364,7 +383,7 @@ function SidebarNav({
         )}>
         <img
           src="/logo-black-transparent.svg"
-          alt="Relon"
+          alt="Apex Field OS"
           className={cn(
             'h-7 w-auto',
             collapsed ? 'max-w-[32px] object-left object-cover' : '',

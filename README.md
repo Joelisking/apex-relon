@@ -1,6 +1,6 @@
 # Relon CRM
 
-A single-tenant, AI-enhanced CRM & Business Performance Dashboard for managing leads, clients, projects, and sales pipelines. Built with **Next.js 16** (App Router) and a **NestJS** backend, with multi-provider AI support (Anthropic Claude, OpenAI GPT-4o, Google Gemini).
+A single-tenant, AI-enhanced CRM & Business Performance Dashboard for managing leads, clients, projects, quotes, tasks, and sales pipelines. Built with **Next.js 16** (App Router) and a **NestJS** backend, with multi-provider AI support (Anthropic Claude, OpenAI GPT-4o, Google Gemini).
 
 ---
 
@@ -15,7 +15,16 @@ A single-tenant, AI-enhanced CRM & Business Performance Dashboard for managing l
   - [Executive Dashboard](#executive-dashboard)
   - [Leads (Prospective Projects)](#leads-prospective-projects)
   - [Client Management](#client-management)
+  - [Contacts](#contacts)
   - [Project Management](#project-management)
+  - [Quotes](#quotes)
+  - [Products & Services Catalog](#products--services-catalog)
+  - [Tasks](#tasks)
+  - [Workflows & Automation](#workflows--automation)
+  - [Forecast & Targets](#forecast--targets)
+  - [Lead Capture Forms](#lead-capture-forms)
+  - [Notifications](#notifications)
+  - [Custom Fields](#custom-fields)
   - [Reports & Analytics](#reports--analytics)
   - [AI Integration](#ai-integration)
   - [Administration](#administration)
@@ -43,7 +52,7 @@ A single-tenant, AI-enhanced CRM & Business Performance Dashboard for managing l
 │  └─────┬──────┘  └─────┬──────┘  └─────┬─────┘  └────────────┘  │
 │        │               │               │                        │
 │        └───────────────┴───────┬───────┘                        │
-│                                │  REST (fetch)                  │
+│                                │  REST (fetch) + SSE            │
 └────────────────────────────────┼────────────────────────────────┘
                                  │
                                  ▼
@@ -55,16 +64,24 @@ A single-tenant, AI-enhanced CRM & Business Performance Dashboard for managing l
 │  │ (JWT +    │  │ (Pipeline│  │ (Health  │  │ (Cost Logs    │  │
 │  │ Passport) │  │  + AI)   │  │  + AI)   │  │  + Status)    │  │
 │  ├──────────┤  ├──────────┤  ├──────────┤  ├───────────────┤  │
+│  │ Quotes    │  │ Tasks    │  │ Workflows│  │ Forecast      │  │
+│  │ (PDF +    │  │ (Assign/ │  │ (Rules + │  │ (Monthly +    │  │
+│  │  Products)│  │  Notify) │  │  Cron)   │  │  Targets)     │  │
+│  ├──────────┤  ├──────────┤  ├──────────┤  ├───────────────┤  │
+│  │ Forms     │  │ Contacts │  │Notific.  │  │ CustomFields  │  │
+│  │ (Public   │  │ (Client/ │  │ (SSE +   │  │ (Def + Values │  │
+│  │  Capture) │  │  Lead)   │  │  Prefs)  │  │  per entity)  │  │
+│  ├──────────┤  ├──────────┤  ├──────────┤  ├───────────────┤  │
 │  │ Dashboard │  │ Reports  │  │ AI Svc   │  │ Admin         │  │
 │  │ (Metrics) │  │ (4 cats) │  │ (3 provs)│  │ (Users/Roles) │  │
 │  ├──────────┤  ├──────────┤  ├──────────┤  ├───────────────┤  │
 │  │ Pipeline  │  │ Teams    │  │ Files    │  │ Activities    │  │
-│  │ (Stages)  │  │ (Org)    │  │ (GCP)   │  │ (Polymorphic) │  │
+│  │ (Stages)  │  │ (Org)    │  │ (GCP)    │  │ (Polymorphic) │  │
 │  └─────┬─────┘  └──────────┘  └──────────┘  └───────────────┘  │
 │        │                                                        │
 │        ▼                                                        │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │  Prisma ORM  →  PostgreSQL (Neon)  │  GCP Cloud Storage  │  │
+│  │  Prisma ORM  →  MySQL (Docker / hosted)  │  GCP Storage  │  │
 │  └──────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -72,8 +89,8 @@ A single-tenant, AI-enhanced CRM & Business Performance Dashboard for managing l
 | Layer    | Technology                                                                                    |
 | -------- | --------------------------------------------------------------------------------------------- |
 | Frontend | Next.js 16 (App Router), React 19, Tailwind CSS, Shadcn/Radix, React Query, Recharts, dnd-kit |
-| Backend  | NestJS, Passport.js (JWT), Prisma ORM, Resend (email)                                         |
-| Database | PostgreSQL (Neon — pooled + direct URLs)                                                      |
+| Backend  | NestJS, Passport.js (JWT), Prisma ORM, Resend (email), @nestjs/schedule (cron)                |
+| Database | MySQL (Docker Compose or hosted)                                                              |
 | Storage  | Google Cloud Storage (private buckets, signed-URL streaming)                                  |
 | AI       | Anthropic Claude, OpenAI GPT-4o, Google Gemini (runtime switch)                               |
 
@@ -84,19 +101,27 @@ A single-tenant, AI-enhanced CRM & Business Performance Dashboard for managing l
 ```
 Relon/
 ├── README.md
-├── CLAUDE.md                    # AI assistant instructions
 ├── backend/                     # NestJS API server
 │   ├── prisma/
-│   │   ├── schema.prisma        # 18 models — full data schema
+│   │   ├── schema.prisma        # Full data schema
 │   │   ├── seed.ts              # Sample data seeder
-│   │   └── migrations/          # PostgreSQL migrations
+│   │   └── migrations/          # MySQL migrations
 │   ├── src/
 │   │   ├── main.ts              # Entry: port 4000, /api prefix, CORS, validation
 │   │   ├── app.module.ts        # Root module — global guards (JWT + Permissions)
 │   │   ├── auth/                # Login, register, password reset, JWT strategy
 │   │   ├── leads/               # Prospective projects pipeline + AI risk analysis
 │   │   ├── clients/             # Client portfolio + AI health + upsell
+│   │   ├── contacts/            # Contact records scoped to clients/leads
 │   │   ├── projects/            # Active projects + cost tracking + status history
+│   │   ├── quotes/              # Quote builder + PDF generation + lifecycle
+│   │   ├── products/            # Product/service catalog for quoting
+│   │   ├── tasks/               # Task management linked to any entity
+│   │   ├── workflows/           # Automation rules (triggers → conditions → actions)
+│   │   ├── forecast/            # Revenue forecasting + monthly targets
+│   │   ├── forms/               # Public lead-capture forms
+│   │   ├── notifications/       # Real-time SSE notifications + scheduler
+│   │   ├── custom-fields/       # Per-entity custom field definitions + values
 │   │   ├── dashboard/           # Executive metrics + AI summary
 │   │   ├── reports/             # 4 report categories (leads, projects, clients, reps)
 │   │   ├── ai/                  # Multi-provider AI abstraction layer
@@ -104,7 +129,7 @@ Relon/
 │   │   │   ├── prompts/         # Template prompts for each AI capability
 │   │   │   └── interfaces/      # AIProvider interface contract
 │   │   ├── admin/               # User CRUD, AI settings, audit logs
-│   │   ├── permissions/         # RBAC permission matrix (56 permissions)
+│   │   ├── permissions/         # RBAC permission matrix
 │   │   ├── roles/               # Role definitions (built-in + custom)
 │   │   ├── pipeline/            # Customizable pipeline stages
 │   │   ├── teams/               # Organizational team structure
@@ -124,28 +149,34 @@ Relon/
 │   │   ├── layout.tsx           # Root: QueryProvider → CurrencyProvider → AuthProvider
 │   │   ├── page.tsx             # / → redirect to /login or /dashboard
 │   │   ├── (auth)/              # Login, register, forgot/reset password
+│   │   ├── forms/               # Public form embed pages (no auth)
 │   │   └── (dashboard)/         # All protected routes
 │   │       ├── dashboard/       # Executive dashboard + AI summary
 │   │       ├── leads/           # Pipeline (Kanban + table)
 │   │       ├── clients/         # Client portfolio
 │   │       ├── projects/        # Project management (Kanban + table)
+│   │       ├── quotes/          # Quote builder + list
+│   │       ├── tasks/           # Task list + detail
 │   │       ├── reports/         # Tabbed analytics (4 categories)
-│   │       ├── admin/           # 10 admin sub-pages
+│   │       ├── admin/           # Admin sub-pages
 │   │       └── settings/        # User profile + password
 │   ├── components/
 │   │   ├── layout/              # AppSidebar (collapsible, permission-filtered)
 │   │   ├── dashboard/           # EnhancedDashboard, MetricsCards, charts
-│   │   ├── leads/               # 17 components (Kanban, dialogs, AI panel)
-│   │   ├── clients/             # 14 components (detail, health, metrics)
-│   │   ├── projects/            # 13 components (Kanban, costs, stage timeline)
-│   │   ├── reports/             # 7 components (4 tab views + filters)
-│   │   ├── admin/               # 16 components (users, teams, permissions, roles)
+│   │   ├── leads/               # Kanban, dialogs, AI panel
+│   │   ├── clients/             # Client detail, health, metrics
+│   │   ├── projects/            # Kanban, costs, stage timeline
+│   │   ├── quotes/              # Quote builder, line items, PDF download
+│   │   ├── tasks/               # Task list, detail dialog, filters
+│   │   ├── reports/             # 4 tab views + filters
+│   │   ├── admin/               # Users, teams, permissions, roles
+│   │   ├── notifications/       # Notification bell, dropdown, preferences
 │   │   ├── providers/           # QueryProvider, CurrencyProvider
 │   │   ├── AIAssistant.tsx      # Floating AI chat widget
-│   │   └── ui/                  # 34 Shadcn/Radix primitives
+│   │   └── ui/                  # Shadcn/Radix primitives
 │   ├── lib/
-│   │   ├── api/                 # 15 API client files (domain-split)
-│   │   ├── types.ts             # All TypeScript domain types (~500 lines)
+│   │   ├── api/                 # API client files (domain-split)
+│   │   ├── types.ts             # All TypeScript domain types
 │   │   ├── validations/         # Zod schemas for forms
 │   │   └── context/             # Auth + Currency contexts
 │   └── package.json
@@ -160,7 +191,7 @@ Relon/
 ### Prerequisites
 
 - Node.js 18+
-- PostgreSQL database (or [Neon](https://neon.tech) for hosted)
+- Docker (for MySQL via Docker Compose) or a hosted MySQL database
 - At least one AI API key (Anthropic, OpenAI, or Google)
 
 ### 1. Install Dependencies
@@ -175,8 +206,7 @@ cd ../frontend && npm install
 **Backend** (`backend/.env`):
 
 ```env
-DATABASE_URL="postgresql://user:pass@host/db?sslmode=require"
-DIRECT_URL="postgresql://user:pass@host/db?sslmode=require"
+DATABASE_URL="mysql://user:pass@host:3306/db"
 JWT_SECRET=your-jwt-secret
 JWT_EXPIRES_IN=7d
 PORT=4000
@@ -205,16 +235,23 @@ ENCRYPTION_KEY=32-char-hex-key
 NEXT_PUBLIC_API_URL=http://localhost:4000/api
 ```
 
-### 3. Setup Database
+### 3. Start Database (Docker)
+
+```bash
+cd backend
+docker-compose up -d      # Starts MySQL on port 3306
+```
+
+### 4. Setup Database
 
 ```bash
 cd backend
 npx prisma generate
 npx prisma migrate dev
-npx prisma db seed            # Seeds roles, pipeline stages, dropdown options, sample users
+npx prisma db seed        # Seeds roles, pipeline stages, dropdown options, sample users
 ```
 
-### 4. Start Development Servers
+### 5. Start Development Servers
 
 ```bash
 # Terminal 1 — Backend
@@ -224,7 +261,7 @@ cd backend && npm run start:dev     # http://localhost:4000
 cd frontend && npm run dev          # http://localhost:3000
 ```
 
-### 5. Access the Application
+### 6. Access the Application
 
 Open [http://localhost:3000](http://localhost:3000). Log in with a seeded user account.
 
@@ -265,9 +302,10 @@ Open [http://localhost:3000](http://localhost:3000). Log in with a seeded user a
           │    ┌───────────┘
           ▼    ▼
    ┌─────────────────┐
-   │ Ongoing Mgmt    │  Activities, Files,
-   │ AI Health Score │  Cost Tracking,
-   │ Upsell Strategy │  Status History
+   │ Ongoing Mgmt    │  Tasks, Activities, Files,
+   │ AI Health Score │  Cost Tracking, Quotes,
+   │ Upsell Strategy │  Contacts, Custom Fields,
+   │ Workflow Rules  │  Notifications, Forecast
    └─────────────────┘
 ```
 
@@ -294,13 +332,16 @@ Browser → Next.js Middleware (check token cookie)
 1. **Sales rep creates a lead** → Lead appears in pipeline Kanban at "New" stage
 2. **Activities logged** → Calls and meetings tracked against the lead with dates
 3. **Files uploaded** → Briefs, drawings, quotations stored in GCP
-4. **Stage progression** → Drag lead through pipeline stages (each transition recorded in StageHistory)
-5. **AI risk analysis** → System analyzes the lead and flags risks (no contact, stale pipeline, high value)
-6. **Quote sent** → Lead moves to "Quoted", `quoteSentAt` timestamp captured
-7. **Deal won** → Lead moves to "Won", `dealClosedAt` + `contractedValue` captured via CloseWonDialog
-8. **Convert to Client + Project** → ConvertLeadDialog creates/links a Client record and creates a Project with PM/designer/QS carry-over from the lead
-9. **Project tracked** → Cost logs, status changes, activities, and files managed under the project
-10. **Client relationship** → Health score calculated, AI generates upsell strategies, activity engagement tracked
+4. **Tasks created** → Follow-up tasks assigned to team members, linked to the lead
+5. **Stage progression** → Drag lead through pipeline stages (each transition recorded in StageHistory)
+6. **Workflow automation** → Rules fire automatically on stage change, sending notifications or assigning users
+7. **AI risk analysis** → System analyzes the lead and flags risks (no contact, stale pipeline, high value)
+8. **Quote generated** → Quote builder creates a line-item quote, PDF exported, sent to client
+9. **Deal won** → Lead moves to "Won", `dealClosedAt` + `contractedValue` captured via CloseWonDialog
+10. **Convert to Client + Project** → ConvertLeadDialog creates/links a Client record and creates a Project with PM/designer/QS carry-over from the lead
+11. **Project tracked** → Cost logs, status changes, activities, tasks, and files managed under the project
+12. **Client relationship** → Health score calculated, AI generates upsell strategies, contacts tracked, activity engagement tracked
+13. **Forecast** → Won revenue feeds monthly forecast charts; targets set per month for comparison
 
 ---
 
@@ -328,6 +369,7 @@ The main dashboard (`/dashboard`) provides a real-time executive view:
 - **Revenue trend** — 12-month area chart
 - **Lead volume trend** — 12-week bar chart
 - **Funnel visualization** — Drop-off rates between pipeline stages
+- **Forecast widget** — Monthly revenue vs. targets for the next 6 months
 - **AI Executive Summary** — On-demand overview covering what changed, what's at risk, what needs attention, and key insights
 - **AI Pipeline Insights** — Bottleneck analysis, win probability by stage, urgent leads, recommendations
 - **Period filtering** — Week / Month / Quarter
@@ -343,6 +385,7 @@ The sales pipeline (`/leads`) manages opportunities from initial contact to clos
 - **Close Won dialog** — Captures contracted value and close date when moving to "Won"
 - **Lead-to-Client+Project conversion** — One-click conversion that creates or links a client and creates a project with assignment carry-over
 - **Contact reps** — Multiple contact representatives per lead (name, phone, email)
+- **Contacts** — Link existing client contacts directly to a lead
 - **Assignment** — Sales rep, designer, and QS assignments with role-based visibility
 - **Lead metrics** — Days in pipeline, days since last contact, activity count, file count, days to quotation
 - **Risk flags** — Automated detection: NO_CONTACT, LONG_PIPELINE, HIGH_VALUE_STALE, STALLED, NO_ACTIVITY
@@ -350,6 +393,8 @@ The sales pipeline (`/leads`) manages opportunities from initial contact to clos
 - **AI email drafting** — AI drafts follow-up emails based on lead context
 - **Stage history** — Full audit trail of all stage transitions with who/when
 - **Year filtering** — Filter leads by creation year
+- **Tasks** — Create and view tasks linked to the lead
+- **Custom fields** — Additional data fields configured per your business needs
 
 **Role-based data filtering:**
 
@@ -376,6 +421,18 @@ The client portfolio (`/clients`) tracks relationships and engagement:
 - **Client metrics** — Days since last contact, total/recent activity counts, project counts, total/recent revenue, average project value
 - **Lead conversion** — Won leads can be converted to create a new client or link to an existing one (auto-detect by email)
 - **Account manager assignment** — Assign a user as the dedicated account manager
+- **Contacts** — Manage a structured contact book per client
+- **Custom fields** — Additional data fields configured per your business needs
+
+### Contacts
+
+A structured contact book that works across clients and leads:
+
+- **Client-scoped contacts** — Create and list contacts belonging to a specific client
+- **Lead contact linking** — Link existing contacts from a client's book to a lead, or unlink them
+- **Contact details** — Name, email, phone, job title, and notes per contact
+- **Individual contact management** — View, update, and delete any contact record
+- **Reusable across entities** — One contact record can be linked to multiple leads
 
 ### Project Management
 
@@ -392,6 +449,112 @@ Active project tracking (`/projects`) covers delivery and cost management:
 - **Assignment** — Project manager, designer, and QS with role-based visibility
 - **Client linkage** — Every project belongs to a client; auto-updates client project counts
 - **Lead linkage** — Optional one-to-one link to the originating lead
+- **Tasks** — Create and view tasks linked to the project
+- **Custom fields** — Additional data fields configured per your business needs
+
+### Quotes
+
+A full quoting module (`/quotes`) covering the quote lifecycle from draft to PDF:
+
+- **Quote list** — Filter by lead, client, or status (draft, sent, accepted, rejected)
+- **Quote builder** — Line-item editor with products from the catalog or ad-hoc items; quantity, unit price, discount, tax
+- **Quote settings** — Company details, logo URL, tax rates, payment terms, and default notes stored globally
+- **Auto-numbering** — Sequential quote numbers with configurable prefix
+- **Status lifecycle** — Draft → Sent → Accepted / Rejected
+  - `send` — Marks quote as sent and records `sentAt`
+  - `accept` — Marks as accepted and records `acceptedAt`
+  - `reject` — Marks as rejected
+- **PDF export** — Generate a formatted PDF of any quote, downloadable directly from the browser
+- **Lead & client linkage** — Each quote can be linked to a lead and/or a client
+- **Notifications** — Status changes trigger `QUOTE_STATUS` notifications to the quote owner
+
+### Products & Services Catalog
+
+A product/service catalog (`/admin` → Products) used when building quotes:
+
+- **Product list** with filtering by active/inactive status
+- **Create products** — Name, description, unit price, unit type (each, hour, day, etc.), tax rate, and SKU
+- **Active/inactive toggle** — Deactivate products without deleting them; inactive products are hidden from the quote builder
+- **Used in quotes** — Products populate the line-item picker in the quote builder with pre-filled price and tax
+
+### Tasks
+
+A cross-entity task management system (`/tasks`) for tracking follow-ups and work items:
+
+- **Task list** — Filter by status (OPEN, IN_PROGRESS, DONE), priority (LOW, MEDIUM, HIGH, URGENT), entity type, entity, assignee, or due date range
+- **My tasks summary** — Quick count of open, in-progress, overdue, and due-today tasks for the current user
+- **Team summary** — Aggregate task counts across the team (for managers and admins)
+- **Entity-linked tasks** — Tasks can be attached to a specific lead, client, or project and visible from those entity detail views
+- **Assignment** — Each task has an assignee and a creator; non-managers see only their own tasks unless they hold `tasks:view_all`
+- **Due dates** — Optional due date with overdue detection
+- **Completion notes** — When marking a task DONE, a completion note is recorded
+- **Workflow integration** — Workflows can automatically create tasks as an action
+- **Notifications** — `TASK_ASSIGNED`, `TASK_DUE`, and `TASK_OVERDUE` notifications are sent automatically via the scheduler
+
+### Workflows & Automation
+
+A no-code automation engine (`/admin` → Workflows) for triggering actions based on CRM events:
+
+- **Workflow rules** — Name, trigger, conditions (AND/OR logic), list of actions, active/inactive toggle
+- **Triggers** — `LEAD_CREATED`, `LEAD_STAGE_CHANGED`, `LEAD_UPDATED`, `PROJECT_STATUS_CHANGED`, `PROJECT_UPDATED`, `CLIENT_UPDATED`, `TASK_COMPLETED`, `FORM_SUBMITTED`, `SCHEDULED` (cron)
+- **Conditions** — Field-level comparisons (`eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `in`) on trigger entity fields
+- **Actions** — Multiple actions per rule, executed in order:
+  - `SEND_NOTIFICATION` — Push an in-app notification to specific users or roles
+  - `SEND_EMAIL` — Send a transactional email via Resend
+  - `UPDATE_FIELD` — Set a field on the trigger entity (allowlisted fields only)
+  - `ASSIGN_USER` — Assign a specific user to the trigger entity
+  - `CREATE_TASK` — Create a new task linked to the trigger entity
+- **Execution history** — Last 20 executions per rule with status (SUCCESS/FAILURE) and error details
+- **Test execution** — Manually fire a rule against a specific entity for debugging
+- **Scheduled rules** — CRON-based rules run daily via `@nestjs/schedule`
+
+### Forecast & Targets
+
+Revenue forecasting (`/dashboard` forecast widget) giving visibility into future pipeline:
+
+- **Monthly forecast** — Projects expected revenue for the next N months based on pipeline won probability, existing projects, and historical data
+- **Forecast summary** — Aggregated view of pipeline value, expected close value, and revenue targets
+- **Targets** — Set a revenue target per calendar month; persisted in `ForecastTarget` records
+- **Actual vs. target comparison** — Side-by-side chart of actual closed revenue against monthly targets
+- **Dashboard integration** — Forecast widget is embedded directly in the executive dashboard
+
+### Lead Capture Forms
+
+Public embeddable web forms (`/forms` public route + admin management) that feed leads directly into the CRM:
+
+- **Form builder** — Create forms with a custom field configuration (label, type, required flag, placeholder)
+- **API key auth** — Each form has a unique API key; public endpoints use the key rather than JWT
+- **Public embed** — `GET /api/forms/public/:apiKey` returns form definition; `POST /api/forms/public/:apiKey/submit` accepts a submission — both are unauthenticated
+- **Spam protection** — Submissions record the submitter's IP address for rate-limiting and review
+- **Auto lead creation** — On submission, a new lead is created in the CRM with the form data mapped to lead fields
+- **Workflow trigger** — Form submissions fire the `FORM_SUBMITTED` trigger, enabling downstream automation
+- **Notification** — `FORM_SUBMISSION` notification is dispatched to configured recipients
+- **Analytics** — Submission count, last submission timestamp, and conversion tracking per form
+- **Active/inactive toggle** — Deactivate a form without deleting it; inactive forms reject submissions
+
+### Notifications
+
+A real-time in-app notification system with user preferences:
+
+- **Notification types** — `TASK_ASSIGNED`, `TASK_DUE`, `TASK_OVERDUE`, `LEAD_STALE`, `LEAD_STAGE_CHANGED`, `PROJECT_AT_RISK`, `CLIENT_DORMANT`, `MENTION`, `SYSTEM`, `WORKFLOW`, `QUOTE_STATUS`, `FORM_SUBMISSION`
+- **Real-time delivery** — Server-Sent Events (SSE) stream pushes notifications to connected browsers instantly
+- **Notification inbox** — Bell icon in the header shows unread count badge; dropdown lists recent notifications
+- **Mark read / mark all read** — Per-notification and bulk read actions
+- **Pagination** — Fetch notifications with limit/offset; filter to unread only
+- **Preferences** — Per-user notification preferences control which types generate in-app or email notifications
+- **Scheduled notifications** — `NotificationSchedulerService` runs on cron to detect and dispatch `TASK_DUE`, `TASK_OVERDUE`, `LEAD_STALE`, `PROJECT_AT_RISK`, and `CLIENT_DORMANT` events automatically
+
+### Custom Fields
+
+An admin-managed system for extending entity data without schema changes:
+
+- **Field definitions** — Create custom field definitions scoped to an entity type (LEAD, CLIENT, PROJECT)
+- **Field types** — Text, Number, Date, Boolean, Select (with options list)
+- **Required flag** — Mark fields as required; validation enforced on submission
+- **Ordering** — Drag-to-reorder definitions; display order is persisted
+- **Values** — `GET /api/custom-fields/values/:entityType/:entityId` retrieves all custom values for an entity; `POST` bulk-sets them in one call
+- **Admin management** — Full CRUD on definitions via `settings:manage` permission
+- **Frontend integration** — Custom field values appear in lead, client, and project detail dialogs
 
 ### Reports & Analytics
 
@@ -492,6 +655,26 @@ The admin panel (`/admin/*`) provides full system configuration:
 - Categories: urgency, activity type, meeting type, file category, cost category, client segment, individual type, project status, project risk status, executing company
 - Reorder, activate/deactivate, protect system options
 
+**Products** (`/admin/products`):
+
+- Manage the product/service catalog used in the quote builder
+- Create, update, activate/deactivate products
+
+**Workflows** (`/admin/workflows`):
+
+- Create and manage automation rules
+- View execution history and test rules against entities
+
+**Custom Fields** (`/admin/custom-fields`):
+
+- Define custom fields per entity type (Lead, Client, Project)
+- Manage field types, labels, required flags, and display order
+
+**Lead Forms** (`/admin/forms`):
+
+- Create and manage public lead capture forms
+- View form analytics and submission counts
+
 **AI Settings** (`/admin/ai-settings`):
 
 - Select default AI provider and per-capability overrides
@@ -548,21 +731,25 @@ Custom roles can be created via the admin panel with any combination of the 56 a
 
 ### Permission Modules (56 permissions)
 
-| Module      | Actions                                             |
-| ----------- | --------------------------------------------------- |
-| Leads       | view, create, edit, delete, analyze                 |
-| Clients     | view, create, edit, delete, health, upsell, convert |
-| Projects    | view, create, edit, delete                          |
-| Costs       | view, create, delete                                |
-| Teams       | view, create, edit, delete, manage_members          |
-| Users       | view, create, edit, delete                          |
-| Dashboard   | view                                                |
-| AI Settings | view, edit                                          |
-| Audit Logs  | view                                                |
-| Permissions | view, edit                                          |
-| Pipeline    | manage                                              |
-| Reports     | view                                                |
-| Settings    | manage                                              |
+| Module        | Actions                                              |
+| ------------- | ---------------------------------------------------- |
+| Leads         | view, create, edit, delete, analyze                  |
+| Clients       | view, create, edit, delete, health, upsell, convert  |
+| Projects      | view, create, edit, delete                           |
+| Costs         | view, create, delete                                 |
+| Quotes        | view, create, edit, delete                           |
+| Tasks         | view, create, edit, delete, view_all                 |
+| Workflows     | view, create, edit, delete                           |
+| Teams         | view, create, edit, delete, manage_members           |
+| Users         | view, create, edit, delete                           |
+| Dashboard     | view                                                 |
+| AI Settings   | view, edit                                           |
+| Audit Logs    | view                                                 |
+| Permissions   | view, edit                                           |
+| Pipeline      | manage                                               |
+| Reports       | view                                                 |
+| Settings      | manage                                               |
+| Notifications | view                                                 |
 
 ### How Permissions Work
 
@@ -576,28 +763,43 @@ Custom roles can be created via the admin panel with any combination of the 56 a
 
 ## Database Schema
 
-18 Prisma models powering the system:
+Prisma models powering the system:
 
-| Model                  | Purpose                                       |
-| ---------------------- | --------------------------------------------- |
-| `User`                 | System users with role, team, hierarchy       |
-| `Lead`                 | Prospective projects in the sales pipeline    |
-| `LeadRep`              | Contact representatives for a lead            |
-| `Client`               | Client portfolio with health/engagement       |
-| `Project`              | Active projects with cost tracking            |
-| `CostLog`              | Individual cost entries per project           |
-| `Activity`             | Polymorphic call/meeting log                  |
-| `File`                 | Polymorphic file metadata (GCP storage)       |
-| `StageHistory`         | Lead pipeline stage transitions               |
-| `ProjectStatusHistory` | Project status change audit trail             |
-| `ServiceType`          | Configurable service type catalog             |
-| `PipelineStage`        | Customizable pipeline stages (lead + project) |
-| `DropdownOption`       | Dynamic dropdown configuration                |
-| `AISettings`           | AI provider config + encrypted keys + prompts |
-| `AuditLog`             | System action audit trail                     |
-| `RolePermission`       | Role-permission mapping matrix                |
-| `Role`                 | Role definitions (built-in + custom)          |
-| `Team`                 | Organizational team structure                 |
+| Model                    | Purpose                                          |
+| ------------------------ | ------------------------------------------------ |
+| `User`                   | System users with role, team, hierarchy          |
+| `Lead`                   | Prospective projects in the sales pipeline       |
+| `LeadRep`                | Contact representatives for a lead               |
+| `Client`                 | Client portfolio with health/engagement          |
+| `Contact`                | Structured contact book linked to clients/leads  |
+| `Project`                | Active projects with cost tracking               |
+| `CostLog`                | Individual cost entries per project              |
+| `Quote`                  | Quote records with line items and lifecycle      |
+| `QuoteItem`              | Line items on a quote (product or ad-hoc)        |
+| `QuoteSettings`          | Global quote defaults (company info, tax, terms) |
+| `Product`                | Product/service catalog for quoting              |
+| `Task`                   | Tasks linked to any entity with status/priority  |
+| `WorkflowRule`           | Automation rules (trigger → conditions → actions)|
+| `WorkflowExecution`      | Execution history for workflow rules             |
+| `ForecastTarget`         | Monthly revenue targets                          |
+| `LeadForm`               | Public lead capture form definitions             |
+| `FormSubmission`         | Submissions received via public forms            |
+| `Notification`           | In-app notifications per user                    |
+| `NotificationPreference` | Per-user notification type preferences           |
+| `CustomFieldDefinition`  | Custom field schema per entity type              |
+| `CustomFieldValue`       | Custom field values per entity instance          |
+| `Activity`               | Polymorphic call/meeting log                     |
+| `File`                   | Polymorphic file metadata (GCP storage)          |
+| `StageHistory`           | Lead pipeline stage transitions                  |
+| `ProjectStatusHistory`   | Project status change audit trail                |
+| `ServiceType`            | Configurable service type catalog                |
+| `PipelineStage`          | Customizable pipeline stages (lead + project)    |
+| `DropdownOption`         | Dynamic dropdown configuration                   |
+| `AISettings`             | AI provider config + encrypted keys + prompts    |
+| `AuditLog`               | System action audit trail                        |
+| `RolePermission`         | Role-permission mapping matrix                   |
+| `Role`                   | Role definitions (built-in + custom)             |
+| `Team`                   | Organizational team structure                    |
 
 ### Key Relationships
 
@@ -611,17 +813,26 @@ User ─┬── manages → User[] (manager/report hierarchy)
 Lead ─┬── belongsTo → Client? (existing client relationship)
       ├── convertsTo → Client? (on conversion)
       ├── convertsTo → Project? (one-to-one)
-      ├── has → LeadRep[], Activity[], File[], StageHistory[]
+      ├── has → LeadRep[], Contact[], Activity[], File[], StageHistory[], Task[], Quote[]
       └── linkedTo → ServiceType?, PipelineStage
 
-Client ─┬── has → Project[], Activity[], File[]
+Client ─┬── has → Project[], Contact[], Activity[], File[], Task[], Quote[]
         ├── receivesFrom → Lead[] (converted leads)
         └── assignedTo → User? (account manager)
 
 Project ─┬── belongsTo → Client
          ├── originatesFrom → Lead? (one-to-one)
-         ├── has → CostLog[], Activity[], File[], ProjectStatusHistory[]
+         ├── has → CostLog[], Activity[], File[], ProjectStatusHistory[], Task[]
          └── assignedTo → User? (PM), User? (designer), User? (QS)
+
+Quote ─┬── belongsTo → Lead? / Client?
+       ├── has → QuoteItem[] (products or ad-hoc lines)
+       └── createdBy → User
+
+WorkflowRule ─┬── trigger → event type
+              ├── conditions → JSON field comparisons
+              ├── actions → notifications, emails, field updates, tasks
+              └── has → WorkflowExecution[]
 ```
 
 ---
@@ -688,6 +899,118 @@ Project ─┬── belongsTo → Client
 | GET    | `/projects/:id/costs`            | `costs:view`      | List cost logs                    |
 | POST   | `/projects/:id/costs`            | `costs:create`    | Add cost log                      |
 | DELETE | `/projects/:id/costs/:costId`    | `costs:delete`    | Delete cost log                   |
+
+### Contacts (`/api/contacts`, `/api/clients/:id/contacts`, `/api/leads/:id/contacts`)
+
+| Method | Endpoint                               | Permission     | Description                      |
+| ------ | -------------------------------------- | -------------- | -------------------------------- |
+| GET    | `/clients/:clientId/contacts`          | `clients:view` | List contacts for a client       |
+| POST   | `/clients/:clientId/contacts`          | `clients:edit` | Create contact under a client    |
+| GET    | `/leads/:leadId/contacts`              | `leads:view`   | List contacts linked to a lead   |
+| POST   | `/leads/:leadId/contacts/:contactId`   | `leads:edit`   | Link contact to a lead           |
+| DELETE | `/leads/:leadId/contacts/:contactId`   | `leads:edit`   | Unlink contact from a lead       |
+| GET    | `/contacts/:id`                        | `clients:view` | Get a single contact             |
+| PATCH  | `/contacts/:id`                        | `clients:edit` | Update a contact                 |
+| DELETE | `/contacts/:id`                        | `clients:edit` | Delete a contact                 |
+
+### Quotes (`/api/quotes`)
+
+| Method | Endpoint              | Permission      | Description                               |
+| ------ | --------------------- | --------------- | ----------------------------------------- |
+| GET    | `/quotes`             | `quotes:view`   | List quotes (`?leadId=&clientId=&status=`)|
+| GET    | `/quotes/settings`    | `quotes:view`   | Get global quote settings                 |
+| PATCH  | `/quotes/settings`    | `quotes:edit`   | Update global quote settings              |
+| GET    | `/quotes/:id`         | `quotes:view`   | Get quote with line items                 |
+| GET    | `/quotes/:id/pdf`     | `quotes:view`   | Download quote as PDF                     |
+| POST   | `/quotes`             | `quotes:create` | Create quote                              |
+| PATCH  | `/quotes/:id`         | `quotes:edit`   | Update quote                              |
+| DELETE | `/quotes/:id`         | `quotes:delete` | Delete quote                              |
+| POST   | `/quotes/:id/send`    | `quotes:edit`   | Mark quote as sent                        |
+| POST   | `/quotes/:id/accept`  | `quotes:edit`   | Mark quote as accepted                    |
+| POST   | `/quotes/:id/reject`  | `quotes:edit`   | Mark quote as rejected                    |
+
+### Products (`/api/products`)
+
+| Method | Endpoint        | Permission        | Description                             |
+| ------ | --------------- | ----------------- | --------------------------------------- |
+| GET    | `/products`     | `quotes:view`     | List products (`?includeInactive=true`) |
+| GET    | `/products/:id` | `quotes:view`     | Get a product                           |
+| POST   | `/products`     | `settings:manage` | Create product                          |
+| PATCH  | `/products/:id` | `settings:manage` | Update product                          |
+| DELETE | `/products/:id` | `settings:manage` | Delete product                          |
+
+### Tasks (`/api/tasks`)
+
+| Method | Endpoint                              | Permission     | Description                                    |
+| ------ | ------------------------------------- | -------------- | ---------------------------------------------- |
+| GET    | `/tasks`                              | `tasks:view`   | List tasks (filtered, role-scoped)             |
+| GET    | `/tasks/summary`                      | `tasks:view`   | My tasks summary (open, in-progress, overdue)  |
+| GET    | `/tasks/team-summary`                 | `tasks:view`   | Team-wide task summary                         |
+| GET    | `/tasks/entity/:entityType/:entityId` | `tasks:view`   | Tasks linked to a specific entity              |
+| GET    | `/tasks/:id`                          | `tasks:view`   | Get a task                                     |
+| POST   | `/tasks`                              | `tasks:create` | Create task                                    |
+| PATCH  | `/tasks/:id`                          | `tasks:edit`   | Update task                                    |
+| PATCH  | `/tasks/:id/complete`                 | `tasks:edit`   | Complete task with a note                      |
+| DELETE | `/tasks/:id`                          | `tasks:delete` | Delete task                                    |
+
+### Workflows (`/api/workflows`)
+
+| Method | Endpoint                    | Permission         | Description                       |
+| ------ | --------------------------- | ------------------ | --------------------------------- |
+| GET    | `/workflows`                | `workflows:view`   | List all workflow rules           |
+| GET    | `/workflows/:id`            | `workflows:view`   | Get rule with executions          |
+| POST   | `/workflows`                | `workflows:create` | Create workflow rule              |
+| PATCH  | `/workflows/:id`            | `workflows:edit`   | Update workflow rule              |
+| DELETE | `/workflows/:id`            | `workflows:delete` | Delete workflow rule              |
+| GET    | `/workflows/:id/executions` | `workflows:view`   | Get execution history for a rule  |
+| POST   | `/workflows/:id/test`       | `workflows:view`   | Test rule against an entity       |
+
+### Forecast (`/api/forecast`)
+
+| Method | Endpoint            | Permission       | Description                           |
+| ------ | ------------------- | ---------------- | ------------------------------------- |
+| GET    | `/forecast/summary` | `dashboard:view` | Forecast summary (pipeline + targets) |
+| GET    | `/forecast/monthly` | `dashboard:view` | Monthly forecast (`?months=6`)        |
+| GET    | `/forecast/targets` | `dashboard:view` | All revenue targets                   |
+| POST   | `/forecast/targets` | `dashboard:view` | Create or update a monthly target     |
+
+### Forms (`/api/forms`)
+
+| Method | Endpoint                       | Auth              | Description                         |
+| ------ | ------------------------------ | ----------------- | ----------------------------------- |
+| GET    | `/forms/public/:apiKey`        | Public            | Get public form definition          |
+| POST   | `/forms/public/:apiKey/submit` | Public            | Submit a form (creates a lead)      |
+| GET    | `/forms`                       | `settings:manage` | List all forms                      |
+| POST   | `/forms`                       | `settings:manage` | Create form                         |
+| GET    | `/forms/:id`                   | `settings:manage` | Get form                            |
+| PATCH  | `/forms/:id`                   | `settings:manage` | Update form                         |
+| DELETE | `/forms/:id`                   | `settings:manage` | Delete form                         |
+| GET    | `/forms/:id/analytics`         | `settings:manage` | Get submission analytics for a form |
+
+### Notifications (`/api/notifications`)
+
+| Method | Endpoint                       | Permission           | Description                                        |
+| ------ | ------------------------------ | -------------------- | -------------------------------------------------- |
+| GET    | `/notifications`               | `notifications:view` | List notifications (`?unread=&limit=&offset=`)     |
+| GET    | `/notifications/unread-count`  | `notifications:view` | Get unread notification count                      |
+| PATCH  | `/notifications/:id/read`      | `notifications:view` | Mark a notification as read                        |
+| POST   | `/notifications/mark-all-read` | `notifications:view` | Mark all notifications as read                     |
+| GET    | `/notifications/preferences`   | `notifications:view` | Get notification preferences                       |
+| PATCH  | `/notifications/preferences`   | `notifications:view` | Update notification preferences                    |
+| GET    | `/notifications/stream`        | `notifications:view` | SSE stream for real-time notifications             |
+
+### Custom Fields (`/api/custom-fields`)
+
+| Method | Endpoint                                      | Permission        | Description                                  |
+| ------ | --------------------------------------------- | ----------------- | -------------------------------------------- |
+| GET    | `/custom-fields/definitions`                  | `settings:manage` | List definitions (`?entityType=`)            |
+| GET    | `/custom-fields/definitions/:id`              | `settings:manage` | Get a definition                             |
+| POST   | `/custom-fields/definitions`                  | `settings:manage` | Create a definition                          |
+| PATCH  | `/custom-fields/definitions/:id`              | `settings:manage` | Update a definition                          |
+| DELETE | `/custom-fields/definitions/:id`              | `settings:manage` | Delete a definition                          |
+| POST   | `/custom-fields/definitions/reorder`          | `settings:manage` | Reorder definitions for an entity type       |
+| GET    | `/custom-fields/values/:entityType/:entityId` | `leads:view`      | Get custom field values for an entity        |
+| POST   | `/custom-fields/values/:entityType/:entityId` | `leads:edit`      | Bulk-set custom field values for an entity   |
 
 ### Dashboard (`/api/dashboard`)
 
@@ -875,8 +1198,7 @@ AI_DEFAULT_PROVIDER=anthropic  # or 'openai' or 'gemini'
 
 | Variable             | Required | Description                             |
 | -------------------- | -------- | --------------------------------------- |
-| `DATABASE_URL`       | Yes      | PostgreSQL connection string (pooled)   |
-| `DIRECT_URL`         | Yes      | PostgreSQL direct connection string     |
+| `DATABASE_URL`       | Yes      | MySQL connection string                 |
 | `JWT_SECRET`         | Yes      | Secret key for JWT signing              |
 | `JWT_EXPIRES_IN`     | No       | Token expiry (default: `7d`)            |
 | `PORT`               | No       | Server port (default: `4000`)           |
@@ -914,6 +1236,10 @@ npx prisma generate        # Regenerate Prisma client
 npx prisma migrate dev     # Run migrations (dev)
 npx prisma db seed         # Seed sample data
 npx prisma studio          # DB GUI at localhost:5555
+
+# Docker (MySQL)
+docker-compose up -d       # Start MySQL container
+docker-compose down        # Stop MySQL container
 ```
 
 ### Frontend (run from `frontend/`)
@@ -930,8 +1256,8 @@ npm run lint               # ESLint
 
 ### Backend not starting
 
-- Verify `DATABASE_URL` and `DIRECT_URL` are correct in `backend/.env`
-- Ensure PostgreSQL is reachable
+- Verify `DATABASE_URL` is correct in `backend/.env`
+- Ensure MySQL is running (`docker-compose up -d` if using Docker)
 - Run `npx prisma generate` if you see Prisma client errors
 - Check port 4000 isn't already in use
 
@@ -946,6 +1272,18 @@ npm run lint               # ESLint
 - Add at least one AI provider API key to `backend/.env`
 - Validate keys in Admin → AI Settings → API Key Status
 - Check the AI settings table has a record (auto-created on first access)
+
+### Notifications not updating in real time
+
+- Ensure the SSE connection is established (check browser DevTools → Network → EventStream)
+- Verify the user's session is valid (SSE requires a valid JWT)
+- Check that notification preferences are enabled for the relevant notification type
+
+### Workflow rules not firing
+
+- Confirm the rule is set to active in Admin → Workflows
+- Check the execution history for error details
+- Use the "Test" button to fire the rule against a specific entity and inspect the result
 
 ### Permission denied errors
 
@@ -969,11 +1307,13 @@ npm run lint               # ESLint
 | State       | React Query (TanStack), React Hook Form + Zod                |
 | Charts      | Recharts                                                     |
 | Drag & Drop | dnd-kit                                                      |
-| Backend     | NestJS, TypeScript, Passport.js (JWT)                        |
-| Database    | PostgreSQL, Prisma ORM                                       |
+| Backend     | NestJS, TypeScript, Passport.js (JWT), @nestjs/schedule      |
+| Database    | MySQL, Prisma ORM                                            |
 | Storage     | Google Cloud Storage                                         |
 | Email       | Resend                                                       |
 | AI          | Anthropic SDK, OpenAI SDK, Google Generative AI SDK          |
+| Real-time   | Server-Sent Events (SSE)                                     |
+| PDF         | PDF generation service (quotes)                              |
 
 ---
 

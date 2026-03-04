@@ -337,6 +337,7 @@ export interface Client {
 
   // Financial
   lifetimeRevenue: number;
+  qbCustomerId?: string | null;
 
   // Health Status
   status: string;
@@ -690,6 +691,8 @@ export interface Quote {
   createdById: string;
   createdBy?: { id: string; name: string; email: string } | null;
   lineItems: QuoteLineItem[];
+  qbInvoiceId?: string | null;
+  qbPaymentStatus?: string | null;
   createdAt: string;
   updatedAt: string;
 }

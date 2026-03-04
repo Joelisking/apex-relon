@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,6 +14,8 @@ import {
 import { cn } from '@/lib/utils';
 import { STATUS_COLORS, formatCurrency, formatDate } from './quote-utils';
 import { quotesApi } from '@/lib/api/quotes-client';
+import { API_URL } from '@/lib/api/client';
+import { toast } from 'sonner';
 import type { Quote } from '@/lib/types';
 
 interface QuoteViewDialogProps {
@@ -24,6 +26,33 @@ interface QuoteViewDialogProps {
 
 export default function QuoteViewDialog({ quote, open, onOpenChange }: QuoteViewDialogProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isSendingToQb, setIsSendingToQb] = useState(false);
+
+  const handleSendToQuickBooks = async () => {
+    if (!quote) return;
+    setIsSendingToQb(true);
+    try {
+      const token = typeof window !== 'undefined' ? (localStorage.getItem('token') ?? '') : '';
+      const res = await fetch(`${API_URL}/quickbooks/invoices`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ quoteId: quote.id, clientId: quote.clientId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message ?? 'Failed to send to QuickBooks');
+      }
+      const data = await res.json();
+      toast.success(`Invoice created in QuickBooks (ID: ${data.qbInvoiceId})`);
+    } catch (e: any) {
+      toast.error(e.message ?? 'Failed to create QuickBooks invoice');
+    } finally {
+      setIsSendingToQb(false);
+    }
+  };
 
   const handleDownloadPdf = async () => {
     if (!quote) return;
@@ -170,6 +199,19 @@ export default function QuoteViewDialog({ quote, open, onOpenChange }: QuoteView
         )}
         {quote && (
           <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSendToQuickBooks}
+              disabled={isSendingToQb || !!quote.qbInvoiceId}
+              className="gap-1.5">
+              {isSendingToQb ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <BookOpen className="h-4 w-4" />
+              )}
+              {quote.qbInvoiceId ? 'Sent to QuickBooks' : 'Send to QuickBooks'}
+            </Button>
             <Button
               variant="outline"
               size="sm"
