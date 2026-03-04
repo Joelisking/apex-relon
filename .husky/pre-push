@@ -1,0 +1,10 @@
+#!/bin/sh
+# Full build check before push — catches anything tsc alone might miss
+echo "Running frontend build..."
+cd frontend && npm run build
+if [ $? -ne 0 ]; then
+  echo "❌ Frontend build failed. Fix errors before pushing."
+  exit 1
+fi
+
+echo "✅ Build passed. Pushing..."

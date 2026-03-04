@@ -1,0 +1,95 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { SettingsService } from './settings.service';
+import { CreateServiceTypeDto } from './dto/create-service-type.dto';
+import { CreateDropdownOptionDto, UpdateDropdownOptionDto } from './dto/dropdown-option.dto';
+import { Permissions } from '../permissions/permissions.decorator';
+
+@Controller('settings')
+export class SettingsController {
+  constructor(private readonly settingsService: SettingsService) {}
+
+  // ── Service Types ──────────────────────────────────────────────────────────
+
+  @Get('service-types')
+  @Permissions('leads:view')
+  findAllServiceTypes() {
+    return this.settingsService.findAllServiceTypes();
+  }
+
+  @Post('service-types')
+  @Permissions('settings:manage')
+  createServiceType(@Body() dto: CreateServiceTypeDto) {
+    return this.settingsService.createServiceType(dto);
+  }
+
+  @Patch('service-types/:id')
+  @Permissions('settings:manage')
+  updateServiceType(
+    @Param('id') id: string,
+    @Body() dto: Partial<CreateServiceTypeDto>,
+  ) {
+    return this.settingsService.updateServiceType(id, dto);
+  }
+
+  @Delete('service-types/:id')
+  @Permissions('settings:manage')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteServiceType(@Param('id') id: string) {
+    return this.settingsService.deleteServiceType(id);
+  }
+
+  // ── Dropdown Options ───────────────────────────────────────────────────────
+
+  @Get('dropdown-options')
+  @Permissions('leads:view')
+  findDropdownOptions(@Query('category') category?: string) {
+    return this.settingsService.findDropdownOptions(category);
+  }
+
+  @Get('dropdown-options/all')
+  @Permissions('settings:manage')
+  findAllDropdownOptions() {
+    return this.settingsService.findAllDropdownOptions();
+  }
+
+  @Post('dropdown-options')
+  @Permissions('settings:manage')
+  createDropdownOption(@Body() dto: CreateDropdownOptionDto) {
+    return this.settingsService.createDropdownOption(dto);
+  }
+
+  @Patch('dropdown-options/:id')
+  @Permissions('settings:manage')
+  updateDropdownOption(
+    @Param('id') id: string,
+    @Body() dto: UpdateDropdownOptionDto,
+  ) {
+    return this.settingsService.updateDropdownOption(id, dto);
+  }
+
+  @Delete('dropdown-options/:id')
+  @Permissions('settings:manage')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteDropdownOption(@Param('id') id: string) {
+    return this.settingsService.deleteDropdownOption(id);
+  }
+
+  @Post('dropdown-options/reorder')
+  @Permissions('settings:manage')
+  reorderDropdownOptions(
+    @Body() body: { category: string; orderedIds: string[] },
+  ) {
+    return this.settingsService.reorderDropdownOptions(body.category, body.orderedIds);
+  }
+}

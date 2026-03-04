@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"]
+    },
+    "nestjs-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/Users/joel/Documents/NestJsMcp/dist/index.js"],
+      "env": {}
+    }
+  }
+}

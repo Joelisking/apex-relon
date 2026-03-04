@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  # MySQL Database (matching GCP Cloud SQL)
+  mysql:
+    image: mysql:8.0
+    container_name: relon-crm-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql_root_password
+      MYSQL_DATABASE: kh3-db
+      MYSQL_USER: khy_user
+      MYSQL_PASSWORD: khy_password
+    ports:
+      - '3306:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'mysqladmin',
+          'ping',
+          '-h',
+          'localhost',
+          '-u',
+          'root',
+          '-pmysql_root_password',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # NestJS Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: relon-crm-backend
+    restart: unless-stopped
+    ports:
+      - '4000:4000'
+    environment:
+      # Database
+      DATABASE_URL: mysql://khy_user:khy_password@mysql:3306/kh3-db
+
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-relon-crm-super-secret-jwt-key-2026-change-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+
+      # Email
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@relon.com}
+
+      # Frontend
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+
+      # AI
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      AI_DEFAULT_PROVIDER: ${AI_DEFAULT_PROVIDER:-OPENAI}
+
+      # GCP Storage
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+      GCP_STORAGE_BUCKET: ${GCP_STORAGE_BUCKET}
+      GCP_SERVICE_ACCOUNT_KEY_PATH: ${GCP_SERVICE_ACCOUNT_KEY_PATH:-./gcp-service-account-key.json}
+
+      # Server
+      PORT: 4000  # Local dev uses 4000, Cloud Run will use 8080
+      NODE_ENV: development
+    volumes:
+      # Mount service account key if using local file
+      - ./gcp-service-account-key.json:/app/gcp-service-account-key.json:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://localhost:4000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mysql_data:
+    driver: local

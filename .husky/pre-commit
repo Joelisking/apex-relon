@@ -1,0 +1,18 @@
+#!/bin/sh
+# TypeScript type-check — frontend
+echo "Running frontend type check..."
+cd frontend && npx tsc --noEmit
+if [ $? -ne 0 ]; then
+  echo "❌ TypeScript errors in frontend. Fix them before committing."
+  exit 1
+fi
+
+# TypeScript type-check — backend
+echo "Running backend type check..."
+cd ../backend && npx tsc --noEmit --skipLibCheck
+if [ $? -ne 0 ]; then
+  echo "❌ TypeScript errors in backend. Fix them before committing."
+  exit 1
+fi
+
+echo "✅ Type checks passed."

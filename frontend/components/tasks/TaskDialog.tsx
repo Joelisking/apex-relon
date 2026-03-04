@@ -1,0 +1,577 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import {
+  Calendar as CalendarIcon,
+  X,
+  Loader2,
+  Check,
+  User,
+  Search,
+  ChevronDown,
+} from 'lucide-react';
+import { TimePicker } from './TimePicker';
+import { format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { EntityLinkPicker } from './EntityLinkPicker';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { tasksApi, type CreateTaskDto } from '@/lib/api/tasks-client';
+import { type UserResponse } from '@/lib/api/users-client';
+import type { Task } from '@/lib/types';
+import { cn } from '@/lib/utils';
+
+interface TaskDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  editingTask: Task | null;
+  assignableUsers?: UserResponse[];
+  currentUserId?: string;
+  canAssign?: boolean;
+  onSaved: () => void;
+  /** Pre-fill entity link when creating a new task from a record's detail view */
+  defaultEntityType?: string;
+  defaultEntityId?: string;
+}
+
+const PRIORITY_OPTIONS = [
+  {
+    value: 'LOW',
+    label: 'Low',
+    active: 'bg-slate-200 border-slate-400 text-slate-800',
+    inactive:
+      'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 hover:border-slate-300',
+  },
+  {
+    value: 'MEDIUM',
+    label: 'Medium',
+    active: 'bg-amber-100 border-amber-400 text-amber-800',
+    inactive:
+      'bg-amber-50/60 border-amber-100 text-amber-600 hover:bg-amber-50 hover:border-amber-200',
+  },
+  {
+    value: 'HIGH',
+    label: 'High',
+    active: 'bg-orange-100 border-orange-400 text-orange-800',
+    inactive:
+      'bg-orange-50/60 border-orange-100 text-orange-600 hover:bg-orange-50 hover:border-orange-200',
+  },
+  {
+    value: 'URGENT',
+    label: 'Urgent',
+    active: 'bg-red-100 border-red-400 text-red-800',
+    inactive:
+      'bg-red-50/60 border-red-100 text-red-600 hover:bg-red-50 hover:border-red-200',
+  },
+] as const;
+
+const STATUS_OPTIONS = [
+  {
+    value: 'OPEN',
+    label: 'Open',
+    active: 'bg-sky-100 border-sky-400 text-sky-800',
+    inactive:
+      'bg-sky-50/60 border-sky-100 text-sky-600 hover:bg-sky-50 hover:border-sky-200',
+  },
+  {
+    value: 'IN_PROGRESS',
+    label: 'In Progress',
+    active: 'bg-violet-100 border-violet-400 text-violet-800',
+    inactive:
+      'bg-violet-50/60 border-violet-100 text-violet-600 hover:bg-violet-50 hover:border-violet-200',
+  },
+  {
+    value: 'DONE',
+    label: 'Done',
+    active: 'bg-emerald-100 border-emerald-400 text-emerald-800',
+    inactive:
+      'bg-emerald-50/60 border-emerald-100 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200',
+  },
+  {
+    value: 'CANCELLED',
+    label: 'Cancelled',
+    active: 'bg-zinc-200 border-zinc-400 text-zinc-700',
+    inactive:
+      'bg-zinc-50/60 border-zinc-100 text-zinc-500 hover:bg-zinc-100 hover:border-zinc-200',
+  },
+] as const;
+
+/** Determine if the current user can mark a task as done in the dialog */
+function canMarkDone(task: Task | null, currentUserId?: string): boolean {
+  if (!task || !currentUserId) return false;
+  if (task.assignedToId) return task.assignedToId === currentUserId;
+  return task.createdById === currentUserId;
+}
+
+export function TaskDialog({
+  open,
+  onOpenChange,
+  editingTask,
+  assignableUsers = [],
+  currentUserId,
+  canAssign = false,
+  onSaved,
+  defaultEntityType,
+  defaultEntityId,
+}: TaskDialogProps) {
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<
+    CreateTaskDto & { status?: string; completionNote?: string }
+  >({
+    title: '',
+    description: '',
+    dueDate: '',
+    dueTime: '',
+    priority: 'MEDIUM',
+    assignedToId: '',
+    entityType: '',
+    entityId: '',
+  });
+
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignQuery, setAssignQuery] = useState('');
+
+  // Whether the current user is allowed to set DONE in this dialog
+  const allowDone = canMarkDone(editingTask, currentUserId);
+
+  useEffect(() => {
+    if (!open) return;
+    setAssignOpen(false);
+    setAssignQuery('');
+    if (editingTask) {
+      setForm({
+        title: editingTask.title,
+        description: editingTask.description || '',
+        dueDate: editingTask.dueDate
+          ? editingTask.dueDate.split('T')[0]
+          : '',
+        dueTime: editingTask.dueTime || '',
+        priority: editingTask.priority,
+        assignedToId: editingTask.assignedToId || '',
+        entityType: editingTask.entityType || '',
+        entityId: editingTask.entityId || '',
+        status: editingTask.status,
+        completionNote: '',
+      });
+    } else {
+      setForm({
+        title: '',
+        description: '',
+        dueDate: '',
+        dueTime: '',
+        priority: 'MEDIUM',
+        assignedToId: currentUserId || '',
+        entityType: defaultEntityType || '',
+        entityId: defaultEntityId || '',
+      });
+    }
+  }, [
+    open,
+    editingTask,
+    currentUserId,
+    defaultEntityType,
+    defaultEntityId,
+  ]);
+
+  const filteredAssignees = useMemo(() => {
+    if (!assignQuery.trim()) return assignableUsers;
+    const q = assignQuery.toLowerCase();
+    return assignableUsers.filter((u) =>
+      u.name.toLowerCase().includes(q),
+    );
+  }, [assignableUsers, assignQuery]);
+
+  const selectedUser = assignableUsers.find(
+    (u) => u.id === form.assignedToId,
+  );
+
+  const isMarkingDone = form.status === 'DONE' && editingTask?.status !== 'DONE';
+
+  const handleSave = async () => {
+    if (!form.title.trim()) return;
+    // Require completionNote when status is being set to DONE
+    if (isMarkingDone && !form.completionNote?.trim()) return;
+    setSaving(true);
+    try {
+      const payload = {
+        ...form,
+        entityType: form.entityType || undefined,
+        entityId: form.entityId || undefined,
+        assignedToId: form.assignedToId || undefined,
+        dueDate: form.dueDate || undefined,
+        dueTime: form.dueTime || undefined,
+        completionNote:
+          isMarkingDone ? form.completionNote?.trim() : undefined,
+      };
+      if (editingTask) {
+        await tasksApi.update(editingTask.id, payload);
+      } else {
+        await tasksApi.create(payload);
+      }
+      onOpenChange(false);
+      onSaved();
+    } catch (err) {
+      console.error('Failed to save task', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl p-0 gap-0 overflow-visible">
+        <DialogHeader className="sr-only">
+          <DialogTitle>
+            {editingTask ? 'Edit Task' : 'New Task'}
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Body */}
+        <div className="px-6 pt-6 pb-5 space-y-4">
+          {/* Title */}
+          <input
+            value={form.title}
+            onChange={(e) =>
+              setForm({ ...form, title: e.target.value })
+            }
+            placeholder="Task title..."
+            className="w-full text-[17px] font-semibold bg-transparent outline-none placeholder:text-muted-foreground/40 text-foreground leading-snug"
+            autoFocus
+          />
+
+          {/* Description */}
+          <Textarea
+            value={form.description}
+            onChange={(e) =>
+              setForm({ ...form, description: e.target.value })
+            }
+            placeholder="Add a description..."
+            className="resize-none text-sm border-dashed min-h-16 text-muted-foreground placeholder:text-muted-foreground/40"
+            rows={2}
+          />
+
+          <div className="border-t border-dashed border-border/50" />
+
+          {/* Priority */}
+          <div className="space-y-2">
+            <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
+              Priority
+            </p>
+            <div className="flex gap-1.5">
+              {PRIORITY_OPTIONS.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() =>
+                    setForm({ ...form, priority: p.value })
+                  }
+                  className={cn(
+                    'flex-1 h-7 rounded-md border text-[11px] font-semibold uppercase tracking-[0.05em] transition-all',
+                    form.priority === p.value ? p.active : p.inactive,
+                  )}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Status (edit mode only) */}
+          {editingTask && (
+            <div className="space-y-2">
+              <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
+                Status
+              </p>
+              <div className="flex gap-1.5">
+                {STATUS_OPTIONS.filter((s) => {
+                  if (s.value === 'IN_PROGRESS' || s.value === 'DONE') return allowDone;
+                  return true;
+                }).map((s) => (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        status: s.value,
+                        completionNote: s.value !== 'DONE' ? '' : form.completionNote,
+                      })
+                    }
+                    className={cn(
+                      'flex-1 h-7 rounded-md border text-[10px] font-semibold uppercase tracking-[0.04em] transition-all',
+                      form.status === s.value ? s.active : s.inactive,
+                    )}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Completion note — shown when editing task and switching to DONE */}
+              {isMarkingDone && (
+                <div className="space-y-1.5 pt-1">
+                  <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
+                    Result / Completion Note
+                    <span className="ml-1 text-destructive">*</span>
+                  </p>
+                  <Textarea
+                    value={form.completionNote ?? ''}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        completionNote: e.target.value,
+                      })
+                    }
+                    placeholder="Describe the outcome or result..."
+                    className="resize-none min-h-20 text-sm"
+                    rows={3}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Due Date + Time */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
+                Due Date
+              </p>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal h-9 text-sm',
+                      !form.dueDate && 'text-muted-foreground',
+                    )}>
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0" />
+                    {form.dueDate
+                      ? format(
+                          new Date(form.dueDate + 'T00:00:00'),
+                          'd MMM yyyy',
+                        )
+                      : 'Set date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={
+                      form.dueDate
+                        ? new Date(form.dueDate + 'T00:00:00')
+                        : undefined
+                    }
+                    onSelect={(date) =>
+                      setForm({
+                        ...form,
+                        dueDate: date
+                          ? format(date, 'yyyy-MM-dd')
+                          : '',
+                      })
+                    }
+                    initialFocus
+                  />
+                  {form.dueDate && (
+                    <div className="border-t p-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs text-muted-foreground"
+                        onClick={() =>
+                          setForm({ ...form, dueDate: '' })
+                        }>
+                        <X className="mr-1 h-3 w-3" />
+                        Clear date
+                      </Button>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
+                Due Time
+              </p>
+              <TimePicker
+                value={form.dueTime ?? ''}
+                onChange={(v) => setForm({ ...form, dueTime: v })}
+              />
+            </div>
+          </div>
+
+          {/* Assign To */}
+          {canAssign && assignableUsers.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
+                Assign To
+              </p>
+              <Popover
+                open={assignOpen}
+                onOpenChange={(v) => {
+                  setAssignOpen(v);
+                  if (!v) setAssignQuery('');
+                }}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      'w-full flex items-center gap-2 px-3 h-9 rounded-md border border-input bg-background text-sm text-left transition-colors hover:bg-muted/40',
+                      !selectedUser && 'text-muted-foreground',
+                    )}>
+                    {selectedUser ? (
+                      <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                        {selectedUser.name.charAt(0).toUpperCase()}
+                      </div>
+                    ) : (
+                      <User className="h-3.5 w-3.5 shrink-0" />
+                    )}
+                    <span className="flex-1 truncate">
+                      {selectedUser
+                        ? `${selectedUser.name}${selectedUser.id === currentUserId ? ' (me)' : ''}`
+                        : 'Assign to someone...'}
+                    </span>
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="p-0 overflow-hidden flex flex-col"
+                  style={{
+                    width: 'var(--radix-popover-trigger-width)',
+                    maxHeight: '260px',
+                  }}
+                  align="start"
+                  sideOffset={4}>
+                  <div className="flex items-center gap-2 px-3 h-9 border-b border-border/60 shrink-0">
+                    <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <input
+                      autoFocus
+                      value={assignQuery}
+                      onChange={(e) => setAssignQuery(e.target.value)}
+                      placeholder="Search people..."
+                      className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                    />
+                    {assignQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setAssignQuery('')}>
+                        <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                      </button>
+                    )}
+                  </div>
+                  <div
+                    className="overflow-y-auto flex-1 py-1"
+                    onWheel={(e) => e.stopPropagation()}>
+                    {/* Unassigned */}
+                    {!assignQuery && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm({ ...form, assignedToId: '' });
+                          setAssignOpen(false);
+                        }}
+                        className={cn(
+                          'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-muted/50',
+                          !form.assignedToId && 'bg-muted/30',
+                        )}>
+                        <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground/25 flex items-center justify-center shrink-0">
+                          <User className="h-2.5 w-2.5 text-muted-foreground/40" />
+                        </div>
+                        <span className="flex-1 text-muted-foreground">
+                          Unassigned
+                        </span>
+                        {!form.assignedToId && (
+                          <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                        )}
+                      </button>
+                    )}
+                    {filteredAssignees.map((u) => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => {
+                          setForm({ ...form, assignedToId: u.id });
+                          setAssignOpen(false);
+                          setAssignQuery('');
+                        }}
+                        className={cn(
+                          'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-muted/50',
+                          form.assignedToId === u.id && 'bg-muted/30',
+                        )}>
+                        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                          {u.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="flex-1 truncate">
+                          {u.name}
+                          {u.id === currentUserId ? ' (me)' : ''}
+                        </span>
+                        {form.assignedToId === u.id && (
+                          <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                    {filteredAssignees.length === 0 && (
+                      <div className="py-6 text-center text-sm text-muted-foreground">
+                        No users found
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+
+          {/* Entity Link */}
+          <EntityLinkPicker
+            entityType={form.entityType ?? ''}
+            entityId={form.entityId ?? ''}
+            onChange={(type, id) =>
+              setForm({ ...form, entityType: type, entityId: id })
+            }
+          />
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-border/60 bg-muted/20">
+          <span className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/40 font-medium">
+            {editingTask ? 'Editing task' : 'New task'}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleSave}
+              disabled={
+                saving ||
+                !form.title.trim() ||
+                (isMarkingDone && !form.completionNote?.trim())
+              }>
+              {saving && (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              )}
+              {editingTask ? 'Update task' : 'Create task'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -1,0 +1,761 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Lead {
+  id                  String              @id @default(uuid())
+  contactName         String
+  company             String
+  position            String?
+  email               String?
+  phone               String?
+  expectedValue       Float
+  stage               String
+  urgency             String
+  source              String?
+  channel             String?
+  likelyStartDate     DateTime?
+  notes               String?
+  aiRiskLevel         String?
+  aiSummary           String?
+  aiRecommendations   String?
+  projectName         String?
+  contractedValue     Float?
+  quoteSentAt         DateTime?
+  dealClosedAt        DateTime?
+  assignedToId        String?
+  designerId          String?
+  qsId                String?
+  clientId            String?
+  serviceTypeId       String?
+  convertedToClientId String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  executingCompany    String?
+  activities          Activity[]
+  contacts            LeadContact[]
+  files               File[]
+  reps                LeadRep[]
+  assignedTo          User?               @relation("LeadAssignments", fields: [assignedToId], references: [id])
+  client              Client?             @relation("ClientLeads", fields: [clientId], references: [id])
+  convertedToClient   Client?             @relation("LeadConversion", fields: [convertedToClientId], references: [id])
+  designer            User?               @relation("LeadDesignerAssignments", fields: [designerId], references: [id])
+  qs                  User?               @relation("LeadQSAssignments", fields: [qsId], references: [id])
+  serviceType         ServiceType?        @relation(fields: [serviceTypeId], references: [id])
+  project             Project?
+  stageHistory        StageHistory[]
+  quotes              Quote[]
+  leadFormSubmission  LeadFormSubmission?
+
+  @@index([assignedToId])
+  @@index([designerId])
+  @@index([qsId])
+  @@index([clientId])
+  @@index([serviceTypeId])
+  @@index([stage])
+  @@index([updatedAt])
+  @@index([likelyStartDate])
+  @@index([quoteSentAt])
+  @@index([dealClosedAt])
+  @@map("leads")
+}
+
+model LeadRep {
+  id        String   @id @default(uuid())
+  leadId    String
+  name      String
+  phone     String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("lead_reps")
+}
+
+model ServiceType {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  leads     Lead[]
+
+  @@map("service_types")
+}
+
+model Activity {
+  id           String   @id @default(uuid())
+  leadId       String?
+  clientId     String?
+  projectId    String?
+  type         String
+  activityDate DateTime
+  activityTime String
+  reason       String
+  notes        String?
+  meetingType  String?
+  userId       String
+  createdAt    DateTime @default(now())
+  client       Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  lead         Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  project      Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user         User     @relation("UserActivities", fields: [userId], references: [id])
+
+  @@index([leadId, createdAt])
+  @@index([clientId, createdAt])
+  @@index([projectId])
+  @@index([activityDate])
+  @@index([createdAt])
+  @@map("activities")
+}
+
+model File {
+  id           String   @id @default(uuid())
+  leadId       String?
+  clientId     String?
+  projectId    String?
+  fileName     String
+  originalName String
+  mimeType     String
+  fileSize     Int
+  category     String
+  gcpPath      String
+  uploadedById String
+  createdAt    DateTime @default(now())
+  client       Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  lead         Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  project      Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy   User     @relation("FileUploads", fields: [uploadedById], references: [id])
+
+  @@index([leadId])
+  @@index([clientId])
+  @@index([projectId])
+  @@index([createdAt])
+  @@map("files")
+}
+
+model StageHistory {
+  id        String   @id @default(uuid())
+  leadId    String
+  fromStage String?
+  toStage   String
+  changedBy String
+  createdAt DateTime @default(now())
+  user      User     @relation("StageChanges", fields: [changedBy], references: [id])
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([toStage])
+  @@index([createdAt])
+  @@map("stage_history")
+}
+
+model Client {
+  id                   String     @id @default(uuid())
+  name                 String
+  email                String?
+  phone                String?
+  address              String?
+  website              String?
+  individualName       String?
+  individualType       String?
+  segment              String
+  industry             String
+  lifetimeRevenue      Float      @default(0)
+  status               String     @default("Active")
+  healthScore          Int?
+  aiHealthSummary      String?
+  aiUpsellStrategy     String?
+  statusOverride       Boolean    @default(false)
+  statusOverrideReason String?
+  statusLastCalculated DateTime?
+  lastContactDate      DateTime?
+  totalProjectCount    Int        @default(0)
+  activeProjectCount   Int        @default(0)
+  accountManagerId     String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  activities           Activity[]
+  accountManager       User?      @relation("ClientAssignments", fields: [accountManagerId], references: [id])
+  contacts             Contact[]
+  files                File[]
+  leads                Lead[]     @relation("ClientLeads")
+  convertedFromLeads   Lead[]     @relation("LeadConversion")
+  projects             Project[]
+  quotes               Quote[]
+
+  @@index([segment])
+  @@index([status])
+  @@index([accountManagerId])
+  @@map("clients")
+}
+
+model Project {
+  id                String                 @id @default(uuid())
+  name              String
+  clientId          String
+  leadId            String?                @unique
+  status            String
+  contractedValue   Float
+  endOfProjectValue Float?
+  startDate         DateTime?
+  completedDate     DateTime?
+  description       String?
+  estimatedDueDate  DateTime?
+  closedDate        DateTime?
+  riskStatus        String?                @default("On Track")
+  estimatedRevenue  Float?
+  totalCost         Float                  @default(0)
+  projectManagerId  String?
+  designerId        String?
+  qsId              String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  executingCompany  String?
+  activities        Activity[]
+  costLogs          CostLog[]
+  files             File[]
+  statusHistory     ProjectStatusHistory[]
+  client            Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  designer          User?                  @relation("ProjectDesignerAssignments", fields: [designerId], references: [id])
+  lead              Lead?                  @relation(fields: [leadId], references: [id])
+  projectManager    User?                  @relation("ProjectManagement", fields: [projectManagerId], references: [id])
+  qs                User?                  @relation("ProjectQSAssignments", fields: [qsId], references: [id])
+
+  @@index([clientId])
+  @@index([leadId])
+  @@index([status])
+  @@index([status, completedDate])
+  @@index([contractedValue])
+  @@index([designerId])
+  @@index([qsId])
+  @@map("projects")
+}
+
+model CostLog {
+  id          String   @id @default(uuid())
+  projectId   String
+  date        DateTime
+  category    String
+  description String
+  amount      Float
+  createdBy   String
+  createdAt   DateTime @default(now())
+  user        User     @relation("CostLogEntries", fields: [createdBy], references: [id])
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("cost_logs")
+}
+
+model ProjectStatusHistory {
+  id         String   @id @default(uuid())
+  projectId  String
+  fromStatus String?
+  toStatus   String
+  changedBy  String
+  createdAt  DateTime @default(now())
+  user       User     @relation("ProjectStatusChanges", fields: [changedBy], references: [id])
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([toStatus])
+  @@index([createdAt])
+  @@map("project_status_history")
+}
+
+model User {
+  id                      String                  @id @default(uuid())
+  email                   String                  @unique
+  password                String?
+  name                    String
+  role                    String
+  status                  String                  @default("Active")
+  isEmailVerified         Boolean                 @default(false)
+  emailVerificationToken  String?                 @unique
+  resetPasswordToken      String?                 @unique
+  resetPasswordExpires    DateTime?
+  lastLogin               DateTime?
+  teamName                String?
+  teamId                  String?
+  managerId               String?
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  activities              Activity[]              @relation("UserActivities")
+  targetedAudits          AuditLog[]              @relation("AuditTarget")
+  auditLogs               AuditLog[]              @relation("AuditActor")
+  assignedClients         Client[]                @relation("ClientAssignments")
+  costLogEntries          CostLog[]               @relation("CostLogEntries")
+  uploadedFiles           File[]                  @relation("FileUploads")
+  assignedLeads           Lead[]                  @relation("LeadAssignments")
+  designedLeads           Lead[]                  @relation("LeadDesignerAssignments")
+  qsLeads                 Lead[]                  @relation("LeadQSAssignments")
+  notifications           Notification[]          @relation("UserNotifications")
+  notificationPreferences NotificationPreference? @relation("UserNotificationPreferences")
+  tasks                   Task[]                  @relation("TaskAssignments")
+  createdTasks            Task[]                  @relation("TaskCreation")
+  quotes                  Quote[]                 @relation("QuoteCreation")
+  workflowRules           WorkflowRule[]          @relation("WorkflowRuleCreation")
+  leadForms               LeadForm[]              @relation("LeadFormAssignments")
+  projectStatusChanges    ProjectStatusHistory[]  @relation("ProjectStatusChanges")
+  designedProjects        Project[]               @relation("ProjectDesignerAssignments")
+  managedProjects         Project[]               @relation("ProjectManagement")
+  qsProjects              Project[]               @relation("ProjectQSAssignments")
+  stageChanges            StageHistory[]          @relation("StageChanges")
+  managedTeams            Team[]                  @relation("ManagerTeams")
+  manager                 User?                   @relation("ManagerTeam", fields: [managerId], references: [id])
+  teamMembers             User[]                  @relation("ManagerTeam")
+  team                    Team?                   @relation("TeamMembers", fields: [teamId], references: [id])
+  dashboardLayout         DashboardLayout?        @relation("UserDashboardLayout")
+
+  @@map("users")
+}
+
+model DashboardLayout {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  widgets   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation("UserDashboardLayout", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("dashboard_layouts")
+}
+
+model AISettings {
+  id                       String   @id @default(uuid())
+  defaultProvider          String   @default("anthropic")
+  leadRiskProvider         String?
+  clientHealthProvider     String?
+  executiveSummaryProvider String?
+  chatProvider             String?
+  anthropicApiKey          String?
+  openaiApiKey             String?
+  geminiApiKey             String?
+  anthropicKeyValid        Boolean  @default(false)
+  openaiKeyValid           Boolean  @default(false)
+  geminiKeyValid           Boolean  @default(false)
+  leadRiskPrompt           String?
+  clientHealthPrompt       String?
+  executiveSummaryPrompt   String?
+  upsellPrompt             String?
+  chatPrompt               String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@map("ai_settings")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  userId       String
+  action       String
+  targetUserId String?
+  details      Json?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  targetUser   User?    @relation("AuditTarget", fields: [targetUserId], references: [id])
+  user         User     @relation("AuditActor", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([targetUserId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model RolePermission {
+  id         String   @id @default(uuid())
+  role       String
+  permission String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([role, permission])
+  @@index([role])
+  @@map("role_permissions")
+}
+
+model Team {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  type        String   @default("SALES")
+  managerId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  manager     User?    @relation("ManagerTeams", fields: [managerId], references: [id])
+  members     User[]   @relation("TeamMembers")
+
+  @@map("teams")
+}
+
+model PipelineStage {
+  id           String   @id @default(uuid())
+  name         String
+  pipelineType String   @default("prospective_project")
+  color        String   @default("bg-gray-500")
+  lightColor   String   @default("bg-gray-50")
+  border       String   @default("border-gray-200")
+  probability  Int      @default(0)
+  sortOrder    Int
+  isSystem     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([name, pipelineType])
+  @@index([pipelineType])
+  @@map("pipeline_stages")
+}
+
+model DropdownOption {
+  id        String   @id @default(uuid())
+  category  String
+  value     String
+  label     String
+  metadata  Json?
+  sortOrder Int      @default(0)
+  isSystem  Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([category, value])
+  @@index([category])
+  @@map("dropdown_options")
+}
+
+model Notification {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  type       String
+  title      String
+  message    String    @db.Text
+  entityType String?
+  entityId   String?
+  read       Boolean   @default(false)
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id               String  @id @default(uuid())
+  userId           String  @unique
+  user             User    @relation("UserNotificationPreferences", fields: [userId], references: [id], onDelete: Cascade)
+  taskAssigned     Boolean @default(true)
+  taskDue          Boolean @default(true)
+  taskOverdue      Boolean @default(true)
+  leadStale        Boolean @default(true)
+  leadStageChanged Boolean @default(true)
+  projectAtRisk    Boolean @default(true)
+  clientDormant    Boolean @default(true)
+  emailDigest      Boolean @default(true)
+
+  @@map("notification_preferences")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  label       String
+  description String?
+  isBuiltIn   Boolean  @default(false)
+  color       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model Task {
+  id               String    @id @default(uuid())
+  title            String
+  description      String?
+  dueDate          DateTime?
+  dueTime          String?
+  priority         String    @default("MEDIUM")
+  status           String    @default("OPEN")
+  entityType       String?
+  entityId         String?
+  assignedToId     String?
+  createdById      String
+  completedAt      DateTime?
+  reminderAt       DateTime?
+  completionNote   String?
+  uncompleteReason String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  assignedTo       User?     @relation("TaskAssignments", fields: [assignedToId], references: [id])
+  createdBy        User      @relation("TaskCreation", fields: [createdById], references: [id])
+
+  @@index([assignedToId])
+  @@index([createdById])
+  @@index([status])
+  @@index([dueDate])
+  @@index([entityType, entityId])
+  @@map("tasks")
+}
+
+model Product {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  defaultPrice Float?
+  unit         String?
+  category     String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("products")
+}
+
+model Quote {
+  id                 String          @id @default(uuid())
+  quoteNumber        Int             @default(autoincrement())
+  leadId             String?
+  clientId           String?
+  status             String          @default("DRAFT")
+  validUntil         DateTime?
+  notes              String?         @db.Text
+  termsAndConditions String?         @db.Text
+  taxRate            Float           @default(0)
+  discount           Float           @default(0)
+  subtotal           Float           @default(0)
+  taxAmount          Float           @default(0)
+  total              Float           @default(0)
+  currency           String          @default("USD")
+  sentAt             DateTime?
+  acceptedAt         DateTime?
+  rejectedAt         DateTime?
+  rejectionReason    String?
+  createdById        String
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  lead               Lead?           @relation(fields: [leadId], references: [id])
+  client             Client?         @relation(fields: [clientId], references: [id])
+  createdBy          User            @relation("QuoteCreation", fields: [createdById], references: [id])
+  lineItems          QuoteLineItem[]
+
+  @@index([leadId])
+  @@index([clientId])
+  @@index([status])
+  @@map("quotes")
+}
+
+model QuoteLineItem {
+  id          String   @id @default(uuid())
+  quoteId     String
+  description String
+  quantity    Float    @default(1)
+  unitPrice   Float    @default(0)
+  lineTotal   Float    @default(0)
+  taxable     Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([quoteId])
+  @@map("quote_line_items")
+}
+
+model QuoteSettings {
+  id                    String   @id @default(uuid())
+  companyName           String   @default("")
+  companyAddress        String   @default("")
+  companyPhone          String   @default("")
+  companyEmail          String   @default("")
+  companyWebsite        String   @default("")
+  logoUrl               String?
+  quoteNumberPrefix     String   @default("Q-")
+  defaultTaxRate        Float    @default(0)
+  defaultValidityDays   Int      @default(30)
+  defaultCurrency       String   @default("USD")
+  defaultNotes          String   @default("")
+  defaultTerms          String   @default("")
+  accentColor           String   @default("#2563eb")
+  showTaxLine           Boolean  @default(true)
+  showDiscountLine      Boolean  @default(true)
+  showSignatureBlock    Boolean  @default(true)
+  enableLeadIntegration Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("quote_settings")
+}
+
+model WorkflowRule {
+  id          String              @id @default(uuid())
+  name        String
+  trigger     String
+  conditions  Json
+  actions     Json
+  isActive    Boolean             @default(true)
+  createdById String
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  createdBy   User                @relation("WorkflowRuleCreation", fields: [createdById], references: [id])
+  executions  WorkflowExecution[]
+
+  @@index([trigger])
+  @@index([isActive])
+  @@map("workflow_rules")
+}
+
+model WorkflowExecution {
+  id         String       @id @default(uuid())
+  ruleId     String
+  entityType String
+  entityId   String
+  result     String
+  details    Json?
+  executedAt DateTime     @default(now())
+  rule       WorkflowRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@index([executedAt])
+  @@map("workflow_executions")
+}
+
+model CustomFieldDefinition {
+  id         String             @id @default(uuid())
+  entityType String
+  label      String
+  fieldKey   String
+  fieldType  String
+  options    Json?
+  required   Boolean            @default(false)
+  sortOrder  Int                @default(0)
+  isActive   Boolean            @default(true)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  values     CustomFieldValue[]
+
+  @@unique([entityType, fieldKey])
+  @@index([entityType])
+  @@map("custom_field_definitions")
+}
+
+model CustomFieldValue {
+  id           String                @id @default(uuid())
+  definitionId String
+  entityType   String
+  entityId     String
+  value        Json?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  definition   CustomFieldDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+
+  @@unique([definitionId, entityType, entityId])
+  @@index([entityType, entityId])
+  @@map("custom_field_values")
+}
+
+model TenantSettings {
+  id                String   @id @default("singleton")
+  clientDisplayMode String   @default("COMPANY")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("tenant_settings")
+}
+
+model ForecastTarget {
+  id           String   @id @default(uuid())
+  month        Int // 1-12
+  year         Int // e.g. 2026
+  targetAmount Float
+  currency     String   @default("USD")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([month, year])
+  @@map("forecast_targets")
+}
+
+model Contact {
+  id              String   @id @default(uuid())
+  clientId        String
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String?
+  jobTitle        String?
+  department      String?
+  linkedInUrl     String?
+  isPrimary       Boolean  @default(false)
+  isDecisionMaker Boolean  @default(false)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  client Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  leads  LeadContact[]
+
+  @@index([clientId])
+  @@map("contacts")
+}
+
+model LeadContact {
+  id        String   @id @default(uuid())
+  leadId    String
+  contactId String
+  createdAt DateTime @default(now())
+
+  lead    Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, contactId])
+  @@index([leadId])
+  @@index([contactId])
+  @@map("lead_contacts")
+}
+
+model LeadForm {
+  id               String   @id @default(uuid())
+  name             String
+  description      String?
+  fields           Json
+  targetStage      String
+  assignToUserId   String?
+  apiKey           String   @unique @default(uuid())
+  isActive         Boolean  @default(true)
+  submissionsCount Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  assignTo    User?                @relation("LeadFormAssignments", fields: [assignToUserId], references: [id], onDelete: SetNull)
+  submissions LeadFormSubmission[]
+
+  @@map("lead_forms")
+}
+
+model LeadFormSubmission {
+  id          String   @id @default(uuid())
+  formId      String
+  leadId      String?  @unique
+  data        Json
+  ipAddress   String?
+  submittedAt DateTime @default(now())
+
+  form LeadForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  lead Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([formId])
+  @@index([submittedAt])
+  @@map("lead_form_submissions")
+}
