@@ -1,105 +1,55 @@
-# ============================================
-# Production-Ready Multi-Stage Dockerfile
-# NestJS + Prisma + MySQL
-# ============================================
-
-# ============================================
-# Stage 1: Dependencies
-# ============================================
-FROM node:20-slim AS dependencies
-
-WORKDIR /app
-
-# Install OpenSSL for Prisma
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    openssl \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy package files
-COPY package*.json ./
-
-# Install ALL dependencies (including dev dependencies for build)
-RUN npm ci && npm cache clean --force
-
-# ============================================
-# Stage 2: Builder
-# ============================================
+# ─── Stage 1: Build ───────────────────────────────────────────────────────────
 FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Install OpenSSL for Prisma
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openssl \
+    openssl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependencies from previous stage
-COPY --from=dependencies /app/node_modules ./node_modules
+# Install all deps (including dev for build + prisma CLI)
+COPY package*.json ./
+RUN npm ci
 
-# Copy application source
-COPY . .
-
-# Generate Prisma Client
+# Generate Prisma client
+COPY prisma ./prisma
 RUN npx prisma generate
 
-# Build the application
+# Build NestJS
+COPY . .
 RUN npm run build
 
-# Prune dev dependencies
-RUN npm prune --production
-
-# ============================================
-# Stage 3: Production
-# ============================================
+# ─── Stage 2: Production ──────────────────────────────────────────────────────
 FROM node:20-slim AS production
-
-# Set to production
-ENV NODE_ENV=production
 
 WORKDIR /app
 
-# Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    dumb-init \
-    openssl \
-    ca-certificates \
+    openssl ca-certificates dumb-init \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
-RUN groupadd -g 1001 nodejs && \
-    useradd -r -u 1001 -g nodejs nestjs
+# Non-root user
+RUN groupadd -g 1001 nodejs && useradd -r -u 1001 -g nodejs nestjs
 
-# Copy production dependencies
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
+# Install production deps + prisma CLI (needed for migrate deploy at startup)
+COPY package*.json ./
+RUN npm ci --omit=dev && npm install prisma
 
-# Copy Prisma schema and generated client
-COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+# Copy generated Prisma client and schema
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --chown=nestjs:nodejs prisma ./prisma
 
-# Copy built application
+# Copy compiled app
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 
-# Copy package.json for metadata
-COPY --chown=nestjs:nodejs package*.json ./
-
-# Switch to non-root user
 USER nestjs
 
-# Expose port
+ENV NODE_ENV=production
 EXPOSE 8080
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD node -e "const http = require('http'); \
-    const port = process.env.PORT || 8080; \
-    http.get('http://localhost:' + port + '/api/health', (res) => { \
-      process.exit(res.statusCode === 200 ? 0 : 1); \
-    }).on('error', () => process.exit(1));"
+  CMD node -e "const http=require('http');http.get('http://localhost:'+(process.env.PORT||8080)+'/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1));"
 
-# Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
-
-# Run migrations and start the application
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
