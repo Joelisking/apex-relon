@@ -155,7 +155,7 @@ export default function ModernClientsView({
     try {
       await api.clients.bulkUpdate(
         selectedClients.map((c) => c.id),
-        { accountManagerId: bulkManagerId },
+        { accountManager: bulkManagerId },
       );
       setSelectedClients([]);
       setBulkManagerDialogOpen(false);
