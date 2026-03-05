@@ -398,24 +398,6 @@ export default function CustomFieldsAdmin() {
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">
-                Field Key *
-              </label>
-              <Input
-                value={form.fieldKey}
-                onChange={(e) =>
-                  setForm({ ...form, fieldKey: e.target.value })
-                }
-                placeholder="e.g. budget_range"
-                className="mt-1"
-                disabled={!!editingDef}
-              />
-              <p className="text-[10px] text-muted-foreground/60 mt-1">
-                Used as the identifier in the database. Cannot be
-                changed after creation.
-              </p>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">
                 Field Type
               </label>
               <Select
@@ -479,9 +461,7 @@ export default function CustomFieldsAdmin() {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={
-                saving || !form.label.trim() || !form.fieldKey.trim()
-              }>
+              disabled={saving || !form.label.trim()}>
               {saving && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
