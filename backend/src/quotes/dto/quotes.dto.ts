@@ -115,6 +115,10 @@ export class CreateQuoteDto {
   clientId?: string;
 
   @IsOptional()
+  @IsString()
+  projectId?: string;
+
+  @IsOptional()
   @IsDateString()
   validUntil?: string;
 
@@ -153,6 +157,10 @@ export class UpdateQuoteDto {
   @IsOptional()
   @IsString()
   clientId?: string;
+
+  @IsOptional()
+  @IsString()
+  projectId?: string;
 
   @IsOptional()
   @IsString()

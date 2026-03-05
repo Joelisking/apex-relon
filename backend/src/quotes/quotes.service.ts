@@ -34,11 +34,13 @@ export class QuotesService {
   async findAll(filters: {
     leadId?: string;
     clientId?: string;
+    projectId?: string;
     status?: string;
   }) {
     const where: Record<string, unknown> = {};
     if (filters.leadId) where.leadId = filters.leadId;
     if (filters.clientId) where.clientId = filters.clientId;
+    if (filters.projectId) where.projectId = filters.projectId;
     if (filters.status) where.status = filters.status;
 
     return this.prisma.quote.findMany({
@@ -48,6 +50,7 @@ export class QuotesService {
           select: { id: true, contactName: true, company: true, stage: true },
         },
         client: { select: { id: true, name: true } },
+        project: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true, email: true } },
         lineItems: { orderBy: { sortOrder: 'asc' } },
       },
@@ -69,6 +72,7 @@ export class QuotesService {
           },
         },
         client: { select: { id: true, name: true, email: true } },
+        project: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true, email: true } },
         lineItems: { orderBy: { sortOrder: 'asc' } },
       },
@@ -101,6 +105,7 @@ export class QuotesService {
       data: {
         leadId: dto.leadId,
         clientId: dto.clientId,
+        projectId: dto.projectId,
         validUntil: dto.validUntil
           ? new Date(dto.validUntil)
           : undefined,
@@ -122,6 +127,7 @@ export class QuotesService {
           select: { id: true, contactName: true, company: true, stage: true },
         },
         client: { select: { id: true, name: true } },
+        project: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true, email: true } },
         lineItems: { orderBy: { sortOrder: 'asc' } },
       },
@@ -136,6 +142,7 @@ export class QuotesService {
     const isContentEdit =
       dto.leadId !== undefined ||
       dto.clientId !== undefined ||
+      dto.projectId !== undefined ||
       dto.validUntil !== undefined ||
       dto.notes !== undefined ||
       dto.termsAndConditions !== undefined ||
@@ -153,6 +160,7 @@ export class QuotesService {
     const data: Record<string, unknown> = {};
     if (dto.leadId !== undefined) data.leadId = dto.leadId;
     if (dto.clientId !== undefined) data.clientId = dto.clientId;
+    if (dto.projectId !== undefined) data.projectId = dto.projectId;
     if (dto.validUntil) data.validUntil = new Date(dto.validUntil);
     if (dto.notes !== undefined) data.notes = dto.notes;
     if (dto.termsAndConditions !== undefined)
@@ -170,6 +178,7 @@ export class QuotesService {
         select: { id: true, contactName: true, company: true, stage: true },
       },
       client: { select: { id: true, name: true } },
+      project: { select: { id: true, name: true } },
       createdBy: { select: { id: true, name: true, email: true } },
       lineItems: { orderBy: { sortOrder: 'asc' } },
     } as const;

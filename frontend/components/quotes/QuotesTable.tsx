@@ -104,10 +104,12 @@ export default function QuotesTable({
               </td>
               <td className="px-3 py-2.5">
                 <p className="text-sm font-medium">
-                  {quote.lead?.company || quote.client?.name || '—'}
+                  {quote.project?.name || quote.lead?.company || quote.client?.name || '—'}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {quote.lead?.contactName || quote.client?.email || ''}
+                  {quote.project
+                    ? quote.client?.name || ''
+                    : quote.lead?.contactName || quote.client?.email || ''}
                 </p>
               </td>
               <td className="px-3 py-2.5 hidden md:table-cell">

@@ -676,6 +676,8 @@ export interface Quote {
   } | null;
   clientId?: string | null;
   client?: { id: string; name: string; email?: string } | null;
+  projectId?: string | null;
+  project?: { id: string; name: string } | null;
   status: string;
   validUntil?: string | null;
   notes?: string | null;

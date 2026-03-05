@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { useNumericInput } from './use-numeric-input';
 import QuoteRecipientPicker from './QuoteRecipientPicker';
 import QuoteLineItemsTable from './QuoteLineItemsTable';
-import type { Lead, Client, Product, QuoteSettings } from '@/lib/types';
+import type { Lead, Client, Project, Product, QuoteSettings } from '@/lib/types';
 import type { QuoteFormState, LineItemRow } from './quote-editor-types';
 
 const LABEL_CLASS =
@@ -24,6 +24,7 @@ interface QuoteEditorFormProps {
   products: Product[];
   leads: Lead[];
   clients: Client[];
+  projects: Project[];
   onChange: (form: QuoteFormState) => void;
   onLineItemsChange: (items: LineItemRow[]) => void;
 }
@@ -35,6 +36,7 @@ export default function QuoteEditorForm({
   products,
   leads,
   clients,
+  projects,
   onChange,
   onLineItemsChange,
 }: QuoteEditorFormProps) {
@@ -46,6 +48,7 @@ export default function QuoteEditorForm({
         form={form}
         leads={leads}
         clients={clients}
+        projects={projects}
         onChange={onChange}
       />
 

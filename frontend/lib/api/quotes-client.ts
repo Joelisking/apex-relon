@@ -4,6 +4,7 @@ import type { Quote, Product, QuoteSettings } from '../types';
 export interface CreateQuoteDto {
   leadId?: string;
   clientId?: string;
+  projectId?: string;
   validUntil?: string;
   notes?: string;
   termsAndConditions?: string;
@@ -27,6 +28,7 @@ export const quotesApi = {
   getAll: (filters?: {
     leadId?: string;
     clientId?: string;
+    projectId?: string;
     status?: string;
   }) => {
     const params = new URLSearchParams();

@@ -24,6 +24,7 @@ import {
 import { format, differenceInDays } from 'date-fns';
 import { CostLogsSection } from './CostLogsSection';
 import { LinkedTasksSection } from '../tasks/LinkedTasksSection';
+import { LinkedQuotesSection } from '../quotes/LinkedQuotesSection';
 import { ProjectActivityTimeline } from './ProjectActivityTimeline';
 import { ProjectFileUploadSection } from './ProjectFileUploadSection';
 import { EditProjectDialog } from './EditProjectDialog';
@@ -596,6 +597,11 @@ export function ProjectDetailDialog({
                 entityType="PROJECT"
                 entityId={project.id}
               />
+
+              <hr className="border-border/40" />
+
+              {/* Quotes */}
+              <LinkedQuotesSection projectId={project.id} />
             </div>
           </div>
         </div>

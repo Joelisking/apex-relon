@@ -232,6 +232,7 @@ model Project {
   qs                User?                  @relation("ProjectQSAssignments", fields: [qsId], references: [id])
   timeEntries       TimeEntry[]            @relation("ProjectTimeEntries")
   budget            ProjectBudget?         @relation("ProjectBudget")
+  quotes            Quote[]                @relation("ProjectQuotes")
 
   @@index([clientId])
   @@index([leadId])
@@ -534,6 +535,7 @@ model Quote {
   quoteNumber        Int             @default(autoincrement())
   leadId             String?
   clientId           String?
+  projectId          String?
   status             String          @default("DRAFT")
   validUntil         DateTime?
   notes              String?         @db.Text
@@ -555,11 +557,13 @@ model Quote {
   updatedAt          DateTime        @updatedAt
   lead               Lead?           @relation(fields: [leadId], references: [id])
   client             Client?         @relation(fields: [clientId], references: [id])
+  project            Project?        @relation("ProjectQuotes", fields: [projectId], references: [id])
   createdBy          User            @relation("QuoteCreation", fields: [createdById], references: [id])
   lineItems          QuoteLineItem[]
 
   @@index([leadId])
   @@index([clientId])
+  @@index([projectId])
   @@index([status])
   @@map("quotes")
 }

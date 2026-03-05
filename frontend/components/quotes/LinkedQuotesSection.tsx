@@ -57,18 +57,20 @@ function formatCurrency(amount: number, currency = 'USD') {
 interface LinkedQuotesSectionProps {
   leadId?: string;
   clientId?: string;
+  projectId?: string;
 }
 
 export function LinkedQuotesSection({
   leadId,
   clientId,
+  projectId,
 }: LinkedQuotesSectionProps) {
   const router = useRouter();
-  const entityId = leadId ?? clientId;
+  const entityId = leadId ?? clientId ?? projectId;
 
   const { data: quotes = [], isLoading } = useQuery({
-    queryKey: ['entity-quotes', leadId, clientId],
-    queryFn: () => quotesApi.getAll({ leadId, clientId }),
+    queryKey: ['entity-quotes', leadId, clientId, projectId],
+    queryFn: () => quotesApi.getAll({ leadId, clientId, projectId }),
     enabled: !!entityId,
   });
 
@@ -84,12 +86,18 @@ export function LinkedQuotesSection({
             </span>
           )}
         </h3>
-        {leadId && (
+        {(leadId || projectId) && (
           <Button
             variant="ghost"
             size="sm"
             className="h-6 text-xs gap-1 text-muted-foreground/60 hover:text-foreground ml-auto"
-            onClick={() => router.push(`/quotes/new?leadId=${leadId}`)}>
+            onClick={() =>
+              router.push(
+                leadId
+                  ? `/quotes/new?leadId=${leadId}`
+                  : `/quotes/new?projectId=${projectId}`,
+              )
+            }>
             <Plus className="h-3 w-3" />
             New
           </Button>

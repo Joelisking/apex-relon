@@ -1,6 +1,7 @@
 export interface QuoteFormState {
   leadId: string;
   clientId: string;
+  projectId: string;
   validUntil: string;
   notes: string;
   termsAndConditions: string;

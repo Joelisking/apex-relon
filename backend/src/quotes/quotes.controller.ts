@@ -47,9 +47,10 @@ export class QuotesController {
   findAll(
     @Query('leadId') leadId?: string,
     @Query('clientId') clientId?: string,
+    @Query('projectId') projectId?: string,
     @Query('status') status?: string,
   ) {
-    return this.quotesService.findAll({ leadId, clientId, status });
+    return this.quotesService.findAll({ leadId, clientId, projectId, status });
   }
 
   @Get(':id/pdf')

@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { quotesApi, productsApi, quoteSettingsApi } from '@/lib/api/quotes-client';
 import { leadsApi, clientsApi } from '@/lib/api/client';
-import type { Quote, Lead, Client, Product, QuoteSettings } from '@/lib/types';
+import { projectsApi } from '@/lib/api/projects-client';
+import type { Quote, Lead, Client, Project, Product, QuoteSettings } from '@/lib/types';
 import type { QuoteFormState, LineItemRow } from './quote-editor-types';
 import QuoteEditorForm from './QuoteEditorForm';
 import QuotePDFPreview from './QuotePDFPreview';
@@ -27,6 +28,7 @@ const STATUS_COLORS: Record<string, string> = {
 const DEFAULT_FORM: QuoteFormState = {
   leadId: '',
   clientId: '',
+  projectId: '',
   validUntil: '',
   notes: '',
   termsAndConditions: '',
@@ -53,6 +55,7 @@ export default function QuoteEditor({ quoteId }: QuoteEditorProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [existingQuote, setExistingQuote] = useState<Quote | null>(null);
   const [form, setForm] = useState<QuoteFormState>(DEFAULT_FORM);
   const [lineItems, setLineItems] = useState<LineItemRow[]>([
@@ -76,17 +79,19 @@ export default function QuoteEditor({ quoteId }: QuoteEditorProps) {
     const load = async () => {
       setLoading(true);
       try {
-        const [fetchedSettings, fetchedProducts, fetchedLeads, fetchedClients] =
+        const [fetchedSettings, fetchedProducts, fetchedLeads, fetchedClients, fetchedProjects] =
           await Promise.all([
             quoteSettingsApi.get(),
             productsApi.getAll(),
             leadsApi.getAll(),
             clientsApi.getAll(),
+            projectsApi.getAll(),
           ]);
         setSettings(fetchedSettings);
         setProducts(fetchedProducts);
         setLeads(fetchedLeads);
         setClients(fetchedClients);
+        setProjects(fetchedProjects);
 
         if (quoteId) {
           const quote = await quotesApi.getById(quoteId);
@@ -94,6 +99,7 @@ export default function QuoteEditor({ quoteId }: QuoteEditorProps) {
           setForm({
             leadId: quote.leadId || '',
             clientId: quote.clientId || '',
+            projectId: quote.projectId || '',
             validUntil: quote.validUntil ? quote.validUntil.split('T')[0] : '',
             notes: quote.notes || '',
             termsAndConditions: quote.termsAndConditions || '',
@@ -113,8 +119,16 @@ export default function QuoteEditor({ quoteId }: QuoteEditorProps) {
         } else {
           initFromSettings(fetchedSettings);
           const prefilledLeadId = searchParams.get('leadId');
+          const prefilledProjectId = searchParams.get('projectId');
           if (prefilledLeadId) {
             setForm((prev) => ({ ...prev, leadId: prefilledLeadId }));
+          } else if (prefilledProjectId) {
+            const project = fetchedProjects.find((p) => p.id === prefilledProjectId);
+            setForm((prev) => ({
+              ...prev,
+              projectId: prefilledProjectId,
+              clientId: project?.clientId || '',
+            }));
           }
         }
       } catch (err) {
@@ -134,6 +148,7 @@ export default function QuoteEditor({ quoteId }: QuoteEditorProps) {
         ...form,
         leadId: form.leadId || undefined,
         clientId: form.clientId || undefined,
+        projectId: form.projectId || undefined,
         validUntil: form.validUntil || undefined,
         lineItems: lineItems
           .filter((li) => li.description.trim())
@@ -260,6 +275,7 @@ export default function QuoteEditor({ quoteId }: QuoteEditorProps) {
             products={products}
             leads={leads}
             clients={clients}
+            projects={projects}
             onChange={setForm}
             onLineItemsChange={setLineItems}
           />
