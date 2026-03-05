@@ -9,11 +9,11 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  AlertTriangle,
   ArrowUpDown,
   Users,
   FileText,
   CreditCard,
+  Receipt,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -103,7 +103,7 @@ export function QuickBooksView() {
     window.location.href = `${API_URL}/quickbooks/connect`;
   };
 
-  const handleSync = async (type: 'clients' | 'payments') => {
+  const handleSync = async (type: 'clients' | 'payments' | 'expenses') => {
     setIsSyncing(type);
     try {
       const result = await qbFetch<any>(`/sync/${type}`, { method: 'POST' });
@@ -112,7 +112,9 @@ export function QuickBooksView() {
       const msg =
         type === 'clients'
           ? `Synced: ${result.pulled} pulled, ${result.pushed} pushed`
-          : `Updated ${result.updated} payment(s)`;
+          : type === 'payments'
+          ? `Updated ${result.updated} payment(s)`
+          : `Expenses: ${result.created} created, ${result.skipped} skipped, ${result.errors} errors`;
       toast.success(msg);
     } catch (e: any) {
       toast.error(e.message ?? 'Sync failed');
@@ -239,6 +241,18 @@ export function QuickBooksView() {
                   )}
                   Sync Payments
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSync('expenses')}
+                  disabled={isSyncing !== null}>
+                  {isSyncing === 'expenses' ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Receipt className="h-4 w-4 mr-2" />
+                  )}
+                  Sync Expenses
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -290,27 +304,6 @@ export function QuickBooksView() {
             </CardContent>
           </Card>
 
-          {/* Setup Instructions */}
-          <Card className="border-amber-200 bg-amber-50/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2 text-amber-800">
-                <AlertTriangle className="h-4 w-4" />
-                Setup Required
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-amber-700 space-y-1">
-              <p>Ensure the following environment variables are set in <code className="bg-amber-100 px-1 rounded">backend/.env</code>:</p>
-              <ul className="list-disc list-inside ml-2 space-y-0.5 font-mono text-xs">
-                <li>QB_CLIENT_ID</li>
-                <li>QB_CLIENT_SECRET</li>
-                <li>QB_REDIRECT_URI</li>
-                <li>QB_ENVIRONMENT (sandbox | production)</li>
-                <li>QB_WEBHOOK_VERIFIER_TOKEN</li>
-                <li>FRONTEND_URL</li>
-              </ul>
-              <p className="mt-2">Register your app at <strong>developer.intuit.com</strong> to obtain OAuth credentials.</p>
-            </CardContent>
-          </Card>
         </>
       )}
     </div>

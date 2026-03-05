@@ -19,6 +19,8 @@ import { QbCallbackDto } from './dto/qb-callback.dto';
 import { QbCreateInvoiceDto } from './dto/qb-create-invoice.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
 @Controller('quickbooks')
 export class QuickBooksController {
@@ -76,6 +78,14 @@ export class QuickBooksController {
   @UseGuards(JwtAuthGuard)
   async syncPayments() {
     const result = await this.qbService.syncPayments();
+    return result;
+  }
+
+  @Post('sync/expenses')
+  @UseGuards(JwtAuthGuard)
+  async syncExpenses(@CurrentUser() user: AuthenticatedUser) {
+    const result = await this.syncService.syncExpenses(user.id);
+    await this.syncService.updateLastSyncAt();
     return result;
   }
 

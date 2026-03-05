@@ -171,6 +171,88 @@ export class QuickBooksSyncService {
     return count;
   }
 
+  // ─── Expense Sync (QB Bills → CostLog) ───────────────────────────────────
+
+  async syncExpenses(userId: string): Promise<{ created: number; skipped: number; errors: number }> {
+    let created = 0, skipped = 0, errors = 0;
+
+    const { client: qbClient } = await this.qbService.getApiClient();
+    const query = 'SELECT * FROM Bill MAXRESULTS 100 ORDERBY TxnDate DESC';
+    const res = await qbClient.get(`/query?query=${encodeURIComponent(query)}`);
+    const bills: any[] = res?.QueryResponse?.Bill ?? [];
+
+    for (const bill of bills) {
+      for (const line of (bill.Line ?? [])) {
+        if (line.DetailType !== 'AccountBasedExpenseLineDetail') continue;
+        const customerRef = line.AccountBasedExpenseLineDetail?.CustomerRef?.value;
+        if (!customerRef) continue;
+
+        const billLineId = `${bill.Id}-${line.Id}`;
+
+        try {
+          const existing = await this.prisma.quickBooksSync.findFirst({
+            where: { entityType: 'Expense', externalId: billLineId },
+          });
+          if (existing) { skipped++; continue; }
+
+          const crmClient = await this.prisma.client.findFirst({
+            where: { qbCustomerId: customerRef },
+          });
+          if (!crmClient) {
+            await this.logSkipped('Expense', billLineId, undefined, `No CRM client for QB customer ${customerRef}`);
+            skipped++; continue;
+          }
+
+          const project = await this.prisma.project.findFirst({
+            where: { clientId: crmClient.id, status: { notIn: ['Completed', 'Cancelled', 'Closed'] } },
+            orderBy: { updatedAt: 'desc' },
+          });
+          if (!project) {
+            await this.logSkipped('Expense', billLineId, crmClient.id, `No active project for client ${crmClient.id}`);
+            skipped++; continue;
+          }
+
+          const costLog = await this.prisma.costLog.create({
+            data: {
+              projectId: project.id,
+              date: bill.TxnDate ? new Date(bill.TxnDate) : new Date(),
+              category: line.AccountBasedExpenseLineDetail?.AccountRef?.name ?? 'QB Import',
+              description: line.Description ?? `QB Bill ${bill.Id} line ${line.Id}`,
+              amount: line.Amount ?? 0,
+              createdBy: userId,
+            },
+          });
+
+          const sum = await this.prisma.costLog.aggregate({
+            where: { projectId: project.id },
+            _sum: { amount: true },
+          });
+          await this.prisma.project.update({
+            where: { id: project.id },
+            data: { totalCost: sum._sum.amount ?? 0 },
+          });
+
+          await this.prisma.quickBooksSync.create({
+            data: { direction: 'QB_TO_CRM', entityType: 'Expense', externalId: billLineId, internalId: costLog.id, status: 'success' },
+          });
+          created++;
+        } catch (e: any) {
+          await this.prisma.quickBooksSync.create({
+            data: { direction: 'QB_TO_CRM', entityType: 'Expense', externalId: billLineId, status: 'error', errorMessage: e?.message ?? 'Unknown error' },
+          }).catch(() => {});
+          errors++;
+        }
+      }
+    }
+    return { created, skipped, errors };
+  }
+
+  private async logSkipped(entityType: string, externalId: string, internalId: string | undefined, reason: string): Promise<void> {
+    await this.prisma.quickBooksSync.create({
+      data: { direction: 'QB_TO_CRM', entityType, externalId, internalId, status: 'skipped', errorMessage: reason },
+    });
+  }
+
   // ─── Update last sync time ────────────────────────────────────────────────
 
   async updateLastSyncAt(): Promise<void> {

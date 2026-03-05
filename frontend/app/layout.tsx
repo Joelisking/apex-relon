@@ -18,7 +18,7 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: 'Apex Field OS',
+  title: 'Relon - Apex ',
   description:
     'AI-Enhanced CRM & Business Performance Dashboard for Apex Consulting & Surveying, Inc.',
 };

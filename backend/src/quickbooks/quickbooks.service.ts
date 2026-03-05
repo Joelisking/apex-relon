@@ -257,6 +257,18 @@ export class QuickBooksService {
 
   // ─── Payment Tracking ─────────────────────────────────────────────────────
 
+  private async recalculateClientRevenue(clientId: string): Promise<void> {
+    const agg = await this.prisma.quote.aggregate({
+      where: { clientId, qbPaymentStatus: 'paid' },
+      _sum: { total: true },
+    });
+    const revenue = agg._sum.total ?? 0;
+    await this.prisma.client.update({
+      where: { id: clientId },
+      data: { lifetimeRevenue: revenue },
+    });
+  }
+
   async syncPayments(): Promise<{ updated: number }> {
     const { client: qbClient } = await this.getApiClient();
     const query = 'SELECT * FROM Payment MAXRESULTS 100 ORDERBY TxnDate DESC';
@@ -270,10 +282,18 @@ export class QuickBooksService {
       const quote = await this.prisma.quote.findFirst({ where: { qbInvoiceId: invoiceId } });
       if (!quote) continue;
 
+      // Skip already-paid to prevent duplicate sync logs
+      if (quote.qbPaymentStatus === 'paid') continue;
+
       await this.prisma.quote.update({ where: { id: quote.id }, data: { qbPaymentStatus: 'paid' } });
       await this.prisma.quickBooksSync.create({
         data: { direction: 'QB_TO_CRM', entityType: 'Payment', externalId: payment.Id, internalId: quote.id, status: 'success' },
       });
+
+      if (quote.clientId) {
+        await this.recalculateClientRevenue(quote.clientId);
+      }
+
       updated++;
     }
     return { updated };
