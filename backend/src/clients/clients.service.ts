@@ -572,6 +572,7 @@ export class ClientsService {
       this.clientMetricsService.determineHealthStatus(
         client.metrics?.engagementScore || 0,
         client.metrics?.activeProjectCount || 0,
+        client.createdAt,
       );
 
     // Update client

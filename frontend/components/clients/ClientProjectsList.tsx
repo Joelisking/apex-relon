@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import {
   Plus,
@@ -36,6 +36,7 @@ import {
   type Project,
   type CreateProjectDto,
 } from '@/lib/api/projects-client';
+import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
 import { ProjectDetailDialog } from '@/components/projects/ProjectDetailDialog';
 import { format } from 'date-fns';
 
@@ -85,13 +86,6 @@ const STATUS_CHIP: Record<string, string> = {
   Cancelled: 'text-red-700    bg-red-50    border-red-200',
 };
 
-const PROJECT_STATUSES = [
-  { value: 'Planning', label: 'Planning' },
-  { value: 'Active', label: 'Active' },
-  { value: 'On Hold', label: 'On Hold' },
-  { value: 'Completed', label: 'Completed' },
-  { value: 'Cancelled', label: 'Cancelled' },
-];
 
 // ── helpers ────────────────────────────────────────────────────────────────
 function avatarInitials(name: string): string {
@@ -124,13 +118,20 @@ export function ClientProjectsList({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedProject, setSelectedProject] =
     useState<Project | null>(null);
-  const [formData, setFormData] = useState<Partial<CreateProjectDto>>(
-    {
-      clientId,
-      status: 'Planning',
-      contractedValue: 0,
-    },
-  );
+  const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
+  const [formData, setFormData] = useState<Partial<CreateProjectDto>>({
+    clientId,
+    contractedValue: 0,
+  });
+
+  useEffect(() => {
+    pipelineApi.getStages('project').then((stages) => {
+      setProjectStages(stages);
+      if (stages.length > 0) {
+        setFormData((prev) => ({ ...prev, status: prev.status ?? stages[0].name }));
+      }
+    }).catch(console.error);
+  }, []);
 
   const canCreate = hasPermission('projects:create');
 
@@ -148,7 +149,7 @@ export function ClientProjectsList({
       await projectsApi.create({
         name: formData.name!,
         clientId,
-        status: formData.status || 'Planning',
+        status: formData.status || projectStages[0]?.name || '',
         contractedValue: formData.contractedValue,
         description: formData.description,
         projectManagerId: formData.projectManagerId,
@@ -160,7 +161,7 @@ export function ClientProjectsList({
       toast.success('Project created');
       setFormData({
         clientId,
-        status: 'Planning',
+        status: projectStages[0]?.name,
         contractedValue: 0,
       });
       setCreateDialogOpen(false);
@@ -362,11 +363,9 @@ export function ClientProjectsList({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {PROJECT_STATUSES.map((status) => (
-                    <SelectItem
-                      key={status.value}
-                      value={status.value}>
-                      {status.label}
+                  {projectStages.map((stage) => (
+                    <SelectItem key={stage.id} value={stage.name}>
+                      {stage.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

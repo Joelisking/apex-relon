@@ -133,7 +133,7 @@ export function QuickBooksView() {
   };
 
   const directionLabel = (d: string) =>
-    d === 'QB_TO_CRM' ? '← QB → CRM' : '→ CRM → QB';
+    d === 'QB_TO_CRM' ? 'QB → CRM' : 'CRM → QB';
 
   return (
     <div className="space-y-6">

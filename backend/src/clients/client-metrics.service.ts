@@ -443,7 +443,18 @@ export class ClientMetricsService {
   determineHealthStatus(
     engagementScore: number,
     activeProjectCount: number,
+    clientCreatedAt?: Date,
   ): string {
+    // New: created within 30 days with no history yet — not enough data to judge
+    if (clientCreatedAt) {
+      const daysSinceCreated = Math.floor(
+        (Date.now() - clientCreatedAt.getTime()) / (1000 * 60 * 60 * 24),
+      );
+      if (daysSinceCreated <= 30 && activeProjectCount === 0) {
+        return 'New';
+      }
+    }
+
     // Active: High engagement OR has active projects
     if (engagementScore >= 60 || activeProjectCount > 0) {
       return 'Active';

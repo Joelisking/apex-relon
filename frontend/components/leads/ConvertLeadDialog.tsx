@@ -37,6 +37,7 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api/client';
 import { usersApi, type UserResponse } from '@/lib/api/users-client';
+import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
 import type { Lead } from '@/lib/types';
 
 const formSchema = z.object({
@@ -69,6 +70,7 @@ export function ConvertLeadDialog({
   const router = useRouter();
   const [isConverting, setIsConverting] = useState(false);
   const [users, setUsers] = useState<UserResponse[]>([]);
+  const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
 
   const form = useForm<FormValues, unknown, FormValues>({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
@@ -85,7 +87,7 @@ export function ConvertLeadDialog({
         projectName:
           lead.projectName ||
           `${lead.company} - ${lead.serviceType?.name || 'Project'}`,
-        status: 'Planning',
+        status: projectStages[0]?.name ?? '',
         contractedValue:
           lead.contractedValue ?? lead.expectedValue ?? 0,
         endOfProjectValue: undefined,
@@ -105,13 +107,16 @@ export function ConvertLeadDialog({
     }
   }, [open, lead]);
 
-  // Fetch users when dialog opens
+  // Fetch users and stages when dialog opens
   useEffect(() => {
     if (open) {
-      usersApi
-        .getUsers()
-        .then((res) => setUsers(res.users || []))
-        .catch(console.error);
+      usersApi.getUsers().then((res) => setUsers(res.users || [])).catch(console.error);
+      pipelineApi.getStages('project').then((stages) => {
+        setProjectStages(stages);
+        if (stages.length > 0 && !form.getValues('status')) {
+          form.setValue('status', stages[0].name);
+        }
+      }).catch(console.error);
     }
   }, [open]);
 
@@ -288,14 +293,9 @@ export function ConvertLeadDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {[
-                          'Planning',
-                          'In Progress',
-                          'On Hold',
-                          'Completed',
-                        ].map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {s}
+                        {projectStages.map((s) => (
+                          <SelectItem key={s.id} value={s.name}>
+                            {s.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

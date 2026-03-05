@@ -35,6 +35,7 @@ import { toast } from 'sonner';
 import { projectsApi } from '@/lib/api/projects-client';
 import { usersApi, type UserResponse } from '@/lib/api/users-client';
 import { clientsApi, leadsApi, settingsApi } from '@/lib/api/client';
+import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
 import type { DropdownOption } from '@/lib/types';
 
 const formSchema = z.object({
@@ -73,6 +74,7 @@ export function CreateProjectDialog({
     { id: string; contactName: string; company: string }[]
   >([]);
   const [users, setUsers] = useState<UserResponse[]>([]);
+  const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
   const [executingCompanyOptions, setExecutingCompanyOptions] =
     useState<DropdownOption[]>([]);
 
@@ -85,16 +87,17 @@ export function CreateProjectDialog({
     },
   });
 
-  // Fetch clients and users on mount
+  // Fetch clients, users, and stages on mount
   useEffect(() => {
     if (open) {
       const fetchData = async () => {
         try {
-          const [clientsData, leadsData, usersRes] =
+          const [clientsData, leadsData, usersRes, stages] =
             await Promise.all([
               clientsApi.getAll(),
               leadsApi.getAll(),
               usersApi.getUsers(),
+              pipelineApi.getStages('project'),
             ]);
           settingsApi
             .getDropdownOptions('executing_company')
@@ -104,6 +107,11 @@ export function CreateProjectDialog({
           setClients(clientsData.map((c) => ({ ...c, individualName: c.individualName ?? undefined })));
           setLeads(Array.isArray(leadsData) ? leadsData : []);
           setUsers(usersRes.users || []);
+          setProjectStages(stages);
+          // Default status to first stage
+          if (stages.length > 0 && !form.getValues('status')) {
+            form.setValue('status', stages[0].name);
+          }
         } catch (error) {
           console.error('Failed to load form data', error);
         }
@@ -248,6 +256,32 @@ export function CreateProjectDialog({
                         {...field}
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Stage */}
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Stage</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select stage" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {projectStages.map((stage) => (
+                          <SelectItem key={stage.id} value={stage.name}>
+                            {stage.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

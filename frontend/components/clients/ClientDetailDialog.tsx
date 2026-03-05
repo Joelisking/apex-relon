@@ -580,9 +580,8 @@ export function ClientDetailDialog({
                     <ClientMetricsPanel
                       metrics={selectedClient.metrics}
                       healthFlags={selectedClient.healthFlags}
-                      suggestedActions={
-                        selectedClient.suggestedActions
-                      }
+                      suggestedActions={selectedClient.suggestedActions}
+                      createdAt={selectedClient.createdAt ? String(selectedClient.createdAt) : undefined}
                     />
                   </>
                 )}

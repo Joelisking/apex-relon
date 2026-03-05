@@ -35,6 +35,7 @@ import { toast } from 'sonner';
 import { projectsApi, type Project } from '@/lib/api/projects-client';
 import { usersApi, type UserResponse } from '@/lib/api/users-client';
 import { clientsApi, leadsApi, settingsApi } from '@/lib/api/client';
+import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
 import type { DropdownOption } from '@/lib/types';
 import { format } from 'date-fns';
 
@@ -85,9 +86,7 @@ export function EditProjectDialog({
     { id: string; contactName: string; company: string }[]
   >([]);
   const [users, setUsers] = useState<UserResponse[]>([]);
-  const [statusOptions, setStatusOptions] = useState<
-    DropdownOption[]
-  >([]);
+  const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
   const [riskOptions, setRiskOptions] = useState<DropdownOption[]>(
     [],
   );
@@ -136,10 +135,7 @@ export function EditProjectDialog({
   }, [project.id]);
 
   useEffect(() => {
-    settingsApi
-      .getDropdownOptions('project_status')
-      .then(setStatusOptions)
-      .catch(console.error);
+    pipelineApi.getStages('project').then(setProjectStages).catch(console.error);
     settingsApi
       .getDropdownOptions('project_risk_status')
       .then(setRiskOptions)
@@ -359,18 +355,9 @@ export function EditProjectDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {(statusOptions.length > 0
-                          ? statusOptions
-                          : [
-                              'Planning',
-                              'Active',
-                              'On Hold',
-                              'Completed',
-                              'Cancelled',
-                            ].map((s) => ({ value: s, label: s }))
-                        ).map((s) => (
-                          <SelectItem key={s.value} value={s.value}>
-                            {s.label}
+                        {projectStages.map((s) => (
+                          <SelectItem key={s.id} value={s.name}>
+                            {s.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

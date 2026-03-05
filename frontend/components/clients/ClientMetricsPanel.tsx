@@ -45,6 +45,7 @@ interface ClientMetricsPanelProps {
   metrics?: ClientMetrics;
   healthFlags?: ClientHealthFlag[];
   suggestedActions?: string[];
+  createdAt?: string;
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -54,12 +55,19 @@ function fmtK(v: number): string {
   return v.toLocaleString();
 }
 
-function getEngagementMeta(score: number): {
+function getEngagementMeta(score: number, isNew?: boolean): {
   label: string;
   hex: string;
   colors: string;
   dot: string;
 } {
+  if (isNew)
+    return {
+      label: 'New',
+      hex: '#6366f1',
+      colors: 'bg-indigo-100/70 text-indigo-900',
+      dot: 'bg-indigo-400',
+    };
   if (score >= 70)
     return {
       label: 'Strong',
@@ -128,12 +136,18 @@ export function ClientMetricsPanel({
   metrics,
   healthFlags = [],
   suggestedActions = [],
+  createdAt,
 }: ClientMetricsPanelProps) {
   const [scoringInfoOpen, setScoringInfoOpen] = useState(false);
 
   if (!metrics) return null;
 
-  const eng = getEngagementMeta(metrics.engagementScore);
+  const isNew = createdAt
+    ? (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24) <= 30 &&
+      metrics.activeProjectCount === 0
+    : false;
+
+  const eng = getEngagementMeta(metrics.engagementScore, isNew);
 
   const keyMetrics = [
     {

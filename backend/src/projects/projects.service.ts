@@ -344,13 +344,19 @@ export class ProjectsService {
       );
     }
 
+    // Determine first project pipeline stage
+    const firstStage = await this.prisma.pipelineStage.findFirst({
+      where: { pipelineType: 'project' },
+      orderBy: { sortOrder: 'asc' },
+    });
+
     // Create project from lead
     const project = await this.prisma.project.create({
       data: {
         name: `${lead.company} - ${lead.projectName || 'Project'}`,
         clientId,
         leadId,
-        status: 'Planning',
+        status: firstStage?.name ?? 'Planning',
         contractedValue: lead.contractedValue ?? lead.expectedValue,
         description: lead.notes || undefined,
         projectManagerId:
