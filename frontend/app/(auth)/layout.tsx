@@ -9,10 +9,11 @@ export default function AuthLayout({
     <div className="min-h-screen grid lg:grid-cols-2">
       {/* Left panel — branding */}
       <div
-        className="hidden lg:flex flex-col justify-between text-background p-10 relative bg-cover bg-center"
-        style={{ backgroundImage: "url('/auth.webp')" }}>
-        {/* Dark overlay for text legibility */}
-        <div className="absolute inset-0 bg-black/70" />
+        className="hidden lg:flex flex-col justify-between text-background p-10 relative"
+        style={{
+          backgroundColor: '#0d0d0d',
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.12'/%3E%3C/svg%3E")`,
+        }}>
         <div className="relative z-10">
           <Image
             src="/logo-black-transparent.svg"
