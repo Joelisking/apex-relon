@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Client } from '@/lib/types';
+import { Client, UpsellStrategy } from '@/lib/types';
 import {
   Search,
   MoreVertical,
@@ -30,16 +30,7 @@ const ClientsClient: React.FC<ClientsClientProps> = ({
   const [selectedClient, setSelectedClient] = useState<Client | null>(
     null
   );
-  const [aiUpsellData, setAiUpsellData] = useState<{
-    approach: string;
-    timing?: string;
-    opportunities: Array<{
-      service: string;
-      rationale: string;
-      estimatedValue: string;
-      priority: 'High' | 'Medium' | 'Low';
-    }>;
-  } | null>(null);
+  const [aiUpsellData, setAiUpsellData] = useState<UpsellStrategy | null>(null);
   const [upsellLoading, setUpsellLoading] = useState(false);
 
   const handleHealthCheck = async (
