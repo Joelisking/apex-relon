@@ -4,6 +4,10 @@ import { cn } from '@/lib/utils';
 import type { WidgetConfig } from '@/lib/types/dashboard-layout';
 import type { DashboardMetrics } from '@/lib/api/dashboard';
 import { useCurrency } from '@/lib/context/currency-context';
+import {
+  DollarSign, Target, TrendingUp, Briefcase, AlertTriangle,
+  CheckCircle2, XCircle, Zap, Users, Clock, type LucideIcon,
+} from 'lucide-react';
 
 interface Props {
   widget: WidgetConfig;
@@ -12,65 +16,76 @@ interface Props {
 }
 
 const CURRENCY_METRICS = [
-  'totalRevenue', 'monthlyRevenue', 'quarterlyRevenue',
-  'pipelineValue', 'avgDealSize',
+  'totalRevenue', 'monthlyRevenue', 'quarterlyRevenue', 'pipelineValue', 'avgDealSize',
 ];
 
-// Subtle gradient tint per metric — keeps the base card color, just adds a whisper of color
-const METRIC_GRADIENT: Record<string, string> = {
-  totalRevenue:     'from-emerald-500/[0.06] to-transparent',
-  monthlyRevenue:   'from-emerald-500/[0.06] to-transparent',
-  quarterlyRevenue: 'from-emerald-500/[0.06] to-transparent',
-  winRate:          'from-blue-500/[0.07] to-transparent',
-  pipelineValue:    'from-cyan-500/[0.06] to-transparent',
-  avgDealSize:      'from-teal-500/[0.06] to-transparent',
-  activeProjects:   'from-violet-500/[0.06] to-transparent',
-  projectsAtRisk:   'from-amber-500/[0.09] to-transparent',
-  wonLeads:         'from-emerald-500/[0.06] to-transparent',
-  lostLeads:        'from-red-500/[0.07] to-transparent',
-  avgTimeToClose:   'from-indigo-500/[0.06] to-transparent',
-  avgTimeToQuote:   'from-indigo-500/[0.06] to-transparent',
+const METRIC_ICON: Partial<Record<string, LucideIcon>> = {
+  totalRevenue:     DollarSign,
+  monthlyRevenue:   DollarSign,
+  quarterlyRevenue: DollarSign,
+  winRate:          Target,
+  pipelineValue:    TrendingUp,
+  avgDealSize:      DollarSign,
+  activeProjects:   Briefcase,
+  projectsAtRisk:   AlertTriangle,
+  wonLeads:         CheckCircle2,
+  lostLeads:        XCircle,
+  totalLeads:       Zap,
+  activeClients:    Users,
+  avgTimeToClose:   Clock,
+  avgTimeToQuote:   Clock,
 };
 
-const METRIC_VALUE_COLOR: Record<string, string> = {
-  projectsAtRisk: 'text-amber-600',
-  lostLeads:      'text-red-500',
+const METRIC_SUBLABEL: Partial<Record<string, string>> = {
+  totalRevenue:     'All time',
+  monthlyRevenue:   'This month',
+  quarterlyRevenue: 'This quarter',
+  winRate:          'Lead close rate',
+  pipelineValue:    'Active pipeline',
+  avgDealSize:      'Per closed deal',
+  activeProjects:   'In progress',
+  projectsAtRisk:   'Need attention',
+  wonLeads:         'Closed won',
+  lostLeads:        'Closed lost',
+  totalLeads:       'In pipeline',
+  activeClients:    'Current clients',
+  avgTimeToClose:   'Days avg.',
+  avgTimeToQuote:   'Days avg.',
 };
 
 export function MetricCardWidget({ widget, metrics, isEditMode }: Props) {
   const { fmtFull } = useCurrency();
   const metric = widget.config.metric as string;
   const title = widget.config.title || metric;
+  const Icon = METRIC_ICON[metric] ?? DollarSign;
+  const sublabel = METRIC_SUBLABEL[metric] ?? '';
+  const isAlert = metric === 'projectsAtRisk';
+  const isDanger = metric === 'lostLeads';
 
-  // No metric configured — guide user to configure via the gear icon in edit mode
   if (!metric) {
     return (
-      <div className="relative h-full flex flex-col items-center justify-center px-5 gap-1 overflow-hidden">
-        <p className="text-[10px] text-muted-foreground/40 text-center leading-tight">
-          No metric selected
-        </p>
-        <p className="text-[9px] text-muted-foreground/30 text-center">
-          Enter edit mode and click the gear icon
-        </p>
+      <div className="h-full flex flex-col items-center justify-center px-6 gap-1.5">
+        <p className="text-[11px] text-muted-foreground text-center">No metric selected</p>
+        <p className="text-[10px] text-muted-foreground/50 text-center">Enter edit mode → click ⚙</p>
       </div>
     );
   }
 
-  // Show skeleton while metrics haven't arrived yet
   if (!metrics) {
     return (
-      <div className="relative h-full flex flex-col justify-between px-5 pt-[18px] pb-4 overflow-hidden">
-        <p className="text-[10px] uppercase tracking-[0.09em] text-muted-foreground/50 font-medium leading-none">
-          {title}
-        </p>
-        <div className="mt-auto h-9 w-24 rounded-md bg-muted/50 animate-pulse" />
+      <div className="relative h-full flex flex-col px-5 py-4">
+        <div className="flex items-center gap-1.5 mb-2">
+          <Icon className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+          <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">{title}</p>
+        </div>
+        <div className="h-7 w-24 bg-muted/50 rounded animate-pulse mb-1.5" />
+        <div className="h-2.5 w-16 bg-muted/30 rounded animate-pulse" />
       </div>
     );
   }
 
   let value: string | number = '—';
-
-  if (metrics && metric) {
+  if (metric) {
     const raw = metrics[metric as keyof DashboardMetrics];
     if (typeof raw === 'number') {
       if (CURRENCY_METRICS.includes(metric)) {
@@ -87,35 +102,40 @@ export function MetricCardWidget({ widget, metrics, isEditMode }: Props) {
     }
   }
 
-  const gradient = METRIC_GRADIENT[metric] ?? 'from-primary/[0.04] to-transparent';
-  const valueColor = METRIC_VALUE_COLOR[metric] ?? 'text-foreground';
+  const valueColor = isDanger
+    ? 'text-red-700'
+    : isAlert
+      ? 'text-amber-700'
+      : 'text-foreground';
 
   return (
-    <div
-      className={cn(
-        'relative h-full flex flex-col justify-between px-5 pt-[18px] pb-4 overflow-hidden',
-        `bg-gradient-to-br ${gradient}`,
-      )}>
-      {/* Label */}
-      <p className="text-[10px] uppercase tracking-[0.09em] text-muted-foreground/50 font-medium leading-none">
-        {title}
-      </p>
+    <div className={cn(
+      'relative h-full flex flex-col px-5 py-4',
+      isAlert && 'bg-amber-50/60',
+      isDanger && 'bg-red-50/40',
+    )}>
+      {/* Icon + label row — matches ClientStatsCards exactly */}
+      <div className="flex items-center gap-1.5 mb-2">
+        <Icon className={cn(
+          'h-3 w-3 shrink-0',
+          isAlert || isDanger ? 'text-amber-500' : 'text-muted-foreground/40',
+        )} />
+        <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium truncate">
+          {title}
+        </p>
+      </div>
 
       {/* Value */}
-      <div className="mt-auto">
-        <p
-          className={cn(
-            'text-[2.15rem] font-bold tabular-nums leading-none tracking-tight',
-            valueColor,
-          )}>
-          {value}
-        </p>
-        {isEditMode && (
-          <p className="text-[9px] text-muted-foreground/25 mt-1.5 font-mono">
-            {metric}
-          </p>
-        )}
-      </div>
+      <p className={cn('text-[22px] font-bold tabular-nums leading-none mb-1', valueColor)}>
+        {value}
+      </p>
+
+      {/* Sublabel */}
+      <p className="text-[11px] text-muted-foreground/50">{sublabel}</p>
+
+      {isEditMode && (
+        <p className="text-[9px] text-muted-foreground/30 mt-auto font-mono">{metric}</p>
+      )}
     </div>
   );
 }

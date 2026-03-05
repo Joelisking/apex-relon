@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -22,6 +22,7 @@ import {
   X,
   Plus,
   GripVertical,
+  GripHorizontal,
   RotateCcw,
   Loader2,
   Check,
@@ -46,16 +47,6 @@ import { WidgetConfigPanel } from './WidgetConfigPanel';
 import { AddWidgetDialog } from './AddWidgetDialog';
 import EnhancedDashboard from './EnhancedDashboard';
 
-// Per-widget-type 2px accent strip colors
-const WIDGET_ACCENT_STRIP: Record<string, string> = {
-  MetricCard:  'bg-blue-400/70',
-  AreaChart:   'bg-emerald-400/70',
-  BarChart:    'bg-violet-400/70',
-  FunnelChart: 'bg-amber-400/70',
-  TaskList:    'bg-orange-400/70',
-  LeadsList:   'bg-cyan-400/70',
-  AIPanel:     'bg-purple-400/70',
-};
 
 const PERIOD_LABELS = { week: 'Week', month: 'Month', quarter: 'Quarter' } as const;
 
@@ -149,8 +140,6 @@ function SortableWidget({
         gridRow: `span ${widget.size.h}`,
       };
 
-  const accentStrip = WIDGET_ACCENT_STRIP[widget.type] ?? 'bg-primary/60';
-
   const renderContent = () => {
     switch (widget.type) {
       case 'MetricCard':
@@ -180,17 +169,14 @@ function SortableWidget({
         animationDelay: `${index * 35}ms`,
       }}
       className={cn(
-        'dash-widget-enter relative rounded-xl border border-border/50 bg-card overflow-hidden',
-        'shadow-[0_1px_3px_rgba(0,0,0,0.04),0_2px_6px_rgba(0,0,0,0.03)]',
+        'dash-widget-enter relative rounded-xl border border-border bg-card overflow-hidden',
+        'shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.04)]',
         'transition-[box-shadow,transform] duration-200 ease-out',
-        !isDragging && !isEditMode && 'hover:shadow-[0_4px_16px_rgba(0,0,0,0.09)] hover:-translate-y-px',
+        !isDragging && !isEditMode && 'hover:shadow-[0_4px_16px_rgba(0,0,0,0.10),0_8px_32px_rgba(0,0,0,0.06)] hover:-translate-y-0.5',
         !inMetricBar && 'min-h-20',
         isDragging && 'opacity-40 scale-[1.02] shadow-2xl ring-2 ring-primary/40 z-50',
         isEditMode && !isDragging && 'ring-1 ring-inset ring-primary/15',
       )}>
-
-      {/* Colored accent strip */}
-      <div className={cn('absolute top-0 left-0 right-0 h-0.5', accentStrip)} />
 
       {/* Edit mode chrome */}
       {isEditMode && (
@@ -198,15 +184,15 @@ function SortableWidget({
           <div
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing flex items-center text-muted-foreground/30 hover:text-muted-foreground/70 transition-colors select-none">
+            className="cursor-grab active:cursor-grabbing flex items-center text-muted-foreground/50 hover:text-muted-foreground transition-colors select-none">
             <GripVertical className="h-3.5 w-3.5" />
           </div>
-          <span className="flex-1 text-center text-[9px] uppercase tracking-[0.12em] text-muted-foreground/30 font-medium pointer-events-none">
+          <span className="flex-1 text-center text-[9px] uppercase tracking-[0.12em] text-muted-foreground/50 font-medium pointer-events-none">
             {widget.type.replace(/([A-Z])/g, ' $1').trim()}
           </span>
           <button
             onClick={() => onConfigure(widget)}
-            className="flex items-center justify-center w-5 h-5 rounded text-muted-foreground/30 hover:text-foreground hover:bg-muted/60 transition-all">
+            className="flex items-center justify-center w-5 h-5 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-all">
             <Settings2 className="h-3 w-3" />
           </button>
         </div>
@@ -326,6 +312,48 @@ export default function CustomizableDashboard({ initialPeriod = 'month' }: Props
   const [configuringWidget, setConfiguringWidget] = useState<WidgetConfig | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [period, setPeriod] = useState<'week' | 'month' | 'quarter'>(initialPeriod);
+
+  // Draggable toolbar
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [toolbarPos, setToolbarPos] = useState<{ left: number; top: number } | null>(null);
+  const toolbarDrag = useRef<{ startX: number; startY: number; startLeft: number; startTop: number } | null>(null);
+
+  // Reset toolbar position when exiting edit mode
+  useEffect(() => {
+    if (!isEditMode) setToolbarPos(null);
+  }, [isEditMode]);
+
+  const handleToolbarDragStart = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const el = toolbarRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    toolbarDrag.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startLeft: rect.left,
+      startTop: rect.top,
+    };
+
+    const onMove = (ev: PointerEvent) => {
+      if (!toolbarDrag.current || !toolbarRef.current) return;
+      const { width, height } = toolbarRef.current.getBoundingClientRect();
+      const dx = ev.clientX - toolbarDrag.current.startX;
+      const dy = ev.clientY - toolbarDrag.current.startY;
+      const left = Math.max(8, Math.min(window.innerWidth - width - 8, toolbarDrag.current.startLeft + dx));
+      const top = Math.max(8, Math.min(window.innerHeight - height - 8, toolbarDrag.current.startTop + dy));
+      setToolbarPos({ left, top });
+    };
+
+    const onUp = () => {
+      toolbarDrag.current = null;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
 
   const {
     widgets,
@@ -525,8 +553,25 @@ export default function CustomizableDashboard({ initialPeriod = 'month' }: Props
         )}
       </div>
 
-      {/* Floating bottom toolbar */}
-      <div className="edit-toolbar-enter fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 px-2 py-1.5 rounded-full border border-border/60 bg-background/95 backdrop-blur-sm shadow-[0_8px_32px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.06)]">
+      {/* Floating bottom toolbar — draggable */}
+      <div
+        ref={toolbarRef}
+        className="edit-toolbar-enter z-50 flex items-center gap-1 px-2 py-1.5 rounded-full border border-border/60 bg-background/95 backdrop-blur-sm shadow-[0_8px_32px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.06)]"
+        style={
+          toolbarPos
+            ? { position: 'fixed', left: toolbarPos.left, top: toolbarPos.top }
+            : { position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)' }
+        }>
+        {/* Drag handle */}
+        <div
+          onPointerDown={handleToolbarDragStart}
+          className="flex items-center justify-center w-6 h-6 rounded-full text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing transition-colors select-none"
+          title="Drag to move">
+          <GripHorizontal className="h-3.5 w-3.5" />
+        </div>
+
+        <div className="w-px h-4 bg-border/50 mx-0.5" />
+
         <button
           onClick={() => user?.role && resetToDefaults(user.role)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all">
