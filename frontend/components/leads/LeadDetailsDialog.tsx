@@ -13,6 +13,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -376,7 +382,7 @@ export function LeadDetailsDialog({
           <div className="w-80 shrink-0 border-r border-border bg-muted/15 flex flex-col overflow-y-auto">
             {/* Urgency accent strip */}
             <div
-              className="h-0.75 w-full shrink-0"
+              className="h-[3px] w-full shrink-0"
               style={{ backgroundColor: accentColor }}
             />
 
@@ -679,480 +685,250 @@ export function LeadDetailsDialog({
           </div>
 
           {/* ─── MAIN CONTENT ─── */}
-          <div className="flex-1 overflow-y-auto pt-4">
-            <div className="p-6 space-y-6">
-              {/* Convert to Client Banner */}
-              {isWon && (
-                <>
-                  {isConverted ? (
-                    <div className="flex items-center justify-between p-3.5 bg-muted/30 border border-border/60 rounded-xl">
-                      <div>
-                        <p className="font-semibold text-[13px]">
-                          Converted to Project
-                        </p>
-                        <p className="text-[12px] text-muted-foreground">
-                          This prospective project has been converted
-                        </p>
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <Tabs defaultValue="overview" className="flex flex-col flex-1 overflow-hidden">
+              <div className="px-6 pt-3 border-b border-border/40 shrink-0">
+                <TabsList className="h-8 bg-transparent p-0 gap-1">
+                  {[
+                    { value: 'overview', label: 'Overview' },
+                    { value: 'contacts', label: 'Contacts' },
+                    { value: 'tasks', label: 'Tasks' },
+                    { value: 'quotes', label: 'Quotes' },
+                    { value: 'documents', label: `Documents${fileCount > 0 ? ` (${fileCount})` : ''}` },
+                    { value: 'fields', label: 'Fields' },
+                  ].map((tab) => (
+                    <TabsTrigger
+                      key={tab.value}
+                      value={tab.value}
+                      className="h-7 px-3 text-xs rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
+                    >
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                {/* ── Overview: convert banner + AI + activities ── */}
+                <TabsContent value="overview" className="mt-0 p-6 space-y-6">
+                  {isWon && (
+                    isConverted ? (
+                      <div className="flex items-center justify-between p-3.5 bg-muted/30 border border-border/60 rounded-xl">
+                        <div>
+                          <p className="font-semibold text-[13px]">Converted to Project</p>
+                          <p className="text-[12px] text-muted-foreground">This prospective project has been converted</p>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => { window.location.href = '/projects'; }} className="gap-1.5 text-[12px]">
+                          View Projects <ArrowRight className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          window.location.href = '/projects';
-                        }}
-                        className="gap-1.5 text-[12px]">
-                        View Projects{' '}
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </Button>
+                    ) : (
+                      <div className="flex items-center justify-between p-3.5 bg-emerald-50/60 border border-emerald-200/60 rounded-xl">
+                        <div>
+                          <p className="font-semibold text-[13px] text-emerald-900">Ready to convert</p>
+                          <p className="text-[12px] text-emerald-700">Create an active project from this lead</p>
+                        </div>
+                        {hasPermission('clients:convert') && (
+                          <Button size="sm" onClick={() => { setLeadToConvert(selectedLead); setConvertDialogOpen(true); }} className="bg-emerald-600 hover:bg-emerald-700 gap-1.5 text-[12px]">
+                            Convert <ArrowRight className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    )
+                  )}
+
+                  <section className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        AI Analysis
+                      </h3>
+                      <div className="flex gap-1.5">
+                        {hasPermission('leads:analyze') && (
+                          <>
+                            <Button variant="outline" size="sm" onClick={handleGenerateAISummary} disabled={summaryLoading} className="h-7 text-xs px-2.5">
+                              {summaryLoading && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+                              Summary
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleAnalyzeRisk(selectedLead)} disabled={aiLoading} className="h-7 text-xs px-2.5">
+                              {aiLoading && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+                              Risk Analysis
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" disabled={draftEmailLoading} className="h-7 text-xs px-2.5">
+                                  <Mail className="h-3 w-3 mr-1" />
+                                  {draftEmailLoading ? 'Drafting...' : 'Draft Email'}
+                                  <ChevronDown className="h-3 w-3 ml-1" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                {['follow-up', 'introduction', 'proposal', 'check-in', 'closing'].map((type) => (
+                                  <DropdownMenuItem key={type} onClick={() => handleDraftEmail(type)}>
+                                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-between p-3.5 bg-emerald-50/60 border border-emerald-200/60 rounded-xl">
-                      <div>
-                        <p className="font-semibold text-[13px] text-emerald-900">
-                          Ready to convert
-                        </p>
-                        <p className="text-[12px] text-emerald-700">
-                          Create an active project from this lead
-                        </p>
+
+                    {selectedLead.aiSummary && (
+                      <div className="rounded-xl bg-muted/30 border border-border/50 p-3.5 text-[13px] text-foreground/80 leading-relaxed">
+                        {selectedLead.aiSummary}
                       </div>
-                      {hasPermission('clients:convert') && (
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            setLeadToConvert(selectedLead);
-                            setConvertDialogOpen(true);
-                          }}
-                          className="bg-emerald-600 hover:bg-emerald-700 gap-1.5 text-[12px]">
-                          Convert{' '}
-                          <ArrowRight className="h-3.5 w-3.5" />
+                    )}
+                    {selectedLead.aiRecommendations && (
+                      <div className="space-y-2">
+                        <p className="text-[10px] uppercase tracking-[0.06em] font-semibold text-muted-foreground/60">Recommendations</p>
+                        <div className="space-y-1.5">
+                          {selectedLead.aiRecommendations.split(';').map((rec, i) => (
+                            <div key={i} className="flex items-start gap-2 text-[13px]">
+                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-bold text-secondary-foreground mt-0.5">{i + 1}</span>
+                              <span className="text-muted-foreground leading-snug">{rec.trim()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {draftEmailOpen && draftEmail && (
+                      <div className="mt-4 rounded-lg border bg-muted/30 p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-sm">Drafted Email</h4>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{draftEmail.tone}</Badge>
+                            <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(`Subject: ${draftEmail.subject}\n\n${draftEmail.body}`); toast.success('Copied to clipboard'); }}>
+                              <Copy className="h-4 w-4 mr-1" /> Copy
+                            </Button>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Subject</p>
+                          <p className="text-sm font-medium">{draftEmail.subject}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Body</p>
+                          <p className="text-sm whitespace-pre-wrap">{draftEmail.body}</p>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  <hr className="border-border/40" />
+
+                  <ActivityTimeline
+                    leadId={selectedLead.id}
+                    activities={activities}
+                    currentUserId={currentUser.id}
+                    onActivityAdded={onActivitiesChanged}
+                  />
+                </TabsContent>
+
+                {/* ── Contacts: reps + client contacts ── */}
+                <TabsContent value="contacts" className="mt-0 p-6 space-y-6">
+                  <section className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5" />
+                        Project Reps
+                      </h3>
+                      {hasPermission('leads:edit') && !addingRep && (
+                        <Button variant="outline" size="sm" onClick={() => setAddingRep(true)} className="h-7 text-xs px-2.5 gap-1">
+                          <Plus className="h-3 w-3" /> Add Rep
                         </Button>
                       )}
                     </div>
-                  )}
-                </>
-              )}
-
-              {/* AI Analysis */}
-              <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    AI Analysis
-                  </h3>
-                  <div className="flex gap-1.5">
-                    {hasPermission('leads:analyze') && (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleGenerateAISummary}
-                          disabled={summaryLoading}
-                          className="h-7 text-xs px-2.5">
-                          {summaryLoading && (
-                            <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                          )}
-                          Summary
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            handleAnalyzeRisk(selectedLead)
-                          }
-                          disabled={aiLoading}
-                          className="h-7 text-xs px-2.5">
-                          {aiLoading && (
-                            <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                          )}
-                          Risk Analysis
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={draftEmailLoading}
-                              className="h-7 text-xs px-2.5">
-                              <Mail className="h-3 w-3 mr-1" />
-                              {draftEmailLoading
-                                ? 'Drafting...'
-                                : 'Draft Email'}
-                              <ChevronDown className="h-3 w-3 ml-1" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            {[
-                              'follow-up',
-                              'introduction',
-                              'proposal',
-                              'check-in',
-                              'closing',
-                            ].map((type) => (
-                              <DropdownMenuItem
-                                key={type}
-                                onClick={() =>
-                                  handleDraftEmail(type)
-                                }>
-                                {type.charAt(0).toUpperCase() +
-                                  type.slice(1)}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {selectedLead.aiSummary && (
-                  <div className="rounded-xl bg-muted/30 border border-border/50 p-3.5 text-[13px] text-foreground/80 leading-relaxed">
-                    {selectedLead.aiSummary}
-                  </div>
-                )}
-
-                {selectedLead.aiRecommendations && (
-                  <div className="space-y-2">
-                    <p className="text-[10px] uppercase tracking-[0.06em] font-semibold text-muted-foreground/60">
-                      Recommendations
-                    </p>
-                    <div className="space-y-1.5">
-                      {selectedLead.aiRecommendations
-                        .split(';')
-                        .map((rec, i) => (
-                          <div
-                            key={i}
-                            className="flex items-start gap-2 text-[13px]">
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-bold text-secondary-foreground mt-0.5">
-                              {i + 1}
-                            </span>
-                            <span className="text-muted-foreground leading-snug">
-                              {rec.trim()}
-                            </span>
+                    <div className="space-y-2">
+                      {reps.length === 0 && !addingRep && (
+                        <p className="text-[13px] text-muted-foreground">No reps added yet.</p>
+                      )}
+                      {reps.map((rep) =>
+                        editingRepId === rep.id ? (
+                          <div key={rep.id} className="rounded-xl border border-border/60 p-3 space-y-2 bg-muted/20">
+                            <Input value={editRepData.name} onChange={(e) => setEditRepData((p) => ({ ...p, name: e.target.value }))} placeholder="Name *" className="h-8 text-sm" />
+                            <div className="grid grid-cols-2 gap-2">
+                              <Input value={editRepData.phone} onChange={(e) => setEditRepData((p) => ({ ...p, phone: e.target.value }))} placeholder="Phone" className="h-8 text-sm" />
+                              <Input value={editRepData.email} onChange={(e) => setEditRepData((p) => ({ ...p, email: e.target.value }))} placeholder="Email" className="h-8 text-sm" />
+                            </div>
+                            <div className="flex gap-1.5 justify-end">
+                              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setEditingRepId(null)}>Cancel</Button>
+                              <Button size="sm" className="h-7 text-xs" onClick={() => handleSaveRep(rep.id)} disabled={repLoading || !editRepData.name.trim()}>
+                                {repLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
+                              </Button>
+                            </div>
                           </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-                {draftEmailOpen && draftEmail && (
-                  <div className="mt-4 rounded-lg border bg-muted/30 p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-sm">
-                        Drafted Email
-                      </h4>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">
-                          {draftEmail.tone}
-                        </Badge>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            navigator.clipboard.writeText(
-                              `Subject: ${draftEmail.subject}\n\n${draftEmail.body}`,
-                            );
-                            toast.success('Copied to clipboard');
-                          }}>
-                          <Copy className="h-4 w-4 mr-1" /> Copy
-                        </Button>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">
-                        Subject
-                      </p>
-                      <p className="text-sm font-medium">
-                        {draftEmail.subject}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">
-                        Body
-                      </p>
-                      <p className="text-sm whitespace-pre-wrap">
-                        {draftEmail.body}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </section>
-
-              <hr className="border-border/40" />
-
-              {/* Project Reps */}
-              <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground flex items-center gap-1.5">
-                    <Users className="h-3.5 w-3.5" />
-                    Project Reps
-                  </h3>
-                  {hasPermission('leads:edit') && !addingRep && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAddingRep(true)}
-                      className="h-7 text-xs px-2.5 gap-1">
-                      <Plus className="h-3 w-3" /> Add Rep
-                    </Button>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  {reps.length === 0 && !addingRep && (
-                    <p className="text-[13px] text-muted-foreground">
-                      No reps added yet.
-                    </p>
-                  )}
-
-                  {reps.map((rep) =>
-                    editingRepId === rep.id ? (
-                      <div
-                        key={rep.id}
-                        className="rounded-xl border border-border/60 p-3 space-y-2 bg-muted/20">
-                        <Input
-                          value={editRepData.name}
-                          onChange={(e) =>
-                            setEditRepData((p) => ({
-                              ...p,
-                              name: e.target.value,
-                            }))
-                          }
-                          placeholder="Name *"
-                          className="h-8 text-sm"
-                        />
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            value={editRepData.phone}
-                            onChange={(e) =>
-                              setEditRepData((p) => ({
-                                ...p,
-                                phone: e.target.value,
-                              }))
-                            }
-                            placeholder="Phone"
-                            className="h-8 text-sm"
-                          />
-                          <Input
-                            value={editRepData.email}
-                            onChange={(e) =>
-                              setEditRepData((p) => ({
-                                ...p,
-                                email: e.target.value,
-                              }))
-                            }
-                            placeholder="Email"
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div className="flex gap-1.5 justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => setEditingRepId(null)}>
-                            Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => handleSaveRep(rep.id)}
-                            disabled={
-                              repLoading || !editRepData.name.trim()
-                            }>
-                            {repLoading ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              'Save'
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        key={rep.id}
-                        className="flex items-start justify-between rounded-xl border border-border/50 px-3.5 py-2.5 bg-muted/10">
-                        <div className="space-y-0.5 min-w-0">
-                          <p className="text-[13px] font-medium">
-                            {rep.name}
-                          </p>
-                          <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
-                            {rep.phone && (
-                              <span className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
-                                {rep.phone}
-                              </span>
-                            )}
-                            {rep.email && (
-                              <span className="flex items-center gap-1">
-                                <Mail className="h-3 w-3" />
-                                {rep.email}
-                              </span>
+                        ) : (
+                          <div key={rep.id} className="flex items-start justify-between rounded-xl border border-border/50 px-3.5 py-2.5 bg-muted/10">
+                            <div className="space-y-0.5 min-w-0">
+                              <p className="text-[13px] font-medium">{rep.name}</p>
+                              <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+                                {rep.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{rep.phone}</span>}
+                                {rep.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{rep.email}</span>}
+                              </div>
+                            </div>
+                            {hasPermission('leads:edit') && (
+                              <div className="flex gap-0.5 shrink-0 ml-2">
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { setEditingRepId(rep.id); setEditRepData({ name: rep.name, phone: rep.phone || '', email: rep.email || '' }); }}>
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteRep(rep.id)}>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
                             )}
                           </div>
-                        </div>
-                        {hasPermission('leads:edit') && (
-                          <div className="flex gap-0.5 shrink-0 ml-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0"
-                              onClick={() => {
-                                setEditingRepId(rep.id);
-                                setEditRepData({
-                                  name: rep.name,
-                                  phone: rep.phone || '',
-                                  email: rep.email || '',
-                                });
-                              }}>
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
-                              onClick={() => handleDeleteRep(rep.id)}>
-                              <Trash2 className="h-3 w-3" />
+                        ),
+                      )}
+                      {addingRep && (
+                        <div className="rounded-xl border border-dashed border-border p-3 space-y-2 bg-muted/10">
+                          <Input value={newRep.name} onChange={(e) => setNewRep((p) => ({ ...p, name: e.target.value }))} placeholder="Name *" className="h-8 text-sm" autoFocus
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleAddRep(); if (e.key === 'Escape') { setAddingRep(false); setNewRep({ name: '', phone: '', email: '' }); } }} />
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input value={newRep.phone} onChange={(e) => setNewRep((p) => ({ ...p, phone: e.target.value }))} placeholder="Phone" className="h-8 text-sm" />
+                            <Input value={newRep.email} onChange={(e) => setNewRep((p) => ({ ...p, email: e.target.value }))} placeholder="Email" className="h-8 text-sm" />
+                          </div>
+                          <div className="flex gap-1.5 justify-end">
+                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setAddingRep(false); setNewRep({ name: '', phone: '', email: '' }); }}>Cancel</Button>
+                            <Button size="sm" className="h-7 text-xs gap-1" onClick={handleAddRep} disabled={repLoading || !newRep.name.trim()}>
+                              {repLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Plus className="h-3 w-3" />Add</>}
                             </Button>
                           </div>
-                        )}
-                      </div>
-                    ),
-                  )}
-
-                  {addingRep && (
-                    <div className="rounded-xl border border-dashed border-border p-3 space-y-2 bg-muted/10">
-                      <Input
-                        value={newRep.name}
-                        onChange={(e) =>
-                          setNewRep((p) => ({
-                            ...p,
-                            name: e.target.value,
-                          }))
-                        }
-                        placeholder="Name *"
-                        className="h-8 text-sm"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleAddRep();
-                          if (e.key === 'Escape') {
-                            setAddingRep(false);
-                            setNewRep({
-                              name: '',
-                              phone: '',
-                              email: '',
-                            });
-                          }
-                        }}
-                      />
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          value={newRep.phone}
-                          onChange={(e) =>
-                            setNewRep((p) => ({
-                              ...p,
-                              phone: e.target.value,
-                            }))
-                          }
-                          placeholder="Phone"
-                          className="h-8 text-sm"
-                        />
-                        <Input
-                          value={newRep.email}
-                          onChange={(e) =>
-                            setNewRep((p) => ({
-                              ...p,
-                              email: e.target.value,
-                            }))
-                          }
-                          placeholder="Email"
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="flex gap-1.5 justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => {
-                            setAddingRep(false);
-                            setNewRep({
-                              name: '',
-                              phone: '',
-                              email: '',
-                            });
-                          }}>
-                          Cancel
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="h-7 text-xs gap-1"
-                          onClick={handleAddRep}
-                          disabled={
-                            repLoading || !newRep.name.trim()
-                          }>
-                          {repLoading ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <>
-                              <Plus className="h-3 w-3" />
-                              Add
-                            </>
-                          )}
-                        </Button>
-                      </div>
+                        </div>
+                      )}
                     </div>
+                  </section>
+
+                  {selectedLead.clientId && (
+                    <>
+                      <hr className="border-border/40" />
+                      <LeadContactsSection leadId={selectedLead.id} clientId={selectedLead.clientId} canEdit={hasPermission('leads:edit')} />
+                    </>
                   )}
-                </div>
-              </section>
+                </TabsContent>
 
-              <hr className="border-border/40" />
+                {/* ── Tasks ── */}
+                <TabsContent value="tasks" className="mt-0 p-6">
+                  <LinkedTasksSection entityType="LEAD" entityId={selectedLead.id} />
+                </TabsContent>
 
-              {/* Client Contacts */}
-              {selectedLead.clientId && (
-                <LeadContactsSection
-                  leadId={selectedLead.id}
-                  clientId={selectedLead.clientId}
-                  canEdit={hasPermission('leads:edit')}
-                />
-              )}
+                {/* ── Quotes ── */}
+                <TabsContent value="quotes" className="mt-0 p-6">
+                  <LinkedQuotesSection leadId={selectedLead.id} />
+                </TabsContent>
 
-              {selectedLead.clientId && (
-                <hr className="border-border/40" />
-              )}
+                {/* ── Documents ── */}
+                <TabsContent value="documents" className="mt-0 p-6">
+                  <FileUploadSection leadId={selectedLead.id} files={files} currentUserId={currentUser.id} onFilesChanged={() => loadFiles(selectedLead.id)} />
+                </TabsContent>
 
-              {/* Activity Timeline */}
-              <ActivityTimeline
-                leadId={selectedLead.id}
-                activities={activities}
-                currentUserId={currentUser.id}
-                onActivityAdded={onActivitiesChanged}
-              />
-
-              <hr className="border-border/40" />
-
-              {/* File Uploads */}
-              <FileUploadSection
-                leadId={selectedLead.id}
-                files={files}
-                currentUserId={currentUser.id}
-                onFilesChanged={() => loadFiles(selectedLead.id)}
-              />
-
-              <hr className="border-border/40" />
-
-              {/* Tasks */}
-              <LinkedTasksSection
-                entityType="LEAD"
-                entityId={selectedLead.id}
-              />
-
-              <hr className="border-border/40" />
-
-              {/* Quotes */}
-              <LinkedQuotesSection leadId={selectedLead.id} />
-
-              {/* Custom Fields */}
-              <LeadCustomFields leadId={selectedLead.id} />
-            </div>
+                {/* ── Custom Fields ── */}
+                <TabsContent value="fields" className="mt-0 p-6">
+                  <LeadCustomFields leadId={selectedLead.id} />
+                </TabsContent>
+              </div>
+            </Tabs>
           </div>
         </div>
       </DialogContent>
