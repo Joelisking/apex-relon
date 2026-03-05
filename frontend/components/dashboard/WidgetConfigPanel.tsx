@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -41,6 +41,14 @@ export function WidgetConfigPanel({
   const [title, setTitle] = useState(() => widget?.config.title || '');
   const [metric, setMetric] = useState(() => (widget?.config.metric as string) || '');
   const [dateRange, setDateRange] = useState(() => (widget?.config.dateRange as string) || 'month');
+
+  useEffect(() => {
+    if (widget) {
+      setTitle(widget.config.title || '');
+      setMetric((widget.config.metric as string) || '');
+      setDateRange((widget.config.dateRange as string) || 'month');
+    }
+  }, [widget?.id]);
 
   const handleSave = () => {
     if (widget) {

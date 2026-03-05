@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Receipt, Plus } from 'lucide-react';
+import { Receipt, Plus, BookOpen } from 'lucide-react';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { quotesApi } from '@/lib/api/quotes-client';
@@ -135,6 +135,16 @@ export function LinkedQuotesSection({
                   )}>
                   {meta.label}
                 </Badge>
+
+                {/* QB payment badge */}
+                {quote.qbPaymentStatus === 'paid' && (
+                  <Badge
+                    variant="outline"
+                    className="shrink-0 flex items-center gap-1 text-[10px] font-medium px-1.5 py-0 h-5 bg-emerald-50 text-emerald-700 border-emerald-200">
+                    <BookOpen className="h-2.5 w-2.5" />
+                    QB Paid
+                  </Badge>
+                )}
 
                 {/* Total */}
                 <span className="flex-1 text-sm font-semibold tabular-nums text-right">

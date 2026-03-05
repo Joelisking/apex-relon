@@ -134,10 +134,20 @@ export default function QuotesTable({
                 </p>
               </td>
               <td className="px-3 py-2.5 hidden md:table-cell">
-                <Badge
-                  className={cn('text-[10px] font-medium', STATUS_COLORS[quote.status])}>
-                  {quote.status}
-                </Badge>
+                <div className="flex items-center gap-1.5">
+                  <Badge
+                    className={cn('text-[10px] font-medium', STATUS_COLORS[quote.status])}>
+                    {quote.status}
+                  </Badge>
+                  {quote.qbPaymentStatus === 'paid' && (
+                    <Badge
+                      variant="outline"
+                      className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0 h-5 bg-emerald-50 text-emerald-700 border-emerald-200">
+                      <BookOpen className="h-2.5 w-2.5" />
+                      QB Paid
+                    </Badge>
+                  )}
+                </div>
               </td>
               <td className="px-3 py-2.5 text-right">
                 <span className="text-sm font-semibold tabular-nums">
