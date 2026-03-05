@@ -270,7 +270,7 @@ export class QuickBooksService {
 
   async syncPayments(): Promise<{ updated: number }> {
     const { client: qbClient } = await this.getApiClient();
-    const query = 'SELECT * FROM Payment MAXRESULTS 100 ORDERBY TxnDate DESC';
+    const query = 'SELECT * FROM Payment MAXRESULTS 100';
     const res = await qbClient.get(`/query?query=${encodeURIComponent(query)}`);
     const payments: any[] = res?.QueryResponse?.Payment ?? [];
 

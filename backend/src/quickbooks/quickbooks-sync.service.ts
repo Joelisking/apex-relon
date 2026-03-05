@@ -177,7 +177,7 @@ export class QuickBooksSyncService {
     let created = 0, skipped = 0, errors = 0;
 
     const { client: qbClient } = await this.qbService.getApiClient();
-    const query = 'SELECT * FROM Bill MAXRESULTS 100 ORDERBY TxnDate DESC';
+    const query = 'SELECT * FROM Bill MAXRESULTS 100';
     const res = await qbClient.get(`/query?query=${encodeURIComponent(query)}`);
     const bills: any[] = res?.QueryResponse?.Bill ?? [];
 
