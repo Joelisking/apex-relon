@@ -80,7 +80,7 @@ export class QuickBooksWebhookService {
     // Re-sync the specific customer
     const { client: qbClient } = await this.qbService.getApiClient();
     const res = await qbClient.get(`/customer/${qbCustomerId}`);
-    const customer = res.data?.Customer;
+    const customer = res?.Customer;
     if (!customer) return;
 
     const email = customer.PrimaryEmailAddr?.Address ?? null;
@@ -124,7 +124,7 @@ export class QuickBooksWebhookService {
     // Check payment status
     const { client: qbClient } = await this.qbService.getApiClient();
     const res = await qbClient.get(`/invoice/${qbInvoiceId}`);
-    const invoice = res.data?.Invoice;
+    const invoice = res?.Invoice;
     if (!invoice) return;
 
     const balance = invoice.Balance ?? 0;

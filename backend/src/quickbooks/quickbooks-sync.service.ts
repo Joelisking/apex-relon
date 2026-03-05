@@ -41,7 +41,7 @@ export class QuickBooksSyncService {
     const { client: qbClient } = await this.qbService.getApiClient();
     const query = 'SELECT * FROM Customer WHERE Active = true MAXRESULTS 1000';
     const res = await qbClient.get(`/query?query=${encodeURIComponent(query)}`);
-    const customers: any[] = res.data?.QueryResponse?.Customer ?? [];
+    const customers: any[] = res?.QueryResponse?.Customer ?? [];
 
     let count = 0;
     for (const customer of customers) {
@@ -134,7 +134,7 @@ export class QuickBooksSyncService {
         };
 
         const res = await qbClient.post('/customer', payload);
-        const qbId = res.data?.Customer?.Id;
+        const qbId = res?.Customer?.Id;
         if (!qbId) continue;
 
         await this.prisma.client.update({
