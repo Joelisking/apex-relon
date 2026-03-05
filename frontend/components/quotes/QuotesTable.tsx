@@ -11,6 +11,7 @@ import {
   Trash2,
   Plus,
   FileText,
+  BookOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +25,8 @@ import {
 import { cn } from '@/lib/utils';
 import { STATUS_COLORS, formatCurrency, formatDate } from './quote-utils';
 import type { Quote } from '@/lib/types';
+import { API_URL, getTokenFromClientCookies } from '@/lib/api/client';
+import { toast } from 'sonner';
 
 interface QuotesTableProps {
   quotes: Quote[];
@@ -45,6 +48,24 @@ export default function QuotesTable({
   onDelete,
 }: QuotesTableProps) {
   const router = useRouter();
+
+  const handleSendToQb = async (quoteId: string) => {
+    try {
+      const token = getTokenFromClientCookies() ?? '';
+      const res = await fetch(`${API_URL}/quickbooks/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ quoteId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message ?? 'Failed to send to QuickBooks');
+      }
+      toast.success('Invoice created in QuickBooks');
+    } catch (e: any) {
+      toast.error(e.message ?? 'Failed to send to QuickBooks');
+    }
+  };
 
   if (quotes.length === 0) {
     return (
@@ -157,6 +178,12 @@ export default function QuotesTable({
                       onClick={() => router.push(`/quotes/${quote.id}/edit`)}>
                       <Download className="mr-2 h-3.5 w-3.5" />
                       Preview / Print
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleSendToQb(quote.id)}
+                      disabled={!!quote.qbInvoiceId}>
+                      <BookOpen className="mr-2 h-3.5 w-3.5 text-green-600" />
+                      {quote.qbInvoiceId ? 'Sent to QuickBooks' : 'Send to QuickBooks'}
                     </DropdownMenuItem>
                     {canEdit && quote.status === 'SENT' && (
                       <>
