@@ -39,7 +39,7 @@ export class QuickBooksSyncService {
 
   private async pullQbCustomers(): Promise<number> {
     const { client: qbClient } = await this.qbService.getApiClient();
-    const query = 'SELECT * FROM Customer MAXRESULTS 1000 WHERE Active = true';
+    const query = 'SELECT * FROM Customer WHERE Active = true MAXRESULTS 1000';
     const res = await qbClient.get(`/query?query=${encodeURIComponent(query)}`);
     const customers: any[] = res.data?.QueryResponse?.Customer ?? [];
 
