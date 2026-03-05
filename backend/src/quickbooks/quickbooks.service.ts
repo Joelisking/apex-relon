@@ -223,7 +223,6 @@ export class QuickBooksService {
     const res = await qbClient.post('/invoice', {
       Line: lineItems,
       CustomerRef: { value: quote.client.qbCustomerId },
-      TaxRate: quote.taxRate,
       ...(quote.validUntil && { DueDate: quote.validUntil.toISOString().split('T')[0] }),
     });
 
