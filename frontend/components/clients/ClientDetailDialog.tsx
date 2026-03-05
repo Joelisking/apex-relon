@@ -687,8 +687,13 @@ export function ClientDetailDialog({
                           Strategy
                         </p>
                         <p className="text-sm text-emerald-900/80">
-                          {upsellData.strategy}
+                          {upsellData.approach}
                         </p>
+                        {upsellData.timing && (
+                          <p className="text-xs text-emerald-700 mt-1.5 font-medium">
+                            Timing: {upsellData.timing}
+                          </p>
+                        )}
                       </div>
                       {upsellData.opportunities &&
                         upsellData.opportunities.length > 0 && (
@@ -698,15 +703,28 @@ export function ClientDetailDialog({
                                 <div
                                   key={idx}
                                   className="rounded-lg border border-border/40 bg-card p-3.5">
-                                  <h6 className="text-sm font-semibold">
-                                    {opp.title}
-                                  </h6>
+                                  <div className="flex items-start justify-between gap-2">
+                                    <h6 className="text-sm font-semibold">
+                                      {opp.service}
+                                    </h6>
+                                    {opp.priority && (
+                                      <span className={`shrink-0 text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-full ${
+                                        opp.priority === 'High' ? 'bg-emerald-100 text-emerald-800' :
+                                        opp.priority === 'Medium' ? 'bg-amber-100 text-amber-800' :
+                                        'bg-muted text-muted-foreground'
+                                      }`}>
+                                        {opp.priority}
+                                      </span>
+                                    )}
+                                  </div>
                                   <p className="text-xs text-muted-foreground mt-1">
-                                    {opp.description}
+                                    {opp.rationale}
                                   </p>
-                                  <p className="text-xs font-medium mt-2 text-emerald-700">
-                                    Est. Value: {opp.potentialValue}
-                                  </p>
+                                  {opp.estimatedValue && (
+                                    <p className="text-xs font-medium mt-2 text-emerald-700">
+                                      Est. Value: {opp.estimatedValue}
+                                    </p>
+                                  )}
                                 </div>
                               ),
                             )}

@@ -22,14 +22,13 @@ export class DashboardController {
   @Get('executive-summary')
   @Permissions('dashboard:view')
   async getExecutiveSummary(
-    @Query('provider') provider: string = 'openai',
     @Query('period') period: 'week' | 'month' | 'quarter' = 'month',
     @Query('executingCompany') executingCompany?: string,
   ) {
     const metrics = await this.dashboardService.getMetrics(period, executingCompany || undefined);
+    // Provider resolved from DB settings (executiveSummary override → default → env)
     const summary = await this.aiService.generateExecutiveSummary(
       metrics as unknown as Record<string, unknown>,
-      provider,
     );
 
     return {

@@ -125,8 +125,24 @@ export interface UpdateUserDto {
 }
 
 export interface ChatContext {
-  leads: Lead[];
-  clients: Client[];
+  leadsCount: number;
+  clientsCount: number;
+  leadsSummary: {
+    company: string;
+    contactName: string;
+    stage: string;
+    expectedValue: number;
+    urgency?: string;
+    aiRiskLevel?: string | null;
+  }[];
+  clientsSummary: {
+    name: string;
+    status: string;
+    segment: string;
+    industry: string;
+    lifetimeRevenue: number;
+    healthScore?: number | null;
+  }[];
 }
 
 // Client-side only - synchronous cookie reading
@@ -502,7 +518,7 @@ export const aiApi = {
 
   chat: (
     message: string,
-    context: ChatContext,
+    context: ChatContext | Record<string, unknown>,
     provider?: AIProvider,
     serverToken?: string,
   ) =>

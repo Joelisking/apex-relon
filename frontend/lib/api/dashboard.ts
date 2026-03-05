@@ -168,7 +168,6 @@ export const dashboardApi = {
 
   async getExecutiveSummary(
     period: 'week' | 'month' | 'quarter' = 'month',
-    provider: string = 'openai',
     token?: string,
   ): Promise<ExecutiveSummaryResponse> {
     const authToken = token || getTokenFromCookies();
@@ -181,7 +180,7 @@ export const dashboardApi = {
     }
 
     const response = await fetch(
-      `${API_URL}/dashboard/executive-summary?period=${period}&provider=${provider}`,
+      `${API_URL}/dashboard/executive-summary?period=${period}`,
       {
         headers,
         credentials: 'include',

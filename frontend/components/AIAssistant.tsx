@@ -50,22 +50,50 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
     setInputValue('');
     setIsTyping(true);
 
-    // Call backend AI chat endpoint
-    const response = await aiApi.chat(userMsg.text, {
-      leads,
-      clients,
-    });
-    const responseText = response.message;
+    try {
+      // Slim the context — pass summaries, not full objects
+      const context = {
+        leadsCount: leads.length,
+        clientsCount: clients.length,
+        leadsSummary: leads.slice(0, 15).map((l) => ({
+          company: l.company,
+          contactName: l.contactName,
+          stage: l.stage,
+          expectedValue: l.expectedValue,
+          urgency: l.urgency,
+          aiRiskLevel: l.aiRiskLevel,
+        })),
+        clientsSummary: clients.slice(0, 15).map((c) => ({
+          name: c.name,
+          status: c.status,
+          segment: c.segment,
+          industry: c.industry,
+          lifetimeRevenue: c.lifetimeRevenue,
+          healthScore: c.healthScore,
+        })),
+      };
 
-    const aiMsg: ChatMessage = {
-      id: (Date.now() + 1).toString(),
-      sender: 'ai',
-      text: responseText,
-      timestamp: new Date(),
-    };
+      const response = await aiApi.chat(userMsg.text, context);
 
-    setMessages((prev) => [...prev, aiMsg]);
-    setIsTyping(false);
+      const aiMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: response.message,
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, aiMsg]);
+    } catch {
+      const errorMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: 'Sorry, I ran into an error. Please try again.',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (

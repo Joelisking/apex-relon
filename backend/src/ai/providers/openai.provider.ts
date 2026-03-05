@@ -11,7 +11,16 @@ import {
   EmailDraft,
   PipelineInsights,
 } from '../interfaces/provider.interface';
-import { buildLeadRiskPrompt, buildClientHealthPrompt, buildExecutiveSummaryPrompt, buildUpsellPrompt, buildChatPrompt, buildEmailDraftPrompt, buildPipelinePrompt } from '../prompts';
+import {
+  SYSTEM_PROMPT,
+  buildLeadRiskPrompt,
+  buildClientHealthPrompt,
+  buildExecutiveSummaryPrompt,
+  buildUpsellPrompt,
+  buildChatPrompt,
+  buildEmailDraftPrompt,
+  buildPipelinePrompt,
+} from '../prompts';
 
 @Injectable()
 export class OpenAIProvider implements AIProvider {
@@ -33,124 +42,64 @@ export class OpenAIProvider implements AIProvider {
     return this.client !== null;
   }
 
-  async draftEmail(lead: Record<string, unknown>, emailType: string): Promise<EmailDraft> {
+  private async call(
+    prompt: string,
+    maxTokens = 1024,
+    jsonMode = true,
+  ): Promise<string> {
     if (!this.client) throw new Error('OpenAI API key not configured');
     const response = await this.client.chat.completions.create({
       model: 'gpt-4o',
-      response_format: { type: 'json_object' },
-      messages: [{ role: 'user', content: buildEmailDraftPrompt(lead, emailType) }],
-      max_tokens: 1024,
+      max_tokens: maxTokens,
+      ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: prompt },
+      ],
     });
-    return JSON.parse(response.choices[0].message.content || '{}');
+    return response.choices[0].message.content || '';
+  }
+
+  async draftEmail(lead: Record<string, unknown>, emailType: string): Promise<EmailDraft> {
+    return JSON.parse(await this.call(buildEmailDraftPrompt(lead, emailType)));
   }
 
   async analyzePipeline(data: Record<string, unknown>): Promise<PipelineInsights> {
-    if (!this.client) throw new Error('OpenAI API key not configured');
-    const response = await this.client.chat.completions.create({
-      model: 'gpt-4o',
-      response_format: { type: 'json_object' },
-      messages: [{ role: 'user', content: buildPipelinePrompt(data) }],
-      max_tokens: 1536,
-    });
-    return JSON.parse(response.choices[0].message.content || '{}');
+    return JSON.parse(await this.call(buildPipelinePrompt(data), 1536));
   }
 
   async analyzeLeadRisk(lead: Record<string, unknown>): Promise<LeadRiskAnalysis> {
-    if (!this.isAvailable()) {
-      throw new Error('OpenAI API key not configured');
-    }
-
-    const response = await this.client!.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'user',
-          content: buildLeadRiskPrompt(lead),
-        },
-      ],
-      response_format: { type: 'json_object' },
-    });
-
-    const content = response.choices[0].message.content || '{}';
-    return JSON.parse(content);
+    return JSON.parse(await this.call(buildLeadRiskPrompt(lead)));
   }
 
   async generateClientHealth(client: Record<string, unknown>): Promise<ClientHealthReport> {
-    if (!this.isAvailable()) {
-      throw new Error('OpenAI API key not configured');
-    }
-
-    const response = await this.client!.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'user',
-          content: buildClientHealthPrompt(client),
-        },
-      ],
-      response_format: { type: 'json_object' },
-    });
-
-    const content = response.choices[0].message.content || '{}';
-    return JSON.parse(content);
+    return JSON.parse(await this.call(buildClientHealthPrompt(client)));
   }
 
   async generateExecutiveSummary(metrics: Record<string, unknown>): Promise<ExecutiveSummary> {
-    if (!this.isAvailable()) {
-      throw new Error('OpenAI API key not configured');
-    }
-
-    const response = await this.client!.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'user',
-          content: buildExecutiveSummaryPrompt(metrics),
-        },
-      ],
-      response_format: { type: 'json_object' },
-    });
-
-    const content = response.choices[0].message.content || '{}';
-    return JSON.parse(content);
+    return JSON.parse(await this.call(buildExecutiveSummaryPrompt(metrics), 1536));
   }
 
   async generateUpsellStrategy(client: Record<string, unknown>): Promise<UpsellStrategy> {
-    if (!this.isAvailable()) {
-      throw new Error('OpenAI API key not configured');
-    }
-
-    const response = await this.client!.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'user',
-          content: buildUpsellPrompt(client),
-        },
-      ],
-      response_format: { type: 'json_object' },
-    });
-
-    const content = response.choices[0].message.content || '{}';
-    return JSON.parse(content);
+    return JSON.parse(await this.call(buildUpsellPrompt(client)));
   }
 
   async chat(message: string, context: Record<string, unknown>): Promise<ChatResponse> {
-    if (!this.isAvailable()) {
-      throw new Error('OpenAI API key not configured');
-    }
+    // Chat doesn't need strict JSON mode — plain text response is fine
+    const text = await this.call(buildChatPrompt(message, context), 1024, false);
+    return { message: text };
+  }
 
-    const response = await this.client!.chat.completions.create({
+  async generateFreeform(prompt: string, maxTokens = 2048): Promise<string> {
+    if (!this.client) throw new Error('OpenAI API key not configured');
+    const response = await this.client.chat.completions.create({
       model: 'gpt-4o',
+      max_tokens: maxTokens,
       messages: [
-        {
-          role: 'user',
-          content: buildChatPrompt(message, context),
-        },
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: prompt },
       ],
     });
-
-    const content = response.choices[0].message.content || '';
-    return { message: content };
+    return response.choices[0].message.content || '';
   }
 }

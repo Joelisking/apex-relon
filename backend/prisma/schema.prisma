@@ -792,6 +792,7 @@ model QuickBooksConnection {
 
 model QuickBooksSync {
   id           String   @id @default(uuid())
+  realmId      String?  // QB company realm ID — used to scope history per company
   direction    String   // "QB_TO_CRM" | "CRM_TO_QB"
   entityType   String   // "Customer" | "Invoice" | "Payment"
   externalId   String?  // QB entity ID
@@ -800,6 +801,7 @@ model QuickBooksSync {
   errorMessage String?  @db.Text
   syncedAt     DateTime @default(now())
 
+  @@index([realmId, syncedAt])
   @@index([entityType, direction])
   @@index([syncedAt])
   @@map("quickbooks_syncs")

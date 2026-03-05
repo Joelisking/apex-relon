@@ -127,11 +127,13 @@ export interface ClientHealthReport {
 }
 
 export interface UpsellStrategy {
-  strategy: string;
+  approach: string;
+  timing?: string;
   opportunities: Array<{
-    title: string;
-    description: string;
-    potentialValue: string;
+    service: string;
+    rationale: string;
+    estimatedValue: string;
+    priority: 'High' | 'Medium' | 'Low';
   }>;
 }
 

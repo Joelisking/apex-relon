@@ -238,8 +238,7 @@ Please provide:
 
 Format your response in clear markdown with headers.`;
 
-    const response = await this.aiService.chat(prompt, context, 'anthropic');
-    const content = typeof response === 'string' ? response : response?.message ?? JSON.stringify(response);
+    const content = await this.aiService.generateFreeform(prompt, undefined, 2048);
 
     // Store in DB
     await this.prisma.aIAnalyticsReport.create({

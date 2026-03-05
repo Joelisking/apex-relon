@@ -31,11 +31,13 @@ const ClientsClient: React.FC<ClientsClientProps> = ({
     null
   );
   const [aiUpsellData, setAiUpsellData] = useState<{
-    strategy: string;
+    approach: string;
+    timing?: string;
     opportunities: Array<{
-      title: string;
-      description: string;
-      potentialValue: string;
+      service: string;
+      rationale: string;
+      estimatedValue: string;
+      priority: 'High' | 'Medium' | 'Low';
     }>;
   } | null>(null);
   const [upsellLoading, setUpsellLoading] = useState(false);
@@ -377,7 +379,7 @@ const ClientsClient: React.FC<ClientsClientProps> = ({
                   <div className="space-y-4 animate-in fade-in relative z-10">
                     <div className="bg-white/10 backdrop-blur-sm p-4 rounded-lg border border-white/20">
                       <p className="text-sm font-medium leading-relaxed">
-                        &quot;{aiUpsellData.strategy}&quot;
+                        &quot;{aiUpsellData.approach}&quot;
                       </p>
                     </div>
 
@@ -388,15 +390,15 @@ const ClientsClient: React.FC<ClientsClientProps> = ({
                           className="bg-white/5 border border-white/10 p-3 rounded-lg flex justify-between items-center hover:bg-white/10 transition-colors cursor-pointer">
                           <div>
                             <p className="font-bold text-sm text-white">
-                              {opp.title}
+                              {opp.service}
                             </p>
                             <p className="text-xs text-indigo-200">
-                              {opp.description}
+                              {opp.rationale}
                             </p>
                           </div>
                           <div className="text-right">
                             <span className="block text-green-300 font-bold text-sm">
-                              {opp.potentialValue}
+                              {opp.estimatedValue}
                             </span>
                             <span className="text-[10px] text-indigo-300 uppercase">
                               Potential

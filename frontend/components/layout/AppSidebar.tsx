@@ -213,6 +213,12 @@ const adminSubItems: Array<{
     permission: 'users:view',
   },
   {
+    title: 'QuickBooks',
+    href: '/admin/quickbooks',
+    icon: BookOpen,
+    permission: 'settings:manage',
+  },
+  {
     title: 'Teams',
     href: '/admin/teams',
     icon: UsersRound,
@@ -282,12 +288,6 @@ const adminSubItems: Array<{
     title: 'Lead Forms',
     href: '/admin/lead-forms',
     icon: FormInput,
-    permission: 'settings:manage',
-  },
-  {
-    title: 'QuickBooks',
-    href: '/admin/quickbooks',
-    icon: BookOpen,
     permission: 'settings:manage',
   },
   {

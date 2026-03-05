@@ -11,7 +11,18 @@ import {
   EmailDraft,
   PipelineInsights,
 } from '../interfaces/provider.interface';
-import { buildLeadRiskPrompt, buildClientHealthPrompt, buildExecutiveSummaryPrompt, buildUpsellPrompt, buildChatPrompt, buildEmailDraftPrompt, buildPipelinePrompt } from '../prompts';
+import {
+  SYSTEM_PROMPT,
+  buildLeadRiskPrompt,
+  buildClientHealthPrompt,
+  buildExecutiveSummaryPrompt,
+  buildUpsellPrompt,
+  buildChatPrompt,
+  buildEmailDraftPrompt,
+  buildPipelinePrompt,
+} from '../prompts';
+
+const MODEL = 'claude-sonnet-4-6';
 
 @Injectable()
 export class AnthropicProvider implements AIProvider {
@@ -33,126 +44,15 @@ export class AnthropicProvider implements AIProvider {
     return this.client !== null;
   }
 
-  async draftEmail(lead: Record<string, unknown>, emailType: string): Promise<EmailDraft> {
+  private async call(prompt: string, maxTokens = 1024): Promise<string> {
     if (!this.client) throw new Error('Anthropic API key not configured');
-    const response = await this.client!.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 1024,
-      messages: [{ role: 'user', content: buildEmailDraftPrompt(lead, emailType) }],
+    const response = await this.client.messages.create({
+      model: MODEL,
+      max_tokens: maxTokens,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: prompt }],
     });
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
-    return this.parseJson<EmailDraft>(text);
-  }
-
-  async analyzePipeline(data: Record<string, unknown>): Promise<PipelineInsights> {
-    if (!this.client) throw new Error('Anthropic API key not configured');
-    const response = await this.client!.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 1536,
-      messages: [{ role: 'user', content: buildPipelinePrompt(data) }],
-    });
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
-    return this.parseJson<PipelineInsights>(text);
-  }
-
-  async analyzeLeadRisk(lead: Record<string, unknown>): Promise<LeadRiskAnalysis> {
-    if (!this.isAvailable()) {
-      throw new Error('Anthropic API key not configured');
-    }
-
-    const response = await this.client!.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: buildLeadRiskPrompt(lead),
-        },
-      ],
-    });
-
-    const content = response.content[0].type === 'text' ? response.content[0].text : '';
-    return this.parseLeadRiskResponse(content);
-  }
-
-  async generateClientHealth(client: Record<string, unknown>): Promise<ClientHealthReport> {
-    if (!this.isAvailable()) {
-      throw new Error('Anthropic API key not configured');
-    }
-
-    const response = await this.client!.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: buildClientHealthPrompt(client),
-        },
-      ],
-    });
-
-    const content = response.content[0].type === 'text' ? response.content[0].text : '';
-    return this.parseClientHealthResponse(content);
-  }
-
-  async generateExecutiveSummary(metrics: Record<string, unknown>): Promise<ExecutiveSummary> {
-    if (!this.isAvailable()) {
-      throw new Error('Anthropic API key not configured');
-    }
-
-    const response = await this.client!.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 1536,
-      messages: [
-        {
-          role: 'user',
-          content: buildExecutiveSummaryPrompt(metrics),
-        },
-      ],
-    });
-
-    const content = response.content[0].type === 'text' ? response.content[0].text : '';
-    return this.parseExecutiveSummaryResponse(content);
-  }
-
-  async generateUpsellStrategy(client: Record<string, unknown>): Promise<UpsellStrategy> {
-    if (!this.isAvailable()) {
-      throw new Error('Anthropic API key not configured');
-    }
-
-    const response = await this.client!.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: buildUpsellPrompt(client),
-        },
-      ],
-    });
-
-    const content = response.content[0].type === 'text' ? response.content[0].text : '';
-    return this.parseUpsellResponse(content);
-  }
-
-  async chat(message: string, context: Record<string, unknown>): Promise<ChatResponse> {
-    if (!this.isAvailable()) {
-      throw new Error('Anthropic API key not configured');
-    }
-
-    const response = await this.client!.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: buildChatPrompt(message, context),
-        },
-      ],
-    });
-
-    const content = response.content[0].type === 'text' ? response.content[0].text : '';
-    return { message: content };
+    return response.content[0].type === 'text' ? response.content[0].text : '';
   }
 
   private parseJson<T>(content: string): T {
@@ -160,81 +60,61 @@ export class AnthropicProvider implements AIProvider {
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]) as T;
     }
-    throw new Error('No JSON found in response');
+    throw new Error('No JSON found in Anthropic response');
   }
 
-  private parseLeadRiskResponse(content: string): LeadRiskAnalysis {
-    try {
-      // Try to extract JSON if present
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
+  async draftEmail(lead: Record<string, unknown>, emailType: string): Promise<EmailDraft> {
+    const text = await this.call(buildEmailDraftPrompt(lead, emailType));
+    return this.parseJson<EmailDraft>(text);
+  }
 
-      // Fallback parsing
-      return {
-        riskLevel: 'Medium',
-        summary: content,
-        recommendations: [],
-        confidence: 0.75,
-      };
-    } catch (error) {
-      throw new Error('Failed to parse lead risk analysis');
+  async analyzePipeline(data: Record<string, unknown>): Promise<PipelineInsights> {
+    const text = await this.call(buildPipelinePrompt(data), 1536);
+    return this.parseJson<PipelineInsights>(text);
+  }
+
+  async analyzeLeadRisk(lead: Record<string, unknown>): Promise<LeadRiskAnalysis> {
+    const text = await this.call(buildLeadRiskPrompt(lead));
+    try {
+      return this.parseJson<LeadRiskAnalysis>(text);
+    } catch {
+      return { riskLevel: 'Medium', summary: text, recommendations: [], confidence: 0.75 };
     }
   }
 
-  private parseClientHealthResponse(content: string): ClientHealthReport {
+  async generateClientHealth(client: Record<string, unknown>): Promise<ClientHealthReport> {
+    const text = await this.call(buildClientHealthPrompt(client));
     try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-
-      return {
-        healthScore: 75,
-        summary: content,
-        riskFactors: [],
-        strengths: [],
-        recommendations: [],
-      };
-    } catch (error) {
-      throw new Error('Failed to parse client health report');
+      return this.parseJson<ClientHealthReport>(text);
+    } catch {
+      return { healthScore: 75, summary: text, riskFactors: [], strengths: [], recommendations: [] };
     }
   }
 
-  private parseExecutiveSummaryResponse(content: string): ExecutiveSummary {
+  async generateExecutiveSummary(metrics: Record<string, unknown>): Promise<ExecutiveSummary> {
+    const text = await this.call(buildExecutiveSummaryPrompt(metrics), 1536);
     try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-
-      return {
-        overview: content,
-        whatChanged: [],
-        whatIsAtRisk: [],
-        whatNeedsAttention: [],
-        keyInsights: [],
-      };
-    } catch (error) {
-      throw new Error('Failed to parse executive summary');
+      return this.parseJson<ExecutiveSummary>(text);
+    } catch {
+      return { overview: text, whatChanged: [], whatIsAtRisk: [], whatNeedsAttention: [], keyInsights: [] };
     }
   }
 
-  private parseUpsellResponse(content: string): UpsellStrategy {
+  async generateUpsellStrategy(client: Record<string, unknown>): Promise<UpsellStrategy> {
+    const text = await this.call(buildUpsellPrompt(client));
     try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-
-      return {
-        opportunities: [],
-        approach: content,
-        timing: 'Immediate',
-      };
-    } catch (error) {
-      throw new Error('Failed to parse upsell strategy');
+      return this.parseJson<UpsellStrategy>(text);
+    } catch {
+      return { opportunities: [], approach: text, timing: 'Immediate' };
     }
+  }
+
+  async chat(message: string, context: Record<string, unknown>): Promise<ChatResponse> {
+    const text = await this.call(buildChatPrompt(message, context));
+    return { message: text };
+  }
+
+  async generateFreeform(prompt: string, maxTokens = 2048): Promise<string> {
+    return this.call(prompt, maxTokens);
   }
 }

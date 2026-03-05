@@ -26,6 +26,17 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   Table,
   TableBody,
   TableCell,
@@ -178,15 +189,34 @@ export function QuickBooksView() {
                   </p>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => disconnectMutation.mutate()}
-                disabled={disconnectMutation.isPending}
-                className="text-destructive border-destructive/30 hover:bg-destructive/10">
-                <Link2Off className="h-4 w-4 mr-2" />
-                Disconnect QuickBooks
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={disconnectMutation.isPending}
+                    className="text-destructive border-destructive/30 hover:bg-destructive/10">
+                    <Link2Off className="h-4 w-4 mr-2" />
+                    Disconnect QuickBooks
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Disconnect QuickBooks?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will revoke the connection to <strong>{status.companyName}</strong>. Sync will stop until you reconnect. Your sync history will be preserved.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => disconnectMutation.mutate()}
+                      className="bg-destructive text-white hover:bg-destructive/90">
+                      Disconnect
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           ) : (
             <div className="space-y-3">

@@ -11,7 +11,18 @@ import {
   EmailDraft,
   PipelineInsights,
 } from '../interfaces/provider.interface';
-import { buildLeadRiskPrompt, buildClientHealthPrompt, buildExecutiveSummaryPrompt, buildUpsellPrompt, buildChatPrompt, buildEmailDraftPrompt, buildPipelinePrompt } from '../prompts';
+import {
+  SYSTEM_PROMPT,
+  buildLeadRiskPrompt,
+  buildClientHealthPrompt,
+  buildExecutiveSummaryPrompt,
+  buildUpsellPrompt,
+  buildChatPrompt,
+  buildEmailDraftPrompt,
+  buildPipelinePrompt,
+} from '../prompts';
+
+const MODEL = 'gemini-2.0-flash';
 
 @Injectable()
 export class GeminiProvider implements AIProvider {
@@ -33,173 +44,91 @@ export class GeminiProvider implements AIProvider {
     return this.client !== null;
   }
 
-  async draftEmail(lead: Record<string, unknown>, emailType: string): Promise<EmailDraft> {
+  private async call(prompt: string): Promise<string> {
     if (!this.client) throw new Error('Gemini API key not configured');
-    const response = await this.client!.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: buildEmailDraftPrompt(lead, emailType),
+    const response = await this.client.models.generateContent({
+      model: MODEL,
+      contents: prompt,
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+      },
     });
-    const content = response.text || '';
+    return response.text || '';
+  }
+
+  private parseJson<T>(content: string, fallback: T): T {
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-      throw new Error('No JSON found in response');
+      if (jsonMatch) return JSON.parse(jsonMatch[0]) as T;
     } catch {
-      return { subject: '', body: content, tone: 'professional' };
+      // fall through
     }
+    return fallback;
+  }
+
+  async draftEmail(lead: Record<string, unknown>, emailType: string): Promise<EmailDraft> {
+    const text = await this.call(buildEmailDraftPrompt(lead, emailType));
+    return this.parseJson<EmailDraft>(text, { subject: '', body: text, tone: 'professional' });
   }
 
   async analyzePipeline(data: Record<string, unknown>): Promise<PipelineInsights> {
-    if (!this.client) throw new Error('Gemini API key not configured');
-    const response = await this.client!.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: buildPipelinePrompt(data),
+    const text = await this.call(buildPipelinePrompt(data));
+    return this.parseJson<PipelineInsights>(text, {
+      summary: text,
+      bottlenecks: [],
+      winProbabilityByStage: {},
+      recommendations: [],
+      urgentLeads: [],
     });
-    const content = response.text || '';
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-      throw new Error('No JSON found in response');
-    } catch {
-      return {
-        summary: content,
-        bottlenecks: [],
-        winProbabilityByStage: {},
-        recommendations: [],
-        urgentLeads: [],
-      };
-    }
   }
 
   async analyzeLeadRisk(lead: Record<string, unknown>): Promise<LeadRiskAnalysis> {
-    if (!this.isAvailable()) {
-      throw new Error('Gemini API key not configured');
-    }
-
-    const response = await this.client!.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: buildLeadRiskPrompt(lead),
+    const text = await this.call(buildLeadRiskPrompt(lead));
+    return this.parseJson<LeadRiskAnalysis>(text, {
+      riskLevel: 'Medium',
+      summary: text,
+      recommendations: [],
+      confidence: 0.75,
     });
-
-    const content = response.text || '';
-
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-      throw new Error('No JSON found in response');
-    } catch (error) {
-      return {
-        riskLevel: 'Medium',
-        summary: content,
-        recommendations: [],
-        confidence: 0.75,
-      };
-    }
   }
 
   async generateClientHealth(client: Record<string, unknown>): Promise<ClientHealthReport> {
-    if (!this.isAvailable()) {
-      throw new Error('Gemini API key not configured');
-    }
-
-    const response = await this.client!.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: buildClientHealthPrompt(client),
+    const text = await this.call(buildClientHealthPrompt(client));
+    return this.parseJson<ClientHealthReport>(text, {
+      healthScore: 75,
+      summary: text,
+      riskFactors: [],
+      strengths: [],
+      recommendations: [],
     });
-
-    const content = response.text || '';
-
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-      throw new Error('No JSON found in response');
-    } catch (error) {
-      return {
-        healthScore: 75,
-        summary: content,
-        riskFactors: [],
-        strengths: [],
-        recommendations: [],
-      };
-    }
   }
 
   async generateExecutiveSummary(metrics: Record<string, unknown>): Promise<ExecutiveSummary> {
-    if (!this.isAvailable()) {
-      throw new Error('Gemini API key not configured');
-    }
-
-    const response = await this.client!.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: buildExecutiveSummaryPrompt(metrics),
+    const text = await this.call(buildExecutiveSummaryPrompt(metrics));
+    return this.parseJson<ExecutiveSummary>(text, {
+      overview: text,
+      whatChanged: [],
+      whatIsAtRisk: [],
+      whatNeedsAttention: [],
+      keyInsights: [],
     });
-
-    const content = response.text || '';
-
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-      throw new Error('No JSON found in response');
-    } catch (error) {
-      return {
-        overview: content,
-        whatChanged: [],
-        whatIsAtRisk: [],
-        whatNeedsAttention: [],
-        keyInsights: [],
-      };
-    }
   }
 
   async generateUpsellStrategy(client: Record<string, unknown>): Promise<UpsellStrategy> {
-    if (!this.isAvailable()) {
-      throw new Error('Gemini API key not configured');
-    }
-
-    const response = await this.client!.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: buildUpsellPrompt(client),
+    const text = await this.call(buildUpsellPrompt(client));
+    return this.parseJson<UpsellStrategy>(text, {
+      opportunities: [],
+      approach: text,
+      timing: 'Immediate',
     });
-
-    const content = response.text || '';
-
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-      throw new Error('No JSON found in response');
-    } catch (error) {
-      return {
-        opportunities: [],
-        approach: content,
-        timing: 'Immediate',
-      };
-    }
   }
 
   async chat(message: string, context: Record<string, unknown>): Promise<ChatResponse> {
-    if (!this.isAvailable()) {
-      throw new Error('Gemini API key not configured');
-    }
+    const text = await this.call(buildChatPrompt(message, context));
+    return { message: text };
+  }
 
-    const response = await this.client!.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: buildChatPrompt(message, context),
-    });
-
-    const content = response.text || '';
-
-    return { message: content };
+  async generateFreeform(prompt: string): Promise<string> {
+    return this.call(prompt);
   }
 }

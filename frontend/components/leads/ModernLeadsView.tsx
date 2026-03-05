@@ -34,7 +34,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import { api, settingsApi } from '@/lib/api/client';
+import { api, settingsApi, apiFetch } from '@/lib/api/client';
 import {
   Select,
   SelectContent,
@@ -525,24 +525,15 @@ export default function ModernLeadsView({
 
     setSummaryLoading(true);
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'}/leads/${selectedLead.id}/summary`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-        },
+      const summary = await apiFetch<typeof aiSummary>(
+        `/leads/${selectedLead.id}/summary`,
+        { method: 'POST' },
       );
-
-      if (!response.ok) {
-        throw new Error('Failed to generate AI summary');
-      }
-
-      const summary = await response.json();
       setAiSummary(summary);
       setSummaryDialogOpen(true);
     } catch (error) {
       console.error('Failed to generate AI summary:', error);
+      toast.error('Failed to generate AI summary');
     } finally {
       setSummaryLoading(false);
     }

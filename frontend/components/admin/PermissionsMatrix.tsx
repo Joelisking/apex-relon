@@ -116,117 +116,109 @@ export function PermissionsMatrix({
     }
   };
 
-  // Calculate column width percentages: permission label gets ~30%, rest split evenly
-  const roleColWidth = `${Math.floor(70 / roles.length)}%`;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground/60">
-          Role Permissions Matrix
-        </p>
-        <p className="text-xs text-muted-foreground/50">
-          CEO always has all permissions and cannot be modified.
-        </p>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
-        <div className="rounded-xl border border-border/60 overflow-hidden overflow-x-auto">
-          <table className="w-full text-sm table-fixed">
-            <colgroup>
-              <col style={{ width: '30%' }} />
-              {roles.map((role) => (
-                <col key={role} style={{ width: roleColWidth }} />
-              ))}
-            </colgroup>
-            <thead>
-              <tr className="border-b bg-muted/40">
-                <th className="text-left py-2.5 px-3 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60">
-                  Permission
-                </th>
-                {roles.map((role) => (
-                  <th key={role} className="py-3 px-2">
-                    <div className="flex flex-col items-center gap-1">
-                      <Badge
-                        variant="outline"
-                        className={getRoleColor(role)}>
-                        {role}
-                      </Badge>
-                      {role !== 'CEO' && canEdit && isDirty(role) && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs gap-1"
-                          disabled={saving === role}
-                          onClick={() => saveRole(role)}>
-                          {saving === role ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Save className="h-3 w-3" />
-                          )}
-                          Save
-                        </Button>
+    <div
+      className="overflow-auto rounded-lg border"
+      style={{ maxHeight: 'calc(100vh - 220px)' }}>
+      <table className="text-sm border-collapse" style={{ minWidth: '100%', width: 'max-content' }}>
+        <thead className="sticky top-0 z-20">
+          <tr className="border-b bg-background">
+            {/* Sticky top-left corner cell */}
+            <th
+              className="sticky left-0 z-30 bg-background text-left py-3 px-4 font-medium border-r"
+              style={{ minWidth: 220, width: 220 }}>
+              Permission
+            </th>
+            {roles.map((role) => (
+              <th
+                key={role}
+                className="py-3 px-4 bg-background text-center"
+                style={{ minWidth: 160 }}>
+                <div className="flex flex-col items-center gap-1.5">
+                  <Badge
+                    variant="outline"
+                    className={getRoleColor(role)}>
+                    {role}
+                  </Badge>
+                  {role !== 'CEO' && canEdit && isDirty(role) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1"
+                      disabled={saving === role}
+                      onClick={() => saveRole(role)}>
+                      {saving === role ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Save className="h-3 w-3" />
                       )}
-                    </div>
-                  </th>
+                      Save
+                    </Button>
+                  )}
+                </div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(modules).map(([moduleName, modulePerms]) => (
+            <Fragment key={moduleName}>
+              {/* Module section header — label sticks to the left */}
+              <tr className="bg-muted/50">
+                <td
+                  className="sticky left-0 z-10 bg-muted/50 py-2 px-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground border-r"
+                  style={{ minWidth: 220, width: 220 }}>
+                  {moduleName}
+                </td>
+                {roles.map((role) => (
+                  <td key={role} className="bg-muted/50" />
                 ))}
               </tr>
-            </thead>
-            <tbody>
-              {Object.entries(modules).map(
-                ([moduleName, modulePerms]) => (
-                  <Fragment key={moduleName}>
-                    <tr className="bg-muted/50">
+              {modulePerms.map((perm) => (
+                <tr
+                  key={perm.key}
+                  className="border-b border-muted/30 hover:bg-muted/20">
+                  {/* Sticky permission label */}
+                  <td
+                    className="sticky left-0 z-10 bg-background py-2.5 px-4 text-sm border-r"
+                    style={{ minWidth: 220, width: 220 }}>
+                    {perm.label}
+                  </td>
+                  {roles.map((role) => {
+                    const checked = (matrix[role] || []).includes(perm.key);
+                    const isCeo = role === 'CEO';
+                    return (
                       <td
-                        colSpan={roles.length + 1}
-                        className="py-2 px-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                        {moduleName}
+                        key={`${role}-${perm.key}`}
+                        className="py-2.5 px-4"
+                        style={{ minWidth: 160 }}>
+                        <div className="flex justify-center">
+                          <Checkbox
+                            checked={isCeo ? true : checked}
+                            disabled={isCeo || !canEdit}
+                            onCheckedChange={() =>
+                              togglePermission(role, perm.key)
+                            }
+                            className={isCeo ? 'opacity-50' : ''}
+                          />
+                        </div>
                       </td>
-                    </tr>
-                    {modulePerms.map((perm) => (
-                      <tr
-                        key={perm.key}
-                        className="border-b border-muted/30 hover:bg-muted/20">
-                        <td className="py-2.5 px-3 text-sm">
-                          {perm.label}
-                        </td>
-                        {roles.map((role) => {
-                          const checked = (
-                            matrix[role] || []
-                          ).includes(perm.key);
-                          const isCeo = role === 'CEO';
-                          return (
-                            <td
-                              key={`${role}-${perm.key}`}
-                              className="py-2.5 px-2">
-                              <div className="flex justify-center">
-                                <Checkbox
-                                  checked={isCeo ? true : checked}
-                                  disabled={isCeo || !canEdit}
-                                  onCheckedChange={() =>
-                                    togglePermission(role, perm.key)
-                                  }
-                                  className={
-                                    isCeo ? 'opacity-50' : ''
-                                  }
-                                />
-                              </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </Fragment>
-                ),
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                    );
+                  })}
+                </tr>
+              ))}
+            </Fragment>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

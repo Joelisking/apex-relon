@@ -65,4 +65,5 @@ export interface AIProvider {
   chat(message: string, context: Record<string, unknown>): Promise<ChatResponse>;
   draftEmail(lead: Record<string, unknown>, emailType: string): Promise<EmailDraft>;
   analyzePipeline(data: Record<string, unknown>): Promise<PipelineInsights>;
+  generateFreeform(prompt: string, maxTokens?: number): Promise<string>;
 }

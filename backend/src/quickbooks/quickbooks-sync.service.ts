@@ -38,7 +38,7 @@ export class QuickBooksSyncService {
   }
 
   private async pullQbCustomers(): Promise<number> {
-    const { client: qbClient } = await this.qbService.getApiClient();
+    const { client: qbClient, realmId } = await this.qbService.getApiClient();
     const query = 'SELECT * FROM Customer WHERE Active = true MAXRESULTS 1000';
     const res = await qbClient.get(`/query?query=${encodeURIComponent(query)}`);
     const customers: any[] = res?.QueryResponse?.Customer ?? [];
@@ -88,6 +88,7 @@ export class QuickBooksSyncService {
 
         await this.prisma.quickBooksSync.create({
           data: {
+            realmId,
             direction: 'QB_TO_CRM',
             entityType: 'Customer',
             externalId: qbId,
@@ -101,6 +102,7 @@ export class QuickBooksSyncService {
         this.logger.warn(`Failed to sync QB Customer ${customer.Id}`, e?.message);
         await this.prisma.quickBooksSync.create({
           data: {
+            realmId,
             direction: 'QB_TO_CRM',
             entityType: 'Customer',
             externalId: customer.Id,
@@ -116,7 +118,7 @@ export class QuickBooksSyncService {
   }
 
   private async pushCrmClients(): Promise<number> {
-    const { client: qbClient } = await this.qbService.getApiClient();
+    const { client: qbClient, realmId } = await this.qbService.getApiClient();
 
     // Find CRM clients without a QB customer ID
     const unsynced = await this.prisma.client.findMany({
@@ -144,6 +146,7 @@ export class QuickBooksSyncService {
 
         await this.prisma.quickBooksSync.create({
           data: {
+            realmId,
             direction: 'CRM_TO_QB',
             entityType: 'Customer',
             externalId: qbId,
@@ -157,6 +160,7 @@ export class QuickBooksSyncService {
         this.logger.warn(`Failed to push CRM client ${crmClient.id} to QB`, e?.message);
         await this.prisma.quickBooksSync.create({
           data: {
+            realmId,
             direction: 'CRM_TO_QB',
             entityType: 'Customer',
             internalId: crmClient.id,
@@ -176,7 +180,7 @@ export class QuickBooksSyncService {
   async syncExpenses(userId: string): Promise<{ created: number; skipped: number; errors: number }> {
     let created = 0, skipped = 0, errors = 0;
 
-    const { client: qbClient } = await this.qbService.getApiClient();
+    const { client: qbClient, realmId } = await this.qbService.getApiClient();
     const query = 'SELECT * FROM Bill MAXRESULTS 100';
     const res = await qbClient.get(`/query?query=${encodeURIComponent(query)}`);
     const bills: any[] = res?.QueryResponse?.Bill ?? [];
@@ -191,7 +195,7 @@ export class QuickBooksSyncService {
 
         try {
           const existing = await this.prisma.quickBooksSync.findFirst({
-            where: { entityType: 'Expense', externalId: billLineId },
+            where: { realmId, entityType: 'Expense', externalId: billLineId },
           });
           if (existing) { skipped++; continue; }
 
@@ -199,7 +203,7 @@ export class QuickBooksSyncService {
             where: { qbCustomerId: customerRef },
           });
           if (!crmClient) {
-            await this.logSkipped('Expense', billLineId, undefined, `No CRM client for QB customer ${customerRef}`);
+            await this.logSkipped(realmId, 'Expense', billLineId, undefined, `No CRM client for QB customer ${customerRef}`);
             skipped++; continue;
           }
 
@@ -208,7 +212,7 @@ export class QuickBooksSyncService {
             orderBy: { updatedAt: 'desc' },
           });
           if (!project) {
-            await this.logSkipped('Expense', billLineId, crmClient.id, `No active project for client ${crmClient.id}`);
+            await this.logSkipped(realmId, 'Expense', billLineId, crmClient.id, `No active project for client ${crmClient.id}`);
             skipped++; continue;
           }
 
@@ -233,12 +237,12 @@ export class QuickBooksSyncService {
           });
 
           await this.prisma.quickBooksSync.create({
-            data: { direction: 'QB_TO_CRM', entityType: 'Expense', externalId: billLineId, internalId: costLog.id, status: 'success' },
+            data: { realmId, direction: 'QB_TO_CRM', entityType: 'Expense', externalId: billLineId, internalId: costLog.id, status: 'success' },
           });
           created++;
         } catch (e: any) {
           await this.prisma.quickBooksSync.create({
-            data: { direction: 'QB_TO_CRM', entityType: 'Expense', externalId: billLineId, status: 'error', errorMessage: e?.message ?? 'Unknown error' },
+            data: { realmId, direction: 'QB_TO_CRM', entityType: 'Expense', externalId: billLineId, status: 'error', errorMessage: e?.message ?? 'Unknown error' },
           }).catch(() => {});
           errors++;
         }
@@ -247,9 +251,9 @@ export class QuickBooksSyncService {
     return { created, skipped, errors };
   }
 
-  private async logSkipped(entityType: string, externalId: string, internalId: string | undefined, reason: string): Promise<void> {
+  private async logSkipped(realmId: string, entityType: string, externalId: string, internalId: string | undefined, reason: string): Promise<void> {
     await this.prisma.quickBooksSync.create({
-      data: { direction: 'QB_TO_CRM', entityType, externalId, internalId, status: 'skipped', errorMessage: reason },
+      data: { realmId, direction: 'QB_TO_CRM', entityType, externalId, internalId, status: 'skipped', errorMessage: reason },
     });
   }
 

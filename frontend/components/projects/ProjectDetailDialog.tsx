@@ -9,6 +9,12 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@/components/ui/tabs';
+import {
   Calendar,
   Clock,
   FileText,
@@ -541,68 +547,82 @@ export function ProjectDetailDialog({
           </div>
 
           {/* ─── MAIN CONTENT ─────────────────────────────────────────────── */}
-          <div className="flex-1 overflow-y-auto pt-4">
-            <div className="p-6 space-y-6">
-              {/* Description */}
-              {project.description && (
-                <section className="space-y-2">
-                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground flex items-center gap-2">
-                    <FileText className="h-3 w-3" />
-                    Description
-                  </h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                    {project.description}
-                  </p>
-                </section>
-              )}
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <Tabs defaultValue="overview" className="flex flex-col flex-1 overflow-hidden">
+              <div className="px-6 pt-3 border-b border-border/40 shrink-0">
+                <TabsList className="h-8 bg-transparent p-0 gap-1">
+                  {[
+                    { value: 'overview', label: 'Overview' },
+                    { value: 'budget', label: 'Budget' },
+                    { value: 'tasks', label: 'Tasks' },
+                    { value: 'quotes', label: 'Quotes' },
+                    { value: 'documents', label: `Documents${files.length > 0 ? ` (${files.length})` : ''}` },
+                  ].map((tab) => (
+                    <TabsTrigger
+                      key={tab.value}
+                      value={tab.value}
+                      className="h-7 px-3 text-xs rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
+                    >
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
 
-              {project.description && (
-                <hr className="border-border/40" />
-              )}
+              <div className="flex-1 overflow-y-auto">
+                <TabsContent value="overview" className="mt-0 p-6 space-y-6">
+                  {project.description && (
+                    <section className="space-y-2">
+                      <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground flex items-center gap-2">
+                        <FileText className="h-3 w-3" />
+                        Description
+                      </h3>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                        {project.description}
+                      </p>
+                    </section>
+                  )}
+                  {project.description && <hr className="border-border/40" />}
+                  <ProjectActivityTimeline
+                    projectId={project.id}
+                    activities={activities}
+                    currentUserId={currentUserId}
+                    onActivityAdded={refreshProject}
+                  />
+                </TabsContent>
 
-              {/* Activities */}
-              <ProjectActivityTimeline
-                projectId={project.id}
-                activities={activities}
-                currentUserId={currentUserId}
-                onActivityAdded={refreshProject}
-              />
+                <TabsContent value="budget" className="mt-0 p-6">
+                  <CostLogsSection
+                    projectId={project.id}
+                    costLogs={costLogs}
+                    estimatedRevenue={revenue}
+                    totalCost={project.totalCost ?? 0}
+                    onUpdated={refreshProject}
+                    canEditCosts={canEditCosts}
+                  />
+                </TabsContent>
 
-              <hr className="border-border/40" />
+                <TabsContent value="tasks" className="mt-0 p-6">
+                  <LinkedTasksSection
+                    entityType="PROJECT"
+                    entityId={project.id}
+                  />
+                </TabsContent>
 
-              {/* Files */}
-              <ProjectFileUploadSection
-                projectId={project.id}
-                files={files}
-                currentUserId={currentUserId}
-                onFilesChanged={refreshProject}
-              />
+                <TabsContent value="quotes" className="mt-0 p-6">
+                  <LinkedQuotesSection projectId={project.id} />
+                </TabsContent>
 
-              <hr className="border-border/40" />
-
-              {/* Cost Logs */}
-              <CostLogsSection
-                projectId={project.id}
-                costLogs={costLogs}
-                estimatedRevenue={revenue}
-                totalCost={project.totalCost ?? 0}
-                onUpdated={refreshProject}
-                canEditCosts={canEditCosts}
-              />
-
-              <hr className="border-border/40" />
-
-              {/* Tasks */}
-              <LinkedTasksSection
-                entityType="PROJECT"
-                entityId={project.id}
-              />
-
-              <hr className="border-border/40" />
-
-              {/* Quotes */}
-              <LinkedQuotesSection projectId={project.id} />
-            </div>
+                <TabsContent value="documents" className="mt-0 p-6">
+                  <ProjectFileUploadSection
+                    projectId={project.id}
+                    files={files}
+                    currentUserId={currentUserId}
+                    onFilesChanged={refreshProject}
+                  />
+                </TabsContent>
+              </div>
+            </Tabs>
           </div>
         </div>
       </DialogContent>

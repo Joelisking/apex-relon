@@ -12,6 +12,7 @@ import { NotificationType } from '../notifications/notification-types.constants'
 import { WorkflowsService } from '../workflows/workflows.service';
 import { CreateLeadRepDto } from './dto/create-lead-rep.dto';
 import { Prisma } from '@prisma/client';
+import { buildLeadSummaryPrompt } from '../ai/prompts';
 
 @Injectable()
 export class LeadsService {
@@ -361,13 +362,31 @@ export class LeadsService {
   }
 
   async analyzeRisk(id: string, provider?: string) {
-    const lead = await this.findOne(id);
-    if (!lead) {
+    // Fetch lead with activities + stageHistory for rich AI context
+    const leadBase = await this.findOne(id);
+    if (!leadBase) {
       throw new Error('Lead not found');
     }
 
+    // Fetch activities separately for the risk prompt (findOne doesn't include them)
+    const activities = await this.prisma.activity.findMany({
+      where: { leadId: id },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: {
+        type: true,
+        reason: true,
+        notes: true,
+        activityDate: true,
+        createdAt: true,
+      },
+    });
+
+    // findOne already enriches with metrics — reuse them
+    const lead = { ...leadBase, activities };
+
     const analysis = await this.aiService.analyzeLeadRisk(
-      lead,
+      lead as unknown as Record<string, unknown>,
       provider,
     );
 
@@ -472,25 +491,19 @@ export class LeadsService {
       fileCategories: lead.files.map((f) => f.category),
     };
 
-    // Generate AI summary
-    const prompt = `Analyze this sales lead and provide:
-1. A concise summary of the current situation (2-3 sentences)
-2. Key insights about the lead's progress
-3. Top 3 recommended next actions
-
-Lead Information:
-${JSON.stringify(context, null, 2)}
-
-Format your response as JSON with fields: summary, insights (array), nextActions (array).`;
+    // Generate AI summary using structured prompt
+    const prompt = buildLeadSummaryPrompt(context);
 
     try {
-      const response = await this.aiService.chat(
-        prompt,
-        {},
-        provider,
-      );
+      const raw = await this.aiService.generateFreeform(prompt, provider);
 
-      const aiResponse = JSON.parse(response.message);
+      let aiResponse: { summary?: string; insights?: string[]; nextActions?: string[] };
+      try {
+        const jsonMatch = raw.match(/\{[\s\S]*\}/);
+        aiResponse = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+      } catch {
+        aiResponse = {};
+      }
 
       // Update lead with AI summary
       await this.update(id, {

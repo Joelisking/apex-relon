@@ -269,7 +269,7 @@ export class QuickBooksService {
   }
 
   async syncPayments(): Promise<{ updated: number }> {
-    const { client: qbClient } = await this.getApiClient();
+    const { client: qbClient, realmId } = await this.getApiClient();
     const query = 'SELECT * FROM Payment MAXRESULTS 100';
     const res = await qbClient.get(`/query?query=${encodeURIComponent(query)}`);
     const payments: any[] = res?.QueryResponse?.Payment ?? [];
@@ -286,7 +286,7 @@ export class QuickBooksService {
 
       await this.prisma.quote.update({ where: { id: quote.id }, data: { qbPaymentStatus: 'paid' } });
       await this.prisma.quickBooksSync.create({
-        data: { direction: 'QB_TO_CRM', entityType: 'Payment', externalId: payment.Id, internalId: quote.id, status: 'success' },
+        data: { realmId, direction: 'QB_TO_CRM', entityType: 'Payment', externalId: payment.Id, internalId: quote.id, status: 'success' },
       });
 
       if (quote.clientId) {
@@ -301,6 +301,14 @@ export class QuickBooksService {
   // ─── Sync History ─────────────────────────────────────────────────────────
 
   async getSyncHistory(limit = 50) {
-    return this.prisma.quickBooksSync.findMany({ orderBy: { syncedAt: 'desc' }, take: limit });
+    const conn = await this.prisma.quickBooksConnection.findFirst({
+      where: { isActive: true },
+      select: { realmId: true },
+    });
+    return this.prisma.quickBooksSync.findMany({
+      where: conn ? { OR: [{ realmId: conn.realmId }, { realmId: null }] } : {},
+      orderBy: { syncedAt: 'desc' },
+      take: limit,
+    });
   }
 }
