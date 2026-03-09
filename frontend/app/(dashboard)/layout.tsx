@@ -41,7 +41,7 @@ export default function DashboardLayout({
             <Separator orientation="vertical" className="mr-2 !h-4" />
             <img
               src="/logo-black-transparent.svg"
-              alt="Relon"
+              alt="Apex"
               className="h-5 w-auto"
             />
             <button

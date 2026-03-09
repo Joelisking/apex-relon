@@ -19,7 +19,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
     {
       id: '1',
       sender: 'ai',
-      text: 'Hello! I am your Relon CRM Assistant. Ask me anything about your leads or clients.',
+      text: 'Hello! I\'m your Apex CRM Assistant. Ask me anything about your leads, projects, or clients.',
       timestamp: new Date(),
     },
   ]);

@@ -17,7 +17,7 @@ export default function AuthLayout({
         <div className="relative z-10">
           <Image
             src="/logo-black-transparent.svg"
-            alt="Relon"
+            alt="Apex"
             width={32}
             height={32}
             className="h-8 invert"
@@ -33,8 +33,7 @@ export default function AuthLayout({
           </p>
         </div>
         <p className="relative z-10 text-xs text-background/40">
-          &copy; {new Date().getFullYear()} Relon. All rights
-          reserved.
+          &copy; {new Date().getFullYear()} Apex Consulting &amp; Surveying, Inc.
         </p>
       </div>
 
@@ -43,7 +42,7 @@ export default function AuthLayout({
         <div className="lg:hidden text-center mb-8">
           <Image
             src="/logo-black-transparent.svg"
-            alt="Relon"
+            alt="Apex"
             width={32}
             height={32}
             className="h-8 mx-auto"

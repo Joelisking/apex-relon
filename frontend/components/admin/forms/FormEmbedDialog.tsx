@@ -69,11 +69,11 @@ export function FormEmbedDialog({ form, onOpenChange }: FormEmbedDialogProps) {
     : '';
 
   const jsCode = form
-    ? `<div id="relon-form-${form.apiKey}"></div>
+    ? `<div id="apex-form-${form.apiKey}"></div>
 <script
   src="${origin}/forms/embed.js"
   data-key="${form.apiKey}"
-  data-container="relon-form-${form.apiKey}"
+  data-container="apex-form-${form.apiKey}"
 ></script>`
     : '';
 

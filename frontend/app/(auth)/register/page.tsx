@@ -44,7 +44,7 @@ export default function RegisterPage() {
       login(response.access_token, response.user);
 
       toast.success('Account created!', {
-        description: 'Welcome to Relon CRM.',
+        description: 'Welcome to Apex CRM.',
       });
 
       router.push('/dashboard');
