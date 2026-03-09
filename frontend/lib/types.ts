@@ -356,6 +356,8 @@ export interface Project {
   riskStatus?: string;
   estimatedRevenue?: number;
   totalCost?: number;
+  serviceTypeId?: string | null;
+  serviceType?: { id: string; name: string } | null;
   projectManagerId?: string;
   projectManager?: {
     id: string;
@@ -609,6 +611,8 @@ export interface Task {
   createdBy?: { id: string; name: string; email: string } | null;
   completedAt?: string | null;
   reminderAt?: string | null;
+  taskTypeId?: string | null;
+  taskType?: { id: string; name: string } | null;
   completionNote?: string | null;
   uncompleteReason?: string | null;
   createdAt: string;

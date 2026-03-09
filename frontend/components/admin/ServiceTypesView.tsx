@@ -113,16 +113,16 @@ export function ServiceTypesView() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-display tracking-tight">Service Types</h2>
+        <h2 className="text-3xl font-display tracking-tight">Project Types</h2>
         <p className="text-muted-foreground mt-1">
-          Manage service types that can be assigned to prospective projects.
+          Manage project types that can be assigned to leads and projects.
         </p>
       </div>
 
-      {/* Service Types Table */}
+      {/* Project Types Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Service Types</CardTitle>
+          <CardTitle>Project Types</CardTitle>
         </CardHeader>
         <CardContent>
           {serviceTypes.length === 0 ? (
@@ -218,7 +218,7 @@ export function ServiceTypesView() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
-            Add Service Type
+            Add Project Type
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -253,10 +253,10 @@ export function ServiceTypesView() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Service Type</AlertDialogTitle>
+            <AlertDialogTitle>Delete Project Type</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete &quot;{deleteTarget?.name}&quot;?
-              This cannot be undone. Service types assigned to prospective projects cannot be deleted.
+              This cannot be undone. Project types assigned to leads or projects cannot be deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

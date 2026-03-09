@@ -249,7 +249,7 @@ const adminSubItems: Array<{
     permission: 'settings:manage',
   },
   {
-    title: 'Service Types',
+    title: 'Project Types',
     href: '/admin/service-types',
     icon: ListFilter,
     permission: 'settings:manage',

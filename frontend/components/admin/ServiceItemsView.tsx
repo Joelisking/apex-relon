@@ -346,7 +346,7 @@ export function ServiceItemsView() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Service Type</Label>
+              <Label>Project Type</Label>
               <Select
                 value={newItem.serviceTypeId}
                 onValueChange={(v) => setNewItem((d) => ({ ...d, serviceTypeId: v === '__none__' ? '' : v }))}>

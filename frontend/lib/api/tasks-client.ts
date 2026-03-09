@@ -10,6 +10,7 @@ export interface CreateTaskDto {
   entityType?: string;
   entityId?: string;
   assignedToId?: string;
+  taskTypeId?: string;
   reminderAt?: string;
 }
 

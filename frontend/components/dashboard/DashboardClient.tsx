@@ -373,10 +373,10 @@ const DashboardClient: React.FC<DashboardClientProps> = ({
           </div>
         </div>
 
-        {/* Revenue by Service Type */}
+        {/* Revenue by Project Type */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-800 mb-6">
-            Revenue by Service Type
+            Revenue by Project Type
           </h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">

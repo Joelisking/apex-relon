@@ -555,7 +555,7 @@ export function EditLeadDialog({
                 name="serviceTypeId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Service Type</FormLabel>
+                    <FormLabel>Project Type</FormLabel>
                     <Select
                       onValueChange={(val) =>
                         field.onChange(val === 'none' ? '' : val)

@@ -111,7 +111,7 @@ export function TaskTypesView() {
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-display tracking-tight">Task Types</h2>
-        <p className="text-muted-foreground mt-1">Manage task types, optionally linked to a service type.</p>
+        <p className="text-muted-foreground mt-1">Manage task types, optionally linked to a project type.</p>
       </div>
 
       <Card>
@@ -124,7 +124,7 @@ export function TaskTypesView() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Service Type</TableHead>
+                  <TableHead>Project Type</TableHead>
                   <TableHead>Active</TableHead>
                   <TableHead className="w-32 text-right">Actions</TableHead>
                 </TableRow>
@@ -226,7 +226,7 @@ export function TaskTypesView() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Service Type</Label>
+              <Label>Project Type</Label>
               <Select
                 value={newData.serviceTypeId}
                 onValueChange={(v) => setNewData((d) => ({ ...d, serviceTypeId: v === '__none__' ? '' : v }))}>

@@ -40,12 +40,13 @@ interface EntityOption {
   type: EntityType;
   label: string;
   sublabel?: string;
+  serviceTypeId?: string;
 }
 
 interface EntityLinkPickerProps {
   entityType: string;
   entityId: string;
-  onChange: (entityType: string, entityId: string) => void;
+  onChange: (entityType: string, entityId: string, serviceTypeId?: string) => void;
 }
 
 const TYPE_META = {
@@ -115,6 +116,7 @@ export function EntityLinkPicker({
           type: 'LEAD' as EntityType,
           label: l.contactName,
           sublabel: l.company,
+          serviceTypeId: l.serviceTypeId ?? undefined,
         })),
         ...clients.map((c) => ({
           id: c.id,
@@ -129,6 +131,7 @@ export function EntityLinkPicker({
           type: 'PROJECT' as EntityType,
           label: p.name,
           sublabel: p.client?.name,
+          serviceTypeId: p.serviceTypeId ?? undefined,
         })),
       ]);
     });
@@ -231,7 +234,7 @@ export function EntityLinkPicker({
   // ------------------------------------------------------------------
   const handleSelect = useCallback(
     (option: EntityOption) => {
-      onChange(option.type, option.id);
+      onChange(option.type, option.id, option.serviceTypeId);
       setAsyncLabel(option.label);
       setOpen(false);
     },
@@ -239,7 +242,7 @@ export function EntityLinkPicker({
   );
 
   const handleClear = () => {
-    onChange('', '');
+    onChange('', '', undefined);
     setAsyncLabel('');
   };
 

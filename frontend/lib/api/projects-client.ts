@@ -26,6 +26,8 @@ export interface Project {
   riskStatus?: string;
   estimatedRevenue?: number;
   totalCost?: number;
+  serviceTypeId?: string | null;
+  serviceType?: { id: string; name: string } | null;
   executingCompany?: string | null;
   projectManagerId?: string;
   projectManager?: {

@@ -9,6 +9,7 @@ import {
   User,
   Search,
   ChevronDown,
+  Tag,
 } from 'lucide-react';
 import { TimePicker } from './TimePicker';
 import { format } from 'date-fns';
@@ -28,8 +29,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { tasksApi, type CreateTaskDto } from '@/lib/api/tasks-client';
+import { settingsApi } from '@/lib/api/client';
 import { type UserResponse } from '@/lib/api/users-client';
-import type { Task } from '@/lib/types';
+import type { Task, TaskType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 interface TaskDialogProps {
@@ -137,18 +139,29 @@ export function TaskDialog({
     assignedToId: '',
     entityType: '',
     entityId: '',
+    taskTypeId: '',
   });
 
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignQuery, setAssignQuery] = useState('');
+  const [taskTypeOpen, setTaskTypeOpen] = useState(false);
+
+  // Task types filtered by the linked entity's project type
+  const [linkedServiceTypeId, setLinkedServiceTypeId] = useState<string | undefined>(undefined);
+  const [taskTypes, setTaskTypes] = useState<TaskType[]>([]);
 
   // Whether the current user is allowed to set DONE in this dialog
   const allowDone = canMarkDone(editingTask, currentUserId);
 
+  // Reset form when dialog opens/closes
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setLinkedServiceTypeId(undefined);
+      return;
+    }
     setAssignOpen(false);
     setAssignQuery('');
+    setTaskTypeOpen(false);
     if (editingTask) {
       setForm({
         title: editingTask.title,
@@ -161,6 +174,7 @@ export function TaskDialog({
         assignedToId: editingTask.assignedToId || '',
         entityType: editingTask.entityType || '',
         entityId: editingTask.entityId || '',
+        taskTypeId: editingTask.taskTypeId || '',
         status: editingTask.status,
         completionNote: '',
       });
@@ -174,6 +188,7 @@ export function TaskDialog({
         assignedToId: currentUserId || '',
         entityType: defaultEntityType || '',
         entityId: defaultEntityId || '',
+        taskTypeId: '',
       });
     }
   }, [
@@ -183,6 +198,14 @@ export function TaskDialog({
     defaultEntityType,
     defaultEntityId,
   ]);
+
+  // Fetch task types, filtered by linked entity's project type when available
+  useEffect(() => {
+    settingsApi
+      .getTaskTypes(linkedServiceTypeId)
+      .then((data) => setTaskTypes(data.filter((tt) => tt.isActive)))
+      .catch(() => setTaskTypes([]));
+  }, [linkedServiceTypeId]);
 
   const filteredAssignees = useMemo(() => {
     if (!assignQuery.trim()) return assignableUsers;
@@ -196,11 +219,12 @@ export function TaskDialog({
     (u) => u.id === form.assignedToId,
   );
 
+  const selectedTaskType = taskTypes.find((tt) => tt.id === form.taskTypeId);
+
   const isMarkingDone = form.status === 'DONE' && editingTask?.status !== 'DONE';
 
   const handleSave = async () => {
     if (!form.title.trim()) return;
-    // Require completionNote when status is being set to DONE
     if (isMarkingDone && !form.completionNote?.trim()) return;
     setSaving(true);
     try {
@@ -209,6 +233,7 @@ export function TaskDialog({
         entityType: form.entityType || undefined,
         entityId: form.entityId || undefined,
         assignedToId: form.assignedToId || undefined,
+        taskTypeId: form.taskTypeId || undefined,
         dueDate: form.dueDate || undefined,
         dueTime: form.dueTime || undefined,
         completionNote:
@@ -260,6 +285,88 @@ export function TaskDialog({
             className="resize-none text-sm border-dashed min-h-16 text-muted-foreground placeholder:text-muted-foreground/40"
             rows={2}
           />
+
+          <div className="border-t border-dashed border-border/50" />
+
+          {/* Entity Link — at top so task type can filter based on it */}
+          <EntityLinkPicker
+            entityType={form.entityType ?? ''}
+            entityId={form.entityId ?? ''}
+            onChange={(type, id, serviceTypeId) => {
+              setForm({ ...form, entityType: type, entityId: id, taskTypeId: '' });
+              setLinkedServiceTypeId(serviceTypeId);
+            }}
+          />
+
+          {/* Task Type — filtered by the linked entity's project type */}
+          {taskTypes.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
+                Task Type
+                {linkedServiceTypeId && (
+                  <span className="ml-1.5 normal-case text-muted-foreground/50 tracking-normal font-normal">
+                    — filtered by project type
+                  </span>
+                )}
+              </p>
+              <Popover
+                open={taskTypeOpen}
+                onOpenChange={setTaskTypeOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      'w-full flex items-center gap-2 px-3 h-9 rounded-md border border-input bg-background text-sm text-left transition-colors hover:bg-muted/40',
+                      !selectedTaskType && 'text-muted-foreground',
+                    )}>
+                    <Tag className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 truncate">
+                      {selectedTaskType
+                        ? selectedTaskType.name
+                        : 'Select task type...'}
+                    </span>
+                    {form.taskTypeId ? (
+                      <X
+                        className="h-3.5 w-3.5 shrink-0 text-muted-foreground hover:text-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setForm({ ...form, taskTypeId: '' });
+                        }}
+                      />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="p-0 overflow-hidden"
+                  style={{ width: 'var(--radix-popover-trigger-width)' }}
+                  align="start"
+                  sideOffset={4}>
+                  <div className="py-1 max-h-52 overflow-y-auto">
+                    {taskTypes.map((tt) => (
+                      <button
+                        key={tt.id}
+                        type="button"
+                        onClick={() => {
+                          setForm({ ...form, taskTypeId: tt.id });
+                          setTaskTypeOpen(false);
+                        }}
+                        className={cn(
+                          'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-muted/50 text-left',
+                          form.taskTypeId === tt.id && 'bg-muted/30',
+                        )}>
+                        <span className="flex-1 truncate">{tt.name}</span>
+                        {form.taskTypeId === tt.id && (
+                          <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
 
           <div className="border-t border-dashed border-border/50" />
 
@@ -531,15 +638,6 @@ export function TaskDialog({
               </Popover>
             </div>
           )}
-
-          {/* Entity Link */}
-          <EntityLinkPicker
-            entityType={form.entityType ?? ''}
-            entityId={form.entityId ?? ''}
-            onChange={(type, id) =>
-              setForm({ ...form, entityType: type, entityId: id })
-            }
-          />
         </div>
 
         {/* Footer */}

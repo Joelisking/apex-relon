@@ -154,7 +154,7 @@ const CATEGORIES: Array<{
   },
   {
     value: 'service_type',
-    label: 'Service Types',
+    label: 'Project Types',
     description:
       'Service types that can be assigned to prospective projects.',
     hasColor: false,
@@ -853,7 +853,7 @@ function ServiceTypesPanel() {
         <CardContent className="p-0">
           {serviceTypes.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              No service types yet. Add one below.
+              No project types yet. Add one below.
             </p>
           ) : (
             <Table>
@@ -945,7 +945,7 @@ function ServiceTypesPanel() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Plus className="h-4 w-4" />
-            Add Service Type
+            Add Project Type
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -986,7 +986,7 @@ function ServiceTypesPanel() {
         onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Service Type</AlertDialogTitle>
+            <AlertDialogTitle>Delete Project Type</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete &quot;
               {deleteTarget?.name}&quot;? This cannot be undone.
