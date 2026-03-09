@@ -27,6 +27,8 @@ export class TimeTrackingService {
         hourlyRate,
         totalCost,
         source: dto.source ?? 'manual',
+        serviceItemId: dto.serviceItemId,
+        serviceItemSubtaskId: dto.serviceItemSubtaskId,
       },
       include: { user: { select: { id: true, name: true } }, project: { select: { id: true, name: true } } },
     });
@@ -55,6 +57,8 @@ export class TimeTrackingService {
       include: {
         user: { select: { id: true, name: true } },
         project: { select: { id: true, name: true } },
+        serviceItem: { select: { id: true, name: true } },
+        serviceItemSubtask: { select: { id: true, name: true } },
       },
     });
   }
@@ -75,6 +79,8 @@ export class TimeTrackingService {
         ...(data.billable !== undefined && { billable: data.billable }),
         ...(data.hourlyRate !== undefined && { hourlyRate: data.hourlyRate }),
         ...(data.projectId !== undefined && { projectId: data.projectId }),
+        ...(data.serviceItemId !== undefined && { serviceItemId: data.serviceItemId }),
+        ...(data.serviceItemSubtaskId !== undefined && { serviceItemSubtaskId: data.serviceItemSubtaskId }),
         totalCost: hours * hourlyRate,
       },
     });

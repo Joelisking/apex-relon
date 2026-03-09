@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/table';
 
 import { DataTablePagination } from './data-table-pagination';
-import { DataTableToolbar } from './data-table-toolbar';
+import { DataTableToolbar, type FilterConfig } from './data-table-toolbar';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -37,6 +37,7 @@ interface DataTableProps<TData, TValue> {
   initialPageSize?: number;
   exportFilename?: string;
   onSelectionChange?: (selectedRows: TData[]) => void;
+  filterConfigs?: FilterConfig[];
 }
 
 export function DataTable<TData, TValue>({
@@ -48,6 +49,7 @@ export function DataTable<TData, TValue>({
   initialPageSize = 20,
   exportFilename,
   onSelectionChange,
+  filterConfigs,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
@@ -103,6 +105,7 @@ export function DataTable<TData, TValue>({
         searchKey={searchKey}
         globalFilter={globalFilter}
         exportFilename={exportFilename}
+        filterConfigs={filterConfigs}
       />
       <div className="rounded-md border">
         <Table>

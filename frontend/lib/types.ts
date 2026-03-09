@@ -11,8 +11,62 @@ export enum Role {
 export interface ServiceType {
   id: string;
   name: string;
+  description?: string | null;
+  isActive: boolean;
+  sortOrder: number;
   createdAt?: string;
   updatedAt?: string;
+  _count?: { leads: number; projects: number };
+}
+
+export interface TaskType {
+  id: string;
+  name: string;
+  description?: string | null;
+  serviceTypeId?: string | null;
+  serviceType?: { id: string; name: string } | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+  _count?: { tasks: number };
+}
+
+export interface ServiceItemRoleEstimate {
+  id: string;
+  subtaskId: string;
+  role: string;
+  estimatedHours: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ServiceItemSubtask {
+  id: string;
+  serviceItemId: string;
+  name: string;
+  description?: string | null;
+  sortOrder: number;
+  roleEstimates: ServiceItemRoleEstimate[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ServiceItem {
+  id: string;
+  name: string;
+  description?: string | null;
+  serviceTypeId?: string | null;
+  serviceType?: { id: string; name: string } | null;
+  unit?: string | null;
+  defaultPrice?: number | null;
+  qbItemId?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  subtasks: ServiceItemSubtask[];
+  createdAt?: string;
+  updatedAt?: string;
+  _count?: { quoteLineItems: number; timeEntries: number };
 }
 
 export interface DropdownOption {
@@ -663,6 +717,7 @@ export interface QuoteLineItem {
   taxable: boolean;
   lineTotal: number;
   sortOrder: number;
+  serviceItemId?: string | null;
 }
 
 export interface Quote {

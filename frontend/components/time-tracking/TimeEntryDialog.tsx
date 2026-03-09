@@ -22,10 +22,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { API_URL } from '@/lib/api/client';
+import { API_URL, getTokenFromClientCookies, serviceItemsApi } from '@/lib/api/client';
+import type { ServiceItem } from '@/lib/types';
 
 function getToken() {
-  return typeof window !== 'undefined' ? (localStorage.getItem('token') ?? '') : '';
+  return getTokenFromClientCookies() ?? '';
 }
 function getCurrentUserId() {
   return typeof window !== 'undefined'
@@ -58,6 +59,8 @@ interface TimeEntry {
   description?: string;
   billable: boolean;
   hourlyRate?: number;
+  serviceItemId?: string;
+  serviceItemSubtaskId?: string;
 }
 
 interface TimeEntryDialogProps {
@@ -85,8 +88,10 @@ export function TimeEntryDialog({
   const [projectId, setProjectId] = useState('');
   const [description, setDescription] = useState('');
   const [billable, setBillable] = useState(true);
+  const [serviceItemId, setServiceItemId] = useState('');
+  const [serviceItemSubtaskId, setServiceItemSubtaskId] = useState('');
 
-  // Fetch projects for selector
+  // Fetch projects
   const { data: projects = [] } = useQuery<{ id: string; name: string }[]>({
     queryKey: ['projects-simple'],
     queryFn: async () => {
@@ -98,6 +103,16 @@ export function TimeEntryDialog({
     },
   });
 
+  // Fetch service items (with subtasks embedded)
+  const { data: serviceItems = [] } = useQuery<ServiceItem[]>({
+    queryKey: ['service-items-active'],
+    queryFn: () => serviceItemsApi.getAll(),
+  });
+
+  // Subtasks for the currently selected service item
+  const selectedItem = serviceItems.find((si) => si.id === serviceItemId);
+  const subtasks = selectedItem?.subtasks ?? [];
+
   useEffect(() => {
     if (entry) {
       setDate(entry.date.split('T')[0]);
@@ -105,24 +120,36 @@ export function TimeEntryDialog({
       setProjectId(entry.projectId ?? '');
       setDescription(entry.description ?? '');
       setBillable(entry.billable);
+      setServiceItemId(entry.serviceItemId ?? '');
+      setServiceItemSubtaskId(entry.serviceItemSubtaskId ?? '');
     } else {
       setDate(new Date().toISOString().split('T')[0]);
       setHours(initialHours ? String(initialHours) : '1');
       setProjectId(initialProjectId ?? '');
       setDescription('');
       setBillable(true);
+      setServiceItemId('');
+      setServiceItemSubtaskId('');
     }
   }, [entry, open, initialHours, initialProjectId]);
 
+  // Reset subtask when service item changes
+  const handleServiceItemChange = (val: string) => {
+    setServiceItemId(val === '__none__' ? '' : val);
+    setServiceItemSubtaskId('');
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const payload = {
+      const payload: Record<string, unknown> = {
         userId,
         date,
         hours: parseFloat(hours),
         projectId: projectId || undefined,
         description: description || undefined,
         billable,
+        serviceItemId: serviceItemId || undefined,
+        serviceItemSubtaskId: serviceItemSubtaskId || undefined,
       };
 
       if (entry) {
@@ -138,6 +165,7 @@ export function TimeEntryDialog({
       }
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['time-entries'] });
       toast.success(entry ? 'Entry updated' : 'Time logged');
       onSaved();
       onOpenChange(false);
@@ -153,6 +181,7 @@ export function TimeEntryDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Date + Hours */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Date</Label>
@@ -172,13 +201,15 @@ export function TimeEntryDialog({
             </div>
           </div>
 
+          {/* Project */}
           <div className="space-y-1.5">
             <Label>Project</Label>
-            <Select value={projectId} onValueChange={setProjectId}>
+            <Select value={projectId} onValueChange={(v) => setProjectId(v === '__none__' ? '' : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select project (optional)" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="__none__">None</SelectItem>
                 {projects.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}
@@ -188,6 +219,48 @@ export function TimeEntryDialog({
             </Select>
           </div>
 
+          {/* Service Item */}
+          <div className="space-y-1.5">
+            <Label>Service Item</Label>
+            <Select value={serviceItemId || '__none__'} onValueChange={handleServiceItemChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select service item (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">None</SelectItem>
+                {serviceItems.map((si) => (
+                  <SelectItem key={si.id} value={si.id}>
+                    {si.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Subtask — only shown when a service item is selected and has subtasks */}
+          {serviceItemId && subtasks.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Subtask</Label>
+              <Select
+                value={serviceItemSubtaskId || '__none__'}
+                onValueChange={(v) => setServiceItemSubtaskId(v === '__none__' ? '' : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select subtask (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {subtasks.map((st) => (
+                    <SelectItem key={st.id} value={st.id}>
+                      {st.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Description */}
           <div className="space-y-1.5">
             <Label>Description</Label>
             <Textarea
@@ -198,6 +271,7 @@ export function TimeEntryDialog({
             />
           </div>
 
+          {/* Billable toggle */}
           <div className="flex items-center gap-3">
             <Switch id="billable" checked={billable} onCheckedChange={setBillable} />
             <Label htmlFor="billable">Billable</Label>

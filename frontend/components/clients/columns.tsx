@@ -98,6 +98,7 @@ export function getClientColumns(
           {row.getValue('industry')}
         </span>
       ),
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       accessorKey: 'segment',
@@ -109,6 +110,7 @@ export function getClientColumns(
           {row.getValue('segment')}
         </span>
       ),
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       accessorKey: 'status',
@@ -128,6 +130,7 @@ export function getClientColumns(
           </span>
         );
       },
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       accessorKey: 'healthScore',
@@ -178,6 +181,7 @@ export function getClientColumns(
           {row.getValue('manager')}
         </span>
       ),
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
   ];
 }

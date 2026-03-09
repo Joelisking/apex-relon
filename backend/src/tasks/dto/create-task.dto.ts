@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsDateString,
   IsEnum,
+  IsUUID,
 } from 'class-validator';
 
 export enum TaskPriority {
@@ -60,4 +61,8 @@ export class CreateTaskDto {
   @IsOptional()
   @IsDateString()
   reminderAt?: string;
+
+  @IsOptional()
+  @IsUUID()
+  taskTypeId?: string;
 }

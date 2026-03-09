@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { ServiceTypesView } from '@/components/admin/ServiceTypesView';
 
 export default function AdminServiceTypesPage() {
-  redirect('/admin/dropdown-options');
+  return <ServiceTypesView />;
 }

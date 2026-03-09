@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { Prisma } from '@prisma/client';
 import { CreateServiceTypeDto } from './dto/create-service-type.dto';
+import { CreateTaskTypeDto } from './dto/create-task-type.dto';
 import {
   CreateDropdownOptionDto,
   UpdateDropdownOptionDto,
@@ -75,7 +76,8 @@ export class SettingsService implements OnModuleInit {
 
   async findAllServiceTypes() {
     return this.prisma.serviceType.findMany({
-      orderBy: { name: 'asc' },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      include: { _count: { select: { leads: true, projects: true } } },
     });
   }
 
@@ -110,15 +112,55 @@ export class SettingsService implements OnModuleInit {
         `Service type with ID ${id} not found`,
       );
     }
-    const inUseCount = await this.prisma.lead.count({
-      where: { serviceTypeId: id },
-    });
-    if (inUseCount > 0) {
+    const [leadCount, projectCount] = await Promise.all([
+      this.prisma.lead.count({ where: { serviceTypeId: id } }),
+      this.prisma.project.count({ where: { serviceTypeId: id } }),
+    ]);
+    if (leadCount > 0 || projectCount > 0) {
       throw new BadRequestException(
-        `Cannot delete service type "${existing.name}" because it is assigned to ${inUseCount} lead(s).`,
+        `Cannot delete service type "${existing.name}" because it is assigned to ${leadCount} lead(s) and ${projectCount} project(s).`,
       );
     }
     return this.prisma.serviceType.delete({ where: { id } });
+  }
+
+  // ── Task Types ─────────────────────────────────────────────────────────────
+
+  async findAllTaskTypes(serviceTypeId?: string) {
+    return this.prisma.taskType.findMany({
+      where: serviceTypeId ? { serviceTypeId } : undefined,
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      include: {
+        serviceType: { select: { id: true, name: true } },
+        _count: { select: { tasks: true } },
+      },
+    });
+  }
+
+  async createTaskType(dto: CreateTaskTypeDto) {
+    return this.prisma.taskType.create({ data: dto });
+  }
+
+  async updateTaskType(id: string, dto: Partial<CreateTaskTypeDto>) {
+    const existing = await this.prisma.taskType.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException(`Task type with ID ${id} not found`);
+    }
+    return this.prisma.taskType.update({ where: { id }, data: dto });
+  }
+
+  async deleteTaskType(id: string) {
+    const existing = await this.prisma.taskType.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException(`Task type with ID ${id} not found`);
+    }
+    const taskCount = await this.prisma.task.count({ where: { taskTypeId: id } });
+    if (taskCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete task type "${existing.name}" because it is assigned to ${taskCount} task(s).`,
+      );
+    }
+    return this.prisma.taskType.delete({ where: { id } });
   }
 
   // ── Dropdown Options ───────────────────────────────────────────────────────

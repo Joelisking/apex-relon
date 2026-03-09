@@ -275,4 +275,171 @@ export class PdfService {
       pdfDoc.end();
     });
   }
+
+  async generateScopePdf(quoteId: string): Promise<Buffer> {
+    const quote = await this.prisma.quote.findUniqueOrThrow({
+      where: { id: quoteId },
+      include: {
+        lineItems: {
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            serviceItem: {
+              include: {
+                subtasks: {
+                  orderBy: { sortOrder: 'asc' },
+                  include: { roleEstimates: { orderBy: { role: 'asc' } } },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const settings = await this.quoteSettingsService.getSettings();
+
+    const fonts = {
+      Roboto: {
+        normal: resolveFontPath('Roboto-Regular.ttf'),
+        bold: resolveFontPath('Roboto-Medium.ttf'),
+        italics: resolveFontPath('Roboto-Italic.ttf'),
+        bolditalics: resolveFontPath('Roboto-MediumItalic.ttf'),
+      },
+    };
+
+    const printer = new PdfPrinter(fonts);
+    const accentColor = settings.accentColor || '#1a56db';
+    const sowNumberStr = `SOW-${quote.quoteNumber.toString().padStart(4, '0')}`;
+
+    const companyInfoLines: object[] = [];
+    if (settings.companyAddress) {
+      companyInfoLines.push({ text: settings.companyAddress, fontSize: 9, color: '#555555' });
+    }
+    const contactParts: string[] = [];
+    if (settings.companyPhone) contactParts.push(settings.companyPhone);
+    if (settings.companyEmail) contactParts.push(settings.companyEmail);
+    if (settings.companyWebsite) contactParts.push(settings.companyWebsite);
+    if (contactParts.length > 0) {
+      companyInfoLines.push({ text: contactParts.join('  |  '), fontSize: 9, color: '#555555' });
+    }
+
+    const content: object[] = [
+      // Header
+      {
+        columns: [
+          {
+            stack: [
+              {
+                text: settings.companyName || 'Your Company',
+                fontSize: 20,
+                bold: true,
+                color: accentColor,
+              },
+              ...companyInfoLines,
+            ],
+          },
+          {
+            stack: [
+              { text: 'SCOPE OF WORK', fontSize: 22, bold: true, alignment: 'right' as const, color: '#333333' },
+              { text: sowNumberStr, fontSize: 11, alignment: 'right' as const, color: '#555555', margin: [0, 2, 0, 0] },
+            ],
+          },
+        ],
+        margin: [0, 0, 0, 24],
+      },
+
+      // Horizontal divider
+      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: accentColor }], margin: [0, 0, 0, 16] },
+    ];
+
+    const itemsWithServiceItem = (quote.lineItems as any[]).filter((li) => li.serviceItem);
+
+    if (itemsWithServiceItem.length === 0) {
+      content.push({ text: 'No service items attached to this quote.', fontSize: 10, color: '#888888' });
+    } else {
+      for (const item of itemsWithServiceItem) {
+        const si = item.serviceItem;
+
+        content.push({ text: si.name, fontSize: 12, bold: true, color: accentColor, margin: [0, 12, 0, 6] });
+
+        if (si.description) {
+          content.push({ text: si.description, fontSize: 9, color: '#555555', margin: [0, 0, 0, 8] });
+        }
+
+        const subtasks: any[] = si.subtasks ?? [];
+        if (subtasks.length > 0) {
+          const tableHeaderRow = [
+            { text: 'Subtask', bold: true, color: '#ffffff', fillColor: accentColor },
+            { text: 'Role', bold: true, color: '#ffffff', fillColor: accentColor },
+            { text: 'Est. Hours', bold: true, color: '#ffffff', fillColor: accentColor, alignment: 'right' as const },
+          ];
+
+          const dataRows: object[] = [];
+          for (const subtask of subtasks) {
+            const roleEstimates: any[] = subtask.roleEstimates ?? [];
+            if (roleEstimates.length === 0) {
+              dataRows.push([
+                { text: subtask.name, fontSize: 9 },
+                { text: '—', fontSize: 9 },
+                { text: '—', fontSize: 9, alignment: 'right' as const },
+              ]);
+            } else {
+              for (const re of roleEstimates) {
+                dataRows.push([
+                  { text: subtask.name, fontSize: 9 },
+                  { text: re.role, fontSize: 9 },
+                  { text: String(re.estimatedHours), fontSize: 9, alignment: 'right' as const },
+                ]);
+              }
+            }
+          }
+
+          content.push({
+            table: {
+              headerRows: 1,
+              widths: ['*', 'auto', 'auto'],
+              body: [tableHeaderRow, ...dataRows],
+            },
+            layout: {
+              hLineWidth: () => 0.5,
+              vLineWidth: () => 0,
+              hLineColor: () => '#e0e0e0',
+              paddingLeft: () => 8,
+              paddingRight: () => 8,
+              paddingTop: () => 6,
+              paddingBottom: () => 6,
+            },
+            margin: [0, 0, 0, 8],
+          });
+        }
+      }
+    }
+
+    const docDefinition = {
+      pageSize: 'A4' as const,
+      pageMargins: [40, 40, 40, 60] as [number, number, number, number],
+      defaultStyle: {
+        font: 'Roboto',
+        fontSize: 10,
+        color: '#333333',
+      },
+      content,
+      footer: (currentPage: number, pageCount: number) => ({
+        text: `Page ${currentPage} of ${pageCount}`,
+        alignment: 'center' as const,
+        fontSize: 8,
+        color: '#aaaaaa',
+        margin: [0, 10, 0, 0],
+      }),
+    };
+
+    const pdfDoc = await printer.createPdfKitDocument(docDefinition);
+    return new Promise<Buffer>((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      pdfDoc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
+      pdfDoc.on('error', reject);
+      pdfDoc.end();
+    });
+  }
 }

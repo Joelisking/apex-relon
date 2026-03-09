@@ -29,7 +29,7 @@ import { ProjectStats } from './ProjectStats';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
-import { api, settingsApi } from '@/lib/api/client';
+import { api } from '@/lib/api/client';
 import {
   Select,
   SelectContent,
@@ -65,8 +65,6 @@ export default function ProjectsView({
   const [completionPendingProject, setCompletionPendingProject] =
     useState<Project | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [executingCompanyFilter, setExecutingCompanyFilter] =
-    useState<string>('');
 
   // Bulk action state
   const [selectedProjects, setSelectedProjects] = useState<Project[]>(
@@ -102,13 +100,6 @@ export default function ProjectsView({
     staleTime: 10 * 60 * 1000,
   });
 
-  const { data: executingCompanyOptions = [] } = useQuery({
-    queryKey: ['dropdown-options', 'executing_company'],
-    queryFn: () =>
-      settingsApi.getDropdownOptions('executing_company'),
-    staleTime: 10 * 60 * 1000,
-  });
-
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const { data: allUsers = [] } = useQuery<any[]>({
     queryKey: ['users'],
@@ -134,11 +125,6 @@ export default function ProjectsView({
   const projects = localProjects;
 
   const filteredProjects = projects.filter((p) => {
-    if (
-      executingCompanyFilter &&
-      p.executingCompany !== executingCompanyFilter
-    )
-      return false;
     if (!dateRange?.from && !dateRange?.to) return true;
     const ref = p.startDate ?? p.createdAt;
     if (!ref) return true;
@@ -405,30 +391,8 @@ export default function ProjectsView({
           placeholder="Filter by date range"
           numberOfMonths={2}
         />
-        {executingCompanyOptions.length > 0 && (
-          <Select
-            value={executingCompanyFilter || '__all__'}
-            onValueChange={(v) =>
-              setExecutingCompanyFilter(v === '__all__' ? '' : v)
-            }>
-            <SelectTrigger className="h-9 w-50">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">
-                All Executing Companies
-              </SelectItem>
-              {executingCompanyOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
         {(dateRange?.from ||
-          dateRange?.to ||
-          executingCompanyFilter) && (
+          dateRange?.to) && (
           <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
             {filteredProjects.length} of {projects.length} projects
           </span>
@@ -527,7 +491,39 @@ export default function ProjectsView({
           <DataTable
             columns={projectColumns}
             data={filteredProjects}
-            searchKey="name"
+            globalFilter
+            filterConfigs={[
+              {
+                columnId: 'status',
+                title: 'Status',
+                options: [
+                  'Planning',
+                  'Active',
+                  'On Hold',
+                  'Completed',
+                  'Cancelled',
+                ].map((v) => ({ label: v, value: v })),
+              },
+              {
+                columnId: 'riskStatus',
+                title: 'Risk',
+                options: ['On Track', 'At Risk', 'Blocked'].map((v) => ({
+                  label: v,
+                  value: v,
+                })),
+              },
+              {
+                columnId: 'projectManager',
+                title: 'Manager',
+                options: [
+                  ...new Set(
+                    filteredProjects.map(
+                      (p) => p.projectManager?.name || 'Unassigned',
+                    ),
+                  ),
+                ].map((v) => ({ label: v, value: v })),
+              },
+            ]}
             onRowClick={(row) => handleProjectClick(row)}
             onSelectionChange={setSelectedProjects}
           />

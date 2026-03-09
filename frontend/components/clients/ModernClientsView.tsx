@@ -320,6 +320,28 @@ export default function ModernClientsView({
             onRowClick={setSelectedClient}
             exportFilename="clients"
             onSelectionChange={setSelectedClients}
+            filterConfigs={[
+              {
+                columnId: 'status',
+                title: 'Status',
+                options: [...new Set(clients.map((c) => c.status).filter(Boolean))].map((v) => ({ label: v!, value: v! })),
+              },
+              {
+                columnId: 'segment',
+                title: 'Segment',
+                options: [...new Set(clients.map((c) => c.segment).filter(Boolean))].map((v) => ({ label: v!, value: v! })),
+              },
+              {
+                columnId: 'industry',
+                title: 'Industry',
+                options: [...new Set(clients.map((c) => c.industry).filter(Boolean))].map((v) => ({ label: v!, value: v! })),
+              },
+              {
+                columnId: 'manager',
+                title: 'Manager',
+                options: [...new Set(clients.map((c) => c.accountManager?.name || 'Unassigned'))].map((v) => ({ label: v, value: v })),
+              },
+            ]}
           />
         </>
       )}

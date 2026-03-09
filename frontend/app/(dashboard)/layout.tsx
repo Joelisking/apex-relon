@@ -8,6 +8,8 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import { CommandPalette } from '@/components/command-palette/CommandPalette';
+import { Search } from 'lucide-react';
 
 export default function DashboardLayout({
   children,
@@ -42,10 +44,27 @@ export default function DashboardLayout({
               alt="Relon"
               className="h-5 w-auto"
             />
+            <button
+              onClick={() => {
+                const event = new KeyboardEvent('keydown', {
+                  key: 'k',
+                  metaKey: true,
+                  bubbles: true,
+                });
+                document.dispatchEvent(event);
+              }}
+              className="ml-4 flex items-center gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors hidden sm:flex">
+              <Search className="h-3.5 w-3.5" />
+              <span>Search...</span>
+              <kbd className="ml-2 pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            </button>
             <div className="ml-auto">
               <NotificationBell />
             </div>
           </header>
+          <CommandPalette />
           <main className="flex-1 overflow-auto p-4 md:p-8 print:p-0 print:overflow-visible">
             {children}
           </main>

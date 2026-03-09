@@ -769,6 +769,26 @@ export default function ModernLeadsView({
             globalFilter={true}
             onRowClick={setSelectedLead}
             onSelectionChange={setSelectedLeads}
+            filterConfigs={[
+              {
+                columnId: 'stage',
+                title: 'Stage',
+                options: [
+                  ...new Set(filteredLeads.map((l) => l.stage).filter(Boolean)),
+                ].map((v) => ({ label: v!, value: v! })),
+              },
+              {
+                columnId: 'owner',
+                title: 'Owner',
+                options: [
+                  ...new Set(
+                    filteredLeads.map(
+                      (l) => (l as any).assignedTo?.name || 'Unassigned',
+                    ),
+                  ),
+                ].map((v) => ({ label: v, value: v })),
+              },
+            ]}
           />
         </>
       ) : (

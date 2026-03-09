@@ -73,6 +73,7 @@ export class TasksService {
           select: { id: true, name: true, email: true, role: true },
         },
         createdBy: { select: { id: true, name: true, email: true } },
+        taskType: { select: { id: true, name: true } },
       },
       orderBy: [
         { dueDate: { sort: 'asc', nulls: 'last' } },
@@ -91,6 +92,7 @@ export class TasksService {
           select: { id: true, name: true, email: true, role: true },
         },
         createdBy: { select: { id: true, name: true, email: true } },
+        taskType: { select: { id: true, name: true } },
       },
     });
     if (!task) throw new NotFoundException('Task not found');
@@ -112,12 +114,14 @@ export class TasksService {
         reminderAt: dto.reminderAt
           ? new Date(dto.reminderAt)
           : undefined,
+        taskTypeId: dto.taskTypeId,
       },
       include: {
         assignedTo: {
           select: { id: true, name: true, email: true, role: true },
         },
         createdBy: { select: { id: true, name: true, email: true } },
+        taskType: { select: { id: true, name: true } },
       },
     });
     // Notify assignee if different from creator
@@ -179,6 +183,7 @@ export class TasksService {
     const data: Record<string, unknown> = { ...dto };
     if (dto.dueDate) data.dueDate = new Date(dto.dueDate);
     if (dto.reminderAt) data.reminderAt = new Date(dto.reminderAt);
+    if (dto.taskTypeId !== undefined) data.taskTypeId = dto.taskTypeId;
 
     // Auto-set completedAt
     if (dto.status === DONE_STATUS) {
@@ -197,6 +202,7 @@ export class TasksService {
           select: { id: true, name: true, email: true, role: true },
         },
         createdBy: { select: { id: true, name: true, email: true } },
+        taskType: { select: { id: true, name: true } },
       },
     });
 
@@ -240,6 +246,7 @@ export class TasksService {
           select: { id: true, name: true, email: true, role: true },
         },
         createdBy: { select: { id: true, name: true, email: true } },
+        taskType: { select: { id: true, name: true } },
       },
     });
     return (await this.resolveEntityNames([task]))[0];
@@ -332,6 +339,7 @@ export class TasksService {
           select: { id: true, name: true, email: true, role: true },
         },
         createdBy: { select: { id: true, name: true, email: true } },
+        taskType: { select: { id: true, name: true } },
       },
       orderBy: [
         { dueDate: { sort: 'asc', nulls: 'last' } },

@@ -82,6 +82,7 @@ function PipelineTable({ pipelineType }: PipelineTableProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editProbability, setEditProbability] = useState(0);
+  const [editColorIdx, setEditColorIdx] = useState(0);
 
   const handleAddStage = async () => {
     if (!newStageName.trim()) {
@@ -140,15 +141,21 @@ function PipelineTable({ pipelineType }: PipelineTableProps) {
     setEditingId(stage.id);
     setEditName(stage.name);
     setEditProbability(stage.probability);
+    const colorIdx = COLOR_PRESETS.findIndex((p) => p.color === stage.color);
+    setEditColorIdx(colorIdx >= 0 ? colorIdx : 0);
   };
 
   const saveEdit = async () => {
     if (!editingId) return;
     setSaving(true);
     try {
+      const preset = COLOR_PRESETS[editColorIdx];
       await pipelineApi.updateStage(editingId, {
         name: editName,
         probability: editProbability,
+        color: preset.color,
+        lightColor: preset.lightColor,
+        border: preset.border,
       });
       setEditingId(null);
       toast.success('Stage updated');
@@ -217,7 +224,24 @@ function PipelineTable({ pipelineType }: PipelineTableProps) {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className={`w-5 h-5 rounded-full ${stage.color}`} />
+                    {editingId === stage.id ? (
+                      <div className="flex gap-1">
+                        {COLOR_PRESETS.map((preset, i) => (
+                          <button
+                            key={preset.label}
+                            onClick={() => setEditColorIdx(i)}
+                            className={`w-5 h-5 rounded-full ${preset.color} ${
+                              editColorIdx === i
+                                ? 'ring-2 ring-offset-1 ring-primary'
+                                : ''
+                            }`}
+                            title={preset.label}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className={`w-5 h-5 rounded-full ${stage.color}`} />
+                    )}
                   </TableCell>
                   <TableCell>
                     {editingId === stage.id ? (

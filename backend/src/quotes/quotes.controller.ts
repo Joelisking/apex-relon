@@ -68,6 +68,21 @@ export class QuotesController {
     res.end(buffer);
   }
 
+  @Get(':id/scope-pdf')
+  @Permissions('quotes:view')
+  async downloadScopePdf(
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.pdfService.generateScopePdf(id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="scope-${id}.pdf"`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
+  }
+
   @Get(':id')
   @Permissions('quotes:view')
   findOne(@Param('id') id: string) {

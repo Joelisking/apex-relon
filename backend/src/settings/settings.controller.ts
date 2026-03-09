@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { CreateServiceTypeDto } from './dto/create-service-type.dto';
+import { CreateTaskTypeDto } from './dto/create-task-type.dto';
 import { CreateDropdownOptionDto, UpdateDropdownOptionDto } from './dto/dropdown-option.dto';
 import { Permissions } from '../permissions/permissions.decorator';
 
@@ -47,6 +48,33 @@ export class SettingsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteServiceType(@Param('id') id: string) {
     return this.settingsService.deleteServiceType(id);
+  }
+
+  // ── Task Types ─────────────────────────────────────────────────────────────
+
+  @Get('task-types')
+  @Permissions('leads:view')
+  findAllTaskTypes(@Query('serviceTypeId') serviceTypeId?: string) {
+    return this.settingsService.findAllTaskTypes(serviceTypeId);
+  }
+
+  @Post('task-types')
+  @Permissions('settings:manage')
+  createTaskType(@Body() dto: CreateTaskTypeDto) {
+    return this.settingsService.createTaskType(dto);
+  }
+
+  @Patch('task-types/:id')
+  @Permissions('settings:manage')
+  updateTaskType(@Param('id') id: string, @Body() dto: Partial<CreateTaskTypeDto>) {
+    return this.settingsService.updateTaskType(id, dto);
+  }
+
+  @Delete('task-types/:id')
+  @Permissions('settings:manage')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteTaskType(@Param('id') id: string) {
+    return this.settingsService.deleteTaskType(id);
   }
 
   // ── Dropdown Options ───────────────────────────────────────────────────────

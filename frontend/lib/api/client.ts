@@ -2,6 +2,10 @@ import type {
   Lead,
   LeadRep,
   ServiceType,
+  TaskType,
+  ServiceItem,
+  ServiceItemSubtask,
+  ServiceItemRoleEstimate,
   DropdownOption,
   Client,
   User,
@@ -623,7 +627,10 @@ export const settingsApi = {
       serverToken,
     ),
 
-  createServiceType: (data: { name: string }, serverToken?: string) =>
+  createServiceType: (
+    data: { name: string; description?: string; isActive?: boolean; sortOrder?: number },
+    serverToken?: string,
+  ) =>
     apiFetch<ServiceType>(
       '/settings/service-types',
       {
@@ -635,7 +642,7 @@ export const settingsApi = {
 
   updateServiceType: (
     id: string,
-    data: { name: string },
+    data: { name: string; description?: string; isActive?: boolean; sortOrder?: number },
     serverToken?: string,
   ) =>
     apiFetch<ServiceType>(
@@ -655,6 +662,28 @@ export const settingsApi = {
       },
       serverToken,
     ),
+
+  // Task Types
+  getTaskTypes: (serviceTypeId?: string, serverToken?: string) => {
+    const query = serviceTypeId ? `?serviceTypeId=${encodeURIComponent(serviceTypeId)}` : '';
+    return apiFetch<TaskType[]>(`/settings/task-types${query}`, {}, serverToken);
+  },
+
+  createTaskType: (
+    data: { name: string; description?: string; serviceTypeId?: string; isActive?: boolean; sortOrder?: number },
+    serverToken?: string,
+  ) =>
+    apiFetch<TaskType>('/settings/task-types', { method: 'POST', body: JSON.stringify(data) }, serverToken),
+
+  updateTaskType: (
+    id: string,
+    data: { name?: string; description?: string; serviceTypeId?: string; isActive?: boolean; sortOrder?: number },
+    serverToken?: string,
+  ) =>
+    apiFetch<TaskType>(`/settings/task-types/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, serverToken),
+
+  deleteTaskType: (id: string, serverToken?: string) =>
+    apiFetch<void>(`/settings/task-types/${id}`, { method: 'DELETE' }, serverToken),
 
   // Dropdown Options
   getDropdownOptions: (category?: string, serverToken?: string) => {
@@ -737,6 +766,74 @@ export const settingsApi = {
     ),
 };
 
+// Service Items API
+export const serviceItemsApi = {
+  getAll: (serviceTypeId?: string, serverToken?: string) => {
+    const query = serviceTypeId ? `?serviceTypeId=${encodeURIComponent(serviceTypeId)}` : '';
+    return apiFetch<ServiceItem[]>(`/service-items${query}`, {}, serverToken);
+  },
+
+  getOne: (id: string, serverToken?: string) =>
+    apiFetch<ServiceItem>(`/service-items/${id}`, {}, serverToken),
+
+  create: (
+    data: { name: string; description?: string; serviceTypeId?: string; unit?: string; defaultPrice?: number; isActive?: boolean; sortOrder?: number },
+    serverToken?: string,
+  ) =>
+    apiFetch<ServiceItem>('/service-items', { method: 'POST', body: JSON.stringify(data) }, serverToken),
+
+  update: (
+    id: string,
+    data: { name?: string; description?: string; serviceTypeId?: string; unit?: string; defaultPrice?: number; isActive?: boolean; sortOrder?: number },
+    serverToken?: string,
+  ) =>
+    apiFetch<ServiceItem>(`/service-items/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, serverToken),
+
+  delete: (id: string, serverToken?: string) =>
+    apiFetch<void>(`/service-items/${id}`, { method: 'DELETE' }, serverToken),
+
+  createSubtask: (
+    serviceItemId: string,
+    data: { name: string; description?: string; sortOrder?: number },
+    serverToken?: string,
+  ) =>
+    apiFetch<ServiceItemSubtask>(`/service-items/${serviceItemId}/subtasks`, { method: 'POST', body: JSON.stringify(data) }, serverToken),
+
+  updateSubtask: (
+    serviceItemId: string,
+    subtaskId: string,
+    data: { name?: string; description?: string; sortOrder?: number },
+    serverToken?: string,
+  ) =>
+    apiFetch<ServiceItemSubtask>(`/service-items/${serviceItemId}/subtasks/${subtaskId}`, { method: 'PATCH', body: JSON.stringify(data) }, serverToken),
+
+  deleteSubtask: (serviceItemId: string, subtaskId: string, serverToken?: string) =>
+    apiFetch<void>(`/service-items/${serviceItemId}/subtasks/${subtaskId}`, { method: 'DELETE' }, serverToken),
+
+  reorderSubtasks: (serviceItemId: string, orderedIds: string[], serverToken?: string) =>
+    apiFetch<void>(`/service-items/${serviceItemId}/subtasks/reorder`, { method: 'POST', body: JSON.stringify({ orderedIds }) }, serverToken),
+
+  upsertRoleEstimate: (
+    serviceItemId: string,
+    subtaskId: string,
+    role: string,
+    estimatedHours: number,
+    serverToken?: string,
+  ) =>
+    apiFetch<ServiceItemRoleEstimate>(
+      `/service-items/${serviceItemId}/subtasks/${subtaskId}/roles/${encodeURIComponent(role)}`,
+      { method: 'PUT', body: JSON.stringify({ estimatedHours }) },
+      serverToken,
+    ),
+
+  deleteRoleEstimate: (serviceItemId: string, subtaskId: string, role: string, serverToken?: string) =>
+    apiFetch<void>(
+      `/service-items/${serviceItemId}/subtasks/${subtaskId}/roles/${encodeURIComponent(role)}`,
+      { method: 'DELETE' },
+      serverToken,
+    ),
+};
+
 // Convenience export
 export const api = {
   leads: leadsApi,
@@ -744,4 +841,5 @@ export const api = {
   ai: aiApi,
   admin: adminApi,
   settings: settingsApi,
+  serviceItems: serviceItemsApi,
 };

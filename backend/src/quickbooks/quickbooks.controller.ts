@@ -89,6 +89,14 @@ export class QuickBooksController {
     return result;
   }
 
+  @Post('sync/service-items')
+  @UseGuards(JwtAuthGuard)
+  async syncServiceItems() {
+    const result = await this.syncService.syncServiceItems();
+    await this.syncService.updateLastSyncAt();
+    return result;
+  }
+
   @Get('sync/history')
   @UseGuards(JwtAuthGuard)
   async getSyncHistory(@Query('limit') limit?: string) {

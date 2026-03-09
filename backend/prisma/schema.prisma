@@ -82,11 +82,17 @@ model LeadRep {
 }
 
 model ServiceType {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  leads     Lead[]
+  id           String        @id @default(uuid())
+  name         String        @unique
+  description  String?       @db.Text
+  isActive     Boolean       @default(true)
+  sortOrder    Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  leads        Lead[]
+  projects     Project[]
+  taskTypes    TaskType[]
+  serviceItems ServiceItem[]
 
   @@map("service_types")
 }
@@ -204,6 +210,7 @@ model Project {
   name              String
   clientId          String
   leadId            String?                @unique
+  serviceTypeId     String?
   status            String
   contractedValue   Float
   endOfProjectValue Float?
@@ -230,12 +237,14 @@ model Project {
   lead              Lead?                  @relation(fields: [leadId], references: [id])
   projectManager    User?                  @relation("ProjectManagement", fields: [projectManagerId], references: [id])
   qs                User?                  @relation("ProjectQSAssignments", fields: [qsId], references: [id])
+  serviceType       ServiceType?           @relation(fields: [serviceTypeId], references: [id])
   timeEntries       TimeEntry[]            @relation("ProjectTimeEntries")
   budget            ProjectBudget?         @relation("ProjectBudget")
   quotes            Quote[]                @relation("ProjectQuotes")
 
   @@index([clientId])
   @@index([leadId])
+  @@index([serviceTypeId])
   @@index([status])
   @@index([status, completedDate])
   @@index([contractedValue])
@@ -499,6 +508,7 @@ model Task {
   entityId         String?
   assignedToId     String?
   createdById      String
+  taskTypeId       String?
   completedAt      DateTime?
   reminderAt       DateTime?
   completionNote   String?
@@ -507,9 +517,11 @@ model Task {
   updatedAt        DateTime  @updatedAt
   assignedTo       User?     @relation("TaskAssignments", fields: [assignedToId], references: [id])
   createdBy        User      @relation("TaskCreation", fields: [createdById], references: [id])
+  taskType         TaskType? @relation(fields: [taskTypeId], references: [id])
 
   @@index([assignedToId])
   @@index([createdById])
+  @@index([taskTypeId])
   @@index([status])
   @@index([dueDate])
   @@index([entityType, entityId])
@@ -569,17 +581,19 @@ model Quote {
 }
 
 model QuoteLineItem {
-  id          String   @id @default(uuid())
-  quoteId     String
-  description String
-  quantity    Float    @default(1)
-  unitPrice   Float    @default(0)
-  lineTotal   Float    @default(0)
-  taxable     Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String       @id @default(uuid())
+  quoteId       String
+  description   String
+  quantity      Float        @default(1)
+  unitPrice     Float        @default(0)
+  lineTotal     Float        @default(0)
+  taxable       Boolean      @default(true)
+  sortOrder     Int          @default(0)
+  serviceItemId String?
+  quote         Quote        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  serviceItem   ServiceItem? @relation(fields: [serviceItemId], references: [id], onDelete: SetNull)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   @@index([quoteId])
   @@map("quote_line_items")
@@ -810,22 +824,26 @@ model QuickBooksSync {
 // ─── Time Tracking ────────────────────────────────────────────────────────────
 
 model TimeEntry {
-  id          String    @id @default(uuid())
-  userId      String
-  projectId   String?
-  taskId      String?
-  date        DateTime
-  hours       Float
-  description String?   @db.Text
-  billable    Boolean   @default(true)
-  hourlyRate  Float?
-  totalCost   Float?
-  source      String    @default("manual") // "manual" | "timer" | "imported"
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                   String              @id @default(uuid())
+  userId               String
+  projectId            String?
+  taskId               String?
+  serviceItemId        String?
+  serviceItemSubtaskId String?
+  date                 DateTime
+  hours                Float
+  description          String?             @db.Text
+  billable             Boolean             @default(true)
+  hourlyRate           Float?
+  totalCost            Float?
+  source               String              @default("manual") // "manual" | "timer" | "imported"
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
 
-  user    User     @relation("UserTimeEntries", fields: [userId], references: [id], onDelete: Cascade)
-  project Project? @relation("ProjectTimeEntries", fields: [projectId], references: [id], onDelete: SetNull)
+  user               User                @relation("UserTimeEntries", fields: [userId], references: [id], onDelete: Cascade)
+  project            Project?            @relation("ProjectTimeEntries", fields: [projectId], references: [id], onDelete: SetNull)
+  serviceItem        ServiceItem?        @relation(fields: [serviceItemId], references: [id], onDelete: SetNull)
+  serviceItemSubtask ServiceItemSubtask? @relation(fields: [serviceItemSubtaskId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([projectId])
@@ -860,6 +878,76 @@ model ProjectBudget {
   project Project @relation("ProjectBudget", fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("project_budgets")
+}
+
+// ─── Service Items ────────────────────────────────────────────────────────────
+
+model TaskType {
+  id            String       @id @default(uuid())
+  name          String       @unique
+  description   String?      @db.Text
+  serviceTypeId String?
+  isActive      Boolean      @default(true)
+  sortOrder     Int          @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  serviceType   ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
+  tasks         Task[]
+
+  @@index([serviceTypeId])
+  @@map("task_types")
+}
+
+model ServiceItem {
+  id            String               @id @default(uuid())
+  name          String
+  description   String?              @db.Text
+  serviceTypeId String?
+  unit          String?
+  defaultPrice  Float?
+  qbItemId      String?
+  isActive      Boolean              @default(true)
+  sortOrder     Int                  @default(0)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  serviceType   ServiceType?         @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
+  subtasks      ServiceItemSubtask[]
+  timeEntries   TimeEntry[]
+  quoteLineItems QuoteLineItem[]
+
+  @@index([serviceTypeId])
+  @@index([isActive])
+  @@map("service_items")
+}
+
+model ServiceItemSubtask {
+  id            String                    @id @default(uuid())
+  serviceItemId String
+  name          String
+  description   String?                   @db.Text
+  sortOrder     Int                       @default(0)
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+  serviceItem   ServiceItem               @relation(fields: [serviceItemId], references: [id], onDelete: Cascade)
+  roleEstimates ServiceItemRoleEstimate[]
+  timeEntries   TimeEntry[]
+
+  @@index([serviceItemId])
+  @@map("service_item_subtasks")
+}
+
+model ServiceItemRoleEstimate {
+  id             String             @id @default(uuid())
+  subtaskId      String
+  role           String
+  estimatedHours Float
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  subtask        ServiceItemSubtask @relation(fields: [subtaskId], references: [id], onDelete: Cascade)
+
+  @@unique([subtaskId, role])
+  @@index([subtaskId])
+  @@map("service_item_role_estimates")
 }
 
 // ─── Bottleneck Analytics ─────────────────────────────────────────────────────

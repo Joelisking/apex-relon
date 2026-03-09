@@ -89,8 +89,8 @@ export const columns: ColumnDef<Lead>[] = [
     },
   },
   {
-    accessorKey: 'assignedTo.name',
     id: 'owner',
+    accessorFn: (row) => row.assignedTo?.name || 'Unassigned',
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Owner" />
     ),
@@ -102,6 +102,7 @@ export const columns: ColumnDef<Lead>[] = [
         </span>
       );
     },
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
   },
   {
     accessorKey: 'metrics.daysSinceLastContact',

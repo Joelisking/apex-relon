@@ -257,6 +257,66 @@ export class QuickBooksSyncService {
     });
   }
 
+  // ─── Service Item Sync (CRM → QB) ────────────────────────────────────────
+
+  async syncServiceItems(): Promise<{ synced: number; skipped: number; errors: number }> {
+    let synced = 0, skipped = 0, errors = 0;
+    const { client: qbClient, realmId } = await this.qbService.getApiClient();
+
+    const items = await this.prisma.serviceItem.findMany({
+      where: { isActive: true, qbItemId: null },
+    });
+
+    for (const item of items) {
+      try {
+        const payload: any = {
+          Name: item.name,
+          Type: 'Service',
+          ...(item.description && { Description: item.description }),
+          ...(item.defaultPrice != null && { UnitPrice: item.defaultPrice }),
+          IncomeAccountRef: { value: '1', name: 'Services' },
+        };
+
+        const res = await qbClient.post('/item', payload);
+        const qbId = res?.Item?.Id;
+        if (!qbId) { skipped++; continue; }
+
+        await this.prisma.serviceItem.update({
+          where: { id: item.id },
+          data: { qbItemId: qbId },
+        });
+
+        await this.prisma.quickBooksSync.create({
+          data: {
+            realmId,
+            direction: 'CRM_TO_QB',
+            entityType: 'Item',
+            externalId: qbId,
+            internalId: item.id,
+            status: 'success',
+          },
+        });
+
+        synced++;
+      } catch (e: any) {
+        this.logger.warn(`Failed to sync service item ${item.id} to QB`, e?.message);
+        await this.prisma.quickBooksSync.create({
+          data: {
+            realmId,
+            direction: 'CRM_TO_QB',
+            entityType: 'Item',
+            internalId: item.id,
+            status: 'error',
+            errorMessage: e?.message ?? 'Unknown error',
+          },
+        }).catch(() => {});
+        errors++;
+      }
+    }
+
+    return { synced, skipped, errors };
+  }
+
   // ─── Update last sync time ────────────────────────────────────────────────
 
   async updateLastSyncAt(): Promise<void> {

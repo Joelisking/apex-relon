@@ -34,9 +34,8 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { projectsApi } from '@/lib/api/projects-client';
 import { usersApi, type UserResponse } from '@/lib/api/users-client';
-import { clientsApi, leadsApi, settingsApi } from '@/lib/api/client';
+import { clientsApi, leadsApi } from '@/lib/api/client';
 import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
-import type { DropdownOption } from '@/lib/types';
 
 const formSchema = z.object({
   clientId: z.string().min(1, 'Client is required'),
@@ -46,12 +45,8 @@ const formSchema = z.object({
   contractedValue: z.coerce.number().min(0, 'Value must be positive'),
   endOfProjectValue: z.coerce.number().optional().nullable(),
   estimatedDueDate: z.string().optional(),
-  closedDate: z.string().optional(),
   projectManagerId: z.string().optional(),
-  designerId: z.string().optional(),
-  qsId: z.string().optional(),
   description: z.string().optional(),
-  executingCompany: z.string().optional(),
 });
 
 interface CreateProjectDialogProps {
@@ -75,8 +70,6 @@ export function CreateProjectDialog({
   >([]);
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
-  const [executingCompanyOptions, setExecutingCompanyOptions] =
-    useState<DropdownOption[]>([]);
 
   type FormValues = z.infer<typeof formSchema>;
   const form = useForm<FormValues, unknown, FormValues>({
@@ -99,11 +92,6 @@ export function CreateProjectDialog({
               usersApi.getUsers(),
               pipelineApi.getStages('project'),
             ]);
-          settingsApi
-            .getDropdownOptions('executing_company')
-            .then(setExecutingCompanyOptions)
-            .catch(console.error);
-
           setClients(clientsData.map((c) => ({ ...c, individualName: c.individualName ?? undefined })));
           setLeads(Array.isArray(leadsData) ? leadsData : []);
           setUsers(usersRes.users || []);
@@ -118,6 +106,7 @@ export function CreateProjectDialog({
       };
       fetchData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // Auto-generate name when client changes
@@ -144,9 +133,6 @@ export function CreateProjectDialog({
         estimatedDueDate: values.estimatedDueDate
           ? new Date(values.estimatedDueDate).toISOString()
           : undefined,
-        closedDate: values.closedDate
-          ? new Date(values.closedDate).toISOString()
-          : undefined,
       });
       toast.success('Project created successfully');
       onProjectCreated();
@@ -160,8 +146,6 @@ export function CreateProjectDialog({
     }
   };
 
-  const designers = users.filter((u) => u.role === 'DESIGNER');
-  const qss = users.filter((u) => u.role === 'QS');
   const pms = users.filter((u) =>
     ['ADMIN', 'CEO', 'SALES', 'BDM'].includes(u.role),
   );
@@ -287,41 +271,6 @@ export function CreateProjectDialog({
                 )}
               />
 
-              {/* Executing Company */}
-              <FormField
-                control={form.control}
-                name="executingCompany"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Executing Company</FormLabel>
-                    <Select
-                      onValueChange={(val) =>
-                        field.onChange(
-                          val === 'none' ? undefined : val,
-                        )
-                      }
-                      value={field.value ?? 'none'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select company" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {executingCompanyOptions.map((opt) => (
-                          <SelectItem
-                            key={opt.value}
-                            value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               {/* Contracted Value */}
               <FormField
                 control={form.control}
@@ -389,25 +338,6 @@ export function CreateProjectDialog({
                 )}
               />
 
-              {/* Closed Date - Native Date Input */}
-              <FormField
-                control={form.control}
-                name="closedDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Closed Date</FormLabel>
-                    <FormControl>
-                      <DatePicker
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Pick a date"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               {/* Project Manager */}
               <FormField
                 control={form.control}
@@ -436,61 +366,6 @@ export function CreateProjectDialog({
                 )}
               />
 
-              {/* Designer */}
-              <FormField
-                control={form.control}
-                name="designerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Designer</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Designer" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {designers.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* QS */}
-              <FormField
-                control={form.control}
-                name="qsId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>QS</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select QS" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {qss.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             <FormField

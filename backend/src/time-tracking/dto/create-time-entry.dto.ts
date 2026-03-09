@@ -44,4 +44,12 @@ export class CreateTimeEntryDto {
   @IsString()
   @IsOptional()
   source?: string;
+
+  @IsUUID()
+  @IsOptional()
+  serviceItemId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  serviceItemSubtaskId?: string;
 }

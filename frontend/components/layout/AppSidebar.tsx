@@ -249,6 +249,24 @@ const adminSubItems: Array<{
     permission: 'settings:manage',
   },
   {
+    title: 'Service Types',
+    href: '/admin/service-types',
+    icon: ListFilter,
+    permission: 'settings:manage',
+  },
+  {
+    title: 'Task Types',
+    href: '/admin/task-types',
+    icon: CheckSquare,
+    permission: 'settings:manage',
+  },
+  {
+    title: 'Service Items',
+    href: '/admin/service-items',
+    icon: BookOpen,
+    permission: 'settings:manage',
+  },
+  {
     title: 'AI Settings',
     href: '/admin/ai-settings',
     icon: Bot,

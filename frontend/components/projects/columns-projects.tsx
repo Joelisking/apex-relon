@@ -77,6 +77,7 @@ export const projectColumns: ColumnDef<Project>[] = [
         <Badge className={RISK_COLORS[risk] || ''}>{risk}</Badge>
       );
     },
+    filterFn: (row, id, value) => value.includes(row.getValue(id) || 'On Track'),
   },
 
   {
@@ -114,15 +115,18 @@ export const projectColumns: ColumnDef<Project>[] = [
   },
   {
     accessorKey: 'projectManager',
+    id: 'projectManager',
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Manager" />
     ),
+    accessorFn: (row) => row.projectManager?.name || 'Unassigned',
     cell: ({ row }) => {
       const pm = row.original.projectManager;
       return (
         <div className="truncate max-w-37.">{pm?.name || '-'}</div>
       );
     },
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
   },
   {
     accessorKey: 'qs',

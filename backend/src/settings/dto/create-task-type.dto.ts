@@ -1,13 +1,16 @@
-import { IsNotEmpty, IsString, IsOptional, IsBoolean, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNumber, IsUUID } from 'class-validator';
 
-export class CreateServiceTypeDto {
+export class CreateTaskTypeDto {
   @IsString()
-  @IsNotEmpty()
   name: string;
 
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsUUID()
+  serviceTypeId?: string;
 
   @IsOptional()
   @IsBoolean()
