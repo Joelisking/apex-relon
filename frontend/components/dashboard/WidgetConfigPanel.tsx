@@ -30,6 +30,7 @@ interface Props {
     config: Partial<WidgetConfig['config']>,
   ) => void;
   onRemove: (widgetId: string) => void;
+  hasPermission?: (p: string) => boolean;
 }
 
 export function WidgetConfigPanel({
@@ -37,6 +38,7 @@ export function WidgetConfigPanel({
   onClose,
   onUpdate,
   onRemove,
+  hasPermission = () => true,
 }: Props) {
   const [title, setTitle] = useState(() => widget?.config.title || '');
   const [metric, setMetric] = useState(() => (widget?.config.metric as string) || '');
@@ -91,7 +93,9 @@ export function WidgetConfigPanel({
                   <SelectValue placeholder="Select metric" />
                 </SelectTrigger>
                 <SelectContent>
-                  {AVAILABLE_METRICS.map((m) => (
+                  {AVAILABLE_METRICS.filter((m) =>
+                    m.requiredPermissions.every((p) => hasPermission(p))
+                  ).map((m) => (
                     <SelectItem key={m.value} value={m.value}>
                       {m.label}
                     </SelectItem>

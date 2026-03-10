@@ -41,16 +41,20 @@ export class PermissionsService implements OnModuleInit {
     const dbRoles = await this.prisma.role.findMany({
       orderBy: [{ isBuiltIn: 'desc' }, { createdAt: 'asc' }],
     });
-    const roleKeys = dbRoles.map((r) => r.key);
     const matrix: Record<string, string[]> = {};
 
-    for (const key of roleKeys) {
-      matrix[key] = await this.getPermissionsForRole(key);
+    for (const r of dbRoles) {
+      matrix[r.key] = await this.getPermissionsForRole(r.key);
     }
 
     return {
       permissions: ALL_PERMISSIONS,
-      roles: roleKeys,
+      roles: dbRoles.map((r) => ({
+        key: r.key,
+        label: r.label,
+        color: r.color,
+        isBuiltIn: r.isBuiltIn,
+      })),
       matrix,
     };
   }

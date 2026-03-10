@@ -461,7 +461,7 @@ export default function EnhancedDashboard({
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display">CEO Dashboard</h1>
+          <h1 className="text-3xl font-display">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
             Real-time business performance metrics
             {isFetching && !isLoading && (

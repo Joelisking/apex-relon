@@ -89,7 +89,6 @@ export class DashboardLayoutController {
   ) {}
 
   @Get()
-  @Permissions('dashboard:view')
   async getLayout(@CurrentUser() user: AuthenticatedUser) {
     return this.dashboardLayoutService.getLayout(user.id, user.role);
   }
@@ -111,10 +110,9 @@ export class DashboardLayoutController {
   }
 
   @Get('defaults/:role')
-  @Permissions('dashboard:view')
   async getRoleDefaults(@Param('role') role: string) {
     return {
-      widgets: this.dashboardLayoutService.getRoleDefaults(role),
+      widgets: await this.dashboardLayoutService.getRoleDefaults(role),
     };
   }
 }

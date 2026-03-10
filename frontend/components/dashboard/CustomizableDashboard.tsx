@@ -34,6 +34,7 @@ import { useQuery } from '@tanstack/react-query';
 import { dashboardApi } from '@/lib/api/dashboard';
 import type { DashboardMetrics } from '@/lib/api/dashboard';
 import type { WidgetConfig } from '@/lib/types/dashboard-layout';
+import { WIDGET_PERMISSION_MAP, METRIC_PERMISSION_MAP } from '@/lib/types/dashboard-layout';
 import {
   MetricCardWidget,
   AreaChartWidget,
@@ -49,6 +50,25 @@ import EnhancedDashboard from './EnhancedDashboard';
 
 
 const PERIOD_LABELS = { week: 'Week', month: 'Month', quarter: 'Quarter' } as const;
+
+// ---------------------------------------------------------------------------
+// Permission-gating helper
+// ---------------------------------------------------------------------------
+function canShowWidget(
+  widget: WidgetConfig,
+  hasPermission: (p: string) => boolean,
+): boolean {
+  const basePerms = WIDGET_PERMISSION_MAP[widget.type] ?? [];
+  if (!basePerms.every((p) => hasPermission(p))) return false;
+
+  // For metric-driven widgets, also check the per-metric permission
+  const metric = widget.config?.metric as string | undefined;
+  if (metric) {
+    const metricPerms = METRIC_PERMISSION_MAP[metric] ?? [];
+    if (!metricPerms.every((p) => hasPermission(p))) return false;
+  }
+  return true;
+}
 
 // ---------------------------------------------------------------------------
 // Resize handle
@@ -307,7 +327,7 @@ interface Props {
 }
 
 export default function CustomizableDashboard({ initialPeriod = 'month' }: Props) {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [isEditMode, setIsEditMode] = useState(false);
   const [configuringWidget, setConfiguringWidget] = useState<WidgetConfig | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -356,7 +376,7 @@ export default function CustomizableDashboard({ initialPeriod = 'month' }: Props
   };
 
   const {
-    widgets,
+    widgets: allWidgets,
     isLoading,
     hasUnsavedChanges,
     isSaving,
@@ -367,6 +387,9 @@ export default function CustomizableDashboard({ initialPeriod = 'month' }: Props
     updateWidgetConfig,
     resetToDefaults,
   } = useDashboardLayout();
+
+  // Filter out widgets the current user doesn't have permission to see
+  const widgets = allWidgets.filter((w) => canShowWidget(w, hasPermission));
 
   // Use the same key format as EnhancedDashboard (['dashboard-metrics', period, ''])
   // so the already-fetched metrics are served from cache when the widget grid mounts.
@@ -473,20 +496,22 @@ export default function CustomizableDashboard({ initialPeriod = 'month' }: Props
                   Unsaved layout
                 </span>
               )}
-              <button
-                onClick={() => setIsEditMode(true)}
-                disabled={isLoading}
-                className={cn(
-                  'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full',
-                  'text-xs font-medium text-muted-foreground',
-                  'border border-border/50 hover:border-border',
-                  'hover:bg-muted/40 hover:text-foreground',
-                  'transition-all duration-150',
-                  'disabled:opacity-40 disabled:cursor-not-allowed',
-                )}>
-                <LayoutDashboard className="h-3.5 w-3.5" />
-                Customize
-              </button>
+              {hasPermission('dashboard:edit') && (
+                <button
+                  onClick={() => setIsEditMode(true)}
+                  disabled={isLoading}
+                  className={cn(
+                    'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full',
+                    'text-xs font-medium text-muted-foreground',
+                    'border border-border/50 hover:border-border',
+                    'hover:bg-muted/40 hover:text-foreground',
+                    'transition-all duration-150',
+                    'disabled:opacity-40 disabled:cursor-not-allowed',
+                  )}>
+                  <LayoutDashboard className="h-3.5 w-3.5" />
+                  Customize
+                </button>
+              )}
             </div>
           </div>
 
@@ -619,6 +644,7 @@ export default function CustomizableDashboard({ initialPeriod = 'month' }: Props
         onClose={() => setConfiguringWidget(null)}
         onUpdate={updateWidgetConfig}
         onRemove={removeWidget}
+        hasPermission={hasPermission}
       />
 
       <AddWidgetDialog
@@ -626,6 +652,7 @@ export default function CustomizableDashboard({ initialPeriod = 'month' }: Props
         onClose={() => setShowAddDialog(false)}
         onAdd={addWidget}
         existingCount={widgets.length}
+        hasPermission={hasPermission}
       />
     </>
   );

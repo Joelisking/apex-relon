@@ -11,19 +11,22 @@ export class StorageService {
   constructor(private configService: ConfigService) {
     const projectId = this.configService.get<string>('GCP_PROJECT_ID');
     this.bucketName = this.configService.get<string>('GCP_STORAGE_BUCKET');
+    const inlineJson = this.configService.get<string>('GCP_SERVICE_ACCOUNT_JSON');
     const keyFilename = this.configService.get<string>('GCP_KEY_FILE');
 
-    // Use service account key file if provided, otherwise use ADC
-    this.storage = new Storage(
-      keyFilename
-        ? {
-            projectId,
-            keyFilename,
-          }
-        : {
-            projectId,
-          },
-    );
+    if (inlineJson) {
+      // Production: credentials stored as JSON string in env var
+      this.storage = new Storage({
+        projectId,
+        credentials: JSON.parse(inlineJson),
+      });
+    } else if (keyFilename) {
+      // Local dev: path to key file
+      this.storage = new Storage({ projectId, keyFilename });
+    } else {
+      // Fallback: Application Default Credentials (GCP-hosted environments)
+      this.storage = new Storage({ projectId });
+    }
   }
 
   async uploadFile(

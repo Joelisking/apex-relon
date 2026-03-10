@@ -22,29 +22,47 @@ export interface WidgetConfig {
   };
 }
 
-export const WIDGET_TYPE_LABELS: Record<WidgetType, string> = {
-  MetricCard: 'Metric Card',
-  AreaChart: 'Area Chart',
-  BarChart: 'Bar Chart',
-  FunnelChart: 'Funnel Chart',
-  TaskList: 'Task List',
-  LeadsList: 'Leads List',
-  AIPanel: 'AI Panel',
+// Single source of truth for widget types.
+// Add requiredPermissions here when adding a new widget type.
+export const WIDGET_DEFINITIONS: Record<WidgetType, { label: string; requiredPermissions: string[] }> = {
+  MetricCard: { label: 'Metric Card',   requiredPermissions: [] },  // gated per-metric
+  AreaChart:  { label: 'Area Chart',    requiredPermissions: [] },  // gated per-metric
+  BarChart:   { label: 'Bar Chart',     requiredPermissions: [] },  // gated per-metric
+  FunnelChart:{ label: 'Funnel Chart',  requiredPermissions: ['leads:view'] },
+  TaskList:   { label: 'Task List',     requiredPermissions: ['tasks:view'] },
+  LeadsList:  { label: 'Leads List',    requiredPermissions: ['leads:view'] },
+  AIPanel:    { label: 'AI Panel',      requiredPermissions: ['reports:view', 'leads:view', 'clients:view'] },
 };
 
+// Derived — no need to maintain separately
+export const WIDGET_TYPE_LABELS: Record<WidgetType, string> = Object.fromEntries(
+  Object.entries(WIDGET_DEFINITIONS).map(([k, v]) => [k, v.label]),
+) as Record<WidgetType, string>;
+
+export const WIDGET_PERMISSION_MAP: Record<WidgetType, string[]> = Object.fromEntries(
+  Object.entries(WIDGET_DEFINITIONS).map(([k, v]) => [k, v.requiredPermissions]),
+) as Record<WidgetType, string[]>;
+
+// Single source of truth for metrics.
+// Add requiredPermissions here when adding a new metric.
 export const AVAILABLE_METRICS = [
-  { value: 'totalRevenue', label: 'Total Revenue' },
-  { value: 'monthlyRevenue', label: 'Monthly Revenue' },
-  { value: 'quarterlyRevenue', label: 'Quarterly Revenue' },
-  { value: 'pipelineValue', label: 'Pipeline Value' },
-  { value: 'totalLeads', label: 'Total Leads' },
-  { value: 'wonLeads', label: 'Won Leads' },
-  { value: 'winRate', label: 'Win Rate' },
-  { value: 'avgDealSize', label: 'Avg Deal Size' },
-  { value: 'activeClients', label: 'Active Clients' },
-  { value: 'totalProjects', label: 'Total Projects' },
-  { value: 'activeProjects', label: 'Active Projects' },
-  { value: 'projectsAtRisk', label: 'Projects at Risk' },
-  { value: 'revenueByClient', label: 'Revenue by Client' },
-  { value: 'projectsByStatus', label: 'Projects by Status' },
-];
+  { value: 'totalRevenue',    label: 'Total Revenue',       requiredPermissions: ['reports:view'] },
+  { value: 'monthlyRevenue',  label: 'Monthly Revenue',     requiredPermissions: ['reports:view'] },
+  { value: 'quarterlyRevenue',label: 'Quarterly Revenue',   requiredPermissions: ['reports:view'] },
+  { value: 'pipelineValue',   label: 'Pipeline Value',      requiredPermissions: ['leads:view'] },
+  { value: 'totalLeads',      label: 'Total Leads',         requiredPermissions: ['leads:view'] },
+  { value: 'wonLeads',        label: 'Won Leads',           requiredPermissions: ['leads:view'] },
+  { value: 'winRate',         label: 'Win Rate',            requiredPermissions: ['leads:view'] },
+  { value: 'avgDealSize',     label: 'Avg Deal Size',       requiredPermissions: ['leads:view'] },
+  { value: 'activeClients',   label: 'Active Clients',      requiredPermissions: ['clients:view'] },
+  { value: 'totalProjects',   label: 'Total Projects',      requiredPermissions: ['projects:view'] },
+  { value: 'activeProjects',  label: 'Active Projects',     requiredPermissions: ['projects:view'] },
+  { value: 'projectsAtRisk',  label: 'Projects at Risk',    requiredPermissions: ['projects:view'] },
+  { value: 'revenueByClient', label: 'Revenue by Client',   requiredPermissions: ['reports:view', 'clients:view'] },
+  { value: 'projectsByStatus',label: 'Projects by Status',  requiredPermissions: ['projects:view'] },
+] as const;
+
+// Derived — no need to maintain separately
+export const METRIC_PERMISSION_MAP: Record<string, string[]> = Object.fromEntries(
+  AVAILABLE_METRICS.map((m) => [m.value, [...m.requiredPermissions]]),
+);

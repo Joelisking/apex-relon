@@ -1,7 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { AiService } from '../ai/ai.service';
-import { Permissions } from '../permissions/permissions.decorator';
 
 @Controller('dashboard')
 export class DashboardController {
@@ -11,7 +10,6 @@ export class DashboardController {
   ) {}
 
   @Get('metrics')
-  @Permissions('dashboard:view')
   async getMetrics(
     @Query('period') period: 'week' | 'month' | 'quarter' = 'month',
     @Query('executingCompany') executingCompany?: string,
@@ -20,7 +18,7 @@ export class DashboardController {
   }
 
   @Get('executive-summary')
-  @Permissions('dashboard:view')
+
   async getExecutiveSummary(
     @Query('period') period: 'week' | 'month' | 'quarter' = 'month',
     @Query('executingCompany') executingCompany?: string,
@@ -46,7 +44,7 @@ export class DashboardController {
   }
 
   @Get('revenue-breakdown')
-  @Permissions('dashboard:view')
+
   async getRevenueBreakdown(
     @Query('period') period: 'week' | 'month' | 'quarter' = 'month',
     @Query('executingCompany') executingCompany?: string,
@@ -64,7 +62,7 @@ export class DashboardController {
   }
 
   @Get('project-analytics')
-  @Permissions('dashboard:view')
+
   async getProjectAnalytics(
     @Query('period') period: 'week' | 'month' | 'quarter' = 'month',
     @Query('executingCompany') executingCompany?: string,
@@ -80,7 +78,7 @@ export class DashboardController {
   }
 
   @Get('revenue-trend')
-  @Permissions('dashboard:view')
+
   getRevenueTrend(
     @Query('period') period: 'week' | 'month' | 'quarter' = 'month',
   ) {
@@ -88,13 +86,13 @@ export class DashboardController {
   }
 
   @Get('lead-volume-trend')
-  @Permissions('dashboard:view')
+
   getLeadVolumeTrend() {
     return this.dashboardService.getLeadVolumeTrend();
   }
 
   @Get('pipeline-insights')
-  @Permissions('dashboard:view')
+
   getPipelineInsights() {
     return this.dashboardService.getPipelineInsights();
   }

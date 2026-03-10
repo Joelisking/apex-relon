@@ -460,6 +460,27 @@ async function main() {
   });
   console.log('✅ Seeded Apex Project Inquiry lead form');
 
+  // ── File categories (document type dropdown) ──────────────────────────────
+  const fileCategories = [
+    { value: 'proposal', label: 'Proposal', sortOrder: 0 },
+    { value: 'contract', label: 'Contract', sortOrder: 1 },
+    { value: 'survey_drawing', label: 'Survey Drawing', sortOrder: 2 },
+    { value: 'field_notes', label: 'Field Notes', sortOrder: 3 },
+    { value: 'report', label: 'Report', sortOrder: 4 },
+    { value: 'invoice', label: 'Invoice', sortOrder: 5 },
+    { value: 'photo', label: 'Photo', sortOrder: 6 },
+    { value: 'correspondence', label: 'Correspondence', sortOrder: 7 },
+    { value: 'other', label: 'Other', sortOrder: 8 },
+  ];
+  for (const cat of fileCategories) {
+    await prisma.dropdownOption.upsert({
+      where: { category_value: { category: 'file_category', value: cat.value } },
+      update: { label: cat.label, sortOrder: cat.sortOrder },
+      create: { category: 'file_category', ...cat, isSystem: true },
+    });
+  }
+  console.log('✅ Seeded file categories');
+
   console.log('\n📊 Seed Summary:');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('✅ 7 test users created with the following credentials:');

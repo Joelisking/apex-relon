@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import type { WidgetType, WidgetConfig } from '@/lib/types/dashboard-layout';
-import { WIDGET_TYPE_LABELS, AVAILABLE_METRICS } from '@/lib/types/dashboard-layout';
+import { WIDGET_TYPE_LABELS, AVAILABLE_METRICS, WIDGET_PERMISSION_MAP, METRIC_PERMISSION_MAP } from '@/lib/types/dashboard-layout';
 
 // Metrics that make sense as a single-number card
 const METRIC_CARD_METRICS = AVAILABLE_METRICS.filter((m) =>
@@ -103,9 +103,10 @@ interface Props {
   onClose: () => void;
   onAdd: (widget: WidgetConfig) => void;
   existingCount: number;
+  hasPermission?: (p: string) => boolean;
 }
 
-export function AddWidgetDialog({ open, onClose, onAdd, existingCount }: Props) {
+export function AddWidgetDialog({ open, onClose, onAdd, existingCount, hasPermission = () => true }: Props) {
   const [selected, setSelected] = useState<WidgetType | null>(null);
   const [selectedMetric, setSelectedMetric] = useState<string>('');
 
@@ -147,7 +148,10 @@ export function AddWidgetDialog({ open, onClose, onAdd, existingCount }: Props) 
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-2.5 mt-1">
-          {(Object.keys(WIDGET_META) as WidgetType[]).map((type) => {
+          {(Object.keys(WIDGET_META) as WidgetType[]).filter((type) => {
+            const perms = WIDGET_PERMISSION_MAP[type] ?? [];
+            return perms.every((p) => hasPermission(p));
+          }).map((type) => {
             const meta = WIDGET_META[type];
             const isSelected = selected === type;
             return (
@@ -221,7 +225,10 @@ export function AddWidgetDialog({ open, onClose, onAdd, existingCount }: Props) 
               Which metric?
             </p>
             <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-0.5">
-              {METRIC_CARD_METRICS.map((m) => (
+              {METRIC_CARD_METRICS.filter((m) => {
+                const perms = METRIC_PERMISSION_MAP[m.value] ?? [];
+                return perms.every((p) => hasPermission(p));
+              }).map((m) => (
                 <button
                   key={m.value}
                   onClick={() => setSelectedMetric(m.value)}

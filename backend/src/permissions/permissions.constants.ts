@@ -96,13 +96,8 @@ export const ALL_PERMISSIONS: PermissionDefinition[] = [
 
   // Dashboard
   {
-    key: 'dashboard:view',
-    label: 'View Dashboard',
-    module: 'Dashboard',
-  },
-  {
     key: 'dashboard:edit',
-    label: 'Edit Dashboard Layout',
+    label: 'Customize Dashboard Layout',
     module: 'Dashboard',
   },
 
@@ -258,7 +253,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'users:create',
     'users:edit',
     'users:delete',
-    'dashboard:view',
     'dashboard:edit',
     'ai_settings:view',
     'ai_settings:edit',
@@ -308,7 +302,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'reports:export',
     'reports:view_all',
     'ai_settings:view',
-    'dashboard:view',
     'dashboard:edit',
     'tasks:view',
     'tasks:create',
@@ -339,7 +332,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'teams:view',
     'reports:view',
     'ai_settings:view',
-    'dashboard:view',
     'dashboard:edit',
     'tasks:view',
     'notifications:view',

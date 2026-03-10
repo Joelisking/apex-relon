@@ -150,7 +150,6 @@ const mainNavItems: Array<{
     title: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
-    permission: 'dashboard:view',
   },
   {
     title: 'Clients',
@@ -372,8 +371,19 @@ function SidebarNav({
   const { user, logout, hasPermission } = useAuth();
   const { currency, setCurrency, symbol } = useCurrency();
 
-  const isAdmin =
-    user?.role && ['CEO', 'ADMIN', 'BDM'].includes(user.role);
+  // Show admin section if the user has any admin-related permission
+  const adminPermissions = [
+    'users:view',
+    'teams:view',
+    'permissions:view',
+    'pipeline:manage',
+    'settings:manage',
+    'settings:view',
+    'ai_settings:view',
+    'audit_logs:view',
+    'workflows:view',
+  ];
+  const isAdmin = adminPermissions.some((p) => hasPermission(p));
   const isAdminRoute = pathname.startsWith('/admin');
 
   const handleLogout = () => {

@@ -295,10 +295,14 @@ export function RolesView() {
   const customRoles = roles.filter((r) => !r.isBuiltIn);
 
   return (
-    <div className="space-y-6">
+    <div
+      className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-500"
+      style={{ animationFillMode: 'backwards' }}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
+        <div
+          className="animate-in fade-in slide-in-from-left-2 duration-400"
+          style={{ animationDelay: '60ms', animationFillMode: 'backwards' }}>
           <h2 className="text-2xl font-semibold tracking-tight">
             Roles
           </h2>
@@ -310,7 +314,8 @@ export function RolesView() {
         {canEdit && (
           <Button
             onClick={() => setCreateOpen(true)}
-            className="gap-2">
+            className="gap-2 animate-in fade-in zoom-in-90 duration-300"
+            style={{ animationDelay: '120ms', animationFillMode: 'backwards' }}>
             <Plus className="h-4 w-4" />
             Add Role
           </Button>
@@ -318,7 +323,9 @@ export function RolesView() {
       </div>
 
       {/* Stats */}
-      <div className="rounded-xl border border-border/60 bg-card shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
+      <div
+        className="rounded-xl border border-border/60 bg-card shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden animate-in fade-in slide-in-from-bottom-1 duration-400"
+        style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
         <div className="grid grid-cols-3 gap-px bg-border/60">
           {[
             {
@@ -342,12 +349,16 @@ export function RolesView() {
               icon: Users,
               highlight: false,
             },
-          ].map((stat) => {
+          ].map((stat, i) => {
             const Icon = stat.icon;
             return (
               <div
                 key={stat.label}
-                className="relative bg-card px-5 py-4">
+                className="relative bg-card px-5 py-4 animate-in fade-in duration-300"
+                style={{
+                  animationDelay: `${i * 60 + 150}ms`,
+                  animationFillMode: 'backwards',
+                }}>
                 {stat.highlight && (
                   <div className="absolute left-0 top-3 bottom-3 w-0.5 bg-destructive/50 rounded-r-full" />
                 )}
@@ -382,11 +393,20 @@ export function RolesView() {
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div className="rounded-xl border border-border/60 overflow-hidden animate-in fade-in duration-300">
+            <div className="h-10 bg-muted/40 border-b border-border/60 animate-pulse" />
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-12 border-b border-border/30 bg-background animate-pulse"
+                style={{ animationDelay: `${i * 60}ms` }}
+              />
+            ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-border/60 overflow-hidden">
+          <div
+            className="rounded-xl border border-border/60 overflow-hidden animate-in fade-in slide-in-from-bottom-1 duration-400"
+            style={{ animationDelay: '180ms', animationFillMode: 'backwards' }}>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border/60 bg-muted/40">
@@ -410,10 +430,14 @@ export function RolesView() {
                   <tr
                     key={role.key}
                     className={cn(
-                      'hover:bg-muted/30 transition-colors',
+                      'hover:bg-muted/30 transition-colors duration-150 animate-in fade-in duration-300',
                       i < roles.length - 1 &&
                         'border-b border-border/40',
-                    )}>
+                    )}
+                    style={{
+                      animationDelay: `${i * 40 + 220}ms`,
+                      animationFillMode: 'backwards',
+                    }}>
                     <td className="py-3 px-4">
                       <Badge
                         variant="outline"

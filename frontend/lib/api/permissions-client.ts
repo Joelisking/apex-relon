@@ -6,9 +6,16 @@ export interface PermissionDefinition {
   module: string;
 }
 
+export interface RoleMeta {
+  key: string;
+  label: string;
+  color: string | null;
+  isBuiltIn: boolean;
+}
+
 export interface PermissionMatrix {
   permissions: PermissionDefinition[];
-  roles: string[];
+  roles: RoleMeta[];
   matrix: Record<string, string[]>;
 }
 

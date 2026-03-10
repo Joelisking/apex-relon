@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { PermissionsService } from '../permissions/permissions.service';
 
 export interface WidgetConfig {
   id: string;
@@ -278,16 +279,117 @@ const DEFAULT_LAYOUT: WidgetConfig[] = [
 const ROLE_DEFAULTS: Record<string, WidgetConfig[]> = {
   CEO: CEO_LAYOUT,
   BDM: BDM_LAYOUT,
+  SALES: BDM_LAYOUT,
   QS: QS_LAYOUT,
   ADMIN: ADMIN_LAYOUT,
 };
 
 @Injectable()
 export class DashboardLayoutService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly permissionsService: PermissionsService,
+  ) {}
 
-  getRoleDefaults(role: string): WidgetConfig[] {
-    return ROLE_DEFAULTS[role] ?? DEFAULT_LAYOUT;
+  async getRoleDefaults(role: string): Promise<WidgetConfig[]> {
+    if (ROLE_DEFAULTS[role]) return ROLE_DEFAULTS[role];
+    // Dynamic generation for custom roles based on their permissions
+    const permissions = await this.permissionsService.getPermissionsForRole(role);
+    return this.buildLayoutFromPermissions(new Set(permissions));
+  }
+
+  private buildLayoutFromPermissions(perms: Set<string>): WidgetConfig[] {
+    const widgets: WidgetConfig[] = [];
+    const has = (p: string) => perms.has(p);
+
+    // Row 0: metric cards (up to 4, 3 cols each)
+    const metricCards: WidgetConfig[] = [];
+    if (has('reports:view')) {
+      metricCards.push({
+        id: 'dyn-revenue',
+        type: 'MetricCard',
+        position: { x: metricCards.length * 3, y: 0 },
+        size: { w: 3, h: 1 },
+        config: { title: 'Total Revenue', metric: 'totalRevenue' },
+      });
+    }
+    if (has('leads:view')) {
+      metricCards.push({
+        id: 'dyn-pipeline',
+        type: 'MetricCard',
+        position: { x: metricCards.length * 3, y: 0 },
+        size: { w: 3, h: 1 },
+        config: { title: 'Pipeline Value', metric: 'pipelineValue' },
+      });
+      metricCards.push({
+        id: 'dyn-winrate',
+        type: 'MetricCard',
+        position: { x: metricCards.length * 3, y: 0 },
+        size: { w: 3, h: 1 },
+        config: { title: 'Win Rate', metric: 'winRate' },
+      });
+    }
+    if (has('projects:view')) {
+      metricCards.push({
+        id: 'dyn-projects',
+        type: 'MetricCard',
+        position: { x: metricCards.length * 3, y: 0 },
+        size: { w: 3, h: 1 },
+        config: { title: 'Active Projects', metric: 'activeProjects' },
+      });
+    }
+    if (has('clients:view') && metricCards.length < 4) {
+      metricCards.push({
+        id: 'dyn-clients',
+        type: 'MetricCard',
+        position: { x: metricCards.length * 3, y: 0 },
+        size: { w: 3, h: 1 },
+        config: { title: 'Active Clients', metric: 'activeClients' },
+      });
+    }
+    widgets.push(...metricCards.slice(0, 4));
+
+    // Row 1+: larger content widgets
+    let yPos = metricCards.length > 0 ? 1 : 0;
+
+    if (has('leads:view')) {
+      widgets.push({
+        id: 'dyn-funnel',
+        type: 'FunnelChart',
+        position: { x: 0, y: yPos },
+        size: { w: 6, h: 3 },
+        config: { title: 'Pipeline Funnel' },
+      });
+      widgets.push({
+        id: 'dyn-leads-list',
+        type: 'LeadsList',
+        position: { x: 6, y: yPos },
+        size: { w: 6, h: 3 },
+        config: { title: 'Recent Leads' },
+      });
+      yPos += 3;
+    } else if (has('projects:view')) {
+      widgets.push({
+        id: 'dyn-projects-chart',
+        type: 'BarChart',
+        position: { x: 0, y: yPos },
+        size: { w: 6, h: 3 },
+        config: { title: 'Projects by Status', metric: 'projectsByStatus' },
+      });
+      yPos += 3;
+    }
+
+    if (has('tasks:view')) {
+      widgets.push({
+        id: 'dyn-tasks',
+        type: 'TaskList',
+        position: { x: has('leads:view') || has('projects:view') ? 0 : 0, y: yPos },
+        size: { w: 12, h: 2 },
+        config: { title: 'My Tasks' },
+      });
+    }
+
+    return widgets.length > 0 ? widgets : DEFAULT_LAYOUT;
   }
 
   async getLayout(
@@ -305,7 +407,7 @@ export class DashboardLayoutService {
       };
     }
 
-    return { widgets: this.getRoleDefaults(role), isDefault: true };
+    return { widgets: await this.getRoleDefaults(role), isDefault: true };
   }
 
   async saveLayout(

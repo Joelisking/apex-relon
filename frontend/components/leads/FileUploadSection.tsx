@@ -60,7 +60,7 @@ export function FileUploadSection({
     settingsApi.getDropdownOptions('file_category').then((opts) => {
       setFileCategories(opts);
       if (opts.length > 0 && !opts.find((o) => o.value === category)) {
-        setCategory(opts[opts.length - 1].value); // default to last (usually 'other')
+        setCategory(opts[opts.length - 1].value);
       }
     }).catch(console.error);
   }, []);
