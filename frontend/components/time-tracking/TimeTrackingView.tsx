@@ -232,7 +232,7 @@ export function TimeTrackingView() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Time Tracking</h1>
+          <h1 className="text-3xl font-display tracking-tight">Time Tracking</h1>
           <p className="text-muted-foreground mt-1">
             Log hours, track billability, and monitor project budgets.
           </p>

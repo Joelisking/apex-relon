@@ -1,6 +1,15 @@
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
+export interface ProjectAssignment {
+  id: string;
+  projectId: string;
+  userId: string;
+  role: string;
+  createdAt: string;
+  user: { id: string; name: string; email: string; role: string };
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -47,6 +56,7 @@ export interface Project {
     name: string;
     email: string;
   };
+  assignments?: ProjectAssignment[];
   costLogs?: CostLog[];
   statusHistory?: Array<{
     id: string;
@@ -485,5 +495,36 @@ export const projectsApi = {
     if (!response.ok) {
       throw new Error('Failed to delete file');
     }
+  },
+
+  // ── Crew Assignments ──────────────────────────────────────────────────────
+
+  async getAssignments(projectId: string): Promise<ProjectAssignment[]> {
+    const response = await fetch(`${API_BASE}/projects/${projectId}/assignments`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch assignments');
+    return response.json();
+  },
+
+  async addAssignment(
+    projectId: string,
+    data: { userId: string; role: string },
+  ): Promise<ProjectAssignment> {
+    const response = await fetch(`${API_BASE}/projects/${projectId}/assignments`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Failed to add assignment');
+    return response.json();
+  },
+
+  async removeAssignment(projectId: string, assignmentId: string): Promise<void> {
+    const response = await fetch(
+      `${API_BASE}/projects/${projectId}/assignments/${assignmentId}`,
+      { method: 'DELETE', headers: authHeaders() },
+    );
+    if (!response.ok) throw new Error('Failed to remove assignment');
   },
 };

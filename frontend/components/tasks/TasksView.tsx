@@ -168,7 +168,7 @@ export default function TasksView() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Tasks</h1>
+          <h1 className="text-3xl font-display tracking-tight">Tasks</h1>
           <p className="text-sm text-muted-foreground">
             Manage your tasks and follow-ups
           </p>

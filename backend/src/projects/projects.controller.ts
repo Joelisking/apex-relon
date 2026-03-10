@@ -21,6 +21,7 @@ import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { CreateCostLogDto } from './dto/create-cost-log.dto';
+import { CreateProjectAssignmentDto } from './dto/create-project-assignment.dto';
 
 @Controller('projects')
 export class ProjectsController {
@@ -141,5 +142,32 @@ export class ProjectsController {
     @Param('costId') costId: string,
   ) {
     return this.projectsService.removeCostLog(id, costId);
+  }
+
+  // --- Crew Assignments ---
+
+  @Get(':id/assignments')
+  @Permissions('projects:view')
+  getAssignments(@Param('id') id: string) {
+    return this.projectsService.getAssignments(id);
+  }
+
+  @Post(':id/assignments')
+  @Permissions('projects:edit')
+  addAssignment(
+    @Param('id') id: string,
+    @Body() dto: CreateProjectAssignmentDto,
+  ) {
+    return this.projectsService.addAssignment(id, dto);
+  }
+
+  @Delete(':id/assignments/:assignmentId')
+  @Permissions('projects:edit')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeAssignment(
+    @Param('id') id: string,
+    @Param('assignmentId') assignmentId: string,
+  ) {
+    return this.projectsService.removeAssignment(id, assignmentId);
   }
 }

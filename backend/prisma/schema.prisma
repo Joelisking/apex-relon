@@ -241,6 +241,7 @@ model Project {
   timeEntries       TimeEntry[]            @relation("ProjectTimeEntries")
   budget            ProjectBudget?         @relation("ProjectBudget")
   quotes            Quote[]                @relation("ProjectQuotes")
+  assignments       ProjectAssignment[]
 
   @@index([clientId])
   @@index([leadId])
@@ -285,6 +286,21 @@ model ProjectStatusHistory {
   @@map("project_status_history")
 }
 
+model ProjectAssignment {
+  id        String   @id @default(uuid())
+  projectId String
+  userId    String
+  role      String
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation("ProjectAssignments", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+  @@map("project_assignments")
+}
+
 model User {
   id                      String                  @id @default(uuid())
   email                   String                  @unique
@@ -324,6 +340,7 @@ model User {
   designedProjects        Project[]               @relation("ProjectDesignerAssignments")
   managedProjects         Project[]               @relation("ProjectManagement")
   qsProjects              Project[]               @relation("ProjectQSAssignments")
+  projectAssignments      ProjectAssignment[]     @relation("ProjectAssignments")
   stageChanges            StageHistory[]          @relation("StageChanges")
   managedTeams            Team[]                  @relation("ManagerTeams")
   manager                 User?                   @relation("ManagerTeam", fields: [managerId], references: [id])

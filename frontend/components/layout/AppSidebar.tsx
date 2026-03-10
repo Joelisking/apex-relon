@@ -40,6 +40,7 @@ import {
   BookOpen,
   Clock,
   TrendingUp,
+  CalendarDays,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import {
@@ -173,6 +174,12 @@ const mainNavItems: Array<{
     title: 'Tasks',
     href: '/tasks',
     icon: CheckSquare,
+    permission: 'tasks:view',
+  },
+  {
+    title: 'Calendar',
+    href: '/calendar',
+    icon: CalendarDays,
     permission: 'tasks:view',
   },
   {

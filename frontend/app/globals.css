@@ -206,3 +206,78 @@ body::before {
     font-optical-sizing: auto;
   }
 }
+
+/* ── react-big-calendar overrides ─────────────────────────────────────────── */
+.rbc-calendar-wrapper .rbc-calendar {
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.rbc-calendar-wrapper .rbc-header {
+  font-weight: 500;
+  font-size: 12px;
+  padding: 6px 4px;
+  border-bottom: 1px solid oklch(0.9 0 0);
+  color: oklch(0.45 0 0);
+}
+
+.rbc-calendar-wrapper .rbc-month-view,
+.rbc-calendar-wrapper .rbc-time-view {
+  border: 1px solid oklch(0.9 0 0);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.rbc-calendar-wrapper .rbc-today {
+  background-color: oklch(0.97 0.01 30);
+}
+
+.rbc-calendar-wrapper .rbc-off-range-bg {
+  background-color: oklch(0.975 0 0);
+}
+
+.rbc-calendar-wrapper .rbc-event {
+  padding: 0;
+  border-radius: 4px;
+  border: none !important;
+  box-shadow: none;
+}
+
+.rbc-calendar-wrapper .rbc-event.rbc-selected {
+  outline: 2px solid oklch(0.6 0.15 25);
+}
+
+.rbc-calendar-wrapper .rbc-event-label {
+  display: none;
+}
+
+.rbc-calendar-wrapper .rbc-show-more {
+  font-size: 11px;
+  color: oklch(0.5 0 0);
+  font-weight: 500;
+}
+
+.rbc-calendar-wrapper .rbc-agenda-view table.rbc-agenda-table {
+  border: 1px solid oklch(0.9 0 0);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.rbc-calendar-wrapper .rbc-agenda-view table.rbc-agenda-table thead > tr > th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: oklch(0.5 0 0);
+  padding: 8px 12px;
+  background: oklch(0.97 0 0);
+}
+
+.rbc-calendar-wrapper .rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.rbc-calendar-wrapper .rbc-toolbar {
+  display: none; /* we render our own toolbar */
+}

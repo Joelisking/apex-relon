@@ -35,6 +35,7 @@ import { ProjectActivityTimeline } from './ProjectActivityTimeline';
 import { ProjectFileUploadSection } from './ProjectFileUploadSection';
 import { EditProjectDialog } from './EditProjectDialog';
 import { ProjectStageTimeline } from './ProjectStageTimeline';
+import { ProjectAssignmentPanel } from './ProjectAssignmentPanel';
 import {
   projectsApi,
   type Project,
@@ -556,6 +557,7 @@ export function ProjectDetailDialog({
                     { value: 'budget', label: 'Budget' },
                     { value: 'tasks', label: 'Tasks' },
                     { value: 'quotes', label: 'Quotes' },
+                    { value: 'crew', label: 'Crew' },
                     { value: 'documents', label: `Documents${files.length > 0 ? ` (${files.length})` : ''}` },
                   ].map((tab) => (
                     <TabsTrigger
@@ -611,6 +613,24 @@ export function ProjectDetailDialog({
 
                 <TabsContent value="quotes" className="mt-0 p-6">
                   <LinkedQuotesSection projectId={project.id} />
+                </TabsContent>
+
+                <TabsContent value="crew" className="mt-0 p-6">
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground mb-3">
+                        Crew Assignments
+                      </h3>
+                      <ProjectAssignmentPanel
+                        projectId={project.id}
+                        excludeUserIds={[
+                          project.projectManagerId,
+                          project.designerId,
+                          project.qsId,
+                        ].filter(Boolean) as string[]}
+                      />
+                    </div>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="documents" className="mt-0 p-6">

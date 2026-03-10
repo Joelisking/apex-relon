@@ -155,7 +155,7 @@ export function BottleneckDashboard() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Bottleneck Analytics</h1>
+          <h1 className="text-3xl font-display tracking-tight">Bottleneck Analytics</h1>
           <p className="text-muted-foreground mt-1">
             AI-powered delay analysis to keep your projects moving.
           </p>
