@@ -700,7 +700,7 @@ export interface CustomFieldValue {
   fieldKey: string;
   label: string;
   fieldType: string;
-  value: string | number | boolean | null;
+  value: string | number | boolean | string[] | null;
 }
 
 // Quote & Proposal Builder

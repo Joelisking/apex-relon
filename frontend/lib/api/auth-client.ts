@@ -8,6 +8,8 @@ export interface AuthResponse {
     email: string;
     name: string;
     role: string;
+    phone?: string | null;
+    mustCompleteProfile?: boolean;
   };
   permissions?: string[];
 }
@@ -17,6 +19,8 @@ export interface User {
   email: string;
   name: string;
   role: string;
+  phone?: string | null;
+  mustCompleteProfile?: boolean;
 }
 
 export interface MessageResponse {
@@ -106,5 +110,13 @@ export const authApi = {
   // Get current user profile
   getProfile: async (): Promise<User> => {
     return authFetch<User>('/auth/profile');
+  },
+
+  // Update profile (name, phone)
+  updateProfile: async (data: { name?: string; phone?: string }): Promise<User> => {
+    return authFetch<User>('/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
   },
 };

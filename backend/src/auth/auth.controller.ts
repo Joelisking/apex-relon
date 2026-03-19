@@ -80,7 +80,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Patch('profile')
-  async updateProfile(@CurrentUser() user: AuthenticatedUser, @Body() updateData: { name?: string }) {
+  async updateProfile(@CurrentUser() user: AuthenticatedUser, @Body() updateData: { name?: string; phone?: string }) {
     return this.authService.updateProfile(user.id, updateData);
   }
 

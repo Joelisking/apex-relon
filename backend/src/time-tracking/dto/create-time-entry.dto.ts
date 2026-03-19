@@ -11,7 +11,8 @@ import {
 
 export class CreateTimeEntryDto {
   @IsUUID()
-  userId: string;
+  @IsOptional()
+  userId?: string;
 
   @IsUUID()
   @IsOptional()

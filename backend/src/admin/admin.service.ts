@@ -313,6 +313,7 @@ export class AdminService {
         managerId: createUserDto.managerId || null,
         status: 'Active',
         isEmailVerified: false,
+        mustCompleteProfile: true,
       },
       select: {
         id: true,

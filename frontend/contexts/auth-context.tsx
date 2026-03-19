@@ -16,6 +16,8 @@ export interface User {
   name: string;
   role: string;
   teamId?: string;
+  phone?: string | null;
+  mustCompleteProfile?: boolean;
 }
 
 interface AuthContextType {
@@ -24,6 +26,7 @@ interface AuthContextType {
   permissions: string[];
   login: (token: string, user: User, permissions?: string[]) => void;
   logout: () => void;
+  updateUser: (updates: Partial<User>) => void;
   hasPermission: (permission: string) => boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -100,6 +103,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const updateUser = (updates: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...updates };
+      Cookies.set('user', JSON.stringify(updated), {
+        expires: 7,
+        sameSite: 'lax',
+      });
+      return updated;
+    });
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -124,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     permissions,
     login,
     logout,
+    updateUser,
     hasPermission,
     isAuthenticated: !!token && !!user,
     isLoading,

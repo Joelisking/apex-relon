@@ -28,11 +28,6 @@ import type { ServiceItem } from '@/lib/types';
 function getToken() {
   return getTokenFromClientCookies() ?? '';
 }
-function getCurrentUserId() {
-  return typeof window !== 'undefined'
-    ? JSON.parse(localStorage.getItem('user') ?? '{}')?.id
-    : undefined;
-}
 
 async function ttFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}/time-tracking${path}`, {
@@ -81,7 +76,6 @@ export function TimeEntryDialog({
   onSaved,
 }: TimeEntryDialogProps) {
   const queryClient = useQueryClient();
-  const userId = getCurrentUserId();
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [hours, setHours] = useState('1');
@@ -142,7 +136,6 @@ export function TimeEntryDialog({
   const saveMutation = useMutation({
     mutationFn: async () => {
       const payload: Record<string, unknown> = {
-        userId,
         date,
         hours: parseFloat(hours),
         projectId: projectId || undefined,

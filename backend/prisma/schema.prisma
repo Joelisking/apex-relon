@@ -312,6 +312,8 @@ model User {
   emailVerificationToken  String?                 @unique
   resetPasswordToken      String?                 @unique
   resetPasswordExpires    DateTime?
+  phone                   String?
+  mustCompleteProfile     Boolean                 @default(false)
   lastLogin               DateTime?
   teamName                String?
   teamId                  String?

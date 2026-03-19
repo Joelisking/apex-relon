@@ -239,16 +239,30 @@ export class QuickBooksService {
   }
 
   private async findOrCreateQbItem(qbClient: QbApiClient, name: string, unitPrice: number): Promise<{ Id: string; Name: string }> {
-    const query = `SELECT * FROM Item WHERE Name = '${name.replace(/'/g, "\\'")}'`;
+    // Escape single quotes per QB query syntax (double the quote, don't backslash)
+    const safeName = name.replace(/'/g, "''");
+    const query = `SELECT * FROM Item WHERE Name = '${safeName}'`;
     const res = await qbClient.get(`/query?query=${encodeURIComponent(query)}`);
     const existing = res?.QueryResponse?.Item?.[0];
     if (existing) return { Id: existing.Id, Name: existing.Name };
+
+    // Look up the income account — use env override or find the first Income account
+    let incomeAccountRef = { value: process.env.QB_INCOME_ACCOUNT_ID ?? '', name: 'Services' };
+    if (!incomeAccountRef.value) {
+      const acctRes = await qbClient.get(`/query?query=${encodeURIComponent("SELECT Id, Name FROM Account WHERE AccountType = 'Income' MAXRESULTS 1")}`);
+      const acct = acctRes?.QueryResponse?.Account?.[0];
+      if (acct) {
+        incomeAccountRef = { value: acct.Id, name: acct.Name };
+      } else {
+        throw new BadRequestException('No Income account found in QuickBooks. Set QB_INCOME_ACCOUNT_ID in environment.');
+      }
+    }
 
     const createRes = await qbClient.post('/item', {
       Name: name.slice(0, 100),
       Type: 'Service',
       UnitPrice: unitPrice,
-      IncomeAccountRef: { value: '1', name: 'Services' },
+      IncomeAccountRef: incomeAccountRef,
     });
     const item = createRes?.Item;
     return { Id: item.Id, Name: item.Name };

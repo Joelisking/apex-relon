@@ -51,7 +51,6 @@ const fieldTypes = [
   { value: 'BOOLEAN', label: 'Yes/No' },
   { value: 'SELECT', label: 'Dropdown' },
   { value: 'MULTI_SELECT', label: 'Multi Select' },
-  { value: 'TEXTAREA', label: 'Long Text' },
   { value: 'URL', label: 'URL' },
 ];
 

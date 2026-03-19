@@ -71,6 +71,7 @@ import { LinkedTasksSection } from '../tasks/LinkedTasksSection';
 import { LinkedQuotesSection } from '../quotes/LinkedQuotesSection';
 import { LeadContactsSection } from '../contacts/LeadContactsSection';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface UserOption {
   id: string;
@@ -987,10 +988,19 @@ function LeadCustomFields({ leadId }: { leadId: string }) {
 
   const saveMutation = useMutation({
     mutationFn: () => {
-      const fields = definitions.map((def) => ({
-        definitionId: def.id,
-        value: customValues[def.id] ?? '',
-      }));
+      const fields = definitions.map((def) => {
+        const raw = customValues[def.id] ?? '';
+        let value: string | number | boolean | string[] | null = raw || null;
+        if (def.fieldType === 'NUMBER') {
+          const n = parseFloat(raw);
+          value = raw !== '' && !isNaN(n) ? n : null;
+        } else if (def.fieldType === 'BOOLEAN') {
+          value = raw === 'true';
+        } else if (def.fieldType === 'MULTI_SELECT') {
+          value = raw ? raw.split(',').map((s) => s.trim()).filter(Boolean) : null;
+        }
+        return { definitionId: def.id, value };
+      });
       return customFieldsApi.setValues('LEAD', leadId, fields);
     },
     onSuccess: () => {
@@ -1114,6 +1124,59 @@ function LeadCustomFields({ leadId }: { leadId: string }) {
                       {def.label}
                     </label>
                   </div>
+                )}
+
+                {def.fieldType === 'MULTI_SELECT' && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {(def.options ?? []).map((opt) => {
+                      const selected = currentVal
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                        .includes(opt);
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => {
+                            const current = currentVal
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean);
+                            const next = selected
+                              ? current.filter((v) => v !== opt)
+                              : [...current, opt];
+                            setLocalEdits((p) => ({
+                              ...p,
+                              [def.id]: next.join(','),
+                            }));
+                          }}
+                          className={cn(
+                            'text-xs px-2 py-1 rounded border transition-colors',
+                            selected
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-muted text-muted-foreground border-border hover:border-primary/50',
+                          )}>
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {def.fieldType === 'URL' && (
+                  <Input
+                    type="url"
+                    value={currentVal}
+                    onChange={(e) =>
+                      setLocalEdits((p) => ({
+                        ...p,
+                        [def.id]: e.target.value,
+                      }))
+                    }
+                    className="h-8 text-sm"
+                    placeholder="https://"
+                  />
                 )}
               </div>
             );

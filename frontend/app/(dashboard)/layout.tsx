@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import { CommandPalette } from '@/components/command-palette/CommandPalette';
+import { CompleteProfileModal } from '@/components/auth/CompleteProfileModal';
 import { Search } from 'lucide-react';
 
 export default function DashboardLayout({
@@ -65,6 +66,7 @@ export default function DashboardLayout({
             </div>
           </header>
           <CommandPalette />
+          <CompleteProfileModal />
           <main className="flex-1 overflow-auto p-4 md:p-8 print:p-0 print:overflow-visible">
             {children}
           </main>

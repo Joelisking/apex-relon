@@ -72,7 +72,7 @@ export const customFieldsApi = {
   setValues: (
     entityType: string,
     entityId: string,
-    fields: Array<{ definitionId: string; value: string | number | boolean | null }>,
+    fields: Array<{ definitionId: string; value: string | number | boolean | string[] | null }>,
   ) =>
     apiFetch<{ saved: number }>(`/custom-fields/values/${entityType}/${entityId}`, {
       method: 'POST',

@@ -10,7 +10,7 @@ export class TimeTrackingService {
 
   // ─── Time Entries ─────────────────────────────────────────────────────────
 
-  async createEntry(dto: CreateTimeEntryDto) {
+  async createEntry(dto: CreateTimeEntryDto & { userId: string }) {
     const rate = await this.getActiveRate(dto.userId);
     const hourlyRate = dto.hourlyRate ?? rate?.rate ?? 0;
     const totalCost = dto.hours * hourlyRate;
@@ -32,6 +32,12 @@ export class TimeTrackingService {
       },
       include: { user: { select: { id: true, name: true } }, project: { select: { id: true, name: true } } },
     });
+  }
+
+  async getEntryById(id: string) {
+    const entry = await this.prisma.timeEntry.findUnique({ where: { id } });
+    if (!entry) throw new NotFoundException(`Time entry ${id} not found`);
+    return entry;
   }
 
   async getEntries(filters: {
@@ -64,8 +70,7 @@ export class TimeTrackingService {
   }
 
   async updateEntry(id: string, data: Partial<CreateTimeEntryDto>) {
-    const entry = await this.prisma.timeEntry.findUnique({ where: { id } });
-    if (!entry) throw new NotFoundException(`Time entry ${id} not found`);
+    const entry = await this.getEntryById(id);
 
     const hours = data.hours ?? entry.hours;
     const hourlyRate = data.hourlyRate ?? entry.hourlyRate ?? 0;

@@ -36,17 +36,13 @@ export function TaskListWidget({ widget }: Props) {
     staleTime: 2 * 60 * 1000,
   });
 
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(0, 0, 0, 0);
-
   const { data: urgentTasks = [], isLoading } = useQuery({
-    queryKey: ['tasks-urgent', tomorrow.toISOString()],
-    queryFn: () => tasksApi.getAll({ status: 'OPEN', dueBefore: tomorrow.toISOString() }),
+    queryKey: ['tasks-open'],
+    queryFn: () => tasksApi.getAll({ status: 'OPEN' }),
     staleTime: 2 * 60 * 1000,
   });
 
-  const displayTasks = (urgentTasks as Task[]).slice(0, 5);
+  const displayTasks = urgentTasks as Task[];
   const typedSummary = summary as TaskSummary | undefined;
 
   const statsBar = [
@@ -102,12 +98,7 @@ export function TaskListWidget({ widget }: Props) {
       ) : displayTasks.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-2">
           <CheckCircle2 className="h-6 w-6 text-emerald-500" />
-          <p className="text-[11px] font-medium text-foreground">
-            {typedSummary && typedSummary.upcoming > 0 ? 'No urgent tasks' : 'All caught up!'}
-          </p>
-          {typedSummary && typedSummary.upcoming > 0 && (
-            <p className="text-[10px] text-muted-foreground">{typedSummary.upcoming} upcoming</p>
-          )}
+          <p className="text-[11px] font-medium text-foreground">All caught up!</p>
         </div>
       ) : (
         <div className="flex-1 overflow-auto divide-y divide-border/40">

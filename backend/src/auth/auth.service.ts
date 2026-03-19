@@ -69,6 +69,8 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        phone: (user.phone as string) ?? null,
+        mustCompleteProfile: (user.mustCompleteProfile as boolean) ?? false,
       },
       permissions,
     };
@@ -248,6 +250,8 @@ export class AuthService {
         email: true,
         name: true,
         role: true,
+        phone: true,
+        mustCompleteProfile: true,
         status: true,
         isEmailVerified: true,
         lastLogin: true,
@@ -262,15 +266,20 @@ export class AuthService {
     return user;
   }
 
-  async updateProfile(userId: string, updateData: { name?: string }) {
+  async updateProfile(userId: string, updateData: { name?: string; phone?: string }) {
     const user = await this.database.user.update({
       where: { id: userId },
-      data: updateData,
+      data: {
+        ...updateData,
+        mustCompleteProfile: false,
+      },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
+        phone: true,
+        mustCompleteProfile: true,
         status: true,
         isEmailVerified: true,
         lastLogin: true,
