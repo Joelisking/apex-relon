@@ -592,16 +592,13 @@ export function EditLeadDialog({
                 )}
               />
 
-              <div>
-                <p className="text-sm font-medium leading-none mb-2">Service Categories &amp; Types</p>
-                <ServiceTypeSelector
-                  categories={serviceCategories}
-                  selectedCategoryIds={selectedCategoryIds}
-                  selectedServiceTypeIds={selectedServiceTypeIds}
-                  onCategoryToggle={toggleCategory}
-                  onServiceTypeToggle={toggleServiceType}
-                />
-              </div>
+              <ServiceTypeSelector
+                categories={serviceCategories}
+                selectedCategoryIds={selectedCategoryIds}
+                selectedServiceTypeIds={selectedServiceTypeIds}
+                onCategoryToggle={toggleCategory}
+                onServiceTypeToggle={toggleServiceType}
+              />
 
               <FormField
                 control={form.control}

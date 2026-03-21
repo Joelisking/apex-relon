@@ -665,7 +665,7 @@ export const settingsApi = {
     ),
 
   createServiceType: (
-    data: { name: string; description?: string; isActive?: boolean; sortOrder?: number },
+    data: { name: string; categoryId?: string; description?: string; isActive?: boolean; sortOrder?: number },
     serverToken?: string,
   ) =>
     apiFetch<ServiceType>(

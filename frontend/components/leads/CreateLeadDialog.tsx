@@ -12,7 +12,11 @@ import {
   pipelineApi,
   type PipelineStage,
 } from '@/lib/api/pipeline-client';
-import type { DropdownOption, ServiceCategory, Lead } from '@/lib/types';
+import type {
+  DropdownOption,
+  ServiceCategory,
+  Lead,
+} from '@/lib/types';
 import { ServiceTypeSelector } from '@/components/settings/ServiceTypeSelector';
 import {
   Dialog,
@@ -41,9 +45,25 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Loader2, Users, X, ChevronsUpDown, Check } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import {
+  Loader2,
+  Users,
+  X,
+  ChevronsUpDown,
+  Check,
+} from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { toast } from 'sonner';
 
 interface UserOption {
@@ -60,7 +80,12 @@ interface ClientOption {
   segment?: string;
   email?: string | null;
   phone?: string | null;
-  contacts?: { firstName: string; lastName: string; email?: string | null; phone?: string | null }[];
+  contacts?: {
+    firstName: string;
+    lastName: string;
+    email?: string | null;
+    phone?: string | null;
+  }[];
 }
 
 // A known contact derived from a previous lead on the same client
@@ -125,11 +150,16 @@ export function CreateLeadDialog({
   const { hasPermission } = useAuth();
   const canViewAllLeads = hasPermission('leads:view_all');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
-  const [selectedServiceTypeIds, setSelectedServiceTypeIds] = useState<string[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<
+    string[]
+  >([]);
+  const [selectedServiceTypeIds, setSelectedServiceTypeIds] =
+    useState<string[]>([]);
   const queryClient = useQueryClient();
 
-  const { data: serviceCategories = [] } = useQuery<ServiceCategory[]>({
+  const { data: serviceCategories = [] } = useQuery<
+    ServiceCategory[]
+  >({
     queryKey: ['service-categories'],
     queryFn: () => settingsApi.getServiceCategories(),
     staleTime: 10 * 60 * 1000,
@@ -137,13 +167,17 @@ export function CreateLeadDialog({
 
   function toggleCategory(id: string) {
     setSelectedCategoryIds((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
+      prev.includes(id)
+        ? prev.filter((c) => c !== id)
+        : [...prev, id],
     );
   }
 
   function toggleServiceType(id: string) {
     setSelectedServiceTypeIds((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+      prev.includes(id)
+        ? prev.filter((s) => s !== id)
+        : [...prev, id],
     );
   }
 
@@ -155,7 +189,9 @@ export function CreateLeadDialog({
   const [urgencyOptions, setUrgencyOptions] = useState<
     DropdownOption[]
   >([]);
-  const [sourceOptions, setSourceOptions] = useState<DropdownOption[]>([]);
+  const [sourceOptions, setSourceOptions] = useState<
+    DropdownOption[]
+  >([]);
   const [pendingTeamMemberIds, setPendingTeamMemberIds] = useState<
     string[]
   >([]);
@@ -222,8 +258,14 @@ export function CreateLeadDialog({
         ? `${primaryContact.firstName} ${primaryContact.lastName}`.trim()
         : client.individualName || '';
       form.setValue('contactName', contactName);
-      form.setValue('email', primaryContact?.email || client.email || '');
-      form.setValue('phone', primaryContact?.phone || client.phone || '');
+      form.setValue(
+        'email',
+        primaryContact?.email || client.email || '',
+      );
+      form.setValue(
+        'phone',
+        primaryContact?.phone || client.phone || '',
+      );
     }
 
     const clientLeads = leads.filter(
@@ -275,7 +317,9 @@ export function CreateLeadDialog({
   }
 
   function removeTeamMember(userId: string) {
-    setPendingTeamMemberIds((prev) => prev.filter((id) => id !== userId));
+    setPendingTeamMemberIds((prev) =>
+      prev.filter((id) => id !== userId),
+    );
   }
 
   const onSubmit = async (data: CreateLeadFormData) => {
@@ -291,8 +335,14 @@ export function CreateLeadDialog({
         projectName: data.projectName,
         stage: data.stage,
         serviceTypeId: selectedServiceTypeIds[0] || undefined,
-        categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
-        serviceTypeIds: selectedServiceTypeIds.length > 0 ? selectedServiceTypeIds : undefined,
+        categoryIds:
+          selectedCategoryIds.length > 0
+            ? selectedCategoryIds
+            : undefined,
+        serviceTypeIds:
+          selectedServiceTypeIds.length > 0
+            ? selectedServiceTypeIds
+            : undefined,
         urgency: data.urgency,
         source: data.source || undefined,
         likelyStartDate: data.likelyStartDate
@@ -340,26 +390,37 @@ export function CreateLeadDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="pb-2">
-          <DialogTitle className="text-lg font-semibold">Create Prospective Project</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">
+            Create Prospective Project
+          </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Add a new prospective project and link it to an existing client.
+            Add a new prospective project and link it to an existing
+            client.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-6">
             {/* ── Project ─────────────────────────────────────────── */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Project</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
+                Project
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
                   name="clientId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Client <span className="text-destructive">*</span></FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <FormLabel>
+                        Client{' '}
+                        <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a client" />
@@ -368,7 +429,9 @@ export function CreateLeadDialog({
                         <SelectContent>
                           {clients.map((c) => (
                             <SelectItem key={c.id} value={c.id}>
-                              {c.individualName ? `${c.individualName} (${c.name})` : c.name}
+                              {c.name
+                                ? `${c.name} (${c.individualName})`
+                                : c.individualName}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -382,9 +445,15 @@ export function CreateLeadDialog({
                   name="projectName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Project Name <span className="text-destructive">*</span></FormLabel>
+                      <FormLabel>
+                        Project Name{' '}
+                        <span className="text-destructive">*</span>
+                      </FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., CR 500W – Boundary Survey" {...field} />
+                        <Input
+                          placeholder="e.g., CR 500W – Boundary Survey"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -397,7 +466,9 @@ export function CreateLeadDialog({
 
             {/* ── Contact ─────────────────────────────────────────── */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Contact</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
+                Contact
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
@@ -410,13 +481,17 @@ export function CreateLeadDialog({
                           placeholder="Jane Smith"
                           list={datalistId}
                           value={field.value}
-                          onChange={(e) => handleContactNameChange(e.target.value)}
+                          onChange={(e) =>
+                            handleContactNameChange(e.target.value)
+                          }
                           onBlur={field.onBlur}
                         />
                       </FormControl>
                       {knownContacts.length > 0 && (
                         <datalist id={datalistId}>
-                          {knownContacts.map((c) => <option key={c.name} value={c.name} />)}
+                          {knownContacts.map((c) => (
+                            <option key={c.name} value={c.name} />
+                          ))}
                         </datalist>
                       )}
                       <FormMessage />
@@ -430,7 +505,11 @@ export function CreateLeadDialog({
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="jane@client.com" {...field} />
+                        <Input
+                          type="email"
+                          placeholder="jane@client.com"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -445,7 +524,10 @@ export function CreateLeadDialog({
                     <FormItem>
                       <FormLabel>Phone</FormLabel>
                       <FormControl>
-                        <Input placeholder="+1 555 000 0000" {...field} />
+                        <Input
+                          placeholder="+1 555 000 0000"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -463,7 +545,11 @@ export function CreateLeadDialog({
                           placeholder="0"
                           {...field}
                           onFocus={(e) => e.target.select()}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          onChange={(e) =>
+                            field.onChange(
+                              parseFloat(e.target.value) || 0,
+                            )
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -477,7 +563,11 @@ export function CreateLeadDialog({
                     <FormItem>
                       <FormLabel>Likely Start Date</FormLabel>
                       <FormControl>
-                        <DatePicker value={field.value} onChange={field.onChange} placeholder="Pick a date" />
+                        <DatePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Pick a date"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -490,7 +580,9 @@ export function CreateLeadDialog({
 
             {/* ── Pipeline ────────────────────────────────────────── */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Pipeline</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
+                Pipeline
+              </p>
               <div className="grid grid-cols-3 gap-3">
                 <FormField
                   control={form.control}
@@ -498,7 +590,9 @@ export function CreateLeadDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Stage</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue />
@@ -506,7 +600,9 @@ export function CreateLeadDialog({
                         </FormControl>
                         <SelectContent>
                           {pipelineStages.map((s) => (
-                            <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>
+                            <SelectItem key={s.name} value={s.name}>
+                              {s.name}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -530,7 +626,9 @@ export function CreateLeadDialog({
                           onOptionCreated={(label) =>
                             settingsApi.createDropdownOption({
                               category: 'urgency',
-                              value: label.toLowerCase().replace(/\s+/g, '_'),
+                              value: label
+                                .toLowerCase()
+                                .replace(/\s+/g, '_'),
                               label,
                             })
                           }
@@ -556,7 +654,9 @@ export function CreateLeadDialog({
                           onOptionCreated={(label) =>
                             settingsApi.createDropdownOption({
                               category: 'lead_source',
-                              value: label.toLowerCase().replace(/\s+/g, '_'),
+                              value: label
+                                .toLowerCase()
+                                .replace(/\s+/g, '_'),
                               label,
                             })
                           }
@@ -582,7 +682,13 @@ export function CreateLeadDialog({
                           {...field}
                           value={field.value ?? ''}
                           onFocus={(e) => e.target.select()}
-                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                          onChange={(e) =>
+                            field.onChange(
+                              e.target.value
+                                ? parseFloat(e.target.value)
+                                : undefined,
+                            )
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -591,31 +697,34 @@ export function CreateLeadDialog({
                 />
               )}
 
-              {/* Service Categories & Types — full width */}
-              <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
-                <p className="text-sm font-medium mb-3">Service Categories &amp; Types</p>
-                <ServiceTypeSelector
-                  categories={serviceCategories}
-                  selectedCategoryIds={selectedCategoryIds}
-                  selectedServiceTypeIds={selectedServiceTypeIds}
-                  onCategoryToggle={toggleCategory}
-                  onServiceTypeToggle={toggleServiceType}
-                />
-              </div>
+              {/* Project Type & Service Categories — full width */}
+              <ServiceTypeSelector
+                categories={serviceCategories}
+                selectedCategoryIds={selectedCategoryIds}
+                selectedServiceTypeIds={selectedServiceTypeIds}
+                onCategoryToggle={toggleCategory}
+                onServiceTypeToggle={toggleServiceType}
+              />
             </div>
 
             <div className="border-t border-border/50" />
 
             {/* ── Assignment ──────────────────────────────────────── */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Assignment</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
+                Assignment
+              </p>
               <FormField
                 control={form.control}
                 name="assignedTo"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Project Manager</FormLabel>
-                    <Popover open={pmOpen && canViewAllLeads} onOpenChange={(o) => canViewAllLeads && setPmOpen(o)}>
+                    <Popover
+                      open={pmOpen && canViewAllLeads}
+                      onOpenChange={(o) =>
+                        canViewAllLeads && setPmOpen(o)
+                      }>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -624,29 +733,51 @@ export function CreateLeadDialog({
                             disabled={!canViewAllLeads}
                             className="w-full justify-between font-normal">
                             {field.value
-                              ? (managers.find((m) => m.id === field.value)?.name ?? 'Select person')
+                              ? (managers.find(
+                                  (m) => m.id === field.value,
+                                )?.name ?? 'Select person')
                               : 'None'}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <PopoverContent
+                        className="w-[--radix-popover-trigger-width] p-0"
+                        align="start">
                         <Command>
                           <CommandInput placeholder="Search users..." />
                           <CommandList>
-                            <CommandEmpty>No users found.</CommandEmpty>
-                            <CommandItem value="none" onSelect={() => { field.onChange(''); setPmOpen(false); }}>
-                              <Check className={`mr-2 h-4 w-4 ${!field.value ? 'opacity-100' : 'opacity-0'}`} />
+                            <CommandEmpty>
+                              No users found.
+                            </CommandEmpty>
+                            <CommandItem
+                              value="none"
+                              onSelect={() => {
+                                field.onChange('');
+                                setPmOpen(false);
+                              }}>
+                              <Check
+                                className={`mr-2 h-4 w-4 ${!field.value ? 'opacity-100' : 'opacity-0'}`}
+                              />
                               None
                             </CommandItem>
                             {managers.map((m) => (
                               <CommandItem
                                 key={m.id}
                                 value={m.name}
-                                onSelect={() => { field.onChange(m.id); setPmOpen(false); }}>
-                                <Check className={`mr-2 h-4 w-4 ${field.value === m.id ? 'opacity-100' : 'opacity-0'}`} />
+                                onSelect={() => {
+                                  field.onChange(m.id);
+                                  setPmOpen(false);
+                                }}>
+                                <Check
+                                  className={`mr-2 h-4 w-4 ${field.value === m.id ? 'opacity-100' : 'opacity-0'}`}
+                                />
                                 {m.name}
-                                {m.teamName && <span className="ml-2 text-xs text-muted-foreground">{m.teamName}</span>}
+                                {m.teamName && (
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    {m.teamName}
+                                  </span>
+                                )}
                               </CommandItem>
                             ))}
                           </CommandList>
@@ -662,15 +793,28 @@ export function CreateLeadDialog({
                 <div className="space-y-2">
                   <div className="flex items-center gap-1.5">
                     <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-sm font-medium">Team Members</span>
+                    <span className="text-sm font-medium">
+                      Team Members
+                    </span>
                   </div>
                   {addedMembers.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {addedMembers.map((u) => (
-                        <div key={u.id} className="flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1">
+                        <div
+                          key={u.id}
+                          className="flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1">
                           <span className="text-sm">{u.name}</span>
-                          {u.role && <Badge variant="secondary" className="h-4 px-1 text-[10px]">{u.role}</Badge>}
-                          <button type="button" onClick={() => removeTeamMember(u.id)} className="ml-0.5 text-muted-foreground hover:text-destructive">
+                          {u.role && (
+                            <Badge
+                              variant="secondary"
+                              className="h-4 px-1 text-[10px]">
+                              {u.role}
+                            </Badge>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeTeamMember(u.id)}
+                            className="ml-0.5 text-muted-foreground hover:text-destructive">
                             <X className="h-3 w-3" />
                           </button>
                         </div>
@@ -678,7 +822,11 @@ export function CreateLeadDialog({
                     </div>
                   )}
                   {availableUsers.length > 0 && (
-                    <Select value="" onValueChange={(val) => { if (val) addTeamMember(val); }}>
+                    <Select
+                      value=""
+                      onValueChange={(val) => {
+                        if (val) addTeamMember(val);
+                      }}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Add a team member..." />
                       </SelectTrigger>
@@ -686,7 +834,11 @@ export function CreateLeadDialog({
                         {availableUsers.map((u) => (
                           <SelectItem key={u.id} value={u.id}>
                             {u.name}
-                            {u.role && <span className="ml-2 text-xs text-muted-foreground">{u.role}</span>}
+                            {u.role && (
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                {u.role}
+                              </span>
+                            )}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -719,10 +871,18 @@ export function CreateLeadDialog({
             />
 
             <div className="flex justify-end gap-2 pt-1">
-              <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}>
+                Cancel
+              </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating…</>
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating…
+                  </>
                 ) : (
                   'Create Prospective Project'
                 )}
