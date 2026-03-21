@@ -92,33 +92,36 @@ export class PermissionsService implements OnModuleInit {
   }
 
   private async seedDefaults(): Promise<void> {
-    // Additive upsert: adds new permissions without wiping admin-customised ones.
-    // No fast-path skip — new roles/permissions added to DEFAULT_ROLE_PERMISSIONS
-    // must be seeded on every startup; the inner findUnique guards against duplicates.
     this.logger.log('Seeding / ensuring default role permissions...');
-    let added = 0;
 
-    for (const [role, permissions] of Object.entries(
-      DEFAULT_ROLE_PERMISSIONS,
-    )) {
-      // CEO is handled in-memory (always has everything); skip DB seeding for it.
+    // Build the full desired set (excluding CEO which is handled in-memory).
+    const desired: { role: string; permission: string }[] = [];
+    for (const [role, permissions] of Object.entries(DEFAULT_ROLE_PERMISSIONS)) {
       if (role === 'CEO') continue;
-
       for (const permission of permissions) {
-        const existing = await this.prisma.rolePermission.findUnique({
-          where: { role_permission: { role, permission } },
-        });
-        if (!existing) {
-          await this.prisma.rolePermission.create({
-            data: { role, permission },
-          });
-          added++;
-        }
+        desired.push({ role, permission });
       }
     }
 
+    // Fetch all existing pairs in one query and diff in memory.
+    const existing = await this.prisma.rolePermission.findMany({
+      select: { role: true, permission: true },
+    });
+    const existingSet = new Set(existing.map((r) => `${r.role}:${r.permission}`));
+
+    const missing = desired.filter(
+      (d) => !existingSet.has(`${d.role}:${d.permission}`),
+    );
+
+    if (missing.length > 0) {
+      await this.prisma.rolePermission.createMany({
+        data: missing,
+        skipDuplicates: true,
+      });
+    }
+
     this.logger.log(
-      `Role permission seeding complete. ${added} new entries added.`,
+      `Role permission seeding complete. ${missing.length} new entries added.`,
     );
   }
 

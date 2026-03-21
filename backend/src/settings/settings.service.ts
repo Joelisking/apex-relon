@@ -21,14 +21,16 @@ export class SettingsService implements OnModuleInit {
   constructor(private prisma: PrismaService) {}
 
   async onModuleInit() {
-    await this.seedTeamTypes();
-    await this.seedClientSegments();
-    await this.seedIndividualTypes();
-    await this.seedClientIndustries();
-    await this.seedLeadSources();
-    await this.seedUrgencyLevels();
-    await this.seedProjectRiskStatus();
-    await this.seedServiceCategories();
+    await Promise.all([
+      this.seedTeamTypes(),
+      this.seedClientSegments(),
+      this.seedIndividualTypes(),
+      this.seedClientIndustries(),
+      this.seedLeadSources(),
+      this.seedUrgencyLevels(),
+      this.seedProjectRiskStatus(),
+      this.seedServiceCategories(),
+    ]);
   }
 
   private async seedTeamTypes() {
