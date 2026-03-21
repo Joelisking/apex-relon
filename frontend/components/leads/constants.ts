@@ -65,6 +65,21 @@ export const DEFAULT_PIPELINE_STAGES = [
 // Keep backward-compatible export
 export const PIPELINE_STAGES = DEFAULT_PIPELINE_STAGES;
 
+export const URGENCY_HEX: Record<string, string> = {
+  High: '#ef4444',
+  Medium: '#f59e0b',
+  Low: '#10b981',
+};
+
+export function urgencyColor(urgency?: string | null): string {
+  if (!urgency) return URGENCY_HEX.Low;
+  return (
+    URGENCY_HEX[urgency] ??
+    URGENCY_HEX[urgency.charAt(0).toUpperCase() + urgency.slice(1).toLowerCase()] ??
+    URGENCY_HEX.Low
+  );
+}
+
 export const getProbability = (
   stage: string,
   stages?: Array<{ name: string; probability: number }>,

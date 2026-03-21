@@ -19,6 +19,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from '@/components/ui/tabs';
+import { CustomerDetailHeader } from './CustomerDetailHeader';
 import type { Client, UpsellStrategy } from '@/lib/types';
 import { api } from '@/lib/api/client';
 import { useTenantSettings } from '@/lib/hooks/useTenantSettings';
@@ -30,7 +31,6 @@ import { CustomerContactsList } from './CustomerContactsList';
 import { CustomerProjectsList } from './CustomerProjectsList';
 import { CustomerActivityTimeline } from './CustomerActivityTimeline';
 import { EditCustomerDialog } from './EditCustomerDialog';
-import { CustomerDetailSidebar } from './CustomerDetailSidebar';
 import { CustomerHealthSection } from './CustomerHealthSection';
 import { CustomerUpsellSection } from './CustomerUpsellSection';
 import { CustomerCustomFields } from './CustomerCustomFields';
@@ -204,6 +204,9 @@ export function ClientDetailView({
   const clientDisplayName = getClientDisplayName(client, clientDisplayMode);
   const clientDisplaySubtitle = getClientSubtitle(client, clientDisplayMode);
   const clientInitials = avatarInitials(clientDisplayName);
+  const lifetimeRevenue = client.metrics?.totalRevenue || client.lifetimeRevenue || 0;
+  const activitiesCount = client._count?.activities ?? activities.length;
+  const projectsCount = projects.length;
 
   const TABS = [
     { value: 'overview', label: 'Overview' },
@@ -226,113 +229,102 @@ export function ClientDetailView({
         />
       </div>
 
-      <div className="flex gap-6 min-h-[calc(100vh-10rem)]">
-        {/* Sidebar */}
-        <div className="w-80 shrink-0">
-          <div className="sticky top-4 border rounded-xl bg-card overflow-hidden">
-            <CustomerDetailSidebar
-              client={client}
-              clientDisplayName={clientDisplayName}
-              clientDisplaySubtitle={clientDisplaySubtitle}
-              clientInitials={clientInitials}
-              activitiesCount={client._count?.activities ?? activities.length}
-              projectsCount={projects.length}
-              canEdit={hasPermission('clients:edit')}
-              canDelete={hasPermission('clients:delete')}
-              onEdit={() => setIsEditOpen(true)}
-              onDelete={() => setDeleteDialogOpen(true)}
-            />
-          </div>
-        </div>
+      <CustomerDetailHeader
+        client={client}
+        clientDisplayName={clientDisplayName}
+        clientDisplaySubtitle={clientDisplaySubtitle}
+        clientInitials={clientInitials}
+        lifetimeRevenue={lifetimeRevenue}
+        activitiesCount={activitiesCount}
+        projectsCount={projectsCount}
+        canEdit={hasPermission('clients:edit')}
+        canDelete={hasPermission('clients:delete')}
+        onEdit={() => setIsEditOpen(true)}
+        onDelete={() => setDeleteDialogOpen(true)}
+      />
 
-        {/* Main Content */}
-        <div className="flex-1 min-w-0">
-          <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <div className="border-b border-border/40 mb-6">
-              <TabsList className="h-9 bg-transparent p-0 gap-1">
-                {TABS.map((tab) => (
-                  <TabsTrigger
-                    key={tab.value}
-                    value={tab.value}
-                    className="h-8 px-3 text-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
-                  >
-                    {tab.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
+      {/* ── Tabs ── */}
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabsList className="mb-6 h-9 bg-muted/40 p-1 rounded-lg border border-border/30 gap-0.5 w-auto inline-flex">
+          {TABS.map((tab) => (
+            <TabsTrigger
+              key={tab.value}
+              value={tab.value}
+              className="h-7 px-3 text-[12px] rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground transition-all">
+              {tab.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-            <TabsContent value="overview" className="mt-0 space-y-6">
-              {client.metrics && (
-                <>
-                  <CustomerMetricsPanel
-                    metrics={client.metrics}
-                    healthFlags={client.healthFlags}
-                    suggestedActions={client.suggestedActions}
-                    createdAt={client.createdAt ? String(client.createdAt) : undefined}
-                  />
-                  <hr className="border-border/40" />
-                </>
-              )}
-
-              <CustomerHealthSection
-                client={client}
-                loadingHealth={loadingHealth}
-                loadingAutoUpdate={loadingAutoUpdate}
-                canGenerateHealth={hasPermission('clients:health')}
-                onAutoUpdateStatus={handleAutoUpdateStatus}
-                onGenerateHealth={handleGenerateHealth}
+        <TabsContent value="overview" className="mt-0 space-y-6">
+          {client.metrics && (
+            <>
+              <CustomerMetricsPanel
+                metrics={client.metrics}
+                healthFlags={client.healthFlags}
+                suggestedActions={client.suggestedActions}
+                createdAt={client.createdAt ? String(client.createdAt) : undefined}
               />
-
               <hr className="border-border/40" />
+            </>
+          )}
 
-              <CustomerUpsellSection
-                upsellData={upsellData}
-                loadingUpsell={loadingUpsell}
-                canGenerateUpsell={hasPermission('clients:upsell')}
-                onGenerateUpsell={handleGenerateUpsell}
-              />
-            </TabsContent>
+          <CustomerHealthSection
+            client={client}
+            loadingHealth={loadingHealth}
+            loadingAutoUpdate={loadingAutoUpdate}
+            canGenerateHealth={hasPermission('clients:health')}
+            onAutoUpdateStatus={handleAutoUpdateStatus}
+            onGenerateHealth={handleGenerateHealth}
+          />
 
-            <TabsContent value="projects" className="mt-0">
-              <CustomerProjectsList
-                clientId={client.id}
-                projects={projects}
-                onProjectsChanged={handleDataRefresh}
-                currentUserId={currentUserId}
-              />
-            </TabsContent>
+          <hr className="border-border/40" />
 
-            <TabsContent value="contacts" className="mt-0">
-              <CustomerContactsList
-                clientId={client.id}
-                canEdit={hasPermission('clients:edit')}
-              />
-            </TabsContent>
+          <CustomerUpsellSection
+            upsellData={upsellData}
+            loadingUpsell={loadingUpsell}
+            canGenerateUpsell={hasPermission('clients:upsell')}
+            onGenerateUpsell={handleGenerateUpsell}
+          />
+        </TabsContent>
 
-            <TabsContent value="activities" className="mt-0">
-              <CustomerActivityTimeline
-                clientId={client.id}
-                activities={activities}
-                currentUserId={currentUserId}
-                onActivityAdded={handleDataRefresh}
-              />
-            </TabsContent>
+        <TabsContent value="projects" className="mt-0">
+          <CustomerProjectsList
+            clientId={client.id}
+            projects={projects}
+            onProjectsChanged={handleDataRefresh}
+            currentUserId={currentUserId}
+          />
+        </TabsContent>
 
-            <TabsContent value="tasks" className="mt-0">
-              <LinkedTasksSection entityType="CLIENT" entityId={client.id} />
-            </TabsContent>
+        <TabsContent value="contacts" className="mt-0">
+          <CustomerContactsList
+            clientId={client.id}
+            canEdit={hasPermission('clients:edit')}
+          />
+        </TabsContent>
 
-            <TabsContent value="quotes" className="mt-0">
-              <LinkedQuotesSection clientId={client.id} />
-            </TabsContent>
+        <TabsContent value="activities" className="mt-0">
+          <CustomerActivityTimeline
+            clientId={client.id}
+            activities={activities}
+            currentUserId={currentUserId}
+            onActivityAdded={handleDataRefresh}
+          />
+        </TabsContent>
 
-            <TabsContent value="fields" className="mt-0">
-              <CustomerCustomFields clientId={client.id} />
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
+        <TabsContent value="tasks" className="mt-0">
+          <LinkedTasksSection entityType="CLIENT" entityId={client.id} />
+        </TabsContent>
+
+        <TabsContent value="quotes" className="mt-0">
+          <LinkedQuotesSection clientId={client.id} />
+        </TabsContent>
+
+        <TabsContent value="fields" className="mt-0">
+          <CustomerCustomFields clientId={client.id} />
+        </TabsContent>
+      </Tabs>
 
       {client && (
         <EditCustomerDialog
