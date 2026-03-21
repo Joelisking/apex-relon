@@ -44,7 +44,7 @@ async function main() {
 
   // ─── Roles ────────────────────────────────────────────────────────────────
   const roles = [
-    { key: 'OWNER', label: 'Owner', description: 'Business owner with full access', isBuiltIn: true, color: '#7c3aed' },
+    { key: 'CEO', label: 'CEO / Owner', description: 'Business owner with full system access', isBuiltIn: true, color: '#7c3aed' },
     { key: 'PROJECT_MANAGER', label: 'Project Manager', description: 'Manages survey projects, budgets, and crew assignments', isBuiltIn: false, color: '#2563eb' },
     { key: 'SURVEY_CREW_CHIEF', label: 'Survey Crew Chief', description: 'Field crew leader and survey operations', isBuiltIn: false, color: '#d97706' },
     { key: 'PARTY_CHIEF', label: 'Party Chief', description: 'Leads field crew, responsible for field measurements', isBuiltIn: false, color: '#0891b2' },
@@ -182,7 +182,7 @@ async function main() {
 
   // ─── Users ────────────────────────────────────────────────────────────────
   const users = [
-    { email: 'adujoel67+nana@gmail.com', name: 'Nana Opoku', role: 'OWNER' },
+    { email: 'adujoel67+nana@gmail.com', name: 'Nana Opoku', role: 'CEO' },
     { email: 'adujoel67+parker@gmail.com', name: 'Parker Zurbuch', role: 'PROJECT_MANAGER' },
     { email: 'adujoel67+frank@gmail.com', name: 'Frank McCutcheon', role: 'PROJECT_MANAGER' },
     { email: 'adujoel67+cody@gmail.com', name: 'Cody Hepler', role: 'PROJECT_MANAGER' },
@@ -193,7 +193,7 @@ async function main() {
   for (const u of users) {
     await prisma.user.upsert({
       where: { email: u.email },
-      update: {},
+      update: { name: u.name, role: u.role },
       create: { email: u.email, password: hashedPassword, name: u.name, role: u.role, status: 'Active', isEmailVerified: true },
     });
   }
@@ -202,7 +202,7 @@ async function main() {
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('✨ Seed complete — all passwords: Pass123$1');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('  adujoel67+nana@gmail.com   OWNER');
+  console.log('  adujoel67+nana@gmail.com   CEO');
   console.log('  adujoel67+parker@gmail.com PROJECT_MANAGER');
   console.log('  adujoel67+frank@gmail.com  PROJECT_MANAGER');
   console.log('  adujoel67+cody@gmail.com   PROJECT_MANAGER');

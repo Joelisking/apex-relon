@@ -166,12 +166,12 @@ export function CustomerDetailDialog({
     setIsDeleting(true);
     try {
       await api.clients.delete(selectedClient.id);
-      toast.success('Customer archived');
+      toast.success('Customer deleted');
       setDeleteDialogOpen(false);
       onClose();
       onClientUpdated();
     } catch {
-      toast.error('Failed to archive customer');
+      toast.error('Failed to delete customer');
     } finally {
       setIsDeleting(false);
     }
@@ -303,10 +303,9 @@ export function CustomerDetailDialog({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Archive Customer</AlertDialogTitle>
+            <AlertDialogTitle>Delete Customer</AlertDialogTitle>
             <AlertDialogDescription>
-              This will archive <strong>{selectedClient?.name}</strong>. The record and all associated
-              projects will be preserved and can be restored by an admin.
+              Are you sure you want to delete <strong>{selectedClient?.name}</strong>? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -318,10 +317,10 @@ export function CustomerDetailDialog({
               {isDeleting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Archiving…
+                  Deleting...
                 </>
               ) : (
-                'Archive'
+                'Delete'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

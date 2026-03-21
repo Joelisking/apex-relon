@@ -250,7 +250,7 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
   ];
 
   return (
-    <>
+    <div className="flex flex-col h-full -mb-4 md:-mb-8">
       <div className="mb-4">
         <PageBreadcrumbs
           items={[
@@ -277,8 +277,8 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
       />
 
       {/* ── Tabs ── */}
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="sticky top-0 z-10 w-full justify-start rounded-none border-b border-border bg-background p-0 h-auto mb-6 gap-0">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col flex-1 min-h-0">
+        <TabsList className="w-full justify-start rounded-none border-b border-border bg-background p-0 h-auto gap-0 shrink-0">
           {TABS.map((tab) => (
             <TabsTrigger
               key={tab.value}
@@ -289,6 +289,8 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
             </TabsTrigger>
           ))}
         </TabsList>
+
+        <div className="flex-1 overflow-auto min-h-0 pt-6 pb-4 md:pb-8">
 
             <TabsContent value="overview" className="mt-0 space-y-6">
               <ProjectOverviewPanel
@@ -356,6 +358,8 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
                 onFilesChanged={refreshProject}
               />
             </TabsContent>
+
+        </div>
       </Tabs>
 
       <EditProjectDialog
@@ -367,6 +371,6 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
           setCostLogs(updated.costLogs || []);
         }}
       />
-    </>
+    </div>
   );
 }

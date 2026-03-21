@@ -173,10 +173,10 @@ export function ClientDetailView({
     setIsDeleting(true);
     try {
       await api.clients.delete(client.id);
-      toast.success('Customer archived');
+      toast.success('Customer deleted');
       router.push('/clients');
     } catch {
-      toast.error('Failed to archive customer');
+      toast.error('Failed to delete customer');
     } finally {
       setIsDeleting(false);
     }
@@ -219,7 +219,7 @@ export function ClientDetailView({
   ];
 
   return (
-    <>
+    <div className="flex flex-col h-full -mb-4 md:-mb-8">
       <div className="mb-4">
         <PageBreadcrumbs
           items={[
@@ -244,8 +244,8 @@ export function ClientDetailView({
       />
 
       {/* ── Tabs ── */}
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="sticky top-0 z-10 w-full justify-start rounded-none border-b border-border bg-background p-0 h-auto mb-6 gap-0">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col flex-1 min-h-0">
+        <TabsList className="w-full justify-start rounded-none border-b border-border bg-background p-0 h-auto gap-0 shrink-0">
           {TABS.map((tab) => (
             <TabsTrigger
               key={tab.value}
@@ -255,6 +255,8 @@ export function ClientDetailView({
             </TabsTrigger>
           ))}
         </TabsList>
+
+        <div className="flex-1 overflow-auto min-h-0 pt-6 pb-4 md:pb-8">
 
         <TabsContent value="overview" className="mt-0 space-y-6">
           {client.metrics && (
@@ -324,6 +326,8 @@ export function ClientDetailView({
         <TabsContent value="fields" className="mt-0">
           <CustomerCustomFields clientId={client.id} />
         </TabsContent>
+
+        </div>
       </Tabs>
 
       {client && (
@@ -340,10 +344,9 @@ export function ClientDetailView({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Archive Customer</AlertDialogTitle>
+            <AlertDialogTitle>Delete Customer</AlertDialogTitle>
             <AlertDialogDescription>
-              This will archive <strong>{client?.name}</strong>. The record and all associated
-              projects will be preserved and can be restored by an admin.
+              Are you sure you want to delete <strong>{client?.name}</strong>? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -355,15 +358,15 @@ export function ClientDetailView({
               {isDeleting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Archiving...
+                  Deleting...
                 </>
               ) : (
-                'Archive'
+                'Delete'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }
