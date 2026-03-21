@@ -160,6 +160,7 @@ export function CreateLeadDialog({
   const [knownContacts, setKnownContacts] = useState<KnownContact[]>(
     [],
   );
+  const [pmSearch, setPmSearch] = useState('');
   const datalistId = useId();
 
   // Set stage to first pipeline stage whenever dialog opens
@@ -643,26 +644,50 @@ export function CreateLeadDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Project Manager</FormLabel>
-                  <Select
-                    onValueChange={(val) =>
-                      field.onChange(val === 'none' ? '' : val)
-                    }
-                    value={field.value || 'none'}
-                    disabled={!canViewAllLeads}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select person" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {managers.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name} {m.teamName && `(${m.teamName})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <div className={!canViewAllLeads ? 'opacity-50 pointer-events-none' : ''}>
+                      <input
+                        type="text"
+                        placeholder="Search users..."
+                        value={pmSearch}
+                        onChange={(e) => setPmSearch(e.target.value)}
+                        className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring mb-1"
+                      />
+                      <div className="max-h-40 overflow-y-auto rounded-md border border-input">
+                        <button
+                          type="button"
+                          onClick={() => field.onChange('')}
+                          className={`w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors ${!field.value ? 'bg-accent font-medium' : ''}`}>
+                          None
+                        </button>
+                        {managers
+                          .filter((m) =>
+                            m.name.toLowerCase().includes(pmSearch.toLowerCase()),
+                          )
+                          .map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => field.onChange(m.id)}
+                              className={`w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors ${field.value === m.id ? 'bg-accent font-medium' : ''}`}>
+                              {m.name}
+                              {m.teamName && (
+                                <span className="ml-2 text-xs text-muted-foreground">
+                                  {m.teamName}
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        {managers.filter((m) =>
+                          m.name.toLowerCase().includes(pmSearch.toLowerCase()),
+                        ).length === 0 && (
+                          <p className="px-3 py-2 text-sm text-muted-foreground">
+                            No users found.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

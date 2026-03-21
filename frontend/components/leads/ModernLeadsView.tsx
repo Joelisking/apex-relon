@@ -113,6 +113,7 @@ export default function ModernLeadsView({
   const [isBulkAssigning, setIsBulkAssigning] = useState(false);
   const [bulkRepDialogOpen, setBulkRepDialogOpen] = useState(false);
   const [bulkRepId, setBulkRepId] = useState<string>('');
+  const [bulkRepSearch, setBulkRepSearch] = useState('');
   const [isBulkAssigningRep, setIsBulkAssigningRep] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(
@@ -170,9 +171,7 @@ export default function ModernLeadsView({
   const allUsersArr: Manager[] = Array.isArray(allUsers)
     ? allUsers
     : ((allUsers as { users?: Manager[] })?.users ?? []);
-  const managers: Manager[] = allUsersArr.filter(
-    (u) => u.role === 'BDM' || u.role === 'SALES' || u.role === 'ADMIN' || u.role === 'CEO',
-  );
+  const managers: Manager[] = allUsersArr;
   const clients = clientList;
 
   const currentYear = new Date().getFullYear();
@@ -886,7 +885,7 @@ export default function ModernLeadsView({
         open={bulkRepDialogOpen}
         onOpenChange={(open) => {
           setBulkRepDialogOpen(open);
-          if (!open) setBulkRepId('');
+          if (!open) { setBulkRepId(''); setBulkRepSearch(''); }
         }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -900,19 +899,41 @@ export default function ModernLeadsView({
               .
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="px-1 py-2">
-            <Select value={bulkRepId} onValueChange={setBulkRepId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a rep..." />
-              </SelectTrigger>
-              <SelectContent>
-                {managers.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
+          <div className="px-1 py-2 space-y-2">
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={bulkRepSearch}
+              onChange={(e) => setBulkRepSearch(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+            />
+            <div className="max-h-48 overflow-y-auto rounded-md border border-input">
+              {managers
+                .filter((m) =>
+                  m.name.toLowerCase().includes(bulkRepSearch.toLowerCase()),
+                )
+                .map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setBulkRepId(m.id)}
+                    className={`w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors ${bulkRepId === m.id ? 'bg-accent font-medium' : ''}`}>
                     {m.name}
-                  </SelectItem>
+                    {m.role && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {m.role}
+                      </span>
+                    )}
+                  </button>
                 ))}
-              </SelectContent>
-            </Select>
+              {managers.filter((m) =>
+                m.name.toLowerCase().includes(bulkRepSearch.toLowerCase()),
+              ).length === 0 && (
+                <p className="px-3 py-2 text-sm text-muted-foreground">
+                  No users found.
+                </p>
+              )}
+            </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
