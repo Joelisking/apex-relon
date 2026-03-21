@@ -88,13 +88,15 @@ export function CommandPalette() {
     staleTime: 60 * 1000,
   });
 
-  const clients: SearchableItem[] = rawClients.map((c: AnyRecord) => ({
-    id: c.id ?? '',
-    label: c.name || c.contactName || 'Unnamed Client',
-    subtitle: c.industry || c.segment,
-    type: 'client',
-    badge: c.status,
-  }));
+  const clients: SearchableItem[] = rawClients.map(
+    (c: AnyRecord) => ({
+      id: c.id ?? '',
+      label: c.name || c.contactName || 'Unnamed Client',
+      subtitle: c.industry || c.segment,
+      type: 'client',
+      badge: c.status,
+    }),
+  );
 
   const leads: SearchableItem[] = rawLeads.map((l: AnyRecord) => ({
     id: l.id ?? '',
@@ -104,13 +106,15 @@ export function CommandPalette() {
     badge: l.stage,
   }));
 
-  const projects: SearchableItem[] = rawProjects.map((p: AnyRecord) => ({
-    id: p.id ?? '',
-    label: p.name || 'Unnamed Project',
-    subtitle: p.client?.name,
-    type: 'project',
-    badge: p.status,
-  }));
+  const projects: SearchableItem[] = rawProjects.map(
+    (p: AnyRecord) => ({
+      id: p.id ?? '',
+      label: p.name || 'Unnamed Project',
+      subtitle: p.client?.name,
+      type: 'project',
+      badge: p.status,
+    }),
+  );
 
   const q = query.toLowerCase().trim();
 
@@ -157,7 +161,12 @@ export function CommandPalette() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQuery(''); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) setQuery('');
+      }}>
       <DialogContent className="overflow-hidden p-0 shadow-lg">
         <VisuallyHidden>
           <DialogTitle>Search</DialogTitle>
@@ -165,14 +174,16 @@ export function CommandPalette() {
         {/* shouldFilter=false disables cmdk's built-in fuzzy filter so only our filter runs */}
         <Command
           shouldFilter={false}
-          className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
+          className="**:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 **:[[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 **:[[cmdk-input]]:h-12 **:[[cmdk-item]]:px-2 **:[[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
           <CommandInput
             placeholder="Search clients, projects, leads, pages..."
             value={query}
             onValueChange={setQuery}
           />
           <CommandList>
-            {!hasResults && <CommandEmpty>No results found.</CommandEmpty>}
+            {!hasResults && (
+              <CommandEmpty>No results found.</CommandEmpty>
+            )}
 
             {filteredNav.length > 0 && (
               <CommandGroup heading="Navigation">
@@ -200,14 +211,18 @@ export function CommandPalette() {
                       onSelect={() => navigate('/clients')}
                       className="flex items-center gap-2">
                       <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="flex-1 truncate">{item.label}</span>
+                      <span className="flex-1 truncate">
+                        {item.label}
+                      </span>
                       {item.subtitle && (
                         <span className="text-xs text-muted-foreground truncate max-w-32">
                           {item.subtitle}
                         </span>
                       )}
                       {item.badge && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-1.5 py-0 h-4 shrink-0">
                           {item.badge}
                         </Badge>
                       )}
@@ -228,14 +243,18 @@ export function CommandPalette() {
                       onSelect={() => navigate('/leads')}
                       className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="flex-1 truncate">{item.label}</span>
+                      <span className="flex-1 truncate">
+                        {item.label}
+                      </span>
                       {item.subtitle && (
                         <span className="text-xs text-muted-foreground truncate max-w-32">
                           {item.subtitle}
                         </span>
                       )}
                       {item.badge && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-1.5 py-0 h-4 shrink-0">
                           {item.badge}
                         </Badge>
                       )}
@@ -256,14 +275,18 @@ export function CommandPalette() {
                       onSelect={() => navigate('/projects')}
                       className="flex items-center gap-2">
                       <FolderKanban className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="flex-1 truncate">{item.label}</span>
+                      <span className="flex-1 truncate">
+                        {item.label}
+                      </span>
                       {item.subtitle && (
                         <span className="text-xs text-muted-foreground truncate max-w-32">
                           {item.subtitle}
                         </span>
                       )}
                       {item.badge && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-1.5 py-0 h-4 shrink-0">
                           {item.badge}
                         </Badge>
                       )}
