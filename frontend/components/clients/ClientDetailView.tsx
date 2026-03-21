@@ -245,7 +245,7 @@ export function ClientDetailView({
 
       {/* ── Tabs ── */}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent p-0 h-auto mb-6 gap-0">
+        <TabsList className="sticky top-0 z-10 w-full justify-start rounded-none border-b border-border bg-background p-0 h-auto mb-6 gap-0">
           {TABS.map((tab) => (
             <TabsTrigger
               key={tab.value}
