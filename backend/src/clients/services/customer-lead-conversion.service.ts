@@ -71,6 +71,8 @@ export class CustomerLeadConversionService {
         description: projectData?.description ?? lead.notes ?? undefined,
         projectManagerId: projectManagerId || lead.assignedToId || undefined,
         serviceTypeId: lead.serviceTypeId || undefined,
+        categoryIds: lead.categoryIds ?? [],
+        serviceTypeIds: lead.serviceTypeIds ?? [],
       },
       include: {
         projectManager: { select: { id: true, name: true, email: true } },

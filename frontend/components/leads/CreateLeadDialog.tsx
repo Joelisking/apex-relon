@@ -41,7 +41,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Loader2, Users, X } from 'lucide-react';
+import { Loader2, Users, X, ChevronsUpDown, Check } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { toast } from 'sonner';
 
 interface UserOption {
@@ -160,7 +162,7 @@ export function CreateLeadDialog({
   const [knownContacts, setKnownContacts] = useState<KnownContact[]>(
     [],
   );
-  const [pmSearch, setPmSearch] = useState('');
+  const [pmOpen, setPmOpen] = useState(false);
   const datalistId = useId();
 
   // Set stage to first pipeline stage whenever dialog opens
@@ -644,50 +646,48 @@ export function CreateLeadDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Project Manager</FormLabel>
-                  <FormControl>
-                    <div className={!canViewAllLeads ? 'opacity-50 pointer-events-none' : ''}>
-                      <input
-                        type="text"
-                        placeholder="Search users..."
-                        value={pmSearch}
-                        onChange={(e) => setPmSearch(e.target.value)}
-                        className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring mb-1"
-                      />
-                      <div className="max-h-40 overflow-y-auto rounded-md border border-input">
-                        <button
-                          type="button"
-                          onClick={() => field.onChange('')}
-                          className={`w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors ${!field.value ? 'bg-accent font-medium' : ''}`}>
-                          None
-                        </button>
-                        {managers
-                          .filter((m) =>
-                            m.name.toLowerCase().includes(pmSearch.toLowerCase()),
-                          )
-                          .map((m) => (
-                            <button
+                  <Popover open={pmOpen && canViewAllLeads} onOpenChange={(o) => canViewAllLeads && setPmOpen(o)}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          disabled={!canViewAllLeads}
+                          className="w-full justify-between font-normal">
+                          {field.value
+                            ? (managers.find((m) => m.id === field.value)?.name ?? 'Select person')
+                            : 'None'}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search users..." />
+                        <CommandList>
+                          <CommandEmpty>No users found.</CommandEmpty>
+                          <CommandItem
+                            value="none"
+                            onSelect={() => { field.onChange(''); setPmOpen(false); }}>
+                            <Check className={`mr-2 h-4 w-4 ${!field.value ? 'opacity-100' : 'opacity-0'}`} />
+                            None
+                          </CommandItem>
+                          {managers.map((m) => (
+                            <CommandItem
                               key={m.id}
-                              type="button"
-                              onClick={() => field.onChange(m.id)}
-                              className={`w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors ${field.value === m.id ? 'bg-accent font-medium' : ''}`}>
+                              value={m.name}
+                              onSelect={() => { field.onChange(m.id); setPmOpen(false); }}>
+                              <Check className={`mr-2 h-4 w-4 ${field.value === m.id ? 'opacity-100' : 'opacity-0'}`} />
                               {m.name}
                               {m.teamName && (
-                                <span className="ml-2 text-xs text-muted-foreground">
-                                  {m.teamName}
-                                </span>
+                                <span className="ml-2 text-xs text-muted-foreground">{m.teamName}</span>
                               )}
-                            </button>
+                            </CommandItem>
                           ))}
-                        {managers.filter((m) =>
-                          m.name.toLowerCase().includes(pmSearch.toLowerCase()),
-                        ).length === 0 && (
-                          <p className="px-3 py-2 text-sm text-muted-foreground">
-                            No users found.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </FormControl>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
