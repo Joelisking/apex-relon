@@ -35,6 +35,7 @@ model Lead {
   serviceTypeId       String?
   categoryIds         String[]
   serviceTypeIds      String[]
+  county              String?
   convertedToClientId String?
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
@@ -205,6 +206,7 @@ model Client {
   individualType       String?
   segment              String
   industry             String
+  county               String?
   lifetimeRevenue      Float      @default(0)
   status               String     @default("Active")
   qbCustomerId         String?    // QuickBooks Customer ID
@@ -245,6 +247,7 @@ model Project {
   serviceTypeId     String?
   categoryIds       String[]
   serviceTypeIds    String[]
+  county            String?
   status            String
   contractedValue   Float
   endOfProjectValue Float?

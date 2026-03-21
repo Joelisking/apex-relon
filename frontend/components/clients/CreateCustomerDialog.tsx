@@ -47,6 +47,7 @@ const createClientSchema = z.object({
   individualType: z.string().optional(),
   segment: z.string().optional(),
   industry: z.string().optional(),
+  county: z.string().optional(),
 });
 
 type CreateClientFormData = z.infer<typeof createClientSchema>;
@@ -60,6 +61,7 @@ export function CreateCustomerDialog({
   const [segmentOptions, setSegmentOptions] = useState<DropdownOption[]>([]);
   const [individualTypeOptions, setIndividualTypeOptions] = useState<DropdownOption[]>([]);
   const [industryOptions, setIndustryOptions] = useState<DropdownOption[]>([]);
+  const [countyOptions, setCountyOptions] = useState<DropdownOption[]>([]);
 
   useEffect(() => {
     settingsApi
@@ -73,6 +75,10 @@ export function CreateCustomerDialog({
     settingsApi
       .getDropdownOptions('client_industry')
       .then(setIndustryOptions)
+      .catch(console.error);
+    settingsApi
+      .getDropdownOptions('county')
+      .then(setCountyOptions)
       .catch(console.error);
   }, []);
 
@@ -104,6 +110,7 @@ export function CreateCustomerDialog({
         individualType: data.individualType || undefined,
         segment: data.segment || '',
         industry: data.industry || '',
+        county: data.county || undefined,
       });
 
       toast.success('Customer created successfully', {
@@ -329,6 +336,33 @@ export function CreateCustomerDialog({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="county"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>County</FormLabel>
+                  <FormControl>
+                    <CreatableSelect
+                      options={countyOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Select county"
+                      onOptionsChange={setCountyOptions}
+                      onOptionCreated={(label) =>
+                        settingsApi.createDropdownOption({
+                          category: 'county',
+                          value: label.toLowerCase().replace(/[.\s]+/g, '_'),
+                          label,
+                        })
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="flex justify-end gap-2 pt-4">
               <Button

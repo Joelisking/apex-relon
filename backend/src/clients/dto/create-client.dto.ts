@@ -14,6 +14,10 @@ export class CreateClientDto {
   industry?: string;
 
   @IsOptional()
+  @IsString()
+  county?: string;
+
+  @IsOptional()
   @IsEmail()
   email?: string;
 

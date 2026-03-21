@@ -164,6 +164,7 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
 
   useEffect(() => {
     const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProjectData(controller.signal);
     return () => controller.abort();
   }, [projectId]);

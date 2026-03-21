@@ -132,6 +132,15 @@ const CATEGORIES: Array<{
     hasMeetingType: false,
   },
   {
+    value: 'county',
+    label: 'Counties',
+    description: 'County locations used on customers, leads, and projects',
+    group: 'Customers',
+    hasColor: false,
+    hasIcon: false,
+    hasMeetingType: false,
+  },
+  {
     value: 'individual_type',
     label: 'Contact Roles',
     description: 'Roles of individual contacts at customer companies',

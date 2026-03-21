@@ -92,4 +92,7 @@ export class CreateProjectDto {
   @IsOptional()
   serviceTypeIds?: string[];
 
+  @IsString()
+  @IsOptional()
+  county?: string;
 }

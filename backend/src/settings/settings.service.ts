@@ -30,6 +30,7 @@ export class SettingsService implements OnModuleInit {
       this.seedUrgencyLevels(),
       this.seedProjectRiskStatus(),
       this.seedServiceCategories(),
+      this.seedCounties(),
     ]);
   }
 
@@ -490,5 +491,40 @@ export class SettingsService implements OnModuleInit {
       }),
     );
     return this.prisma.$transaction(updates);
+  }
+
+  private async seedCounties() {
+    const COUNTIES = [
+      'Adams', 'Allen', 'Bartholomew', 'Benton', 'Blackford', 'Boone', 'Brown',
+      'Carroll', 'Cass', 'Clark', 'Clay', 'Clinton', 'Crawford', 'Daviess',
+      'DeKalb', 'Dearborn', 'Decatur', 'Delaware', 'Dubois', 'Elkhart',
+      'Fayette', 'Floyd', 'Fountain', 'Franklin', 'Fulton', 'Gibson', 'Grant',
+      'Greene', 'Hamilton', 'Hancock', 'Harrison', 'Hendricks', 'Henry',
+      'Howard', 'Huntington', 'Jackson', 'Jasper', 'Jay', 'Jefferson',
+      'Jennings', 'Johnson', 'Knox', 'Kosciusko', 'LaGrange', 'LaPorte',
+      'Lake', 'Lawrence', 'Madison', 'Marion', 'Marshall', 'Martin', 'Miami',
+      'Monroe', 'Montgomery', 'Morgan', 'Newton', 'Noble', 'Ohio', 'Orange',
+      'Owen', 'Parke', 'Perry', 'Pike', 'Porter', 'Posey', 'Pulaski',
+      'Putnam', 'Randolph', 'Ripley', 'Rush', 'Scott', 'Shelby', 'Spencer',
+      'St. Joseph', 'Starke', 'Steuben', 'Sullivan', 'Switzerland', 'Tippecanoe',
+      'Tipton', 'Union', 'Vanderburgh', 'Vermillion', 'Vigo', 'Wabash',
+      'Warren', 'Warrick', 'Washington', 'Wayne', 'Wells', 'White', 'Whitley',
+    ];
+
+    const existingCount = await this.prisma.dropdownOption.count({
+      where: { category: 'county' },
+    });
+    if (existingCount >= COUNTIES.length) return;
+
+    for (let i = 0; i < COUNTIES.length; i++) {
+      const label = COUNTIES[i];
+      const value = label.toLowerCase().replace(/[.\s]+/g, '_');
+      await this.prisma.dropdownOption.upsert({
+        where: { category_value: { category: 'county', value } },
+        update: {},
+        create: { category: 'county', value, label, sortOrder: i, isSystem: false, isActive: true },
+      });
+    }
+    this.logger.log(`County dropdown options seeded (${COUNTIES.length} entries).`);
   }
 }

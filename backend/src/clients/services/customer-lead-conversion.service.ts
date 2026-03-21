@@ -73,6 +73,7 @@ export class CustomerLeadConversionService {
         serviceTypeId: lead.serviceTypeId || undefined,
         categoryIds: lead.categoryIds ?? [],
         serviceTypeIds: lead.serviceTypeIds ?? [],
+        county: lead.county ?? undefined,
       },
       include: {
         projectManager: { select: { id: true, name: true, email: true } },

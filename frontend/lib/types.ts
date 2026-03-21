@@ -104,6 +104,7 @@ export type DropdownCategory =
   | 'cost_category'
   | 'client_segment'
   | 'client_industry'
+  | 'county'
   | 'individual_type'
   | 'project_status'
   | 'project_risk_status'
@@ -220,6 +221,7 @@ export interface Lead {
   serviceType?: ServiceType | null;
   categoryIds?: string[];
   serviceTypeIds?: string[];
+  county?: string | null;
   urgency: string;
   source: string;
   likelyStartDate?: string | Date | null;
@@ -359,6 +361,7 @@ export interface Project {
   totalCost?: number;
   serviceTypeId?: string | null;
   serviceType?: { id: string; name: string } | null;
+  county?: string | null;
   projectManagerId?: string;
   projectManager?: {
     id: string;
@@ -392,6 +395,7 @@ export interface Client {
   // Classification
   segment: string;
   industry: string;
+  county?: string | null;
 
   // Financial
   lifetimeRevenue: number;

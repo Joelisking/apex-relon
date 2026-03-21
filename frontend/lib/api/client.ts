@@ -37,6 +37,7 @@ export interface CreateLeadDto {
   serviceTypeId?: string;
   categoryIds?: string[];
   serviceTypeIds?: string[];
+  county?: string;
   urgency: string;
   source?: string;
   likelyStartDate?: Date | string;
@@ -58,6 +59,7 @@ export interface UpdateLeadDto {
   serviceTypeId?: string;
   categoryIds?: string[];
   serviceTypeIds?: string[];
+  county?: string;
   urgency?: string;
   source?: string;
   likelyStartDate?: Date | string;
@@ -86,6 +88,7 @@ export interface CreateClientDto {
   individualType?: string;
   segment: string;
   industry: string;
+  county?: string;
   accountManagerId?: string;
   // These fields have defaults and should be calculated, not entered during creation
   lifetimeRevenue?: number;
@@ -102,6 +105,7 @@ export interface UpdateClientDto {
   individualType?: string;
   segment?: string;
   industry?: string;
+  county?: string;
   lifetimeRevenue?: number;
   accountManager?: string;
   status?: string;

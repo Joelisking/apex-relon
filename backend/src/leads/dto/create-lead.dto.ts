@@ -85,6 +85,10 @@ export class CreateLeadDto {
   @Type(() => Number)
   contractedValue?: number;
 
+  @IsString()
+  @IsOptional()
+  county?: string;
+
   @IsArray()
   @IsString({ each: true })
   @IsOptional()

@@ -53,6 +53,7 @@ const formSchema = z.object({
   closedDate: z.string().optional(),
   projectManagerId: z.string().optional(),
   riskStatus: z.string().optional(),
+  county: z.string().optional(),
   description: z.string().optional(),
 });
 
@@ -78,6 +79,7 @@ export function CreateProjectDialog({
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
   const [riskOptions, setRiskOptions] = useState<DropdownOption[]>([]);
+  const [countyOptions, setCountyOptions] = useState<DropdownOption[]>([]);
   const [pendingTeamMemberIds, setPendingTeamMemberIds] = useState<string[]>([]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [selectedServiceTypeIds, setSelectedServiceTypeIds] = useState<string[]>([]);
@@ -140,17 +142,23 @@ export function CreateProjectDialog({
         .getDropdownOptions('project_risk_status')
         .then(setRiskOptions)
         .catch(console.error);
+      settingsApi
+        .getDropdownOptions('county')
+        .then(setCountyOptions)
+        .catch(console.error);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Auto-generate name when client changes
+  // Auto-generate name and populate county when client changes
   const handleClientChange = (clientId: string) => {
     const client = clients.find((c) => c.id === clientId);
-    if (client && !form.getValues('name')) {
-      const displayName =
-        client.individualName || client.name;
-      form.setValue('name', `${displayName} - Project`);
+    if (client) {
+      if (!form.getValues('name')) {
+        const displayName = client.individualName || client.name;
+        form.setValue('name', `${displayName} - Project`);
+      }
+      if (client.county) form.setValue('county', client.county);
     }
     form.setValue('clientId', clientId);
   };
@@ -490,6 +498,33 @@ export function CreateProjectDialog({
               />
 
             </div>
+
+            <FormField
+              control={form.control}
+              name="county"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>County</FormLabel>
+                  <FormControl>
+                    <CreatableSelect
+                      options={countyOptions}
+                      value={field.value || undefined}
+                      onChange={field.onChange}
+                      placeholder="Select county"
+                      onOptionsChange={setCountyOptions}
+                      onOptionCreated={(label) =>
+                        settingsApi.createDropdownOption({
+                          category: 'county',
+                          value: label.toLowerCase().replace(/[.\s]+/g, '_'),
+                          label,
+                        })
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

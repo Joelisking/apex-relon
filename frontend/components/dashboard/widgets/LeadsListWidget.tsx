@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { leadsApi } from '@/lib/api/client';
 import { ExternalLink, Inbox, Zap } from 'lucide-react';
@@ -58,11 +59,11 @@ export function LeadsListWidget({ widget }: Props) {
             {title}
           </span>
         </div>
-        <a
+        <Link
           href="/leads"
           className="text-[10px] font-medium text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
           View all <ExternalLink className="h-2.5 w-2.5" />
-        </a>
+        </Link>
       </div>
 
       {isLoading ? (

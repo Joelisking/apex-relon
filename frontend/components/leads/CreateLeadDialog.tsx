@@ -78,6 +78,7 @@ interface ClientOption {
   name: string;
   individualName?: string;
   segment?: string;
+  county?: string | null;
   email?: string | null;
   phone?: string | null;
   contacts?: {
@@ -119,6 +120,7 @@ const createLeadSchema = z.object({
     .optional()
     .or(z.literal('')),
   phone: z.string().optional(),
+  county: z.string().optional().or(z.literal('')),
   expectedValue: z.number().min(0, 'Value must be positive'),
   contractedValue: z
     .number()
@@ -186,12 +188,9 @@ export function CreateLeadDialog({
     queryFn: () => pipelineApi.getStages('prospective_project'),
     staleTime: 10 * 60 * 1000,
   });
-  const [urgencyOptions, setUrgencyOptions] = useState<
-    DropdownOption[]
-  >([]);
-  const [sourceOptions, setSourceOptions] = useState<
-    DropdownOption[]
-  >([]);
+  const [urgencyOptions, setUrgencyOptions] = useState<DropdownOption[]>([]);
+  const [sourceOptions, setSourceOptions] = useState<DropdownOption[]>([]);
+  const [countyOptions, setCountyOptions] = useState<DropdownOption[]>([]);
   const [pendingTeamMemberIds, setPendingTeamMemberIds] = useState<
     string[]
   >([]);
@@ -218,6 +217,10 @@ export function CreateLeadDialog({
       .getDropdownOptions('lead_source')
       .then(setSourceOptions)
       .catch(console.error);
+    settingsApi
+      .getDropdownOptions('county')
+      .then(setCountyOptions)
+      .catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -227,6 +230,7 @@ export function CreateLeadDialog({
       contactName: '',
       email: '',
       phone: '',
+      county: '',
       expectedValue: 0,
       contractedValue: undefined,
       projectName: '',
@@ -266,6 +270,7 @@ export function CreateLeadDialog({
         'phone',
         primaryContact?.phone || client.phone || '',
       );
+      if (client.county) form.setValue('county', client.county);
     }
 
     const clientLeads = leads.filter(
@@ -330,6 +335,7 @@ export function CreateLeadDialog({
         company: selectedClient?.name || '',
         email: data.email || undefined,
         phone: data.phone || undefined,
+        county: data.county || undefined,
         expectedValue: data.expectedValue,
         contractedValue: data.contractedValue ?? undefined,
         projectName: data.projectName,
@@ -415,7 +421,7 @@ export function CreateLeadDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Client{' '}
+                        Customer{' '}
                         <span className="text-destructive">*</span>
                       </FormLabel>
                       <Select
@@ -423,7 +429,7 @@ export function CreateLeadDialog({
                         value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a client" />
+                            <SelectValue placeholder="Select a customer" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -516,7 +522,7 @@ export function CreateLeadDialog({
                   )}
                 />
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 <FormField
                   control={form.control}
                   name="phone"
@@ -527,6 +533,32 @@ export function CreateLeadDialog({
                         <Input
                           placeholder="+1 555 000 0000"
                           {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="county"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>County</FormLabel>
+                      <FormControl>
+                        <CreatableSelect
+                          options={countyOptions}
+                          value={field.value || undefined}
+                          onChange={field.onChange}
+                          placeholder="Select county"
+                          onOptionsChange={setCountyOptions}
+                          onOptionCreated={(label) =>
+                            settingsApi.createDropdownOption({
+                              category: 'county',
+                              value: label.toLowerCase().replace(/[.\s]+/g, '_'),
+                              label,
+                            })
+                          }
                         />
                       </FormControl>
                       <FormMessage />

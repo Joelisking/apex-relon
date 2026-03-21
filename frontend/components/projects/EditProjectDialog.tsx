@@ -54,6 +54,7 @@ const formSchema = z.object({
   closedDate: z.string().optional(),
   projectManagerId: z.string().optional(),
   riskStatus: z.string().optional(),
+  county: z.string().optional(),
   description: z.string().optional(),
 });
 
@@ -89,6 +90,7 @@ export function EditProjectDialog({
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
   const [riskOptions, setRiskOptions] = useState<DropdownOption[]>([]);
+  const [countyOptions, setCountyOptions] = useState<DropdownOption[]>([]);
   const [assignments, setAssignments] = useState<ProjectAssignment[]>(
     project.assignments ?? [],
   );
@@ -131,6 +133,7 @@ export function EditProjectDialog({
       closedDate: toDateInput(project.closedDate),
       projectManagerId: project.projectManagerId ?? undefined,
       riskStatus: project.riskStatus ?? '',
+      county: project.county ?? '',
       description: project.description ?? '',
     },
   });
@@ -148,6 +151,7 @@ export function EditProjectDialog({
       closedDate: toDateInput(project.closedDate),
       projectManagerId: project.projectManagerId ?? undefined,
       riskStatus: project.riskStatus ?? '',
+      county: project.county ?? '',
       description: project.description ?? '',
     });
     setAssignments(project.assignments ?? []);
@@ -160,6 +164,10 @@ export function EditProjectDialog({
     settingsApi
       .getDropdownOptions('project_risk_status')
       .then(setRiskOptions)
+      .catch(console.error);
+    settingsApi
+      .getDropdownOptions('county')
+      .then(setCountyOptions)
       .catch(console.error);
   }, []);
 
@@ -531,6 +539,33 @@ export function EditProjectDialog({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="county"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>County</FormLabel>
+                  <FormControl>
+                    <CreatableSelect
+                      options={countyOptions}
+                      value={field.value || undefined}
+                      onChange={field.onChange}
+                      placeholder="Select county"
+                      onOptionsChange={setCountyOptions}
+                      onOptionCreated={(label) =>
+                        settingsApi.createDropdownOption({
+                          category: 'county',
+                          value: label.toLowerCase().replace(/[.\s]+/g, '_'),
+                          label,
+                        })
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

@@ -90,6 +90,7 @@ const editLeadSchema = z.object({
     .optional()
     .or(z.literal('')),
   phone: z.string().optional(),
+  county: z.string().optional().or(z.literal('')),
   expectedValue: z.number().min(0, 'Value must be positive'),
   contractedValue: z
     .number()
@@ -159,6 +160,7 @@ export function EditLeadDialog({
     queryFn: () => pipelineApi.getStages('prospective_project'),
     staleTime: 10 * 60 * 1000,
   });
+  const [countyOptions, setCountyOptions] = useState<DropdownOption[]>([]);
   const [urgencyOptions, setUrgencyOptions] = useState<
     DropdownOption[]
   >([]);
@@ -179,12 +181,17 @@ export function EditLeadDialog({
       .getDropdownOptions('lead_source')
       .then(setSourceOptions)
       .catch(console.error);
+    settingsApi
+      .getDropdownOptions('county')
+      .then(setCountyOptions)
+      .catch(console.error);
   }, []);
 
   const buildDefaults = (l: Lead): EditLeadFormData => ({
     contactName: l.contactName || '',
     email: l.email || '',
     phone: l.phone || '',
+    county: l.county || '',
     expectedValue: l.expectedValue ?? 0,
     contractedValue: l.contractedValue ?? undefined,
     projectName: l.projectName || '',
@@ -289,6 +296,7 @@ export function EditLeadDialog({
         contactName: data.contactName,
         email: data.email || undefined,
         phone: data.phone || undefined,
+        county: data.county || undefined,
         expectedValue: data.expectedValue,
         contractedValue: data.contractedValue ?? undefined,
         projectName: data.projectName,
@@ -350,7 +358,7 @@ export function EditLeadDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Client <span className="text-red-500">*</span>
+                    Customer <span className="text-red-500">*</span>
                   </FormLabel>
                   <Select
                     onValueChange={field.onChange}
@@ -446,7 +454,7 @@ export function EditLeadDialog({
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <FormField
                 control={form.control}
                 name="phone"
@@ -457,6 +465,33 @@ export function EditLeadDialog({
                       <Input
                         placeholder="+1 555 000 0000"
                         {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="county"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>County</FormLabel>
+                    <FormControl>
+                      <CreatableSelect
+                        options={countyOptions}
+                        value={field.value || undefined}
+                        onChange={field.onChange}
+                        placeholder="Select county"
+                        onOptionsChange={setCountyOptions}
+                        onOptionCreated={(label) =>
+                          settingsApi.createDropdownOption({
+                            category: 'county',
+                            value: label.toLowerCase().replace(/[.\s]+/g, '_'),
+                            label,
+                          })
+                        }
                       />
                     </FormControl>
                     <FormMessage />
