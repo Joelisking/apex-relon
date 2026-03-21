@@ -170,7 +170,7 @@ export class ProjectsService {
   /**
    * Get a single project by ID
    */
-  async findOne(id: string) {
+  async findOne(id: string, userId?: string, userRole?: string) {
     const project = await this.prisma.project.findUnique({
       where: { id },
       include: {
@@ -184,6 +184,12 @@ export class ProjectsService {
         },
         qs: {
           select: { id: true, name: true, email: true },
+        },
+        assignments: {
+          include: {
+            user: { select: { id: true, name: true, email: true, role: true } },
+          },
+          orderBy: { createdAt: 'asc' },
         },
         costLogs: {
           include: {
@@ -200,6 +206,22 @@ export class ProjectsService {
 
     if (!project) {
       throw new NotFoundException(`Project with ID ${id} not found`);
+    }
+
+    // Apply same scope filter as findAll — users without projects:view_all
+    // can only see projects they are assigned to.
+    if (userId && userRole) {
+      const canViewAll = await this.permissionsService.hasPermission(userRole, 'projects:view_all');
+      if (!canViewAll) {
+        const isAssigned =
+          project.projectManagerId === userId ||
+          project.designerId === userId ||
+          project.qsId === userId ||
+          project.assignments.some((a) => a.userId === userId);
+        if (!isAssigned) {
+          throw new NotFoundException(`Project with ID ${id} not found`);
+        }
+      }
     }
 
     return project;
@@ -223,6 +245,15 @@ export class ProjectsService {
 
     // Extract client-level fields before passing to Prisma (Project model doesn't have these)
     const { segment, industry, ...projectUpdateData } = updateProjectDto;
+
+    // Auto-set completedDate when transitioning to Completed
+    if (
+      updateProjectDto.status === 'Completed' &&
+      existingProject.status !== 'Completed' &&
+      !projectUpdateData.completedDate
+    ) {
+      (projectUpdateData as Record<string, unknown>).completedDate = new Date();
+    }
 
     const project = await this.prisma.project.update({
       where: { id },

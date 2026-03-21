@@ -13,14 +13,12 @@ model Lead {
   id                  String              @id @default(uuid())
   contactName         String
   company             String
-  position            String?
   email               String?
   phone               String?
   expectedValue       Float
   stage               String
   urgency             String
   source              String?
-  channel             String?
   likelyStartDate     DateTime?
   notes               String?
   aiRiskLevel         String?
@@ -35,6 +33,8 @@ model Lead {
   qsId                String?
   clientId            String?
   serviceTypeId       String?
+  categoryIds         String[]
+  serviceTypeIds      String[]
   convertedToClientId String?
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
@@ -95,7 +95,7 @@ model LeadTeamMember {
   @@map("lead_team_members")
 }
 
-model ServiceType {
+model ServiceCategory {
   id           String        @id @default(uuid())
   name         String        @unique
   description  String?       @db.Text
@@ -103,11 +103,27 @@ model ServiceType {
   sortOrder    Int           @default(0)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  serviceTypes ServiceType[]
+
+  @@map("service_categories")
+}
+
+model ServiceType {
+  id           String           @id @default(uuid())
+  name         String           @unique
+  description  String?          @db.Text
+  isActive     Boolean          @default(true)
+  sortOrder    Int              @default(0)
+  categoryId   String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  category     ServiceCategory? @relation(fields: [categoryId], references: [id])
   leads        Lead[]
   projects     Project[]
   taskTypes    TaskType[]
   serviceItems ServiceItem[]
 
+  @@index([categoryId])
   @@map("service_types")
 }
 
@@ -227,6 +243,8 @@ model Project {
   clientId          String
   leadId            String?                @unique
   serviceTypeId     String?
+  categoryIds       String[]
+  serviceTypeIds    String[]
   status            String
   contractedValue   Float
   endOfProjectValue Float?

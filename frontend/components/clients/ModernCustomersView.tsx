@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Plus, RefreshCw } from 'lucide-react';
@@ -9,7 +10,6 @@ import type { Client, User } from '@/lib/types';
 import { CreateCustomerDialog } from './CreateCustomerDialog';
 import { useAuth } from '@/contexts/auth-context';
 import { CustomerStatsCards } from './CustomerStatsCards';
-import { CustomerDetailDialog } from './CustomerDetailDialog';
 import { CustomerBulkActions } from './CustomerBulkActions';
 import { DataTable } from '@/components/ui/data-table';
 import { getClientColumns } from './columns';
@@ -26,10 +26,10 @@ interface ModernCustomersViewProps {
 }
 
 export default function ModernCustomersView({ currentUser }: ModernCustomersViewProps) {
+  const router = useRouter();
   const { hasPermission } = useAuth();
   const queryClient = useQueryClient();
   const { clientDisplayMode } = useTenantSettings();
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedClients, setSelectedClients] = useState<Client[]>([]);
 
@@ -148,7 +148,7 @@ export default function ModernCustomersView({ currentUser }: ModernCustomersView
             columns={getClientColumns(clientDisplayMode)}
             data={clients}
             globalFilter
-            onRowClick={setSelectedClient}
+            onRowClick={(client) => router.push(`/clients/${client.id}`)}
             exportFilename="clients"
             onSelectionChange={setSelectedClients}
             filterConfigs={[
@@ -183,14 +183,6 @@ export default function ModernCustomersView({ currentUser }: ModernCustomersView
         onCreated={handleClientUpdated}
       />
 
-      <CustomerDetailDialog
-        client={selectedClient}
-        open={!!selectedClient}
-        onClose={() => setSelectedClient(null)}
-        currentUserId={currentUser.id}
-        onClientUpdated={handleClientUpdated}
-        accountManagers={managers}
-      />
     </div>
   );
 }

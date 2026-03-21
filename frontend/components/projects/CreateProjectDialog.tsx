@@ -37,8 +37,10 @@ import { toast } from 'sonner';
 import { projectsApi } from '@/lib/api/projects-client';
 import { usersApi, type UserResponse } from '@/lib/api/users-client';
 import { clientsApi, leadsApi, settingsApi } from '@/lib/api/client';
+import { useQuery } from '@tanstack/react-query';
 import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
-import type { DropdownOption } from '@/lib/types';
+import type { DropdownOption, ServiceCategory } from '@/lib/types';
+import { ServiceTypeSelector } from '@/components/settings/ServiceTypeSelector';
 
 const formSchema = z.object({
   clientId: z.string().min(1, 'Client is required'),
@@ -77,6 +79,26 @@ export function CreateProjectDialog({
   const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
   const [riskOptions, setRiskOptions] = useState<DropdownOption[]>([]);
   const [pendingTeamMemberIds, setPendingTeamMemberIds] = useState<string[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [selectedServiceTypeIds, setSelectedServiceTypeIds] = useState<string[]>([]);
+
+  const { data: serviceCategories = [] } = useQuery<ServiceCategory[]>({
+    queryKey: ['service-categories'],
+    queryFn: () => settingsApi.getServiceCategories(),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  function toggleCategory(id: string) {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
+    );
+  }
+
+  function toggleServiceType(id: string) {
+    setSelectedServiceTypeIds((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
+  }
 
   type FormValues = z.infer<typeof formSchema>;
   const form = useForm<FormValues, unknown, FormValues>({
@@ -151,12 +173,16 @@ export function CreateProjectDialog({
           : undefined,
         teamMemberIds:
           pendingTeamMemberIds.length > 0 ? pendingTeamMemberIds : undefined,
+        categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
+        serviceTypeIds: selectedServiceTypeIds.length > 0 ? selectedServiceTypeIds : undefined,
       });
       toast.success('Project created successfully');
       onProjectCreated();
       onOpenChange(false);
       form.reset();
       setPendingTeamMemberIds([]);
+      setSelectedCategoryIds([]);
+      setSelectedServiceTypeIds([]);
     } catch (error) {
       toast.error('Failed to create project');
       console.error(error);
@@ -394,6 +420,18 @@ export function CreateProjectDialog({
                   </FormItem>
                 )}
               />
+
+              {/* Service Categories & Types */}
+              <div>
+                <p className="text-sm font-medium leading-none mb-2">Service Categories &amp; Types</p>
+                <ServiceTypeSelector
+                  categories={serviceCategories}
+                  selectedCategoryIds={selectedCategoryIds}
+                  selectedServiceTypeIds={selectedServiceTypeIds}
+                  onCategoryToggle={toggleCategory}
+                  onServiceTypeToggle={toggleServiceType}
+                />
+              </div>
 
               {/* Risk Status */}
               <FormField

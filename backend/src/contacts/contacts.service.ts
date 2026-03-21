@@ -137,14 +137,4 @@ export class ContactsService {
     });
   }
 
-  private async clearPrimaryForClient(clientId: string, excludeId?: string) {
-    await this.prisma.contact.updateMany({
-      where: {
-        clientId,
-        isPrimary: true,
-        ...(excludeId ? { id: { not: excludeId } } : {}),
-      },
-      data: { isPrimary: false },
-    });
-  }
 }

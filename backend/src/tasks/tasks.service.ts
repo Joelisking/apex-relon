@@ -166,8 +166,9 @@ export class TasksService {
       if (!canAssign) throw new ForbiddenException('Cannot assign tasks to other users');
     }
 
-    // Validate completion rules when marking as DONE
-    if (dto.status === DONE_STATUS) {
+    // Validate completion rules when marking as DONE — only when task is not already DONE.
+    // Skip this block entirely if the task is already DONE (e.g., editing title/description).
+    if (dto.status === DONE_STATUS && existing.status !== DONE_STATUS) {
       const isUnauthorised = existing.assignedToId
         ? userId !== existing.assignedToId
         : userId !== existing.createdById;
@@ -261,6 +262,9 @@ export class TasksService {
         taskType: { select: { id: true, name: true } },
       },
     });
+
+    this.workflowsService.triggerRules('TASK_COMPLETED', 'TASK', task.id, task as unknown as Record<string, unknown>);
+
     return (await this.resolveEntityNames([task]))[0];
   }
 
@@ -295,8 +299,12 @@ export class TasksService {
       this.prisma.task.count({ where: { ...base, dueDate: { lt: startOfToday } } }),
       this.prisma.task.count({ where: { ...base, dueDate: { gte: startOfToday, lt: endOfToday } } }),
       // Tasks with no due date or due after today count as upcoming
+      // Use AND to avoid overwriting the user-scope OR from base
       this.prisma.task.count({
-        where: { ...base, OR: [{ dueDate: { gte: endOfToday } }, { dueDate: null }] },
+        where: {
+          ...base,
+          AND: [{ OR: [{ dueDate: { gte: endOfToday } }, { dueDate: null }] }],
+        },
       }),
       this.prisma.task.count({ where: base }),
     ]);

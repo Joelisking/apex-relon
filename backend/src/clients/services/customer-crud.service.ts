@@ -91,6 +91,7 @@ export class CustomerCrudService {
       where: { id },
       include: {
         ...this.primaryContactInclude,
+        _count: { select: { activities: true } },
         projects: {
           select: {
             id: true, name: true, status: true, contractedValue: true,

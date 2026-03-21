@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useId } from 'react';
+import { useState, useEffect, useId, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,8 +12,8 @@ import {
   pipelineApi,
   type PipelineStage,
 } from '@/lib/api/pipeline-client';
-import type { DropdownOption } from '@/lib/types';
-import type { ServiceType, Lead } from '@/lib/types';
+import type { DropdownOption, ServiceCategory, Lead } from '@/lib/types';
+import { ServiceTypeSelector } from '@/components/settings/ServiceTypeSelector';
 import {
   Dialog,
   DialogContent,
@@ -41,7 +41,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Loader2, Users, X, Plus, Check } from 'lucide-react';
+import { Loader2, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface UserOption {
@@ -69,8 +69,7 @@ interface EditLeadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentUser: { id: string; role: string };
-  managers: UserOption[];
-  serviceTypes?: ServiceType[];
+  managers?: UserOption[];
   allUsers?: UserOption[];
   designers?: UserOption[];
   qsUsers?: UserOption[];
@@ -123,8 +122,7 @@ export function EditLeadDialog({
   open,
   onOpenChange,
   currentUser,
-  managers,
-  serviceTypes = [],
+  managers = [],
   allUsers = [],
   clients = [],
   leads = [],
@@ -133,32 +131,25 @@ export function EditLeadDialog({
   const { hasPermission } = useAuth();
   const canViewAllLeads = hasPermission('leads:view_all');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [localServiceTypes, setLocalServiceTypes] = useState<ServiceType[]>(serviceTypes);
-  const [isAddingServiceType, setIsAddingServiceType] = useState(false);
-  const [newServiceTypeName, setNewServiceTypeName] = useState('');
-  const [isSavingServiceType, setIsSavingServiceType] = useState(false);
-  const queryClient = useQueryClient();
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(lead.categoryIds ?? []);
+  const [selectedServiceTypeIds, setSelectedServiceTypeIds] = useState<string[]>(lead.serviceTypeIds ?? []);
 
-  useEffect(() => {
-    setLocalServiceTypes(serviceTypes);
-  }, [serviceTypes]);
+  const { data: serviceCategories = [] } = useQuery<ServiceCategory[]>({
+    queryKey: ['service-categories'],
+    queryFn: () => settingsApi.getServiceCategories(),
+    staleTime: 10 * 60 * 1000,
+  });
 
-  async function handleSaveServiceType() {
-    if (!newServiceTypeName.trim()) return;
-    setIsSavingServiceType(true);
-    try {
-      const created = await settingsApi.createServiceType({ name: newServiceTypeName.trim() });
-      const updated = [...localServiceTypes, created];
-      setLocalServiceTypes(updated);
-      form.setValue('serviceTypeId', created.id);
-      setIsAddingServiceType(false);
-      setNewServiceTypeName('');
-      queryClient.invalidateQueries({ queryKey: ['service-types'] });
-    } catch {
-      toast.error('Failed to add project type');
-    } finally {
-      setIsSavingServiceType(false);
-    }
+  function toggleCategory(id: string) {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
+    );
+  }
+
+  function toggleServiceType(id: string) {
+    setSelectedServiceTypeIds((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
   }
 
   const { data: pipelineStages = [] } = useQuery<PipelineStage[]>({
@@ -217,6 +208,8 @@ export function EditLeadDialog({
     setTeamMemberIds(
       (lead.teamMembers ?? []).map((tm) => tm.userId),
     );
+    setSelectedCategoryIds(lead.categoryIds ?? []);
+    setSelectedServiceTypeIds(lead.serviceTypeIds ?? []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lead.id]);
 
@@ -224,12 +217,13 @@ export function EditLeadDialog({
   const watchedStage = form.watch('stage');
 
   // Derive known contacts from past leads on the same client
+  const stableLeads = useMemo(() => leads, [JSON.stringify(leads.map(l => l.id))]);
   useEffect(() => {
     if (!watchedClientId) {
       setKnownContacts([]);
       return;
     }
-    const clientLeads = leads.filter(
+    const clientLeads = stableLeads.filter(
       (l) => l.clientId === watchedClientId && l.id !== lead.id,
     );
     const seen = new Set<string>();
@@ -245,7 +239,7 @@ export function EditLeadDialog({
       }
     }
     setKnownContacts(contacts);
-  }, [watchedClientId, leads, lead.id]);
+  }, [watchedClientId, stableLeads, lead.id]);
 
   function handleContactNameChange(value: string) {
     form.setValue('contactName', value);
@@ -296,7 +290,9 @@ export function EditLeadDialog({
         contractedValue: data.contractedValue ?? undefined,
         projectName: data.projectName,
         stage: data.stage,
-        serviceTypeId: data.serviceTypeId || undefined,
+        serviceTypeId: selectedServiceTypeIds[0] || undefined,
+        categoryIds: selectedCategoryIds,
+        serviceTypeIds: selectedServiceTypeIds,
         urgency: data.urgency,
         source: data.source || undefined,
         likelyStartDate: data.likelyStartDate
@@ -593,63 +589,16 @@ export function EditLeadDialog({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="serviceTypeId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project Type</FormLabel>
-                    {isAddingServiceType ? (
-                      <div className="flex gap-2">
-                        <Input
-                          autoFocus
-                          placeholder="Enter project type..."
-                          value={newServiceTypeName}
-                          onChange={(e) => setNewServiceTypeName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') { e.preventDefault(); handleSaveServiceType(); }
-                            if (e.key === 'Escape') { setIsAddingServiceType(false); setNewServiceTypeName(''); }
-                          }}
-                        />
-                        <Button type="button" size="icon" variant="outline" onClick={handleSaveServiceType} disabled={isSavingServiceType || !newServiceTypeName.trim()}>
-                          {isSavingServiceType ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                        </Button>
-                        <Button type="button" size="icon" variant="outline" onClick={() => { setIsAddingServiceType(false); setNewServiceTypeName(''); }}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <Select
-                        onValueChange={(val) => {
-                          if (val === '__add_st__') { setIsAddingServiceType(true); return; }
-                          field.onChange(val === 'none' ? '' : val);
-                        }}
-                        value={field.value || 'none'}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="__add_st__">
-                            <span className="flex items-center gap-2 text-primary font-medium">
-                              <Plus className="h-3.5 w-3.5" />
-                              Add new...
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="none">None</SelectItem>
-                          {localServiceTypes.map((st) => (
-                            <SelectItem key={st.id} value={st.id}>
-                              {st.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div>
+                <p className="text-sm font-medium leading-none mb-2">Service Categories &amp; Types</p>
+                <ServiceTypeSelector
+                  categories={serviceCategories}
+                  selectedCategoryIds={selectedCategoryIds}
+                  selectedServiceTypeIds={selectedServiceTypeIds}
+                  onCategoryToggle={toggleCategory}
+                  onServiceTypeToggle={toggleServiceType}
+                />
+              </div>
 
               <FormField
                 control={form.control}

@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { projectsApi, type ProjectAssignment } from '@/lib/api/projects-client';
 import { usersApi } from '@/lib/api/users-client';
+import { useAuth } from '@/contexts/auth-context';
 
 const CREW_ROLES = [
   'Party Chief',
@@ -37,6 +38,7 @@ export function ProjectAssignmentPanel({
   excludeUserIds = [],
 }: ProjectAssignmentPanelProps) {
   const queryClient = useQueryClient();
+  const { hasPermission } = useAuth();
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
 
@@ -111,21 +113,23 @@ export function ProjectAssignmentPanel({
                   {a.role}
                 </Badge>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
-                onClick={() => removeMutation.mutate(a.id)}
-                disabled={removeMutation.isPending}>
-                <X className="h-3.5 w-3.5" />
-              </Button>
+              {hasPermission('projects:edit') && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => removeMutation.mutate(a.id)}
+                  disabled={removeMutation.isPending}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      {/* Add form */}
-      <div className="flex items-center gap-2">
+      {/* Add form — only shown when user can edit */}
+      {hasPermission('projects:edit') && <div className="flex items-center gap-2">
         <Select value={selectedUserId} onValueChange={setSelectedUserId}>
           <SelectTrigger className="h-8 text-xs flex-1">
             <SelectValue placeholder="Select crew member..." />
@@ -170,7 +174,7 @@ export function ProjectAssignmentPanel({
           )}
           Add
         </Button>
-      </div>
+      </div>}
     </div>
   );
 }

@@ -59,6 +59,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Listen for permission changes pushed from the server via SSE
+  useEffect(() => {
+    const handlePermissionsUpdated = () => {
+      const currentToken = Cookies.get('token');
+      if (currentToken) {
+        fetchPermissions(currentToken);
+      }
+    };
+    window.addEventListener('permissions-updated', handlePermissionsUpdated);
+    return () => window.removeEventListener('permissions-updated', handlePermissionsUpdated);
+  }, [fetchPermissions]);
+
   // Restore session from cookies on mount
   useEffect(() => {
     const storedToken = Cookies.get('token');

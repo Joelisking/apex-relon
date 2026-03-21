@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { Prisma } from '@prisma/client';
-import { CreateServiceTypeDto } from './dto/create-service-type.dto';
+import { CreateServiceTypeDto, CreateServiceCategoryDto } from './dto/create-service-type.dto';
 import { CreateTaskTypeDto } from './dto/create-task-type.dto';
 import {
   CreateDropdownOptionDto,
@@ -28,6 +28,7 @@ export class SettingsService implements OnModuleInit {
     await this.seedLeadSources();
     await this.seedUrgencyLevels();
     await this.seedProjectRiskStatus();
+    await this.seedServiceCategories();
   }
 
   private async seedTeamTypes() {
@@ -217,12 +218,105 @@ export class SettingsService implements OnModuleInit {
     this.logger.log('Project risk status dropdown options ensured.');
   }
 
+  // ── Service Categories ─────────────────────────────────────────────────────
+
+  private async seedServiceCategories() {
+    const CATEGORIES = [
+      { name: 'Surveying', description: 'Land survey, boundary, topo, and related field work', sortOrder: 0 },
+      { name: 'Engineering', description: 'Construction engineering, stormwater, design, and inspection services', sortOrder: 1 },
+    ];
+
+    const SERVICE_TYPES_BY_CATEGORY: Record<string, Array<{ name: string; description: string; sortOrder: number }>> = {
+      Surveying: [
+        { name: 'Topographic Survey', description: 'Topo maps, elevation data, CAD', sortOrder: 0 },
+        { name: 'Boundary Survey', description: 'Property boundary determination and marking', sortOrder: 1 },
+        { name: 'Lot Survey', description: 'Residential lot surveys, PP/HS/Final', sortOrder: 2 },
+        { name: 'ALTA/NSPS Survey', description: 'Title survey for commercial transactions', sortOrder: 3 },
+        { name: 'Construction Staking', description: 'Layout, staking for construction', sortOrder: 4 },
+        { name: 'Plot Plan & House Stake', description: 'Plot plans, house stakes, finals', sortOrder: 5 },
+        { name: 'As-Built Survey', description: 'Post-construction as-built documentation', sortOrder: 6 },
+        { name: 'Subdivision Plat', description: 'Subdivision design and recorded plats', sortOrder: 7 },
+        { name: 'Drone Survey', description: 'Aerial survey and mapping', sortOrder: 8 },
+      ],
+      Engineering: [
+        { name: 'Construction Engineering', description: 'CE, project oversight during construction', sortOrder: 0 },
+        { name: 'Construction Inspection', description: 'On-site inspection services', sortOrder: 1 },
+        { name: 'SWQCP & Stormwater', description: 'Stormwater quality control plans, monitoring', sortOrder: 2 },
+        { name: 'Right-of-Way Engineering', description: 'ROW plans, legal descriptions, staking', sortOrder: 3 },
+        { name: 'LCRS', description: 'Location control route surveys', sortOrder: 4 },
+        { name: 'Engineering Services', description: 'Site design, engineering analysis, utility design', sortOrder: 5 },
+        { name: 'Easement Preparation', description: 'Easement exhibits, legal descriptions', sortOrder: 6 },
+      ],
+    };
+
+    const existingCount = await this.prisma.serviceCategory.count();
+    if (existingCount >= CATEGORIES.length) {
+      this.logger.log(`Service categories already seeded (${existingCount} entries). Skipping.`);
+      return;
+    }
+
+    for (const cat of CATEGORIES) {
+      const category = await this.prisma.serviceCategory.upsert({
+        where: { name: cat.name },
+        update: {},
+        create: { name: cat.name, description: cat.description, sortOrder: cat.sortOrder, isActive: true },
+      });
+
+      for (const st of SERVICE_TYPES_BY_CATEGORY[cat.name] ?? []) {
+        await this.prisma.serviceType.upsert({
+          where: { name: st.name },
+          update: { categoryId: category.id },
+          create: { name: st.name, description: st.description, sortOrder: st.sortOrder, isActive: true, categoryId: category.id },
+        });
+      }
+    }
+    this.logger.log('Service categories and typed service types seeded.');
+  }
+
+  async findAllServiceCategories() {
+    return this.prisma.serviceCategory.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      include: {
+        serviceTypes: {
+          where: { isActive: true },
+          orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+        },
+      },
+    });
+  }
+
+  async createServiceCategory(dto: CreateServiceCategoryDto) {
+    return this.prisma.serviceCategory.create({ data: dto });
+  }
+
+  async updateServiceCategory(id: string, dto: Partial<CreateServiceCategoryDto>) {
+    const existing = await this.prisma.serviceCategory.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`Service category with ID ${id} not found`);
+    return this.prisma.serviceCategory.update({ where: { id }, data: dto });
+  }
+
+  async deleteServiceCategory(id: string) {
+    const existing = await this.prisma.serviceCategory.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`Service category with ID ${id} not found`);
+    const typeCount = await this.prisma.serviceType.count({ where: { categoryId: id } });
+    if (typeCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete category "${existing.name}" because it has ${typeCount} service type(s) assigned to it.`,
+      );
+    }
+    return this.prisma.serviceCategory.delete({ where: { id } });
+  }
+
   // ── Service Types ──────────────────────────────────────────────────────────
 
   async findAllServiceTypes() {
     return this.prisma.serviceType.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-      include: { _count: { select: { leads: true, projects: true } } },
+      include: {
+        category: { select: { id: true, name: true } },
+        _count: { select: { leads: true, projects: true } },
+      },
     });
   }
 

@@ -12,8 +12,8 @@ import {
   pipelineApi,
   type PipelineStage,
 } from '@/lib/api/pipeline-client';
-import type { DropdownOption } from '@/lib/types';
-import type { ServiceType, Lead } from '@/lib/types';
+import type { DropdownOption, ServiceCategory, Lead } from '@/lib/types';
+import { ServiceTypeSelector } from '@/components/settings/ServiceTypeSelector';
 import {
   Dialog,
   DialogContent,
@@ -41,7 +41,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Loader2, Users, X, Plus, Check } from 'lucide-react';
+import { Loader2, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface UserOption {
@@ -76,7 +76,6 @@ interface CreateLeadDialogProps {
     role: string;
   };
   managers: UserOption[];
-  serviceTypes?: ServiceType[];
   allUsers?: UserOption[];
   clients?: ClientOption[];
   leads?: Lead[]; // existing leads used to suggest past contacts
@@ -116,7 +115,6 @@ export function CreateLeadDialog({
   onOpenChange,
   currentUser,
   managers,
-  serviceTypes = [],
   allUsers = [],
   clients = [],
   leads = [],
@@ -125,33 +123,26 @@ export function CreateLeadDialog({
   const { hasPermission } = useAuth();
   const canViewAllLeads = hasPermission('leads:view_all');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [localServiceTypes, setLocalServiceTypes] = useState<ServiceType[]>(serviceTypes);
-  const [isAddingServiceType, setIsAddingServiceType] = useState(false);
-  const [newServiceTypeName, setNewServiceTypeName] = useState('');
-  const [isSavingServiceType, setIsSavingServiceType] = useState(false);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [selectedServiceTypeIds, setSelectedServiceTypeIds] = useState<string[]>([]);
   const queryClient = useQueryClient();
 
-  // Keep local service types in sync with prop
-  useEffect(() => {
-    setLocalServiceTypes(serviceTypes);
-  }, [serviceTypes]);
+  const { data: serviceCategories = [] } = useQuery<ServiceCategory[]>({
+    queryKey: ['service-categories'],
+    queryFn: () => settingsApi.getServiceCategories(),
+    staleTime: 10 * 60 * 1000,
+  });
 
-  async function handleSaveServiceType() {
-    if (!newServiceTypeName.trim()) return;
-    setIsSavingServiceType(true);
-    try {
-      const created = await settingsApi.createServiceType({ name: newServiceTypeName.trim() });
-      const updated = [...localServiceTypes, created];
-      setLocalServiceTypes(updated);
-      form.setValue('serviceTypeId', created.id);
-      setIsAddingServiceType(false);
-      setNewServiceTypeName('');
-      queryClient.invalidateQueries({ queryKey: ['service-types'] });
-    } catch {
-      toast.error('Failed to add project type');
-    } finally {
-      setIsSavingServiceType(false);
-    }
+  function toggleCategory(id: string) {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
+    );
+  }
+
+  function toggleServiceType(id: string) {
+    setSelectedServiceTypeIds((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
   }
 
   const { data: pipelineStages = [] } = useQuery<PipelineStage[]>({
@@ -296,7 +287,9 @@ export function CreateLeadDialog({
         contractedValue: data.contractedValue ?? undefined,
         projectName: data.projectName,
         stage: data.stage,
-        serviceTypeId: data.serviceTypeId || undefined,
+        serviceTypeId: selectedServiceTypeIds[0] || undefined,
+        categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
+        serviceTypeIds: selectedServiceTypeIds.length > 0 ? selectedServiceTypeIds : undefined,
         urgency: data.urgency,
         source: data.source || undefined,
         likelyStartDate: data.likelyStartDate
@@ -335,6 +328,8 @@ export function CreateLeadDialog({
   const handleClose = () => {
     form.reset();
     setPendingTeamMemberIds([]);
+    setSelectedCategoryIds([]);
+    setSelectedServiceTypeIds([]);
     onOpenChange(false);
   };
 
@@ -602,63 +597,16 @@ export function CreateLeadDialog({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="serviceTypeId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project Type</FormLabel>
-                    {isAddingServiceType ? (
-                      <div className="flex gap-2">
-                        <Input
-                          autoFocus
-                          placeholder="Enter project type..."
-                          value={newServiceTypeName}
-                          onChange={(e) => setNewServiceTypeName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') { e.preventDefault(); handleSaveServiceType(); }
-                            if (e.key === 'Escape') { setIsAddingServiceType(false); setNewServiceTypeName(''); }
-                          }}
-                        />
-                        <Button type="button" size="icon" variant="outline" onClick={handleSaveServiceType} disabled={isSavingServiceType || !newServiceTypeName.trim()}>
-                          {isSavingServiceType ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                        </Button>
-                        <Button type="button" size="icon" variant="outline" onClick={() => { setIsAddingServiceType(false); setNewServiceTypeName(''); }}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <Select
-                        onValueChange={(val) => {
-                          if (val === '__add_st__') { setIsAddingServiceType(true); return; }
-                          field.onChange(val === 'none' ? '' : val);
-                        }}
-                        value={field.value || 'none'}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="__add_st__">
-                            <span className="flex items-center gap-2 text-primary font-medium">
-                              <Plus className="h-3.5 w-3.5" />
-                              Add new...
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="none">None</SelectItem>
-                          {localServiceTypes.map((st) => (
-                            <SelectItem key={st.id} value={st.id}>
-                              {st.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div>
+                <p className="text-sm font-medium leading-none mb-2">Service Categories &amp; Types</p>
+                <ServiceTypeSelector
+                  categories={serviceCategories}
+                  selectedCategoryIds={selectedCategoryIds}
+                  selectedServiceTypeIds={selectedServiceTypeIds}
+                  onCategoryToggle={toggleCategory}
+                  onServiceTypeToggle={toggleServiceType}
+                />
+              </div>
 
               <FormField
                 control={form.control}

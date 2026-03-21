@@ -19,10 +19,6 @@ export class CreateLeadDto {
   @IsNotEmpty()
   company: string;
 
-  @IsString()
-  @IsOptional()
-  position?: string;
-
   @IsEmail()
   @IsOptional()
   email?: string;
@@ -44,6 +40,16 @@ export class CreateLeadDto {
   @IsOptional()
   serviceTypeId?: string;
 
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  categoryIds?: string[];
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  serviceTypeIds?: string[];
+
   @IsString()
   @IsNotEmpty()
   urgency: string;
@@ -51,10 +57,6 @@ export class CreateLeadDto {
   @IsString()
   @IsOptional()
   source?: string;
-
-  @IsString()
-  @IsOptional()
-  channel?: string;
 
   @IsDate()
   @IsOptional()

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -84,6 +85,7 @@ interface ModernLeadsViewProps {
 export default function ModernLeadsView({
   currentUser,
 }: ModernLeadsViewProps) {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -637,7 +639,7 @@ export default function ModernLeadsView({
         onOpenChange={setCreateDialogOpen}
         currentUser={currentUser}
         managers={managers}
-        serviceTypes={serviceTypes}
+
         allUsers={allUsersArr}
         clients={clients}
         leads={leads}
@@ -682,21 +684,25 @@ export default function ModernLeadsView({
                 {selectedLeads.length} selected
               </span>
               <div className="flex items-center gap-1.5 ml-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 h-7 text-xs"
-                  onClick={() => setBulkStageDialogOpen(true)}>
-                  <ChevronDown className="h-3 w-3" />
-                  Assign Stage
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 h-7 text-xs"
-                  onClick={() => setBulkRepDialogOpen(true)}>
-                  Assign Rep
-                </Button>
+                {hasPermission('leads:edit') && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 h-7 text-xs"
+                    onClick={() => setBulkStageDialogOpen(true)}>
+                    <ChevronDown className="h-3 w-3" />
+                    Assign Stage
+                  </Button>
+                )}
+                {hasPermission('leads:edit') && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 h-7 text-xs"
+                    onClick={() => setBulkRepDialogOpen(true)}>
+                    Assign Rep
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="outline"
@@ -704,14 +710,16 @@ export default function ModernLeadsView({
                   onClick={handleExportLeads}>
                   Export
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 h-7 text-xs text-destructive hover:text-destructive"
-                  onClick={() => setBulkDeleteDialogOpen(true)}>
-                  <Trash2 className="h-3 w-3" />
-                  Delete selected
-                </Button>
+                {hasPermission('leads:delete') && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 h-7 text-xs text-destructive hover:text-destructive"
+                    onClick={() => setBulkDeleteDialogOpen(true)}>
+                    <Trash2 className="h-3 w-3" />
+                    Delete selected
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -719,7 +727,7 @@ export default function ModernLeadsView({
             columns={columns}
             data={filteredLeads}
             globalFilter={true}
-            onRowClick={setSelectedLead}
+            onRowClick={(lead) => router.push(`/leads/${lead.id}`)}
             onSelectionChange={setSelectedLeads}
             filterConfigs={[
               {
@@ -753,40 +761,14 @@ export default function ModernLeadsView({
           handleDragCancel={handleDragCancel}
           activeDragId={activeDragId}
           activeLead={activeLead}
-          setSelectedLead={setSelectedLead}
+          setSelectedLead={(lead) => { if (lead) router.push(`/leads/${lead.id}`); }}
           stages={
             pipelineStages.length > 0 ? pipelineStages : undefined
           }
         />
       )}
 
-      {/* Lead Detail Dialog */}
-      <LeadDetailsDialog
-        selectedLead={selectedLead}
-        open={!!selectedLead}
-        onOpenChange={() => setSelectedLead(null)}
-        currentUser={currentUser}
-        files={files}
-        loadFiles={loadFiles}
-        setDeleteDialogOpen={setDeleteDialogOpen}
-        setConvertDialogOpen={setConvertDialogOpen}
-        setLeadToConvert={setLeadToConvert}
-        handleGenerateAISummary={handleGenerateAISummary}
-        handleAnalyzeRisk={handleAnalyzeRisk}
-        aiLoading={aiLoading}
-        summaryLoading={summaryLoading}
-        activities={activities}
-        hasPermission={hasPermission}
-        onActivitiesChanged={() =>
-          selectedLead && loadActivities(selectedLead.id)
-        }
-        managers={managers}
-        serviceTypes={serviceTypes}
-        allUsers={allUsersArr}
-        clients={clients}
-        leads={leads}
-        onLeadUpdated={handleLeadUpdated}
-      />
+      {/* Lead Detail Dialog removed — detail views are now full pages at /leads/[id] */}
 
       {/* AI Summary Dialog */}
       <AISummaryDialog

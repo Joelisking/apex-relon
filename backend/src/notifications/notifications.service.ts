@@ -136,6 +136,20 @@ export class NotificationsService {
     });
   }
 
+  async pushPermissionsUpdatedToRole(role: string): Promise<void> {
+    const users = await this.prisma.user.findMany({
+      where: { role },
+      select: { id: true },
+    });
+    const event = { type: 'PERMISSIONS_UPDATED' };
+    for (const user of users) {
+      const subject = this.notificationSubjects.get(user.id);
+      if (subject) {
+        subject.next(event);
+      }
+    }
+  }
+
   async hasRecentNotification(
     userId: string,
     type: string,

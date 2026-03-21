@@ -1,6 +1,7 @@
 import type {
   Lead,
   LeadRep,
+  ServiceCategory,
   ServiceType,
   TaskType,
   ServiceItem,
@@ -34,9 +35,10 @@ export interface CreateLeadDto {
   projectName?: string;
   stage: string;
   serviceTypeId?: string;
+  categoryIds?: string[];
+  serviceTypeIds?: string[];
   urgency: string;
   source?: string;
-  channel?: string;
   likelyStartDate?: Date | string;
   notes?: string;
   assignedToId?: string;
@@ -54,9 +56,10 @@ export interface UpdateLeadDto {
   projectName?: string;
   stage?: string;
   serviceTypeId?: string;
+  categoryIds?: string[];
+  serviceTypeIds?: string[];
   urgency?: string;
   source?: string;
-  channel?: string;
   likelyStartDate?: Date | string;
   notes?: string;
   aiRiskLevel?: string;
@@ -625,8 +628,35 @@ export const adminApi = {
     ),
 };
 
-// Settings API (Service Types + Dropdown Options)
+// Settings API (Service Categories + Service Types + Dropdown Options)
 export const settingsApi = {
+  getServiceCategories: (serverToken?: string) =>
+    apiFetch<ServiceCategory[]>('/settings/service-categories', {}, serverToken),
+
+  createServiceCategory: (
+    data: { name: string; description?: string; isActive?: boolean; sortOrder?: number },
+    serverToken?: string,
+  ) =>
+    apiFetch<ServiceCategory>(
+      '/settings/service-categories',
+      { method: 'POST', body: JSON.stringify(data) },
+      serverToken,
+    ),
+
+  updateServiceCategory: (
+    id: string,
+    data: { name: string; description?: string; isActive?: boolean; sortOrder?: number },
+    serverToken?: string,
+  ) =>
+    apiFetch<ServiceCategory>(
+      `/settings/service-categories/${id}`,
+      { method: 'PATCH', body: JSON.stringify(data) },
+      serverToken,
+    ),
+
+  deleteServiceCategory: (id: string, serverToken?: string) =>
+    apiFetch<void>(`/settings/service-categories/${id}`, { method: 'DELETE' }, serverToken),
+
   getServiceTypes: (serverToken?: string) =>
     apiFetch<ServiceType[]>(
       '/settings/service-types',

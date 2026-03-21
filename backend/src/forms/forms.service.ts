@@ -185,7 +185,6 @@ export class FormsService {
           stage: form.targetStage,
           assignedToId: form.assignToUserId || null,
           source: 'Web Form',
-          channel: 'Website',
           expectedValue: 0,
           urgency: 'Medium',
         },

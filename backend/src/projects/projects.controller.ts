@@ -74,8 +74,8 @@ export class ProjectsController {
 
   @Get(':id')
   @Permissions('projects:view')
-  findOne(@Param('id') id: string) {
-    return this.projectsService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.projectsService.findOne(id, user?.id, user?.role);
   }
 
   @Patch(':id')

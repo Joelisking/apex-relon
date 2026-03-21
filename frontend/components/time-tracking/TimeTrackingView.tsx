@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Clock, Users, Trash2, Pencil, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Label } from '@/components/ui/label';
 import {
   Card,
@@ -113,19 +113,16 @@ export function TimeTrackingView() {
   // Weekly timesheet navigation
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
 
-  const currentUserId = typeof window !== 'undefined'
-    ? JSON.parse(localStorage.getItem('user') ?? '{}')?.id
-    : undefined;
-
   const dateQuery = startDate && endDate
     ? `&startDate=${startDate}&endDate=${endDate}`
     : '';
 
+  // Backend auto-scopes to the authenticated user's entries when no userId is passed
+  // (or when the user lacks time_tracking:manage_all)
   const { data: myEntries = [], isLoading: myLoading } = useQuery<TimeEntry[]>({
-    queryKey: ['time-entries', 'my', currentUserId, startDate, endDate],
+    queryKey: ['time-entries', 'my', startDate, endDate],
     queryFn: () =>
-      ttFetch<TimeEntry[]>(`/entries?userId=${currentUserId}&limit=200${dateQuery}`),
-    enabled: !!currentUserId,
+      ttFetch<TimeEntry[]>(`/entries?limit=200${dateQuery}`),
   });
 
   const { data: allEntries = [], isLoading: allLoading } = useQuery<TimeEntry[]>({
@@ -254,20 +251,20 @@ export function TimeTrackingView() {
           <div className="flex flex-wrap items-end gap-4">
             <div className="space-y-1">
               <Label className="text-xs">From</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="h-8 w-36 text-sm"
+                onChange={setStartDate}
+                className="h-8 w-44 text-sm"
+                clearable={false}
               />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">To</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="h-8 w-36 text-sm"
+                onChange={setEndDate}
+                className="h-8 w-44 text-sm"
+                clearable={false}
               />
             </div>
             <div className="flex gap-2">

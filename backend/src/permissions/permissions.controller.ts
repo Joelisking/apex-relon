@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { PermissionsService } from './permissions.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Permissions } from './permissions.decorator';
 import { UpdateRolePermissionsDto } from './dto/update-role-permissions.dto';
 
@@ -17,6 +18,7 @@ export class PermissionsController {
   constructor(
     private readonly permissionsService: PermissionsService,
     private readonly auditService: AuditService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   @Get('matrix')
@@ -54,6 +56,9 @@ export class PermissionsController {
         permissions: dto.permissions,
       },
     });
+
+    // Notify all currently-connected users of that role so their permissions refresh instantly
+    await this.notificationsService.pushPermissionsUpdatedToRole(role);
 
     return { message: `Permissions updated for role ${role}` };
   }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   LayoutGrid,
   List,
@@ -55,6 +56,7 @@ interface ProjectsViewProps {
 export default function ProjectsView({
   currentUser,
 }: ProjectsViewProps) {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
   const [localProjects, setLocalProjects] = useState<Project[]>([]);
@@ -137,7 +139,7 @@ export default function ProjectsView({
   });
 
   const handleProjectClick = (project: Project) => {
-    setSelectedProject(project);
+    router.push(`/projects/${project.id}`);
   };
 
   const handleProjectUpdated = () => {
@@ -209,6 +211,7 @@ export default function ProjectsView({
       setLocalProjects((prev) =>
         prev.filter((p) => !deletedIds.has(p.id)),
       );
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       setSelectedProjects([]);
       setBulkDeleteDialogOpen(false);
       toast.success(
@@ -236,6 +239,7 @@ export default function ProjectsView({
             : p,
         ),
       );
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       setSelectedProjects([]);
       setBulkStatusDialogOpen(false);
       setBulkStatus('');
@@ -314,13 +318,8 @@ export default function ProjectsView({
     );
   };
 
-  const PROJECT_STATUSES = [
-    'Planning',
-    'Active',
-    'On Hold',
-    'Completed',
-    'Cancelled',
-  ];
+  // Derive statuses from the pipeline stages fetched via pipelineApi.getStages('project')
+  const PROJECT_STATUSES = projectStages.map((s) => s.name);
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -449,22 +448,26 @@ export default function ProjectsView({
                 {selectedProjects.length !== 1 ? 's' : ''} selected
               </span>
               <div className="flex items-center gap-1.5 ml-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 h-7 text-xs"
-                  onClick={() => setBulkStatusDialogOpen(true)}>
-                  <ChevronDown className="h-3 w-3" />
-                  Move to Status
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 h-7 text-xs"
-                  onClick={() => setBulkManagerDialogOpen(true)}>
-                  <UserRound className="h-3 w-3" />
-                  Assign Manager
-                </Button>
+                {hasPermission('projects:edit') && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 h-7 text-xs"
+                    onClick={() => setBulkStatusDialogOpen(true)}>
+                    <ChevronDown className="h-3 w-3" />
+                    Move to Status
+                  </Button>
+                )}
+                {hasPermission('projects:edit') && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 h-7 text-xs"
+                    onClick={() => setBulkManagerDialogOpen(true)}>
+                    <UserRound className="h-3 w-3" />
+                    Assign Manager
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="outline"
@@ -528,19 +531,7 @@ export default function ProjectsView({
         </>
       )}
 
-      {/* Detail dialog */}
-      {selectedProject && (
-        <ProjectDetailDialog
-          project={selectedProject}
-          open={!!selectedProject}
-          onOpenChange={(open) => {
-            if (!open) setSelectedProject(null);
-          }}
-          onUpdated={handleProjectUpdated}
-          currentUserId={currentUser.id}
-          currentUserRole={currentUser.role}
-        />
-      )}
+      {/* Detail dialog removed — detail views are now full pages at /projects/[id] */}
 
       <CreateProjectDialog
         open={isCreateOpen}

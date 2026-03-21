@@ -229,20 +229,26 @@ export function ProjectDetailDialog({
 
   // ── financials ───────────────────────────────────────────────────────────
   const contractedValue = project.contractedValue ?? 0;
-  const endOfProjectValue =
-    project.endOfProjectValue ?? contractedValue;
+  const rawEndOfProjectValue = project.endOfProjectValue ?? null;
+  const endOfProjectValue = rawEndOfProjectValue ?? contractedValue;
   const cost = project.totalCost ?? 0;
-  const variance = endOfProjectValue - contractedValue;
+  const variance = rawEndOfProjectValue != null ? rawEndOfProjectValue - contractedValue : null;
   const variancePercent =
-    contractedValue > 0 ? (variance / contractedValue) * 100 : 0;
+    variance != null && contractedValue > 0 ? (variance / contractedValue) * 100 : null;
   const profit = endOfProjectValue - cost;
   const margin =
     endOfProjectValue > 0 ? (profit / endOfProjectValue) * 100 : 0;
   const revenue = project.estimatedRevenue ?? project.contractedValue;
 
-  const daysInStatus = project.updatedAt
-    ? differenceInDays(new Date(), new Date(project.updatedAt))
-    : 0;
+  const lastStatusEntry =
+    project.statusHistory && project.statusHistory.length > 0
+      ? project.statusHistory[project.statusHistory.length - 1]
+      : null;
+  const daysInStatus = lastStatusEntry
+    ? differenceInDays(new Date(), new Date(lastStatusEntry.createdAt))
+    : project.updatedAt
+      ? differenceInDays(new Date(), new Date(project.updatedAt))
+      : 0;
 
   const canEditCosts = hasPermission('costs:create');
 
@@ -332,29 +338,37 @@ export function ProjectDetailDialog({
                   <p className="text-[9px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
                     EOP Value
                   </p>
-                  <p className="text-[18px] font-bold tabular-nums leading-none text-blue-600">
-                    ${fmtVal(endOfProjectValue)}
-                  </p>
+                  {rawEndOfProjectValue != null ? (
+                    <p className="text-[18px] font-bold tabular-nums leading-none text-blue-600">
+                      ${fmtVal(rawEndOfProjectValue)}
+                    </p>
+                  ) : (
+                    <p className="text-[18px] font-bold leading-none text-muted-foreground/40">
+                      —
+                    </p>
+                  )}
                 </div>
               </div>
 
               {/* Variance + Margin as pills */}
               <div className="flex gap-1.5 mb-3">
-                <span
-                  className={`inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5 border ${
-                    variance >= 0
-                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                      : 'text-red-700 bg-red-50 border-red-200'
-                  }`}>
-                  {variance >= 0 ? (
-                    <TrendingUp className="h-2.5 w-2.5" />
-                  ) : (
-                    <TrendingDown className="h-2.5 w-2.5" />
-                  )}
-                  {variance >= 0 ? '+' : ''}$
-                  {fmtVal(Math.abs(variance))} (
-                  {variancePercent.toFixed(1)}%)
-                </span>
+                {variance != null && variancePercent != null && (
+                  <span
+                    className={`inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5 border ${
+                      variance >= 0
+                        ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                        : 'text-red-700 bg-red-50 border-red-200'
+                    }`}>
+                    {variance >= 0 ? (
+                      <TrendingUp className="h-2.5 w-2.5" />
+                    ) : (
+                      <TrendingDown className="h-2.5 w-2.5" />
+                    )}
+                    {variance >= 0 ? '+' : ''}$
+                    {fmtVal(Math.abs(variance))} (
+                    {variancePercent.toFixed(1)}%)
+                  </span>
+                )}
 
                 <span
                   className={`inline-flex items-center text-[10px] font-semibold rounded-full px-2 py-0.5 border ${

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -68,7 +67,6 @@ export function ConvertLeadDialog({
   open,
   onOpenChange,
 }: ConvertLeadDialogProps) {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const [isConverting, setIsConverting] = useState(false);
   const [pmUsers, setPmUsers] = useState<UserResponse[]>([]);
@@ -145,7 +143,7 @@ export function ConvertLeadDialog({
       toast.success('Converted to active project!');
       onOpenChange(false);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     } catch (error) {
       toast.error('Failed to convert', {
         description: error instanceof Error ? error.message : undefined,

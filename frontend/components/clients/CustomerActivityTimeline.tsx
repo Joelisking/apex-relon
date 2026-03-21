@@ -11,6 +11,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -47,6 +57,7 @@ export function CustomerActivityTimeline({
 }: CustomerActivityTimelineProps) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [activityTypes, setActivityTypes] = useState<
     DropdownOption[]
   >([]);
@@ -254,9 +265,7 @@ export function CustomerActivityTimeline({
 
                       {activity.userId === currentUserId && (
                         <button
-                          onClick={() =>
-                            handleDeleteActivity(activity.id)
-                          }
+                          onClick={() => setDeleteConfirmId(activity.id)}
                           className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -279,6 +288,30 @@ export function CustomerActivityTimeline({
           })}
         </div>
       )}
+
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(o) => { if (!o) setDeleteConfirmId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Activity</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this activity. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (deleteConfirmId) {
+                  handleDeleteActivity(deleteConfirmId);
+                  setDeleteConfirmId(null);
+                }
+              }}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="max-w-4xl">

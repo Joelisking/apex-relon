@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
@@ -120,10 +121,9 @@ export function CustomerCustomFields({ clientId }: Props) {
                 )}
 
                 {def.fieldType === 'DATE' && (
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={currentVal}
-                    onChange={(e) => setField(def.id, e.target.value)}
+                    onChange={(v) => setField(def.id, v)}
                     className="h-8 text-sm"
                   />
                 )}

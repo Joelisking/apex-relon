@@ -68,10 +68,9 @@ export class TimeTrackingController {
     @Param('id') id: string,
     @Body() dto: Partial<CreateTimeEntryDto>,
   ) {
-    // P0-4: Use permission-based check instead of hardcoded role strings
+    // Strictly own-only — nobody can edit another person's time entries
     const entry = await this.timeTrackingService.getEntryById(id);
-    const canManageAll = await this.permissionsService.hasPermission(user.role, 'time_tracking:manage_all');
-    if (!canManageAll && entry.userId !== user.id) {
+    if (entry.userId !== user.id) {
       throw new ForbiddenException('You can only edit your own time entries');
     }
     // Strip userId from updates — cannot reassign entries
@@ -83,10 +82,9 @@ export class TimeTrackingController {
   @HttpCode(204)
   @Permissions('time_tracking:edit')
   async deleteEntry(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    // P0-4: Use permission-based check instead of hardcoded role strings
+    // Strictly own-only — nobody can delete another person's time entries
     const entry = await this.timeTrackingService.getEntryById(id);
-    const canManageAll = await this.permissionsService.hasPermission(user.role, 'time_tracking:manage_all');
-    if (!canManageAll && entry.userId !== user.id) {
+    if (entry.userId !== user.id) {
       throw new ForbiddenException('You can only delete your own time entries');
     }
     return this.timeTrackingService.deleteEntry(id);

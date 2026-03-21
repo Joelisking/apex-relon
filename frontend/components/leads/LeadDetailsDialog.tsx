@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   useQuery,
   useMutation,
@@ -21,6 +22,7 @@ import {
 } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
@@ -200,6 +202,7 @@ export function LeadDetailsDialog({
   leads = [],
   onLeadUpdated,
 }: LeadDetailsDialogProps) {
+  const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [draftEmailLoading, setDraftEmailLoading] = useState(false);
   const [draftEmail, setDraftEmail] = useState<{
@@ -326,11 +329,6 @@ export function LeadDetailsDialog({
                   <p className="text-[12px] text-muted-foreground truncate">
                     {selectedLead.company}
                   </p>
-                  {selectedLead.position && (
-                    <p className="text-[11px] text-muted-foreground/60 truncate mt-0.5">
-                      {selectedLead.position}
-                    </p>
-                  )}
                 </div>
               </div>
 
@@ -639,23 +637,21 @@ export function LeadDetailsDialog({
                           <p className="font-semibold text-[13px]">Converted to Project</p>
                           <p className="text-[12px] text-muted-foreground">This prospective project has been converted</p>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => { window.location.href = '/projects'; }} className="gap-1.5 text-[12px]">
+                        <Button variant="outline" size="sm" onClick={() => { onOpenChange(false); router.push('/projects'); }} className="gap-1.5 text-[12px]">
                           View Projects <ArrowRight className="h-3.5 w-3.5" />
                         </Button>
                       </div>
-                    ) : (
+                    ) : hasPermission('clients:convert') ? (
                       <div className="flex items-center justify-between p-3.5 bg-emerald-50/60 border border-emerald-200/60 rounded-xl">
                         <div>
                           <p className="font-semibold text-[13px] text-emerald-900">Ready to convert</p>
                           <p className="text-[12px] text-emerald-700">Create an active project from this lead</p>
                         </div>
-                        {hasPermission('clients:convert') && (
-                          <Button size="sm" onClick={() => { setLeadToConvert(selectedLead); setConvertDialogOpen(true); }} className="bg-emerald-600 hover:bg-emerald-700 gap-1.5 text-[12px]">
-                            Convert <ArrowRight className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
+                        <Button size="sm" onClick={() => { setLeadToConvert(selectedLead); setConvertDialogOpen(true); }} className="bg-emerald-600 hover:bg-emerald-700 gap-1.5 text-[12px]">
+                          Convert <ArrowRight className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
-                    )
+                    ) : null
                   )}
 
                   <section className="space-y-3">
@@ -789,7 +785,7 @@ export function LeadDetailsDialog({
           onOpenChange={setIsEditOpen}
           currentUser={currentUser}
           managers={managers}
-          serviceTypes={serviceTypes}
+
           allUsers={allUsers}
           clients={clients}
           leads={leads}
@@ -915,13 +911,12 @@ function LeadCustomFields({ leadId }: { leadId: string }) {
                 )}
 
                 {def.fieldType === 'DATE' && (
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={currentVal}
-                    onChange={(e) =>
+                    onChange={(v) =>
                       setLocalEdits((p) => ({
                         ...p,
-                        [def.id]: e.target.value,
+                        [def.id]: v,
                       }))
                     }
                     className="h-8 text-sm"

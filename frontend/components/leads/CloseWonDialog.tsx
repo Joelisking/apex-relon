@@ -26,6 +26,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Loader2, Trophy, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api/client';
+import { useAuth } from '@/contexts/auth-context';
 import type { Lead } from '@/lib/types';
 
 const formSchema = z.object({
@@ -48,6 +49,7 @@ export function CloseWonDialog({
   onOpenChange,
   onSuccess,
 }: CloseWonDialogProps) {
+  const { hasPermission } = useAuth();
   const form = useForm<FormValues, unknown, FormValues>({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
     defaultValues: {
@@ -181,19 +183,21 @@ export function CloseWonDialog({
                 )}
                 Mark as Won
               </Button>
-              <Button
-                type="button"
-                disabled={isSubmitting}
-                onClick={form.handleSubmit((values) =>
-                  handleSubmit(values, true),
-                )}>
-                {isSubmitting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <FolderOpen className="mr-2 h-4 w-4" />
-                )}
-                Won & Convert
-              </Button>
+              {hasPermission('clients:convert') && (
+                <Button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={form.handleSubmit((values) =>
+                    handleSubmit(values, true),
+                  )}>
+                  {isSubmitting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FolderOpen className="mr-2 h-4 w-4" />
+                  )}
+                  Won & Convert
+                </Button>
+              )}
             </DialogFooter>
           </form>
         </Form>

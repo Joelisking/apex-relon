@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import {
   Plus,
@@ -43,7 +44,7 @@ import { format } from 'date-fns';
 interface CustomerProjectsListProps {
   clientId: string;
   projects: Project[];
-  accountManagers: Array<{ id: string; name: string; email: string }>;
+  accountManagers?: Array<{ id: string; name: string; email: string }>;
   onProjectsChanged: () => void;
   currentUserId: string;
 }
@@ -109,10 +110,11 @@ function fmtValue(v: number): string {
 export function CustomerProjectsList({
   clientId,
   projects,
-  accountManagers,
+  accountManagers = [],
   onProjectsChanged,
   currentUserId,
 }: CustomerProjectsListProps) {
+  const router = useRouter();
   const { user, hasPermission } = useAuth();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -234,7 +236,7 @@ export function CustomerProjectsList({
                   borderTopColor: accentColor,
                   borderTopWidth: '2px',
                 }}
-                onClick={() => setSelectedProject(project)}>
+                onClick={() => router.push(`/projects/${project.id}`)}>
                 <div className="px-3.5 py-3">
                   {/* Name + actions */}
                   <div className="flex items-start justify-between gap-2 mb-1.5">
@@ -524,18 +526,6 @@ export function CustomerProjectsList({
         </DialogContent>
       </Dialog>
 
-      {selectedProject && (
-        <ProjectDetailDialog
-          project={selectedProject}
-          open={!!selectedProject}
-          onOpenChange={(open) => {
-            if (!open) setSelectedProject(null);
-          }}
-          onUpdated={onProjectsChanged}
-          currentUserId={currentUserId}
-          currentUserRole={user?.role ?? ''}
-        />
-      )}
     </div>
   );
 }

@@ -19,6 +19,8 @@
 - **Web search is permitted without asking.** When unsure about an API, library, behavior, or best practice — search first, then act.
 - You may read, write, and edit files freely. For destructive git operations (reset, force push, branch delete), confirm first.
 - Do NOT auto-commit unless explicitly asked.
+- **Interactive CLI commands** (e.g. `prisma migrate dev`, `git rebase -i`) require a TTY and cannot be run by Claude. When you need one, give the user the exact command to paste and run themselves (prefix with `! ` if in the Claude Code prompt).
+- **Prisma schema changes:** Always use `npx prisma db push && npx prisma generate` — NOT `prisma migrate dev`. This project has migration drift history and `migrate dev` will prompt to wipe all data. `db push` applies the diff safely and is non-interactive.
 
 ---
 

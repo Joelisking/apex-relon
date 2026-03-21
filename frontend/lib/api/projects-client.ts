@@ -13,6 +13,7 @@ export interface ProjectAssignment {
 export interface Project {
   id: string;
   name: string;
+  jobNumber?: string;
   clientId: string;
   client?: {
     id: string;
@@ -37,6 +38,8 @@ export interface Project {
   totalCost?: number;
   serviceTypeId?: string | null;
   serviceType?: { id: string; name: string } | null;
+  categoryIds?: string[];
+  serviceTypeIds?: string[];
   projectManagerId?: string;
   projectManager?: {
     id: string;
@@ -129,6 +132,8 @@ export interface CreateProjectDto {
   riskStatus?: string;
   estimatedRevenue?: number;
   teamMemberIds?: string[];
+  categoryIds?: string[];
+  serviceTypeIds?: string[];
 }
 
 // Client-side only - synchronous cookie reading

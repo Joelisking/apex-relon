@@ -11,7 +11,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { SettingsService } from './settings.service';
-import { CreateServiceTypeDto } from './dto/create-service-type.dto';
+import { CreateServiceTypeDto, CreateServiceCategoryDto } from './dto/create-service-type.dto';
 import { CreateTaskTypeDto } from './dto/create-task-type.dto';
 import { CreateDropdownOptionDto, UpdateDropdownOptionDto } from './dto/dropdown-option.dto';
 import { Permissions } from '../permissions/permissions.decorator';
@@ -19,6 +19,36 @@ import { Permissions } from '../permissions/permissions.decorator';
 @Controller('settings')
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
+
+  // ── Service Categories ─────────────────────────────────────────────────────
+
+  @Get('service-categories')
+  @Permissions('leads:view')
+  findAllServiceCategories() {
+    return this.settingsService.findAllServiceCategories();
+  }
+
+  @Post('service-categories')
+  @Permissions('settings:manage')
+  createServiceCategory(@Body() dto: CreateServiceCategoryDto) {
+    return this.settingsService.createServiceCategory(dto);
+  }
+
+  @Patch('service-categories/:id')
+  @Permissions('settings:manage')
+  updateServiceCategory(
+    @Param('id') id: string,
+    @Body() dto: Partial<CreateServiceCategoryDto>,
+  ) {
+    return this.settingsService.updateServiceCategory(id, dto);
+  }
+
+  @Delete('service-categories/:id')
+  @Permissions('settings:manage')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteServiceCategory(@Param('id') id: string) {
+    return this.settingsService.deleteServiceCategory(id);
+  }
 
   // ── Service Types ──────────────────────────────────────────────────────────
 

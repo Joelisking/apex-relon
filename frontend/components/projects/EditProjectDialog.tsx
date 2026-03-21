@@ -37,8 +37,10 @@ import { toast } from 'sonner';
 import { projectsApi, type Project, type ProjectAssignment } from '@/lib/api/projects-client';
 import { usersApi, type UserResponse } from '@/lib/api/users-client';
 import { clientsApi, leadsApi, settingsApi } from '@/lib/api/client';
+import { useQuery } from '@tanstack/react-query';
 import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
-import type { DropdownOption } from '@/lib/types';
+import type { DropdownOption, ServiceCategory } from '@/lib/types';
+import { ServiceTypeSelector } from '@/components/settings/ServiceTypeSelector';
 import { format } from 'date-fns';
 
 const formSchema = z.object({
@@ -90,6 +92,30 @@ export function EditProjectDialog({
   const [assignments, setAssignments] = useState<ProjectAssignment[]>(
     project.assignments ?? [],
   );
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(
+    project.categoryIds ?? [],
+  );
+  const [selectedServiceTypeIds, setSelectedServiceTypeIds] = useState<string[]>(
+    project.serviceTypeIds ?? [],
+  );
+
+  const { data: serviceCategories = [] } = useQuery<ServiceCategory[]>({
+    queryKey: ['service-categories'],
+    queryFn: () => settingsApi.getServiceCategories(),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  function toggleCategory(id: string) {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
+    );
+  }
+
+  function toggleServiceType(id: string) {
+    setSelectedServiceTypeIds((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
+  }
 
   type FormValues = z.infer<typeof formSchema>;
   const form = useForm<FormValues, unknown, FormValues>({
@@ -125,6 +151,8 @@ export function EditProjectDialog({
       description: project.description ?? '',
     });
     setAssignments(project.assignments ?? []);
+    setSelectedCategoryIds(project.categoryIds ?? []);
+    setSelectedServiceTypeIds(project.serviceTypeIds ?? []);
   }, [project.id]);
 
   useEffect(() => {
@@ -180,6 +208,8 @@ export function EditProjectDialog({
         closedDate: values.closedDate
           ? new Date(values.closedDate).toISOString()
           : undefined,
+        categoryIds: selectedCategoryIds,
+        serviceTypeIds: selectedServiceTypeIds,
       });
       toast.success('Project updated successfully');
       onProjectUpdated(updated);
@@ -432,6 +462,18 @@ export function EditProjectDialog({
                   </FormItem>
                 )}
               />
+
+              {/* Service Categories & Types */}
+              <div>
+                <p className="text-sm font-medium leading-none mb-2">Service Categories &amp; Types</p>
+                <ServiceTypeSelector
+                  categories={serviceCategories}
+                  selectedCategoryIds={selectedCategoryIds}
+                  selectedServiceTypeIds={selectedServiceTypeIds}
+                  onCategoryToggle={toggleCategory}
+                  onServiceTypeToggle={toggleServiceType}
+                />
+              </div>
 
               {/* Risk Status */}
               <FormField

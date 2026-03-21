@@ -119,9 +119,10 @@ export function LinkedTasksSection({
     invalidate();
   };
 
-  const pending = tasks.filter((t) => t.status !== 'DONE');
+  const pending = tasks.filter((t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS');
+  const cancelled = tasks.filter((t) => t.status === 'CANCELLED');
   const done = tasks.filter((t) => t.status === 'DONE');
-  const orderedTasks = [...pending, ...done];
+  const orderedTasks = [...pending, ...cancelled, ...done];
 
   return (
     <section>
@@ -132,6 +133,11 @@ export function LinkedTasksSection({
           {pending.length > 0 && (
             <span className="ml-0.5 text-muted-foreground/40">
               · {pending.length} open
+            </span>
+          )}
+          {cancelled.length > 0 && (
+            <span className="ml-0.5 text-muted-foreground/40">
+              · {cancelled.length} cancelled
             </span>
           )}
         </h3>
@@ -163,18 +169,20 @@ export function LinkedTasksSection({
               task.dueDate &&
               isPast(new Date(task.dueDate)) &&
               !isToday(new Date(task.dueDate)) &&
-              task.status !== 'DONE';
+              task.status !== 'DONE' &&
+              task.status !== 'CANCELLED';
             const isDone = task.status === 'DONE';
+            const isCancelled = task.status === 'CANCELLED';
             const meta =
               PRIORITY_META[task.priority] ?? PRIORITY_META.MEDIUM;
-            const canComplete = canCompleteTask(task, user?.id);
+            const canComplete = !isCancelled && canCompleteTask(task, user?.id);
 
             return (
               <div
                 key={task.id}
                 className={cn(
                   'flex items-start gap-2.5 px-3 py-2 rounded-lg border transition-colors group',
-                  isDone
+                  isDone || isCancelled
                     ? 'bg-muted/20 border-border/30 opacity-60'
                     : 'bg-background border-border/50 hover:bg-muted/30',
                 )}>
@@ -189,9 +197,11 @@ export function LinkedTasksSection({
                       ? canComplete
                         ? 'text-emerald-500 hover:text-emerald-600'
                         : 'text-emerald-500'
-                      : canComplete
-                        ? 'text-muted-foreground/30 hover:text-emerald-500'
-                        : 'text-muted-foreground/20 cursor-not-allowed',
+                      : isCancelled
+                        ? 'text-muted-foreground/20 cursor-not-allowed'
+                        : canComplete
+                          ? 'text-muted-foreground/30 hover:text-emerald-500'
+                          : 'text-muted-foreground/20 cursor-not-allowed',
                   )}>
                   {isDone ? (
                     <CheckCircle2 className="h-4 w-4" />
@@ -211,7 +221,7 @@ export function LinkedTasksSection({
                   <p
                     className={cn(
                       'text-sm font-medium truncate',
-                      isDone && 'line-through text-muted-foreground',
+                      (isDone || isCancelled) && 'line-through text-muted-foreground',
                     )}>
                     {task.title}
                   </p>

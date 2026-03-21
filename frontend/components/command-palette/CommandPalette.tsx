@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { projectsApi } from '@/lib/api/projects-client';
+import { useAuth } from '@/contexts/auth-context';
 import {
   Building2,
   FolderKanban,
@@ -40,21 +41,26 @@ interface SearchableItem {
   badge?: string;
 }
 
-const NAV_ITEMS = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Customers', href: '/clients', icon: Building2 },
-  { label: 'Prospective Projects', href: '/leads', icon: Users },
-  { label: 'Projects', href: '/projects', icon: FolderKanban },
-  { label: 'Quotes', href: '/quotes', icon: FileText },
-  { label: 'Time Tracking', href: '/time-tracking', icon: Clock },
-  { label: 'Reports', href: '/reports', icon: BarChart3 },
-  { label: 'Settings', href: '/settings', icon: Settings },
+const ALL_NAV_ITEMS = [
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: undefined },
+  { label: 'Customers', href: '/clients', icon: Building2, permission: 'clients:view' },
+  { label: 'Prospective Projects', href: '/leads', icon: Users, permission: 'leads:view' },
+  { label: 'Projects', href: '/projects', icon: FolderKanban, permission: 'projects:view' },
+  { label: 'Quotes', href: '/quotes', icon: FileText, permission: 'quotes:view' },
+  { label: 'Time Tracking', href: '/time-tracking', icon: Clock, permission: 'time_tracking:view' },
+  { label: 'Reports', href: '/reports', icon: BarChart3, permission: 'reports:view' },
+  { label: 'Settings', href: '/settings', icon: Settings, permission: undefined },
 ];
 
 export function CommandPalette() {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const router = useRouter();
+  const { hasPermission } = useAuth();
+
+  const NAV_ITEMS = ALL_NAV_ITEMS.filter(
+    (item) => !item.permission || hasPermission(item.permission),
+  );
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -74,18 +80,21 @@ export function CommandPalette() {
     queryKey: ['clients'],
     queryFn: () => api.clients.getAll(),
     staleTime: 60 * 1000,
+    enabled: hasPermission('clients:view'),
   });
 
   const { data: rawLeads = [] } = useQuery<AnyRecord[]>({
     queryKey: ['leads'],
     queryFn: () => api.leads.getAll(),
     staleTime: 60 * 1000,
+    enabled: hasPermission('leads:view'),
   });
 
   const { data: rawProjects = [] } = useQuery<AnyRecord[]>({
     queryKey: ['projects'],
     queryFn: () => projectsApi.getAll(),
     staleTime: 60 * 1000,
+    enabled: hasPermission('projects:view'),
   });
 
   const clients: SearchableItem[] = rawClients.map(

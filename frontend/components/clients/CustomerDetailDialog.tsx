@@ -81,7 +81,16 @@ export function CustomerDetailDialog({
 
   useEffect(() => {
     setSelectedClient(client);
-    setUpsellData(null);
+    // Restore persisted upsell strategy if present, otherwise clear
+    if (client?.aiUpsellStrategy) {
+      try {
+        setUpsellData(JSON.parse(client.aiUpsellStrategy));
+      } catch {
+        setUpsellData(null);
+      }
+    } else {
+      setUpsellData(null);
+    }
     if (!client?.id) return;
     const controller = new AbortController();
     loadClientData(client.id, controller.signal);
@@ -191,7 +200,7 @@ export function CustomerDetailDialog({
               clientDisplayName={clientDisplayName}
               clientDisplaySubtitle={clientDisplaySubtitle}
               clientInitials={clientInitials}
-              activitiesCount={activities.length}
+              activitiesCount={selectedClient._count?.activities ?? activities.length}
               projectsCount={projects.length}
               canEdit={hasPermission('clients:edit')}
               canDelete={hasPermission('clients:delete')}

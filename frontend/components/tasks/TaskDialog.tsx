@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/dialog';
 import { tasksApi, type CreateTaskDto } from '@/lib/api/tasks-client';
 import { settingsApi } from '@/lib/api/client';
+import { toast } from 'sonner';
 import { type UserResponse } from '@/lib/api/users-client';
 import type { Task, TaskType } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -248,6 +249,7 @@ export function TaskDialog({
       onSaved();
     } catch (err) {
       console.error('Failed to save task', err);
+      toast.error('Failed to save task. Please try again.');
     } finally {
       setSaving(false);
     }

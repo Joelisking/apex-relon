@@ -10,10 +10,10 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
+import { TimePicker } from '@/components/ui/time-picker';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -78,12 +78,24 @@ export function TimeEntryDialog({
   const queryClient = useQueryClient();
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [hours, setHours] = useState('1');
+  const [startTime, setStartTime] = useState('08:00:00');
+  const [endTime, setEndTime] = useState('09:00:00');
   const [projectId, setProjectId] = useState('');
   const [description, setDescription] = useState('');
-  const [billable, setBillable] = useState(true);
+  const [billable, setBillable] = useState<boolean | null>(null);
   const [serviceItemId, setServiceItemId] = useState('');
   const [serviceItemSubtaskId, setServiceItemSubtaskId] = useState('');
+
+  // Compute hours from start/end times
+  const computedHours = (() => {
+    const [sh, sm, ss] = startTime.split(':').map(Number);
+    const [eh, em, es] = endTime.split(':').map(Number);
+    const startSec = sh * 3600 + sm * 60 + ss;
+    const endSec = eh * 3600 + em * 60 + es;
+    const diff = endSec - startSec;
+    if (diff <= 0) return 0;
+    return Math.round((diff / 3600) * 10000) / 10000;
+  })();
 
   // Fetch projects
   const { data: projects = [] } = useQuery<{ id: string; name: string }[]>({
@@ -111,7 +123,13 @@ export function TimeEntryDialog({
   useEffect(() => {
     if (entry) {
       setDate(entry.date.split('T')[0]);
-      setHours(String(entry.hours));
+      const h = entry.hours || 1;
+      setStartTime('08:00:00');
+      const endTotalSec = 8 * 3600 + Math.round(h * 3600);
+      const eh = Math.floor(endTotalSec / 3600);
+      const em = Math.floor((endTotalSec % 3600) / 60);
+      const es = endTotalSec % 60;
+      setEndTime(`${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}:${String(es).padStart(2, '0')}`);
       setProjectId(entry.projectId ?? '');
       setDescription(entry.description ?? '');
       setBillable(entry.billable);
@@ -119,10 +137,16 @@ export function TimeEntryDialog({
       setServiceItemSubtaskId(entry.serviceItemSubtaskId ?? '');
     } else {
       setDate(new Date().toISOString().split('T')[0]);
-      setHours(initialHours ? String(initialHours) : '1');
+      setStartTime('08:00:00');
+      const ih = initialHours || 1;
+      const endTotalSec = 8 * 3600 + Math.round(ih * 3600);
+      const eh = Math.floor(endTotalSec / 3600);
+      const em = Math.floor((endTotalSec % 3600) / 60);
+      const es = endTotalSec % 60;
+      setEndTime(`${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}:${String(es).padStart(2, '0')}`);
       setProjectId(initialProjectId ?? '');
       setDescription('');
-      setBillable(true);
+      setBillable(null);
       setServiceItemId('');
       setServiceItemSubtaskId('');
     }
@@ -135,14 +159,16 @@ export function TimeEntryDialog({
     setServiceItemSubtaskId('');
   };
 
+  const canSave = computedHours > 0 && billable !== null;
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const payload: Record<string, unknown> = {
         date,
-        hours: parseFloat(hours),
+        hours: computedHours,
         projectId: projectId || undefined,
         description: description || undefined,
-        billable,
+        billable: billable!,
         serviceItemId: serviceItemId || undefined,
         serviceItemSubtaskId: serviceItemSubtaskId || undefined,
       };
@@ -170,30 +196,46 @@ export function TimeEntryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>{entry ? 'Edit Time Entry' : 'Log Time'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Date + Hours */}
+          {/* Date */}
+          <div className="space-y-1.5">
+            <Label>Date</Label>
+            <DatePicker value={date} onChange={setDate} clearable={false} />
+          </div>
+
+          {/* Start / End Time */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Date</Label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <div>
+              <Label className="mb-1.5 block">Start Time</Label>
+              <TimePicker value={startTime} onChange={setStartTime} />
             </div>
-            <div className="space-y-1.5">
-              <Label>Hours</Label>
-              <Input
-                type="number"
-                min="0.25"
-                max="24"
-                step="0.25"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-                placeholder="1.5"
-              />
+            <div>
+              <Label className="mb-1.5 block">End Time</Label>
+              <TimePicker value={endTime} onChange={setEndTime} />
             </div>
+          </div>
+
+          {/* Duration display */}
+          <div className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2">
+            <span className="text-xs text-muted-foreground">Duration:</span>
+            {computedHours > 0 ? (
+              <span className="text-sm font-medium tabular-nums">
+                {(() => {
+                  const totalSec = Math.round(computedHours * 3600);
+                  const hh = Math.floor(totalSec / 3600);
+                  const mm = Math.floor((totalSec % 3600) / 60);
+                  const ss = totalSec % 60;
+                  return `${hh}h ${mm}m ${ss}s (${computedHours.toFixed(2)} hrs)`;
+                })()}
+              </span>
+            ) : (
+              <span className="text-sm text-destructive">End time must be after start time</span>
+            )}
           </div>
 
           {/* Project */}
@@ -266,10 +308,34 @@ export function TimeEntryDialog({
             />
           </div>
 
-          {/* Billable toggle */}
-          <div className="flex items-center gap-3">
-            <Switch id="billable" checked={billable} onCheckedChange={setBillable} />
-            <Label htmlFor="billable">Billable</Label>
+          {/* Billable selection — nothing selected by default */}
+          <div className="space-y-1.5">
+            <Label>
+              Billable <span className="text-destructive">*</span>
+            </Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={billable === true ? 'default' : 'outline'}
+                className={billable === true ? 'bg-green-600 hover:bg-green-700 text-white' : ''}
+                onClick={() => setBillable(true)}
+              >
+                Billable
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={billable === false ? 'default' : 'outline'}
+                className={billable === false ? 'bg-slate-600 hover:bg-slate-700 text-white' : ''}
+                onClick={() => setBillable(false)}
+              >
+                Non-billable
+              </Button>
+            </div>
+            {billable === null && (
+              <p className="text-xs text-muted-foreground">Please select whether this entry is billable</p>
+            )}
           </div>
         </div>
 
@@ -277,7 +343,7 @@ export function TimeEntryDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !canSave}>
             {saveMutation.isPending ? 'Saving…' : entry ? 'Update' : 'Log Time'}
           </Button>
         </DialogFooter>

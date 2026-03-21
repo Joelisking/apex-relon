@@ -52,7 +52,11 @@ export function useNotifications() {
       eventSourceRef.current = es;
       es.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data) as Notification;
+          const data = JSON.parse(event.data) as Notification & { type?: string };
+          if (data?.type === 'PERMISSIONS_UPDATED') {
+            window.dispatchEvent(new CustomEvent('permissions-updated'));
+            return;
+          }
           if (data && data.id) {
             setNotifications((prev) => [data, ...prev].slice(0, 20));
             setUnreadCount((prev) => prev + 1);

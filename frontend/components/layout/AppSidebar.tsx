@@ -198,11 +198,13 @@ const mainNavItems: Array<{
     title: 'Time Tracking',
     href: '/time-tracking',
     icon: Clock,
+    permission: 'time_tracking:view',
   },
   {
     title: 'Analytics',
     href: '/analytics',
     icon: TrendingUp,
+    permission: 'bottleneck:view',
   },
 ];
 

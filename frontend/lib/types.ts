@@ -8,12 +8,25 @@ export enum Role {
   QS = 'QS',
 }
 
+export interface ServiceCategory {
+  id: string;
+  name: string;
+  description?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+  serviceTypes?: ServiceType[];
+}
+
 export interface ServiceType {
   id: string;
   name: string;
   description?: string | null;
   isActive: boolean;
   sortOrder: number;
+  categoryId?: string | null;
+  category?: { id: string; name: string } | null;
   createdAt?: string;
   updatedAt?: string;
   _count?: { leads: number; projects: number };
@@ -197,7 +210,6 @@ export interface Lead {
   id: string;
   contactName: string;
   company: string;
-  position?: string;
   email?: string;
   phone?: string;
   expectedValue: number;
@@ -206,9 +218,10 @@ export interface Lead {
   stage: string;
   serviceTypeId?: string | null;
   serviceType?: ServiceType | null;
+  categoryIds?: string[];
+  serviceTypeIds?: string[];
   urgency: string;
   source: string;
-  channel: string;
   likelyStartDate?: string | Date | null;
   notes?: string | null;
   aiRiskLevel?: string | null;
@@ -422,6 +435,8 @@ export interface Client {
   metrics?: ClientMetrics;
   healthFlags?: ClientHealthFlag[];
   suggestedActions?: string[];
+
+  _count?: { activities: number };
 
   isDeleted?: boolean;
   deletedAt?: string | Date | null;
