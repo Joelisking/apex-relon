@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { LeadsModule } from './leads/leads.module';
 import { ClientsModule } from './clients/clients.module';
@@ -45,6 +46,7 @@ import { BottleneckModule } from './bottleneck/bottleneck.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ThrottlerModule.forRoot([{ ttl: 900000, limit: 5 }]),
     ScheduleModule.forRoot(),
     DatabaseModule,
     StorageModule,

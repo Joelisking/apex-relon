@@ -2,9 +2,12 @@
 
 import { useState, useEffect, useId } from 'react';
 import { useForm } from 'react-hook-form';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { leadsApi, settingsApi } from '@/lib/api/client';
+import { useAuth } from '@/contexts/auth-context';
+import { CreatableSelect } from '@/components/ui/creatable-select';
 import {
   pipelineApi,
   type PipelineStage,
@@ -38,7 +41,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Loader2, Users, X } from 'lucide-react';
+import { Loader2, Users, X, Plus, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface UserOption {
@@ -55,6 +58,7 @@ interface ClientOption {
   segment?: string;
   email?: string | null;
   phone?: string | null;
+  contacts?: { firstName: string; lastName: string; email?: string | null; phone?: string | null }[];
 }
 
 // A known contact derived from a previous lead on the same client
@@ -97,7 +101,7 @@ const createLeadSchema = z.object({
   projectName: z.string().min(1, 'Project name is required'),
   stage: z.string().min(1, 'Stage is required'),
   serviceTypeId: z.string().optional(),
-  urgency: z.enum(['Low', 'Medium', 'High']),
+  urgency: z.string().min(1, 'Urgency is required'),
   source: z.string().optional(),
   likelyStartDate: z.string().optional(),
   notes: z.string().optional(),
@@ -118,10 +122,43 @@ export function CreateLeadDialog({
   leads = [],
   onLeadCreated,
 }: CreateLeadDialogProps) {
+  const { hasPermission } = useAuth();
+  const canViewAllLeads = hasPermission('leads:view_all');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pipelineStages, setPipelineStages] = useState<
-    PipelineStage[]
-  >([]);
+  const [localServiceTypes, setLocalServiceTypes] = useState<ServiceType[]>(serviceTypes);
+  const [isAddingServiceType, setIsAddingServiceType] = useState(false);
+  const [newServiceTypeName, setNewServiceTypeName] = useState('');
+  const [isSavingServiceType, setIsSavingServiceType] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Keep local service types in sync with prop
+  useEffect(() => {
+    setLocalServiceTypes(serviceTypes);
+  }, [serviceTypes]);
+
+  async function handleSaveServiceType() {
+    if (!newServiceTypeName.trim()) return;
+    setIsSavingServiceType(true);
+    try {
+      const created = await settingsApi.createServiceType({ name: newServiceTypeName.trim() });
+      const updated = [...localServiceTypes, created];
+      setLocalServiceTypes(updated);
+      form.setValue('serviceTypeId', created.id);
+      setIsAddingServiceType(false);
+      setNewServiceTypeName('');
+      queryClient.invalidateQueries({ queryKey: ['service-types'] });
+    } catch {
+      toast.error('Failed to add project type');
+    } finally {
+      setIsSavingServiceType(false);
+    }
+  }
+
+  const { data: pipelineStages = [] } = useQuery<PipelineStage[]>({
+    queryKey: ['pipeline-stages', 'prospective_project'],
+    queryFn: () => pipelineApi.getStages('prospective_project'),
+    staleTime: 10 * 60 * 1000,
+  });
   const [urgencyOptions, setUrgencyOptions] = useState<
     DropdownOption[]
   >([]);
@@ -134,19 +171,15 @@ export function CreateLeadDialog({
   );
   const datalistId = useId();
 
+  // Set stage to first pipeline stage whenever dialog opens
   useEffect(() => {
-    pipelineApi
-      .getStages('prospective_project')
-      .then((stages) => {
-        setPipelineStages(stages);
-        if (
-          stages.length > 0 &&
-          !stages.find((s) => s.name === form.getValues('stage'))
-        ) {
-          form.setValue('stage', stages[0].name);
-        }
-      })
-      .catch(console.error);
+    if (!open || pipelineStages.length === 0) return;
+    form.setValue('stage', pipelineStages[0].name);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, pipelineStages]);
+
+  useEffect(() => {
+    if (!open) return;
     settingsApi
       .getDropdownOptions('urgency')
       .then(setUrgencyOptions)
@@ -156,7 +189,7 @@ export function CreateLeadDialog({
       .then(setSourceOptions)
       .catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [open]);
 
   const form = useForm<CreateLeadFormData>({
     resolver: zodResolver(createLeadSchema),
@@ -167,13 +200,13 @@ export function CreateLeadDialog({
       expectedValue: 0,
       contractedValue: undefined,
       projectName: '',
-      stage: 'New',
+      stage: '',
       serviceTypeId: '',
-      urgency: 'Medium',
+      urgency: '',
       source: '',
       likelyStartDate: '',
       notes: '',
-      assignedTo: currentUser.role === 'BDM' ? currentUser.id : '',
+      assignedTo: !canViewAllLeads ? currentUser.id : '',
       clientId: '',
     },
   });
@@ -190,10 +223,13 @@ export function CreateLeadDialog({
 
     const client = clients.find((c) => c.id === watchedClientId);
     if (client) {
-      if (client.individualName)
-        form.setValue('contactName', client.individualName);
-      if (client.email) form.setValue('email', client.email);
-      if (client.phone) form.setValue('phone', client.phone);
+      const primaryContact = client.contacts?.[0];
+      const contactName = primaryContact
+        ? `${primaryContact.firstName} ${primaryContact.lastName}`.trim()
+        : client.individualName || '';
+      form.setValue('contactName', contactName);
+      form.setValue('email', primaryContact?.email || client.email || '');
+      form.setValue('phone', primaryContact?.phone || client.phone || '');
     }
 
     const clientLeads = leads.filter(
@@ -449,6 +485,7 @@ export function CreateLeadDialog({
                         type="number"
                         placeholder="0"
                         {...field}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) =>
                           field.onChange(
                             parseFloat(e.target.value) || 0,
@@ -493,6 +530,7 @@ export function CreateLeadDialog({
                         placeholder="0"
                         {...field}
                         value={field.value ?? ''}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) =>
                           field.onChange(
                             e.target.value
@@ -515,25 +553,22 @@ export function CreateLeadDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Source</FormLabel>
-                  <Select
-                    onValueChange={(val) =>
-                      field.onChange(val === 'none' ? '' : val)
-                    }
-                    value={field.value || 'none'}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="How was this sourced?" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">Unknown</SelectItem>
-                      {sourceOptions.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                          {o.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <CreatableSelect
+                      options={sourceOptions}
+                      value={field.value || undefined}
+                      onChange={field.onChange}
+                      placeholder="How was this sourced?"
+                      onOptionsChange={setSourceOptions}
+                      onOptionCreated={(label) =>
+                        settingsApi.createDropdownOption({
+                          category: 'lead_source',
+                          value: label.toLowerCase().replace(/\s+/g, '_'),
+                          label,
+                        })
+                      }
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -555,24 +590,11 @@ export function CreateLeadDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {pipelineStages.length > 0
-                          ? pipelineStages.map((s) => (
-                              <SelectItem key={s.name} value={s.name}>
-                                {s.name}
-                              </SelectItem>
-                            ))
-                          : [
-                              'New',
-                              'Contacted',
-                              'Quoted',
-                              'Negotiation',
-                              'Won',
-                              'Lost',
-                            ].map((name) => (
-                              <SelectItem key={name} value={name}>
-                                {name}
-                              </SelectItem>
-                            ))}
+                        {pipelineStages.map((s) => (
+                          <SelectItem key={s.name} value={s.name}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -586,25 +608,53 @@ export function CreateLeadDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Project Type</FormLabel>
-                    <Select
-                      onValueChange={(val) =>
-                        field.onChange(val === 'none' ? '' : val)
-                      }
-                      value={field.value || 'none'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {serviceTypes.map((st) => (
-                          <SelectItem key={st.id} value={st.id}>
-                            {st.name}
+                    {isAddingServiceType ? (
+                      <div className="flex gap-2">
+                        <Input
+                          autoFocus
+                          placeholder="Enter project type..."
+                          value={newServiceTypeName}
+                          onChange={(e) => setNewServiceTypeName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); handleSaveServiceType(); }
+                            if (e.key === 'Escape') { setIsAddingServiceType(false); setNewServiceTypeName(''); }
+                          }}
+                        />
+                        <Button type="button" size="icon" variant="outline" onClick={handleSaveServiceType} disabled={isSavingServiceType || !newServiceTypeName.trim()}>
+                          {isSavingServiceType ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                        </Button>
+                        <Button type="button" size="icon" variant="outline" onClick={() => { setIsAddingServiceType(false); setNewServiceTypeName(''); }}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Select
+                        onValueChange={(val) => {
+                          if (val === '__add_st__') { setIsAddingServiceType(true); return; }
+                          field.onChange(val === 'none' ? '' : val);
+                        }}
+                        value={field.value || 'none'}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="__add_st__">
+                            <span className="flex items-center gap-2 text-primary font-medium">
+                              <Plus className="h-3.5 w-3.5" />
+                              Add new...
+                            </span>
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          <SelectItem value="none">None</SelectItem>
+                          {localServiceTypes.map((st) => (
+                            <SelectItem key={st.id} value={st.id}>
+                              {st.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -616,30 +666,22 @@ export function CreateLeadDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Urgency</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {urgencyOptions.length > 0
-                          ? urgencyOptions.map((o) => (
-                              <SelectItem
-                                key={o.value}
-                                value={o.value}>
-                                {o.label}
-                              </SelectItem>
-                            ))
-                          : ['Low', 'Medium', 'High'].map((v) => (
-                              <SelectItem key={v} value={v}>
-                                {v}
-                              </SelectItem>
-                            ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <CreatableSelect
+                        options={urgencyOptions}
+                        value={field.value || undefined}
+                        onChange={field.onChange}
+                        placeholder="Select urgency"
+                        onOptionsChange={setUrgencyOptions}
+                        onOptionCreated={(label) =>
+                          settingsApi.createDropdownOption({
+                            category: 'urgency',
+                            value: label.toLowerCase().replace(/\s+/g, '_'),
+                            label,
+                          })
+                        }
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -652,13 +694,13 @@ export function CreateLeadDialog({
               name="assignedTo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Assigned To</FormLabel>
+                  <FormLabel>Project Manager</FormLabel>
                   <Select
                     onValueChange={(val) =>
                       field.onChange(val === 'none' ? '' : val)
                     }
                     value={field.value || 'none'}
-                    disabled={currentUser.role === 'BDM'}>
+                    disabled={!canViewAllLeads}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select person" />

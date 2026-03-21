@@ -9,6 +9,7 @@ import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/notification-types.constants';
 import { WorkflowsService } from '../workflows/workflows.service';
+import { PermissionsService } from '../permissions/permissions.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
@@ -24,6 +25,7 @@ export class TasksService {
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
     private workflowsService: WorkflowsService,
+    private permissionsService: PermissionsService,
   ) {}
 
   async findAll(filters: {
@@ -99,7 +101,12 @@ export class TasksService {
     return (await this.resolveEntityNames([task]))[0];
   }
 
-  async create(dto: CreateTaskDto, userId: string) {
+  async create(dto: CreateTaskDto, userId: string, userRole?: string) {
+    if (dto.assignedToId && dto.assignedToId !== userId && userRole) {
+      const canAssign = await this.permissionsService.hasPermission(userRole, 'tasks:assign');
+      if (!canAssign) throw new ForbiddenException('Cannot assign tasks to other users');
+    }
+
     const task = await this.prisma.task.create({
       data: {
         title: dto.title,
@@ -150,9 +157,14 @@ export class TasksService {
     return (await this.resolveEntityNames([task]))[0];
   }
 
-  async update(id: string, dto: UpdateTaskDto, userId: string) {
+  async update(id: string, dto: UpdateTaskDto, userId: string, userRole?: string) {
     const existing = await this.prisma.task.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Task not found');
+
+    if (dto.assignedToId && dto.assignedToId !== userId && userRole) {
+      const canAssign = await this.permissionsService.hasPermission(userRole, 'tasks:assign');
+      if (!canAssign) throw new ForbiddenException('Cannot assign tasks to other users');
+    }
 
     // Validate completion rules when marking as DONE
     if (dto.status === DONE_STATUS) {

@@ -82,18 +82,23 @@ export function CustomerDetailDialog({
   useEffect(() => {
     setSelectedClient(client);
     setUpsellData(null);
-    if (client?.id) loadClientData(client.id);
+    if (!client?.id) return;
+    const controller = new AbortController();
+    loadClientData(client.id, controller.signal);
+    return () => controller.abort();
   }, [client]);
 
-  const loadClientData = async (clientId: string) => {
+  const loadClientData = async (clientId: string, signal?: AbortSignal) => {
     try {
       const [projectsData, activitiesData] = await Promise.all([
         projectsApi.getByClient(clientId),
         clientActivitiesApi.getActivities(clientId),
       ]);
+      if (signal?.aborted) return;
       setProjects(projectsData);
       setActivities(activitiesData);
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
       console.error('Failed to load client data:', error);
     }
   };
@@ -152,12 +157,12 @@ export function CustomerDetailDialog({
     setIsDeleting(true);
     try {
       await api.clients.delete(selectedClient.id);
-      toast.success('Customer deleted');
+      toast.success('Customer archived');
       setDeleteDialogOpen(false);
       onClose();
       onClientUpdated();
     } catch {
-      toast.error('Failed to delete customer');
+      toast.error('Failed to archive customer');
     } finally {
       setIsDeleting(false);
     }
@@ -289,10 +294,10 @@ export function CustomerDetailDialog({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Customer</AlertDialogTitle>
+            <AlertDialogTitle>Archive Customer</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete <strong>{selectedClient?.name}</strong> and all
-              associated projects. This action cannot be undone.
+              This will archive <strong>{selectedClient?.name}</strong>. The record and all associated
+              projects will be preserved and can be restored by an admin.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -304,10 +309,10 @@ export function CustomerDetailDialog({
               {isDeleting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting…
+                  Archiving…
                 </>
               ) : (
-                'Delete'
+                'Archive'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

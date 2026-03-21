@@ -30,9 +30,11 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Users, X } from 'lucide-react';
+import { CreatableSelect } from '@/components/ui/creatable-select';
 import { toast } from 'sonner';
-import { projectsApi, type Project } from '@/lib/api/projects-client';
+import { projectsApi, type Project, type ProjectAssignment } from '@/lib/api/projects-client';
 import { usersApi, type UserResponse } from '@/lib/api/users-client';
 import { clientsApi, leadsApi, settingsApi } from '@/lib/api/client';
 import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
@@ -49,11 +51,8 @@ const formSchema = z.object({
   estimatedDueDate: z.string().optional(),
   closedDate: z.string().optional(),
   projectManagerId: z.string().optional(),
-  designerId: z.string().optional(),
-  qsId: z.string().optional(),
   riskStatus: z.string().optional(),
   description: z.string().optional(),
-  executingCompany: z.string().optional(),
 });
 
 interface EditProjectDialogProps {
@@ -87,11 +86,10 @@ export function EditProjectDialog({
   >([]);
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
-  const [riskOptions, setRiskOptions] = useState<DropdownOption[]>(
-    [],
+  const [riskOptions, setRiskOptions] = useState<DropdownOption[]>([]);
+  const [assignments, setAssignments] = useState<ProjectAssignment[]>(
+    project.assignments ?? [],
   );
-  const [executingCompanyOptions, setExecutingCompanyOptions] =
-    useState<DropdownOption[]>([]);
 
   type FormValues = z.infer<typeof formSchema>;
   const form = useForm<FormValues, unknown, FormValues>({
@@ -106,15 +104,12 @@ export function EditProjectDialog({
       estimatedDueDate: toDateInput(project.estimatedDueDate),
       closedDate: toDateInput(project.closedDate),
       projectManagerId: project.projectManagerId ?? undefined,
-      designerId: project.designerId ?? undefined,
-      qsId: project.qsId ?? undefined,
-      riskStatus: project.riskStatus ?? 'On Track',
+      riskStatus: project.riskStatus ?? '',
       description: project.description ?? '',
-      executingCompany: project.executingCompany ?? undefined,
     },
   });
 
-  // Re-sync form when project changes (e.g. dialog re-opened for a different project)
+  // Re-sync form and assignments when project changes
   useEffect(() => {
     form.reset({
       name: project.name,
@@ -126,12 +121,10 @@ export function EditProjectDialog({
       estimatedDueDate: toDateInput(project.estimatedDueDate),
       closedDate: toDateInput(project.closedDate),
       projectManagerId: project.projectManagerId ?? undefined,
-      designerId: project.designerId ?? undefined,
-      qsId: project.qsId ?? undefined,
-      riskStatus: project.riskStatus ?? 'On Track',
+      riskStatus: project.riskStatus ?? '',
       description: project.description ?? '',
-      executingCompany: project.executingCompany ?? undefined,
     });
+    setAssignments(project.assignments ?? []);
   }, [project.id]);
 
   useEffect(() => {
@@ -139,10 +132,6 @@ export function EditProjectDialog({
     settingsApi
       .getDropdownOptions('project_risk_status')
       .then(setRiskOptions)
-      .catch(console.error);
-    settingsApi
-      .getDropdownOptions('executing_company')
-      .then(setExecutingCompanyOptions)
       .catch(console.error);
   }, []);
 
@@ -203,11 +192,35 @@ export function EditProjectDialog({
     }
   };
 
-  const designers = users.filter((u) => u.role === 'DESIGNER');
-  const qss = users.filter((u) => u.role === 'QS');
   const pms = users.filter((u) =>
     ['ADMIN', 'CEO', 'SALES', 'BDM'].includes(u.role),
   );
+
+  const availableUsers = users.filter(
+    (u) => !assignments.some((a) => a.userId === u.id),
+  );
+
+  async function addTeamMember(userId: string) {
+    if (!userId || assignments.some((a) => a.userId === userId)) return;
+    try {
+      const newAssignment = await projectsApi.addAssignment(project.id, {
+        userId,
+        role: 'Team Member',
+      });
+      setAssignments((prev) => [...prev, newAssignment]);
+    } catch {
+      toast.error('Failed to add team member');
+    }
+  }
+
+  async function removeTeamMember(assignmentId: string) {
+    try {
+      await projectsApi.removeAssignment(project.id, assignmentId);
+      setAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
+    } catch {
+      toast.error('Failed to remove team member');
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -304,41 +317,6 @@ export function EditProjectDialog({
                 )}
               />
 
-              {/* Executing Company */}
-              <FormField
-                control={form.control}
-                name="executingCompany"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Executing Company</FormLabel>
-                    <Select
-                      onValueChange={(val) =>
-                        field.onChange(
-                          val === 'none' ? undefined : val,
-                        )
-                      }
-                      value={field.value ?? 'none'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select company" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {executingCompanyOptions.map((opt) => (
-                          <SelectItem
-                            key={opt.value}
-                            value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               {/* Status */}
               <FormField
                 control={form.control}
@@ -380,6 +358,7 @@ export function EditProjectDialog({
                         min="0"
                         step="0.01"
                         {...field}
+                        onFocus={(e) => e.target.select()}
                       />
                     </FormControl>
                     <FormMessage />
@@ -401,6 +380,7 @@ export function EditProjectDialog({
                         step="0.01"
                         {...field}
                         value={field.value ?? ''}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) =>
                           field.onChange(
                             e.target.value === ''
@@ -460,27 +440,22 @@ export function EditProjectDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Risk Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value ?? 'On Track'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(riskOptions.length > 0
-                          ? riskOptions
-                          : ['On Track', 'At Risk', 'Blocked'].map(
-                              (r) => ({ value: r, label: r }),
-                            )
-                        ).map((r) => (
-                          <SelectItem key={r.value} value={r.value}>
-                            {r.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <CreatableSelect
+                        options={riskOptions}
+                        value={field.value || undefined}
+                        onChange={field.onChange}
+                        placeholder="Select risk status"
+                        onOptionsChange={setRiskOptions}
+                        onOptionCreated={(label) =>
+                          settingsApi.createDropdownOption({
+                            category: 'project_risk_status',
+                            value: label.toLowerCase().replace(/\s+/g, '_'),
+                            label,
+                          })
+                        }
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -513,62 +488,6 @@ export function EditProjectDialog({
                   </FormItem>
                 )}
               />
-
-              {/* Designer */}
-              <FormField
-                control={form.control}
-                name="designerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Designer</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value ?? ''}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Designer" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {designers.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* QS */}
-              <FormField
-                control={form.control}
-                name="qsId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>QS</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value ?? ''}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select QS" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {qss.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             <FormField
@@ -587,6 +506,67 @@ export function EditProjectDialog({
                 </FormItem>
               )}
             />
+
+            {/* Team Members */}
+            {users.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold">Team Members</span>
+                </div>
+
+                {assignments.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {assignments.map((a) => (
+                      <div
+                        key={a.id}
+                        className="flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1">
+                        <span className="text-sm font-medium">
+                          {a.user.name}
+                        </span>
+                        {a.user.role && (
+                          <Badge
+                            variant="secondary"
+                            className="h-4 px-1 text-[10px]">
+                            {a.user.role}
+                          </Badge>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeTeamMember(a.id)}
+                          className="ml-0.5 text-muted-foreground hover:text-destructive">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {availableUsers.length > 0 && (
+                  <Select
+                    value=""
+                    onValueChange={(val) => {
+                      if (val) addTeamMember(val);
+                    }}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Add a team member..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableUsers.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.name}
+                          {u.role && (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {u.role}
+                            </span>
+                          )}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
 
             <DialogFooter>
               <Button

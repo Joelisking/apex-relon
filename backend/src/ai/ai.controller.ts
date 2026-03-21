@@ -7,7 +7,6 @@ export class AiController {
   constructor(private readonly aiService: AiService) {}
 
   @Post('executive-summary')
-  @Permissions('dashboard:view')
   async generateExecutiveSummary(
     @Body() body: { metrics: Record<string, unknown>; provider?: string },
   ) {
@@ -35,7 +34,6 @@ export class AiController {
   }
 
   @Get('providers')
-  @Permissions('dashboard:view')
   getProviders() {
     return {
       available: this.aiService.getAvailableProviders(),

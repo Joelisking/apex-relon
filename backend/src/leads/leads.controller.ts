@@ -37,7 +37,7 @@ export class LeadsController {
     @Body() body: { ids: string[]; data: Record<string, unknown> },
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.leadsService.bulkUpdate(body.ids, body.data, user?.id);
+    return this.leadsService.bulkUpdate(body.ids, body.data, user?.id, user?.role);
   }
 
   @Post('bulk-delete')
@@ -46,7 +46,7 @@ export class LeadsController {
     @Body() body: { ids: string[] },
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.leadsService.bulkDelete(body.ids, user?.id);
+    return this.leadsService.bulkDelete(body.ids, user?.id, user?.role);
   }
 
   @Get(':id')

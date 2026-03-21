@@ -507,7 +507,10 @@ export function CustomerProjectsList({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setCreateDialogOpen(false)}>
+                onClick={() => {
+                  setFormData({ clientId, status: projectStages[0]?.name, contractedValue: 0 });
+                  setCreateDialogOpen(false);
+                }}>
                 Cancel
               </Button>
               <Button

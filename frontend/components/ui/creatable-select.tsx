@@ -105,8 +105,11 @@ export function CreatableSelect({
     );
   }
 
+  // If the current value doesn't match any loaded option, show placeholder instead
+  const resolvedValue = options.find((o) => o.label === value) ? value : undefined;
+
   return (
-    <Select onValueChange={handleValueChange} value={value}>
+    <Select onValueChange={handleValueChange} value={resolvedValue}>
       <SelectTrigger>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

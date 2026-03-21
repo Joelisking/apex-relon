@@ -481,23 +481,21 @@ export const clientsApi = {
 
   convertLead: (
     leadId: string,
-    accountManagerId?: string,
     projectManagerId?: string,
     projectData?: {
       projectName?: string;
       contractedValue?: number;
       endOfProjectValue?: number;
+      startDate?: string;
       estimatedDueDate?: string;
       closedDate?: string;
-      designerId?: string;
-      qsId?: string;
       description?: string;
       status?: string;
     },
     serverToken?: string,
   ) =>
     apiFetch<{
-      client: Client;
+      customer: Client;
       project: Record<string, unknown>;
       message: string;
     }>(
@@ -505,7 +503,6 @@ export const clientsApi = {
       {
         method: 'POST',
         body: JSON.stringify({
-          accountManagerId,
           projectManagerId,
           ...projectData,
         }),

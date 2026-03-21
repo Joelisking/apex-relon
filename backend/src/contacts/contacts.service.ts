@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
 import { CreateContactDto } from './dto/create-contact.dto';
 import { UpdateContactDto } from './dto/update-contact.dto';
@@ -105,7 +105,15 @@ export class ContactsService {
   }
 
   async linkToLead(leadId: string, contactId: string) {
-    await this.findOne(contactId);
+    const contact = await this.prisma.contact.findUnique({ where: { id: contactId }, select: { id: true, clientId: true } });
+    if (!contact) throw new NotFoundException('Contact not found');
+
+    const lead = await this.prisma.lead.findUnique({ where: { id: leadId }, select: { id: true, clientId: true } });
+    if (!lead) throw new NotFoundException('Lead not found');
+
+    if (contact.clientId !== lead.clientId) {
+      throw new BadRequestException('Contact does not belong to this lead\'s client');
+    }
 
     return this.prisma.leadContact.upsert({
       where: { leadId_contactId: { leadId, contactId } },

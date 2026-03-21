@@ -37,7 +37,6 @@ export interface Project {
   totalCost?: number;
   serviceTypeId?: string | null;
   serviceType?: { id: string; name: string } | null;
-  executingCompany?: string | null;
   projectManagerId?: string;
   projectManager?: {
     id: string;
@@ -125,12 +124,11 @@ export interface CreateProjectDto {
   completedDate?: string;
   description?: string;
   projectManagerId?: string;
-  designerId?: string;
-  qsId?: string;
   estimatedDueDate?: string;
   closedDate?: string;
   riskStatus?: string;
   estimatedRevenue?: number;
+  teamMemberIds?: string[];
 }
 
 // Client-side only - synchronous cookie reading
@@ -276,28 +274,6 @@ export const projectsApi = {
     if (!response.ok) {
       const error = await response.text();
       throw new Error(`Failed to bulk delete projects: ${error}`);
-    }
-
-    return response.json();
-  },
-
-  async convertLead(
-    leadId: string,
-    clientId: string,
-    projectManagerId?: string,
-  ): Promise<Project> {
-    const response = await fetch(
-      `${API_BASE}/projects/convert-lead/${leadId}`,
-      {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ clientId, projectManagerId }),
-      },
-    );
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Failed to convert lead: ${error}`);
     }
 
     return response.json();

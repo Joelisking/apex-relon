@@ -90,7 +90,7 @@ export class TasksController {
     @Body() dto: CreateTaskDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.tasksService.create(dto, user.id);
+    return this.tasksService.create(dto, user.id, user.role);
   }
 
   @Patch(':id')
@@ -100,7 +100,7 @@ export class TasksController {
     @Body() dto: UpdateTaskDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.tasksService.update(id, dto, user.id);
+    return this.tasksService.update(id, dto, user.id, user.role);
   }
 
   @Post(':id/complete')

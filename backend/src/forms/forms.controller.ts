@@ -16,6 +16,7 @@ import { SubmitFormDto } from './dto/submit-form.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
 import { Permissions } from '../permissions/permissions.decorator';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('forms')
 @UseGuards(JwtAuthGuard)
@@ -33,6 +34,7 @@ export class FormsController {
   }
 
   @Public()
+  @Throttle({ default: { ttl: 900000, limit: 5 } })
   @Post('public/:apiKey/submit')
   submit(
     @Param('apiKey') apiKey: string,

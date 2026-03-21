@@ -1,13 +1,13 @@
-# QuickBooks Customer Sync — Audit & Flow Documentation
+# QuickBooks Integration — System Audit
 
-**Audited:** 2026-03-20
-**Scope:** Customer/client bidirectional sync, invoice flow, payment status, expense sync, webhook handling
+**Last updated:** 2026-03-20
+**Scope:** Full QB integration — OAuth, customer sync, invoice flow, payment sync, expense sync, service item sync, webhooks, scheduling, RBAC, frontend
 
 ---
 
 ## TL;DR
 
-The QuickBooks integration is **substantially built**. OAuth, bidirectional customer sync, invoice creation, payment status polling, expense sync, and webhook handling are all implemented and wired up. There are **10 gaps** documented at the bottom — the most critical are a hardcoded income account ID in service item sync, no RBAC on QB routes, and no scheduled/automatic sync.
+The QuickBooks integration is **fully operational and hardened**. All 8 high/medium priority issues from the original audit have been resolved. The module has been fully refactored from two monolithic services into a clean, single-responsibility architecture. Two low-priority items remain open (workflow engine auto-invoice wiring, QB Time/TSheets).
 
 ---
 
@@ -15,36 +15,46 @@ The QuickBooks integration is **substantially built**. OAuth, bidirectional cust
 
 ```
 backend/src/quickbooks/
-├── quickbooks.module.ts          # NestJS module, exports QuickBooksService
-├── quickbooks.controller.ts      # All REST endpoints under /quickbooks
-├── quickbooks.service.ts         # OAuth, token management, invoice creation, payment sync
-├── quickbooks-sync.service.ts    # Bidirectional customer/expense/service-item sync
-├── quickbooks-webhook.service.ts # Intuit webhook receiver + HMAC verification
-└── dto/
-    ├── qb-callback.dto.ts        # OAuth callback query params
-    └── qb-create-invoice.dto.ts  # Invoice creation request body
+├── api/
+│   └── qb-api.client.ts              # Standalone fetch wrapper for QB REST API
+├── controllers/
+│   ├── qb-connection.controller.ts   # GET connect, GET callback, DELETE disconnect, GET status
+│   ├── qb-sync.controller.ts         # POST sync/{clients,payments,expenses,service-items}, GET sync/history
+│   ├── qb-invoice.controller.ts      # POST invoices
+│   └── qb-webhook.controller.ts      # POST webhook (HMAC-verified)
+├── services/
+│   ├── qb-token.service.ts           # Token management, auto-refresh, income account resolution
+│   ├── qb-connection.service.ts      # OAuth flow, connection status, sync history
+│   ├── qb-payment.service.ts         # Payment sync (paginated), revenue recalculation
+│   ├── qb-invoice.service.ts         # Invoice creation from CRM Quote
+│   ├── qb-customer-sync.service.ts   # Bidirectional customer sync (paginated)
+│   ├── qb-expense-sync.service.ts    # Expense sync (paginated, ambiguity detection)
+│   └── qb-item-sync.service.ts       # Bidirectional service item sync (paginated)
+├── quickbooks-webhook.service.ts     # Webhook dispatcher: Customer, Invoice, Payment, Item
+├── quickbooks-schedule.service.ts    # Cron: payments every 30min, customers every 2h
+└── quickbooks.module.ts              # Registers all 9 services + 4 controllers
 ```
 
-Registered in `backend/src/app.module.ts` (lines 38, 80).
+**Deleted (monoliths):** `quickbooks.service.ts`, `quickbooks-sync.service.ts`, `quickbooks.controller.ts`
 
 ---
 
 ## Database Models
 
-### On the `Client` model (`schema.prisma` ~line 180)
+### On the `Client` model
 ```prisma
-qbCustomerId  String?   // QuickBooks Customer ID — the primary sync key
+qbCustomerId  String?   // QB Customer ID — primary sync key
 ```
 
-### On the `Quote` model (`schema.prisma` ~line 584)
+### On the `Quote` model
 ```prisma
-qbInvoiceId     String?   // QuickBooks Invoice ID
+qbInvoiceId     String?   // QB Invoice ID
 qbPaymentStatus String?   // "unpaid" | "paid" | "partial" | "voided"
 ```
 
-### On the `ServiceItem` model (`schema.prisma` ~line 927)
+### On the `ServiceItem` model
 ```prisma
-qbItemId  String?   // QB Item ID — set after first push to QB
+qbItemId  String?   // QB Item ID — set after first sync to QB
 ```
 
 ### `QuickBooksConnection` model
@@ -71,27 +81,32 @@ Append-only audit log for every sync event.
 | `status` | `success`, `error`, `skipped` |
 | `externalId` | QB entity ID |
 | `internalId` | CRM entity ID |
-| `errorMessage` | Populated on failure |
+| `errorMessage` | Populated on failure or skip reason |
 
 ---
 
 ## API Routes
 
-All routes are under `/quickbooks`. Auth is `JwtAuthGuard` unless noted.
+All routes are under `/quickbooks`. RBAC is enforced via the global `PermissionsGuard` + `@Permissions()` decorator.
 
-| Method | Route | Auth | Purpose |
-|---|---|---|---|
-| GET | `/quickbooks/connect` | Public | Redirects browser to Intuit OAuth consent screen |
-| GET | `/quickbooks/callback` | Public | Receives auth code from Intuit, exchanges for tokens |
-| DELETE | `/quickbooks/disconnect` | JWT | Marks connection inactive |
-| GET | `/quickbooks/status` | JWT | Returns connection state + last sync time |
-| POST | `/quickbooks/sync/clients` | JWT | Runs bidirectional customer sync |
-| POST | `/quickbooks/sync/payments` | JWT | Pulls QB payments → updates quote payment status |
-| POST | `/quickbooks/sync/expenses` | JWT | Pulls QB Bills → creates CRM CostLog entries |
-| POST | `/quickbooks/sync/service-items` | JWT | Pushes CRM ServiceItems → QB Items |
-| GET | `/quickbooks/sync/history` | JWT | Returns last N sync log entries |
-| POST | `/quickbooks/invoices` | JWT | Creates a QB Invoice from a CRM Quote |
-| POST | `/quickbooks/webhook` | Public (HMAC) | Receives real-time Intuit webhook events |
+| Method | Route | Auth | Permission | Purpose |
+|---|---|---|---|---|
+| GET | `/quickbooks/connect` | Public | — | Redirects to Intuit OAuth consent screen |
+| GET | `/quickbooks/callback` | Public | — | Receives auth code, exchanges for tokens |
+| DELETE | `/quickbooks/disconnect` | JWT | `quickbooks:manage` | Marks connection inactive |
+| GET | `/quickbooks/status` | JWT | `quickbooks:manage` | Returns connection state + last sync time |
+| POST | `/quickbooks/sync/clients` | JWT | `quickbooks:sync` | Bidirectional customer sync |
+| POST | `/quickbooks/sync/payments` | JWT | `quickbooks:sync` | Pulls QB payments → updates quote payment status |
+| POST | `/quickbooks/sync/expenses` | JWT | `quickbooks:sync` | Pulls QB Bills → creates CRM CostLog entries |
+| POST | `/quickbooks/sync/service-items` | JWT | `quickbooks:sync` | Bidirectional service item sync |
+| GET | `/quickbooks/sync/history` | JWT | `quickbooks:manage` | Returns last N sync log entries |
+| POST | `/quickbooks/invoices` | JWT | `quickbooks:invoices` | Creates QB Invoice from a CRM Quote |
+| POST | `/quickbooks/webhook` | Public (HMAC) | — | Receives real-time Intuit webhook events |
+
+**Permissions defined in** `permissions.constants.ts`:
+- `quickbooks:manage` — connect, disconnect, view status/history (Admin only)
+- `quickbooks:sync` — trigger any sync (Admin only)
+- `quickbooks:invoices` — create invoices (Admin only)
 
 ---
 
@@ -100,7 +115,7 @@ All routes are under `/quickbooks`. Auth is `JwtAuthGuard` unless noted.
 ```
 User clicks "Connect QuickBooks Online"
   → Browser navigates to GET /quickbooks/connect
-  → Backend builds Intuit authorization URL (scope: accounting)
+  → QbConnectionService builds Intuit authorization URL (scope: accounting)
   → Browser redirects to Intuit consent screen
   → User approves
   → Intuit redirects to GET /quickbooks/callback?code=...&realmId=...
@@ -110,111 +125,160 @@ User clicks "Connect QuickBooks Online"
   → Backend redirects browser to /admin/quickbooks?connected=true
 ```
 
-**Token refresh:** `getValidAccessToken()` checks token expiry before every QB API call. If expiry is within 5 minutes, it automatically refreshes using the stored refresh token and updates the DB record.
+**Token refresh:** `QbTokenService.getValidAccessToken()` checks expiry before every QB API call. If expiry is within 5 minutes, it automatically refreshes and updates the DB record.
+
+**Income account resolution:** `QbTokenService.getIncomeAccountRef(qbClient)` is called wherever a QB Item needs to be created. It checks `QB_INCOME_ACCOUNT_ID` env var first; if unset, queries QB for the first active Income-type account as a fallback. Used by both `QbInvoiceService` and `QbItemSyncService`.
 
 ---
 
 ## Flow 2: Bidirectional Customer Sync
 
-Triggered by `POST /quickbooks/sync/clients` (manual button in admin UI).
+Triggered by `POST /quickbooks/sync/clients` (manual button) or the 2-hour cron job.
 
 ### Direction 1: QB → CRM (`pullQbCustomers`)
 
 ```
-Query QB: SELECT * FROM Customer WHERE Active = true MAXRESULTS 1000
+Paginated query: SELECT * FROM Customer WHERE Active = true
+  STARTPOSITION {n} MAXRESULTS 1000  (loop until page < 1000)
   For each QB Customer:
     1. Look for CRM client with matching qbCustomerId
     2. If not found, fall back to email match
-    3. If matched and qbCustomerId is missing → patch it onto the CRM client
-    4. If no match at all → create new CRM Client with:
+    3. If matched and qbCustomerId missing → patch it onto the CRM client
+    4. If no match → create new CRM Client:
          name = QB Customer DisplayName
          email = QB Customer PrimaryEmailAddr
-         segment = 'SMB' (default)
-         industry = 'Surveying' (default)
-    5. Write QuickBooksSync log entry (direction: QB_TO_CRM)
+         segment = 'SME' (default)
+    5. Write QuickBooksSync log entry (QB_TO_CRM)
 ```
 
 ### Direction 2: CRM → QB (`pushCrmClients`)
 
 ```
-Query CRM: SELECT clients WHERE qbCustomerId IS NULL LIMIT 100
+Query CRM: clients WHERE qbCustomerId IS NULL LIMIT 100
   For each unlinked CRM Client:
     1. POST to QB /customer with DisplayName, email, phone, address
-    2. Store returned QB Customer.Id as qbCustomerId on CRM client
-    3. Write QuickBooksSync log entry (direction: CRM_TO_QB)
+    2. Store returned QB Customer.Id as qbCustomerId
+    3. Write QuickBooksSync log entry (CRM_TO_QB)
 ```
 
-**Match key:** `qbCustomerId` on the `Client` model is the permanent link between a CRM customer and a QB Customer entity.
+**Response:** `{ pulled: number, pushed: number }`
 
 ---
 
 ## Flow 3: Invoice Creation
 
-Triggered when a user clicks "Send to QuickBooks" on a Quote (in `QuotesTable` or `QuoteViewDialog`).
+Triggered when a user clicks "Send to QuickBooks" on a Quote.
 
 ```
 POST /quickbooks/invoices  { quoteId }
   → Fetch Quote + lineItems + Client from DB
-  → Verify Client.qbCustomerId is set (error if not — must sync customers first)
+  → Verify Client.qbCustomerId is set (error if not synced)
   → For each line item:
-      Call findOrCreateQbItem(name):
+      findOrCreateQbItem(qbClient, name, unitPrice):
         1. Query QB: SELECT * FROM Item WHERE Name = '{name}'
         2. If found → use existing QB Item.Id
-        3. If not found → look up income account (QB_INCOME_ACCOUNT_ID env var,
-           or query QB for first Income account as fallback)
-           → POST to QB /item to create it
+        3. If not found → call getIncomeAccountRef(), POST to QB /item
+             with Type: 'Service', Name, UnitPrice, IncomeAccountRef
            → Store QB Item.Id as ServiceItem.qbItemId
   → POST to QB /invoice:
        CustomerRef: { value: client.qbCustomerId }
        Line items: [{ Amount, Description, SalesItemLineDetail: { ItemRef } }]
        DueDate: quote.validUntil
-  → Update Quote: qbInvoiceId = returned QB Invoice.Id, qbPaymentStatus = 'unpaid'
+  → Update Quote: qbInvoiceId, qbPaymentStatus = 'unpaid'
   → Write QuickBooksSync log entry
-  → Button is disabled in UI once qbInvoiceId is set (prevents duplicate invoices)
+  → "Send to QB" button disabled in UI once qbInvoiceId is set
 ```
 
 ---
 
 ## Flow 4: Payment Status Sync
 
-Triggered by `POST /quickbooks/sync/payments`.
+Triggered by `POST /quickbooks/sync/payments` (manual) or the 30-minute cron job.
 
 ```
-Query QB: SELECT * FROM Payment MAXRESULTS 100
+Paginated query: SELECT * FROM Payment
+  STARTPOSITION {n} MAXRESULTS 100  (loop until page < 100)
   For each QB Payment:
     → Find CRM Quote by qbInvoiceId matching payment's LinkedTxn
     → Update Quote.qbPaymentStatus = 'paid'
-    → Call recalculateClientRevenue(clientId):
-         SUM all quotes where qbPaymentStatus = 'paid' for this client
+    → recalculateClientRevenue(clientId):
+         SUM all quotes where qbPaymentStatus = 'paid'
          → Update Client.lifetimeRevenue
 ```
 
-Also triggered by webhook events (see Flow 6).
+Also triggered by Payment webhook events (see Flow 6).
+
+**Response:** `{ updated: number }`
 
 ---
 
 ## Flow 5: Expense Sync
 
-Triggered by `POST /quickbooks/sync/expenses`.
+Triggered by `POST /quickbooks/sync/expenses` (manual only — not scheduled due to matching fragility).
 
 ```
-Query QB: SELECT * FROM Bill MAXRESULTS 100
+Paginated query: SELECT * FROM Bill
+  STARTPOSITION {n} MAXRESULTS 100  (loop until page < 100)
   For each QB Bill line item (AccountBasedExpenseLineDetail):
     → Dedup key: '{billId}-{lineId}' checked against QuickBooksSync
     → If already synced → skip
-    → If bill has a CustomerRef:
+    → If bill has CustomerRef:
         Find CRM Client by qbCustomerId
-        Find most recently updated non-closed Project for that client
+        Find active (non-closed) Projects for that client
+        If exactly 1 active project → auto-assign CostLog to it
+        If 0 active projects → log with projectId = null
+        If >1 active projects → skip with status 'skipped',
+          errorMessage: "multiple active projects — manual assignment required"
         Create CostLog: { projectId, amount, description, date }
-        Update Project.totalCost += amount
+        Update Project.totalCost += amount (if assigned)
     → Write QuickBooksSync log entry
 ```
 
-> ⚠️ **Gap:** If a client has multiple active projects the expense gets attached to the most recently updated one — not necessarily the correct one.
+> ⚠️ **Known limitation:** Expenses for clients with multiple active projects are flagged as `skipped` and require manual assignment. Long-term fix: support QB Classes as a project mapping mechanism.
+
+**Response:** `{ created: number, skipped: number, errors: number }`
 
 ---
 
-## Flow 6: Webhook (Real-Time Events)
+## Flow 6: Service Item Sync
+
+Triggered by `POST /quickbooks/sync/service-items` (manual button).
+
+### Direction 1: QB → CRM (`pullQbServiceItems`)
+
+```
+Paginated query: SELECT * FROM Item WHERE Type = 'Service' AND Active = true
+  STARTPOSITION {n} MAXRESULTS 100  (loop until page < 100)
+  For each QB Service Item:
+    1. Look for CRM ServiceItem with matching qbItemId
+    2. If not found, fall back to case-insensitive name match
+       (if matched this way → patch qbItemId and log the linkage)
+    3. If matched → update name, description, unitPrice from QB
+    4. If no match → create new CRM ServiceItem with all QB fields + qbItemId
+    5. Write QuickBooksSync log entry (QB_TO_CRM)
+```
+
+### Direction 2: CRM → QB (`pushCrmServiceItems`)
+
+```
+Query CRM: ServiceItems WHERE isActive = true AND qbItemId IS NULL LIMIT 100
+  For each unlinked ServiceItem:
+    1. Call getIncomeAccountRef()
+    2. POST to QB /item:
+         Type: 'Service'
+         Name: serviceItem.name
+         Description: serviceItem.description
+         UnitPrice: serviceItem.unitPrice
+         IncomeAccountRef: { value, name }
+    3. Store returned QB Item.Id as qbItemId
+    4. Write QuickBooksSync log entry (CRM_TO_QB)
+```
+
+**Response:** `{ pulled: number, synced: number, skipped: number }`
+
+---
+
+## Flow 7: Webhook (Real-Time Events)
 
 Intuit POSTs to `POST /quickbooks/webhook` when QB entities change.
 
@@ -226,7 +290,7 @@ Intuit POSTs to `POST /quickbooks/webhook` when QB entities change.
 
    Customer changed/created:
      → Re-fetch customer from QB
-     → Find matching CRM Client by qbCustomerId
+     → Find CRM Client by qbCustomerId
      → Patch email + phone from QB onto CRM Client
 
    Customer deleted:
@@ -244,12 +308,42 @@ Intuit POSTs to `POST /quickbooks/webhook` when QB entities change.
      → Set Quote.qbPaymentStatus = 'voided'
 
    Payment changed:
-     → Trigger full syncPayments() run
+     → Trigger full QbPaymentService.syncPayments()
+
+   Item changed/created:
+     → Re-fetch item from QB
+     → If item.Type !== 'Service' → skip (non-service items are ignored)
+     → Find CRM ServiceItem by qbItemId
+     → If found → update name, description, unitPrice
+     → If not found → create new CRM ServiceItem
+     → Write QuickBooksSync log entry
+
+   Item deleted:
+     → Find CRM ServiceItem by qbItemId
+     → Set ServiceItem.qbItemId = null (unlinks without deleting)
+     → Write QuickBooksSync log entry
 ```
 
 ---
 
+## Flow 8: Scheduled Sync
+
+Handled by `QuickBooksScheduleService` using `@nestjs/schedule`.
+
+| Cron | Frequency | What runs |
+|---|---|---|
+| `*/30 * * * *` | Every 30 minutes | `QbPaymentService.syncPayments()` |
+| `0 */2 * * *` | Every 2 hours | `QbCustomerSyncService.syncClients()` |
+
+Both jobs check `QbConnectionService.getStatus()` first — if QB is disconnected, the job silently skips without logging errors. Each job is wrapped in try/catch so a failure doesn't prevent the next scheduled run.
+
+> Expense sync and service item sync are **not scheduled** — expense matching requires human review for ambiguous cases, and service items change infrequently enough that manual sync is sufficient.
+
+---
+
 ## Environment Variables
+
+All documented in `backend/.env.example`.
 
 | Variable | Required | Purpose |
 |---|---|---|
@@ -258,12 +352,8 @@ Intuit POSTs to `POST /quickbooks/webhook` when QB entities change.
 | `QB_REDIRECT_URI` | ✅ | Must match exactly what's registered in the Intuit developer portal |
 | `QB_ENVIRONMENT` | ✅ | `sandbox` or `production` |
 | `QB_WEBHOOK_VERIFIER_TOKEN` | ✅ (prod) | HMAC secret from Intuit webhook settings |
-| `QB_INCOME_ACCOUNT_ID` | ⚠️ Recommended | QB account ID for income. Falls back to a live API query if unset |
+| `QB_INCOME_ACCOUNT_ID` | ⚠️ Recommended | QB Income account ID for item creation. Falls back to a live API query if unset — set this to avoid latency and fragility |
 | `FRONTEND_URL` | ✅ | Used in OAuth callback redirect to frontend |
-
-> ⚠️ **None of these are documented in `.env.example`.**
-
-**Current `.env` state:** Production credentials are active (`QB_ENVIRONMENT=production`). Sandbox credentials are commented out. `QB_INCOME_ACCOUNT_ID` is not set.
 
 ---
 
@@ -272,7 +362,11 @@ Intuit POSTs to `POST /quickbooks/webhook` when QB entities change.
 | Location | What it does |
 |---|---|
 | `frontend/app/(dashboard)/admin/quickbooks/page.tsx` | Admin page shell |
-| `frontend/components/admin/QuickBooksView.tsx` | Full QB admin UI: connect, disconnect, sync buttons, history table |
+| `frontend/components/admin/QuickBooksView.tsx` | Thin orchestrator — assembles QB admin UI |
+| `frontend/components/admin/quickbooks/QbConnectionCard.tsx` | Connection status, connect/disconnect UI |
+| `frontend/components/admin/quickbooks/QbSyncActionsCard.tsx` | Manual sync buttons (Customers, Payments, Expenses, Service Items) |
+| `frontend/components/admin/quickbooks/QbSyncHistoryCard.tsx` | Last 20 sync events table |
+| `frontend/components/admin/quickbooks/qb-api.ts` | `qbFetch` utility + `QbStatus`/`SyncLog` interfaces |
 | `frontend/components/quotes/QuotesTable.tsx` | "Send to QuickBooks" button per quote row |
 | `frontend/components/quotes/QuoteViewDialog.tsx` | "Send to QuickBooks" in quote detail view |
 | `frontend/lib/types.ts` | `Client.qbCustomerId`, `Quote.qbInvoiceId`, `Quote.qbPaymentStatus`, `ServiceItem.qbItemId` |
@@ -282,57 +376,32 @@ The frontend polls `/quickbooks/status` every 30 seconds to keep the connection 
 
 ---
 
-## Gaps & Issues
+## What Works Today (End-to-End)
 
-### 🔴 High Priority
-
-**1. Hardcoded income account in service item sync**
-`quickbooks-sync.service.ts` ~line 277:
-```ts
-IncomeAccountRef: { value: '1', name: 'Services' }
-```
-QB account IDs are company-specific integers. `'1'` is not guaranteed to be valid. This will silently fail or attach items to the wrong account in production. Fix: use `QB_INCOME_ACCOUNT_ID` env var here, same as `quickbooks.service.ts` does.
-
-**2. No RBAC permission guard on QB routes**
-All JWT-protected QB routes bypass the `PermissionsGuard`. Any authenticated user can trigger syncs, create invoices, or disconnect QB regardless of their role. Should gate behind permissions like `quickbooks:sync`, `quickbooks:manage`.
-
-**3. `QB_INCOME_ACCOUNT_ID` not set in `.env`**
-Every new QB item creation triggers an extra live API call to find an income account. Set this once to avoid the overhead and fragility.
-
-### 🟡 Medium Priority
-
-**4. No scheduled/automatic sync**
-All syncs are manual. The `ScheduleModule` is already imported in `app.module.ts` but no cron jobs are configured for QB. Payment status and customer sync should run automatically (e.g., every hour).
-
-**5. Payment sync limited to 100 records**
-`syncPayments()` uses `MAXRESULTS 100` with no pagination. Older payments on a mature QB account will never be fetched.
-
-**6. Expense-to-project matching is fragile**
-Expenses are attached to "the most recently updated non-closed project" for a customer. With multiple active projects this will be wrong. Needs a more explicit mapping mechanism.
-
-**7. "Sync Service Items" button missing in frontend**
-`POST /quickbooks/sync/service-items` is implemented on the backend but there is no UI button in `QuickBooksView.tsx`. The only way to trigger it is via direct API call.
-
-### 🟢 Low Priority
-
-**8. `QB_INCOME_ACCOUNT_ID` not in `.env.example`**
-None of the six QB environment variables are documented in `.env.example`. Any new developer setting up the project would have no reference.
-
-**9. No workflow engine integration**
-`QuickBooksModule` exports `QuickBooksService` for future use, but the `WorkflowsModule` doesn't yet consume it. Auto-creating a QB invoice when a Quote is accepted (workflow trigger) is not wired up.
-
-**10. QB Time / TSheets sync not started**
-Referenced in `apex-relon-strategy.md` as a planned feature (time entries sync to QB Time). Not yet implemented.
+1. ✅ Connect QB account via OAuth 2.0
+2. ✅ Bidirectional customer sync — paginated, email fallback matching, `qbCustomerId` as permanent link
+3. ✅ Bidirectional service item sync — paginated, name fallback matching, `Type: 'Service'` enforced
+4. ✅ Create QB Invoice from a CRM Quote — all line items synced as Service-type QB Items
+5. ✅ Payment status reflected back on Quote and rolled up to `Client.lifetimeRevenue`
+6. ✅ Expense sync with ambiguity detection — multi-project clients flagged as `skipped` for manual review
+7. ✅ Real-time webhook events: Customer, Invoice, Payment, Item (all handled)
+8. ✅ Scheduled automatic sync — payments every 30 min, customers every 2 hours
+9. ✅ RBAC on all JWT-protected routes (`quickbooks:manage`, `quickbooks:sync`, `quickbooks:invoices`)
+10. ✅ Income account resolved via env var with live API fallback — no hardcoded IDs
+11. ✅ All QB env vars documented in `.env.example`
+12. ✅ Full admin UI — connection card, 4 sync buttons, history table
 
 ---
 
-## What Works Today (End-to-End)
+## Remaining Open Items
 
-1. ✅ Connect QB account via OAuth 2.0 (production credentials active)
-2. ✅ Manual bidirectional customer sync — new CRM customers pushed to QB, new QB customers pulled into CRM, `qbCustomerId` set as the permanent link
-3. ✅ Create QB invoice from a CRM Quote — requires customer to be synced first
-4. ✅ Payment status reflected back on Quote (`qbPaymentStatus`) and rolled up to `Client.lifetimeRevenue`
-5. ✅ Real-time webhook events update customer email/phone and invoice payment status
-6. ✅ Expense sync creates CostLog entries and updates project cost totals
-7. ✅ Full admin UI with connection status, sync history, and manual sync triggers
-8. ✅ "Send to QuickBooks" button on every Quote in the quotes table and detail view
+### 🟢 Low Priority
+
+**1. Workflow engine auto-invoice**
+`QuickBooksModule` exports `QbInvoiceService` and `QbConnectionService` for consumption. The `WorkflowsModule` doesn't yet import them. Wiring a "Quote Accepted → Create QB Invoice" workflow action requires reading the workflow trigger/action registration pattern and adding a new action handler. Preconditions to check: QB connected, client has `qbCustomerId`, quote doesn't already have `qbInvoiceId`.
+
+**2. QB Time / TSheets sync**
+Referenced in `apex-relon-strategy.md`. Requires a separate OAuth scope (`com.intuit.quickbooks.timetracking`), a time entry model in the CRM schema, and a mapping between CRM projects and QB Time jobs. Not yet started.
+
+**3. Expense manual assignment UI**
+Expenses for clients with multiple active projects are logged as `skipped` with `status: 'skipped'` in `QuickBooksSync`. There is no UI yet to surface these for manual project assignment. A filter on the QB sync history table (or a dedicated "pending expenses" section in the admin view) would complete this flow.

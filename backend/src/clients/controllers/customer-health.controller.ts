@@ -22,8 +22,9 @@ export class CustomerHealthController {
   generateHealthReport(
     @Param('id') id: string,
     @Body() body: { provider?: string },
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.aiService.generateHealthReport(id, body.provider);
+    return this.aiService.generateHealthReport(id, body.provider, user.id, user.role);
   }
 
   @Post(':id/upsell')
@@ -31,8 +32,9 @@ export class CustomerHealthController {
   generateUpsellStrategy(
     @Param('id') id: string,
     @Body() body: { provider?: string },
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.aiService.generateUpsellStrategy(id, body.provider);
+    return this.aiService.generateUpsellStrategy(id, body.provider, user.id, user.role);
   }
 
   @Post(':id/health/auto-update')
@@ -40,8 +42,9 @@ export class CustomerHealthController {
   updateHealthStatus(
     @Param('id') id: string,
     @Body() body: { provider?: string },
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.aiService.updateHealthStatus(id, body.provider);
+    return this.aiService.updateHealthStatus(id, body.provider, user.id, user.role);
   }
 
   @Post(':id/health/override')
@@ -51,43 +54,41 @@ export class CustomerHealthController {
     @Body() body: { status: string; reason: string },
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.aiService.overrideHealthStatus(id, body.status, body.reason, user.id);
+    return this.aiService.overrideHealthStatus(id, body.status, body.reason, user.id, user.role);
   }
 
   @Post('convert-lead/:leadId')
-  @Permissions('clients:convert')
+  @Permissions('clients:convert', 'projects:create')
   convertLead(
     @Param('leadId') leadId: string,
     @Body()
     body: {
-      accountManagerId?: string;
       projectManagerId?: string;
       projectName?: string;
       contractedValue?: number;
       endOfProjectValue?: number;
+      startDate?: string;
       estimatedDueDate?: string;
       closedDate?: string;
-      designerId?: string;
-      qsId?: string;
       description?: string;
       status?: string;
     },
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.leadConversionService.convertLeadToClient(
       leadId,
-      body.accountManagerId,
       body.projectManagerId,
       {
         name: body.projectName,
         contractedValue: body.contractedValue,
         endOfProjectValue: body.endOfProjectValue,
+        startDate: body.startDate,
         estimatedDueDate: body.estimatedDueDate,
         closedDate: body.closedDate,
-        designerId: body.designerId,
-        qsId: body.qsId,
         description: body.description,
         status: body.status,
       },
+      user?.id,
     );
   }
 }

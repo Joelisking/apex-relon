@@ -136,7 +136,6 @@ export interface PipelineInsights {
 export const dashboardApi = {
   async getMetrics(
     period: 'week' | 'month' | 'quarter' = 'month',
-    executingCompany?: string,
     token?: string,
   ): Promise<DashboardMetrics> {
     const authToken = token || getTokenFromCookies();
@@ -149,7 +148,6 @@ export const dashboardApi = {
     }
 
     const params = new URLSearchParams({ period });
-    if (executingCompany) params.set('executingCompany', executingCompany);
 
     const response = await fetch(
       `${API_URL}/dashboard/metrics?${params.toString()}`,

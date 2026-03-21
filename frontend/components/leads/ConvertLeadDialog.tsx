@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -45,6 +46,7 @@ const formSchema = z.object({
   status: z.string().default('Planning'),
   contractedValue: z.coerce.number().min(0, 'Value must be positive'),
   endOfProjectValue: z.coerce.number().optional().nullable(),
+  startDate: z.string().optional(),
   estimatedDueDate: z.string().optional(),
   closedDate: z.string().optional(),
   projectManagerId: z.string().optional(),
@@ -59,7 +61,6 @@ interface ConvertLeadDialogProps {
   lead: Lead | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  managers: Array<{ id: string; name: string; email: string }>;
 }
 
 export function ConvertLeadDialog({
@@ -68,8 +69,9 @@ export function ConvertLeadDialog({
   onOpenChange,
 }: ConvertLeadDialogProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isConverting, setIsConverting] = useState(false);
-  const [users, setUsers] = useState<UserResponse[]>([]);
+  const [pmUsers, setPmUsers] = useState<UserResponse[]>([]);
   const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
 
   const form = useForm<FormValues, unknown, FormValues>({
@@ -91,9 +93,8 @@ export function ConvertLeadDialog({
         contractedValue:
           lead.contractedValue ?? lead.expectedValue ?? 0,
         endOfProjectValue: undefined,
-        estimatedDueDate: lead.likelyStartDate
-          ? new Date(lead.likelyStartDate).toISOString().split('T')[0]
-          : '',
+        startDate: '',
+        estimatedDueDate: '',
         closedDate: lead.dealClosedAt
           ? (typeof lead.dealClosedAt === 'string'
               ? lead.dealClosedAt.split('T')[0]
@@ -110,21 +111,17 @@ export function ConvertLeadDialog({
   // Fetch users and stages when dialog opens
   useEffect(() => {
     if (open) {
-      usersApi.getUsers().then((res) => setUsers(res.users || [])).catch(console.error);
+      usersApi.getUsers(undefined, 'projects:create').then((res) => setPmUsers(res.users || [])).catch(console.error);
       pipelineApi.getStages('project').then((stages) => {
         setProjectStages(stages);
-        if (stages.length > 0 && !form.getValues('status')) {
+        if (stages.length > 0) {
           form.setValue('status', stages[0].name);
         }
       }).catch(console.error);
     }
   }, [open]);
 
-  const pms = users.filter((u) =>
-    ['ADMIN', 'CEO', 'SALES', 'BDM'].includes(u.role)
-  );
-  const designers = users.filter((u) => u.role === 'DESIGNER');
-  const qss = users.filter((u) => u.role === 'QS');
+  const pms = pmUsers;
 
   const handleSubmit = async (values: FormValues) => {
     if (!lead) return;
@@ -133,15 +130,13 @@ export function ConvertLeadDialog({
       await api.clients.convertLead(
         lead.id,
         values.projectManagerId || undefined,
-        values.projectManagerId || undefined,
         {
           projectName: values.projectName,
           contractedValue: values.contractedValue,
           endOfProjectValue: values.endOfProjectValue ?? undefined,
+          startDate: values.startDate || undefined,
           estimatedDueDate: values.estimatedDueDate || undefined,
           closedDate: values.closedDate || undefined,
-          designerId: values.designerId || undefined,
-          qsId: values.qsId || undefined,
           description: values.description || undefined,
           status: values.status,
         }
@@ -149,6 +144,7 @@ export function ConvertLeadDialog({
 
       toast.success('Converted to active project!');
       onOpenChange(false);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
       router.refresh();
     } catch (error) {
       toast.error('Failed to convert', {
@@ -212,6 +208,7 @@ export function ConvertLeadDialog({
                         min="0"
                         step="0.01"
                         {...field}
+                        onFocus={(e) => e.target.select()}
                       />
                     </FormControl>
                     <FormMessage />
@@ -233,6 +230,7 @@ export function ConvertLeadDialog({
                         step="0.01"
                         placeholder="Optional"
                         value={field.value ?? ''}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) =>
                           field.onChange(
                             e.target.value === ''
@@ -241,6 +239,21 @@ export function ConvertLeadDialog({
                           )
                         }
                       />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Start Date */}
+              <FormField
+                control={form.control}
+                name="startDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start Date</FormLabel>
+                    <FormControl>
+                      <DatePicker value={field.value} onChange={field.onChange} placeholder="Pick a date" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -336,67 +349,6 @@ export function ConvertLeadDialog({
                 )}
               />
 
-              {/* Designer */}
-              <FormField
-                control={form.control}
-                name="designerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Designer</FormLabel>
-                    <Select
-                      onValueChange={(val) =>
-                        field.onChange(val === 'none' ? '' : val)
-                      }
-                      value={field.value || 'none'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Designer" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {designers.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* QS */}
-              <FormField
-                control={form.control}
-                name="qsId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>QS</FormLabel>
-                    <Select
-                      onValueChange={(val) =>
-                        field.onChange(val === 'none' ? '' : val)
-                      }
-                      value={field.value || 'none'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select QS" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {qss.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             {/* Description */}

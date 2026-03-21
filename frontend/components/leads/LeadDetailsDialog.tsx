@@ -106,19 +106,25 @@ interface LeadDetailsDialogProps {
   managers?: UserOption[];
   serviceTypes?: ServiceType[];
   allUsers?: UserOption[];
-  designers?: UserOption[];
-  qsUsers?: UserOption[];
   clients?: ClientOption[];
   leads?: Lead[];
   onLeadUpdated?: (lead: Lead) => void;
 }
 
-// Urgency → hex for sidebar accent strip
+// Urgency → hex for sidebar accent strip (keyed by Title Case; lookup is case-insensitive)
 const URGENCY_HEX: Record<string, string> = {
   High: '#ef4444',
   Medium: '#f59e0b',
   Low: '#10b981',
 };
+function urgencyColor(urgency?: string | null): string {
+  if (!urgency) return URGENCY_HEX.Low;
+  return (
+    URGENCY_HEX[urgency] ??
+    URGENCY_HEX[urgency.charAt(0).toUpperCase() + urgency.slice(1).toLowerCase()] ??
+    URGENCY_HEX.Low
+  );
+}
 
 const RISK_CHIP: Record<string, string> = {
   High: 'text-red-700 bg-red-50 border-red-200',
@@ -189,8 +195,7 @@ export function LeadDetailsDialog({
   onActivitiesChanged,
   managers = [],
   serviceTypes = [],
-  designers = [],
-  qsUsers = [],
+  allUsers = [],
   clients = [],
   leads = [],
   onLeadUpdated,
@@ -240,12 +245,9 @@ export function LeadDetailsDialog({
     new Date(selectedLead.likelyStartDate) < new Date();
 
   const isWon = selectedLead.stage === 'Won';
-  const isConverted = !!(
-    selectedLead.clientId || selectedLead.convertedToClientId
-  );
+  const isConverted = !!selectedLead.convertedToClientId;
 
-  const accentColor =
-    URGENCY_HEX[selectedLead.urgency] ?? URGENCY_HEX.Low;
+  const accentColor = urgencyColor(selectedLead.urgency);
   const companyOrName =
     selectedLead.company || selectedLead.contactName || 'Unknown';
 
@@ -410,13 +412,6 @@ export function LeadDetailsDialog({
                     </span>
                   </StatRow>
                 )}
-                {selectedLead.executingCompany && (
-                  <StatRow label="Executing Co.">
-                    <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                      {selectedLead.executingCompany}
-                    </span>
-                  </StatRow>
-                )}
                 <StatRow label="Source">
                   <span className="text-xs">
                     {selectedLead.source}
@@ -469,6 +464,16 @@ export function LeadDetailsDialog({
                 )}
               </div>
             </div>
+
+            {/* Notes */}
+            {selectedLead.notes && (
+              <div className="px-5 py-4 border-b border-border/50">
+                <SectionLabel>Notes</SectionLabel>
+                <p className="text-[12px] text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                  {selectedLead.notes}
+                </p>
+              </div>
+            )}
 
             {/* Dates */}
             <div className="px-5 py-4 border-b border-border/50">
@@ -785,8 +790,7 @@ export function LeadDetailsDialog({
           currentUser={currentUser}
           managers={managers}
           serviceTypes={serviceTypes}
-          designers={designers}
-          qsUsers={qsUsers}
+          allUsers={allUsers}
           clients={clients}
           leads={leads}
           onLeadUpdated={(updated) => {

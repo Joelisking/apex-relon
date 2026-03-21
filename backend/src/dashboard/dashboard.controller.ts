@@ -1,29 +1,34 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { AiService } from '../ai/ai.service';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { PermissionsService } from '../permissions/permissions.service';
 
 @Controller('dashboard')
 export class DashboardController {
   constructor(
     private dashboardService: DashboardService,
     private aiService: AiService,
+    private permissionsService: PermissionsService,
   ) {}
 
   @Get('metrics')
   async getMetrics(
+    @CurrentUser() user: AuthenticatedUser,
     @Query('period') period: 'week' | 'month' | 'quarter' = 'month',
-    @Query('executingCompany') executingCompany?: string,
   ) {
-    return this.dashboardService.getMetrics(period, executingCompany || undefined);
+    const permissions = await this.permissionsService.getPermissionsForRole(user.role);
+    return this.dashboardService.getMetrics(period, user.id, permissions);
   }
 
   @Get('executive-summary')
-
   async getExecutiveSummary(
+    @CurrentUser() user: AuthenticatedUser,
     @Query('period') period: 'week' | 'month' | 'quarter' = 'month',
-    @Query('executingCompany') executingCompany?: string,
   ) {
-    const metrics = await this.dashboardService.getMetrics(period, executingCompany || undefined);
+    const permissions = await this.permissionsService.getPermissionsForRole(user.role);
+    const metrics = await this.dashboardService.getMetrics(period, user.id, permissions);
     // Provider resolved from DB settings (executiveSummary override → default → env)
     const summary = await this.aiService.generateExecutiveSummary(
       metrics as unknown as Record<string, unknown>,
@@ -44,12 +49,12 @@ export class DashboardController {
   }
 
   @Get('revenue-breakdown')
-
   async getRevenueBreakdown(
+    @CurrentUser() user: AuthenticatedUser,
     @Query('period') period: 'week' | 'month' | 'quarter' = 'month',
-    @Query('executingCompany') executingCompany?: string,
   ) {
-    const metrics = await this.dashboardService.getMetrics(period, executingCompany || undefined);
+    const permissions = await this.permissionsService.getPermissionsForRole(user.role);
+    const metrics = await this.dashboardService.getMetrics(period, user.id, permissions);
 
     return {
       totalRevenue: metrics.totalRevenue,
@@ -62,12 +67,12 @@ export class DashboardController {
   }
 
   @Get('project-analytics')
-
   async getProjectAnalytics(
+    @CurrentUser() user: AuthenticatedUser,
     @Query('period') period: 'week' | 'month' | 'quarter' = 'month',
-    @Query('executingCompany') executingCompany?: string,
   ) {
-    const metrics = await this.dashboardService.getMetrics(period, executingCompany || undefined);
+    const permissions = await this.permissionsService.getPermissionsForRole(user.role);
+    const metrics = await this.dashboardService.getMetrics(period, user.id, permissions);
 
     return {
       totalProjects: metrics.totalProjects,
@@ -78,22 +83,23 @@ export class DashboardController {
   }
 
   @Get('revenue-trend')
-
-  getRevenueTrend(
+  async getRevenueTrend(
+    @CurrentUser() user: AuthenticatedUser,
     @Query('period') period: 'week' | 'month' | 'quarter' = 'month',
   ) {
-    return this.dashboardService.getRevenueTrend(period);
+    const permissions = await this.permissionsService.getPermissionsForRole(user.role);
+    return this.dashboardService.getRevenueTrend(period, user.id, permissions);
   }
 
   @Get('lead-volume-trend')
-
-  getLeadVolumeTrend() {
-    return this.dashboardService.getLeadVolumeTrend();
+  async getLeadVolumeTrend(@CurrentUser() user: AuthenticatedUser) {
+    const permissions = await this.permissionsService.getPermissionsForRole(user.role);
+    return this.dashboardService.getLeadVolumeTrend(user.id, permissions);
   }
 
   @Get('pipeline-insights')
-
-  getPipelineInsights() {
-    return this.dashboardService.getPipelineInsights();
+  async getPipelineInsights(@CurrentUser() user: AuthenticatedUser) {
+    const permissions = await this.permissionsService.getPermissionsForRole(user.role);
+    return this.dashboardService.getPipelineInsights(user.id, permissions);
   }
 }

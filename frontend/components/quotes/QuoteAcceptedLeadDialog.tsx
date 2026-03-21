@@ -107,7 +107,6 @@ export function QuoteAcceptedLeadDialog({
             setShowConvertDialog(o);
             if (!o) onClose();
           }}
-          managers={[]}
         />
       )}
     </Dialog>

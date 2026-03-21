@@ -15,10 +15,9 @@ export class QuickBooksWebhookService {
   ) {}
 
   verifySignature(payload: string, signature: string): boolean {
-    const verifierToken = process.env.QB_WEBHOOK_VERIFIER_TOKEN ?? '';
+    const verifierToken = process.env.QB_WEBHOOK_VERIFIER_TOKEN;
     if (!verifierToken) {
-      this.logger.warn('QB_WEBHOOK_VERIFIER_TOKEN not set — skipping verification in dev');
-      return true;
+      throw new Error('QB_WEBHOOK_VERIFIER_TOKEN is not set — cannot verify QuickBooks webhooks. Set this environment variable to enable webhook processing.');
     }
     const computed = crypto
       .createHmac('sha256', verifierToken)

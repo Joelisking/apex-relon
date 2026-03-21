@@ -38,7 +38,6 @@ model Lead {
   convertedToClientId String?
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
-  executingCompany    String?
   activities          Activity[]
   contacts            LeadContact[]
   files               File[]
@@ -203,6 +202,8 @@ model Client {
   totalProjectCount    Int        @default(0)
   activeProjectCount   Int        @default(0)
   accountManagerId     String?
+  isDeleted            Boolean    @default(false)
+  deletedAt            DateTime?
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
   activities           Activity[]
@@ -242,7 +243,6 @@ model Project {
   qsId              String?
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
-  executingCompany  String?
   activities        Activity[]
   costLogs          CostLog[]
   files             File[]

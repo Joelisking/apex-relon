@@ -205,6 +205,30 @@ See `frontend/components/clients/CreateCustomerDialog.tsx` → `industry` field 
 
 ---
 
+## Modular Code (STRICT)
+
+Every file must have a single, clear responsibility. Do not put everything in one file.
+
+**Backend rules:**
+- Each NestJS module gets its own directory: `module.ts`, `controller.ts`, `service.ts`, `dto/`, `entities/` — never merge these.
+- A service must not exceed ~300 lines. If it does, split into focused sub-services (e.g. `leads-query.service.ts`, `leads-mutation.service.ts`).
+- DTOs live in `dto/` — never inline them in controller or service files.
+- Helper/utility logic goes in a dedicated `*.helper.ts` or `*.util.ts` file, not stuffed into the service.
+
+**Frontend rules:**
+- One component per file. No file may export multiple distinct UI components.
+- Dialogs, forms, tables, and cards are always separate files — never nested inside a page file.
+- Custom hooks go in `hooks/` — not inlined in components.
+- API client functions go in `lib/api/` — not inlined in components or hooks.
+- If a component file exceeds ~250 lines, it must be split into sub-components.
+
+**General rules:**
+- If you find yourself thinking "I'll just add this here for now" — stop and create the right file instead.
+- Shared types belong in `lib/types.ts` (frontend) or a dedicated `*.types.ts` file (backend) — not in the file that first needed them.
+- Never add a new feature to a file that already has a different responsibility.
+
+---
+
 ## What NOT to Do
 
 - Do not auto-commit without being asked.
@@ -215,3 +239,4 @@ See `frontend/components/clients/CreateCustomerDialog.tsx` → `industry` field 
 - Do not build a UI component from scratch if shadcn/ui has it.
 - Do not write NestJS boilerplate from scratch if an MCP tool generates it.
 - Do not guess at QuickBooks API behavior — web search or read Intuit docs.
+- **Do not put multiple components, services, or responsibilities in one file.** Split first, always.

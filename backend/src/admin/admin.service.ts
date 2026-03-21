@@ -8,6 +8,7 @@ import { PrismaService } from '../database/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../email/email.service';
 import { AuditService } from '../audit/audit.service';
+import { PermissionsService } from '../permissions/permissions.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Prisma } from '@prisma/client';
@@ -26,47 +27,43 @@ export class AdminService {
     private config: ConfigService,
     private emailService: EmailService,
     private auditService: AuditService,
+    private permissionsService: PermissionsService,
   ) {}
 
   // ==================== Permission Validation Methods ====================
 
   /**
-   * Check if current user can manage a user with the target role
+   * Check if current user can manage a user with the target role.
+   * Permission-based: users with users:edit can manage any non-admin role.
+   * CEO/SUPER_ADMIN bypass applies unconditionally.
    */
-  private canManageUser(
+  private async canManageUser(
     currentUserRole: string,
     targetUserRole: string,
-  ): boolean {
-    // CEO can manage all roles
-    if (currentUserRole === 'CEO') return true;
+  ): Promise<boolean> {
+    if (currentUserRole === 'CEO' || currentUserRole === 'SUPER_ADMIN') return true;
+    if (targetUserRole === 'CEO' || targetUserRole === 'SUPER_ADMIN') return false;
 
-    // ADMIN can manage: BDM, SALES, DESIGNER, QS (not CEO or other ADMIN)
-    if (currentUserRole === 'ADMIN') {
-      return ['BDM', 'SALES', 'DESIGNER', 'QS'].includes(
-        targetUserRole,
-      );
-    }
+    const currentHasUsersEdit = await this.permissionsService.hasPermission(currentUserRole, 'users:edit');
+    if (!currentHasUsersEdit) return false;
 
-    // BDM can manage: SALES only (not CEO, ADMIN, or other BDM)
-    if (currentUserRole === 'BDM') {
-      return targetUserRole === 'SALES';
-    }
-
-    return false; // SALES cannot manage anyone
+    // Can manage users who don't themselves have users:edit (i.e., non-admin roles)
+    const targetHasUsersEdit = await this.permissionsService.hasPermission(targetUserRole, 'users:edit');
+    return !targetHasUsersEdit;
   }
 
   /**
    * Validate user creation permissions and requirements
    */
   private async validateUserCreation(
-    currentUserId: string,
+    _currentUserId: string,
     currentUserRole: string,
     createDto: CreateUserDto,
   ): Promise<void> {
     // Check if user can create this role
-    if (!this.canManageUser(currentUserRole, createDto.role)) {
+    if (!(await this.canManageUser(currentUserRole, createDto.role))) {
       throw new ForbiddenException(
-        `${currentUserRole} users cannot create ${createDto.role} users`,
+        `You do not have permission to create users with the ${createDto.role} role`,
       );
     }
 
@@ -78,43 +75,23 @@ export class AdminService {
       throw new BadRequestException('Email already in use');
     }
 
-    // If creating SALES user, validate managerId
-    if (createDto.role === 'SALES') {
-      if (currentUserRole === 'BDM') {
-        // BDM can only assign to themselves
-        createDto.managerId = currentUserId;
-      } else if (createDto.managerId) {
-        // CEO/ADMIN must specify valid manager
-        const manager = await this.prisma.user.findUnique({
-          where: { id: createDto.managerId },
-        });
-        if (!manager || manager.role !== 'BDM') {
-          throw new BadRequestException('Invalid manager ID');
-        }
-      } else {
-        throw new BadRequestException(
-          'SALES users must have a manager',
-        );
+    // If managerId is provided, validate the manager exists
+    if (createDto.managerId) {
+      const manager = await this.prisma.user.findUnique({
+        where: { id: createDto.managerId },
+      });
+      if (!manager) {
+        throw new BadRequestException('Invalid manager ID');
       }
     }
 
-    // Validate teamName or teamId requirements
-    // Deprecating teamName in favor of teamId
-    if (['BDM', 'SALES'].includes(createDto.role)) {
-      if (!createDto.teamName && !createDto.teamId) {
-        throw new BadRequestException(
-          `${createDto.role} users must have a team assigned`,
-        );
-      }
-
-      // If teamId is provided, validate it exists
-      if (createDto.teamId) {
-        const team = await this.prisma.team.findUnique({
-          where: { id: createDto.teamId },
-        });
-        if (!team) {
-          throw new NotFoundException('Team not found');
-        }
+    // If teamId is provided, validate it exists
+    if (createDto.teamId) {
+      const team = await this.prisma.team.findUnique({
+        where: { id: createDto.teamId },
+      });
+      if (!team) {
+        throw new NotFoundException('Team not found');
       }
     }
   }
@@ -145,7 +122,7 @@ export class AdminService {
     }
 
     // Check permission to modify this user
-    if (!this.canManageUser(currentUserRole, targetUser.role)) {
+    if (!(await this.canManageUser(currentUserRole, targetUser.role))) {
       throw new ForbiddenException(
         `You don't have permission to modify ${targetUser.role} users`,
       );
@@ -153,18 +130,9 @@ export class AdminService {
 
     // If role is being changed, validate new role
     if (updateDto.role && updateDto.role !== targetUser.role) {
-      if (!this.canManageUser(currentUserRole, updateDto.role)) {
+      if (!(await this.canManageUser(currentUserRole, updateDto.role))) {
         throw new ForbiddenException(
           `You don't have permission to change users to ${updateDto.role} role`,
-        );
-      }
-    }
-
-    // BDM can only modify their own team members
-    if (currentUserRole === 'BDM') {
-      if (targetUser.managerId !== currentUserId) {
-        throw new ForbiddenException(
-          'You can only modify your own team members',
         );
       }
     }
@@ -212,19 +180,9 @@ export class AdminService {
       role: { not: 'SUPER_ADMIN' },
     };
 
-    // CEO/ADMIN see all users
-    if (currentUserRole === 'CEO' || currentUserRole === 'ADMIN') {
-      // No further filter
-    }
-    // BDM sees only their team
-    else if (currentUserRole === 'BDM') {
-      where.OR = [
-        { managerId: currentUserId },
-        { id: currentUserId },
-      ];
-    }
-    // SALES sees only themselves
-    else if (currentUserRole === 'SALES') {
+    const canViewAll = await this.permissionsService.hasPermission(currentUserRole, 'users:view');
+    if (!canViewAll) {
+      // Users without users:view only see themselves
       where.id = currentUserId;
     }
 
@@ -461,25 +419,23 @@ export class AdminService {
       );
     }
 
-    // Only CEO can delete ADMIN users
-    if (targetUser.role === 'CEO') {
-      throw new ForbiddenException('CEO users cannot be deleted');
+    if (targetUser.role === 'CEO' || targetUser.role === 'SUPER_ADMIN') {
+      throw new ForbiddenException('This user cannot be deleted');
     }
 
-    if (targetUser.role === 'ADMIN' && currentUser.role !== 'CEO') {
-      throw new ForbiddenException('Only CEO can delete ADMIN users');
+    // Only users with users:delete permission can delete; only CEO can delete users with users:edit
+    if (!(await this.canManageUser(currentUser.role, targetUser.role))) {
+      throw new ForbiddenException('You do not have permission to delete this user');
     }
 
-    // Check if user has team members
-    if (targetUser.role === 'BDM') {
-      const teamMembers = await this.prisma.user.count({
-        where: { managerId: targetUserId },
-      });
-      if (teamMembers > 0) {
-        throw new BadRequestException(
-          'Cannot delete manager with active team members. Please reassign team members first.',
-        );
-      }
+    // Check if user has direct reports — prevent deletion regardless of role
+    const teamMembers = await this.prisma.user.count({
+      where: { managerId: targetUserId },
+    });
+    if (teamMembers > 0) {
+      throw new BadRequestException(
+        'Cannot delete a user with active direct reports. Please reassign them first.',
+      );
     }
 
     await this.prisma.user.delete({

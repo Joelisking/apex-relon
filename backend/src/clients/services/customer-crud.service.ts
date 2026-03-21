@@ -1,8 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../../audit/audit.service';
 import { WorkflowsService } from '../../workflows/workflows.service';
+import { PermissionsService } from '../../permissions/permissions.service';
 import { CustomerMetricsService } from './customer-metrics.service';
 import { CustomerHealthFlagsService } from './customer-health-flags.service';
 
@@ -12,27 +13,49 @@ export class CustomerCrudService {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly workflowsService: WorkflowsService,
+    private readonly permissionsService: PermissionsService,
     private readonly metricsService: CustomerMetricsService,
     private readonly healthFlagsService: CustomerHealthFlagsService,
   ) {}
 
-  async findAll(userId?: string, userRole?: string) {
-    const where: Record<string, unknown> = {};
+  private readonly primaryContactInclude = {
+    contacts: {
+      where: { isPrimary: true },
+      select: { firstName: true, lastName: true, email: true, phone: true },
+      take: 1,
+    },
+  } as const;
 
-    if (userRole === 'SALES') {
-      where.accountManagerId = userId;
-    } else if (userRole === 'BDM') {
-      const teamMembers = await this.prisma.user.findMany({
-        where: { managerId: userId },
-        select: { id: true },
-      });
-      where.accountManagerId = { in: [...teamMembers.map((m) => m.id), userId] };
+  private buildAccessFilter(userId: string) {
+    return {
+      OR: [
+        { projects: { some: { OR: [
+          { projectManagerId: userId },
+          { assignments: { some: { userId } } },
+        ] } } },
+        { leads: { some: { OR: [
+          { assignedToId: userId },
+          { teamMembers: { some: { userId } } },
+        ] } } },
+      ],
+    };
+  }
+
+  async findAll(userId?: string, userRole?: string) {
+    const where: Record<string, unknown> = { isDeleted: false };
+
+    const canViewAll = userRole
+      ? await this.permissionsService.hasPermission(userRole, 'clients:view_all')
+      : false;
+
+    if (!canViewAll && userId) {
+      Object.assign(where, this.buildAccessFilter(userId));
     }
 
     const customers = await this.prisma.client.findMany({
       where,
       include: {
-        accountManager: { select: { id: true, name: true, email: true, role: true } },
+        ...this.primaryContactInclude,
         projects: {
           select: {
             id: true, name: true, status: true, contractedValue: true,
@@ -67,7 +90,7 @@ export class CustomerCrudService {
     const customer = await this.prisma.client.findUnique({
       where: { id },
       include: {
-        accountManager: { select: { id: true, name: true, email: true, role: true } },
+        ...this.primaryContactInclude,
         projects: {
           select: {
             id: true, name: true, status: true, contractedValue: true,
@@ -91,21 +114,17 @@ export class CustomerCrudService {
       },
     });
 
-    if (!customer) return null;
+    if (!customer || customer.isDeleted) throw new NotFoundException('Client not found');
 
-    if (userRole === 'SALES' && customer.accountManagerId !== userId) {
-      throw new Error('You do not have permission to view this customer');
-    }
-
-    if (userRole === 'BDM') {
-      const teamMembers = await this.prisma.user.findMany({
-        where: { managerId: userId },
-        select: { id: true },
-      });
-      const canAccess =
-        customer.accountManagerId === userId ||
-        teamMembers.map((m) => m.id).includes(customer.accountManagerId || '');
-      if (!canAccess) throw new Error('You do not have permission to view this customer');
+    if (userRole && userId) {
+      const canViewAll = await this.permissionsService.hasPermission(userRole, 'clients:view_all');
+      if (!canViewAll) {
+        const hasAccess = await this.prisma.client.findFirst({
+          where: { id, isDeleted: false, ...this.buildAccessFilter(userId) },
+          select: { id: true },
+        });
+        if (!hasAccess) throw new ForbiddenException('Access denied');
+      }
     }
 
     return this.enrichWithMetrics(customer);
@@ -116,8 +135,28 @@ export class CustomerCrudService {
       data: data as Prisma.ClientCreateInput,
     });
 
+    // Auto-create primary Contact from flat fields if individualName is provided
+    const individualName = data.individualName as string | undefined;
+    if (individualName?.trim()) {
+      const nameParts = individualName.trim().split(/\s+/);
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || '';
+      await this.prisma.contact.create({
+        data: {
+          clientId: customer.id,
+          firstName,
+          lastName,
+          email: (data.email as string | undefined) || undefined,
+          phone: (data.phone as string | undefined) || undefined,
+          jobTitle: (data.individualType as string | undefined) || undefined,
+          isPrimary: true,
+          isDecisionMaker: true,
+        },
+      });
+    }
+
     await this.auditService.log({
-      userId: (data.accountManagerId as string | undefined) || userId || 'system',
+      userId: userId || 'system',
       action: 'CREATE_CUSTOMER',
       details: { customerId: customer.id, name: customer.name, segment: customer.segment, industry: customer.industry },
     });
@@ -142,6 +181,31 @@ export class CustomerCrudService {
       data: prismaData as Prisma.ClientUpdateInput,
     });
 
+    // Sync flat field changes to the primary Contact record
+    const contactUpdates: Record<string, unknown> = {};
+    if ('email' in data) contactUpdates.email = data.email;
+    if ('phone' in data) contactUpdates.phone = data.phone;
+    if ('individualType' in data) contactUpdates.jobTitle = data.individualType;
+
+    if ('individualName' in data && typeof data.individualName === 'string') {
+      const nameParts = data.individualName.trim().split(/\s+/);
+      contactUpdates.firstName = nameParts[0];
+      contactUpdates.lastName = nameParts.slice(1).join(' ') || '';
+    }
+
+    if (Object.keys(contactUpdates).length > 0) {
+      const primaryContact = await this.prisma.contact.findFirst({
+        where: { clientId: id, isPrimary: true },
+        select: { id: true },
+      });
+      if (primaryContact) {
+        await this.prisma.contact.update({
+          where: { id: primaryContact.id },
+          data: contactUpdates as Prisma.ContactUpdateInput,
+        });
+      }
+    }
+
     await this.auditService.log({
       userId: userId || 'system',
       action: 'UPDATE_CUSTOMER',
@@ -159,54 +223,74 @@ export class CustomerCrudService {
       select: { id: true, name: true, segment: true, industry: true },
     });
 
-    const deleted = await this.prisma.client.delete({ where: { id } });
+    if (!customer) throw new NotFoundException('Client not found');
 
-    if (customer) {
-      await this.auditService.log({
-        userId: userId || 'system',
-        action: 'DELETE_CUSTOMER',
-        details: { customerId: id, name: customer.name, segment: customer.segment, industry: customer.industry },
-      });
-    }
+    const archived = await this.prisma.client.update({
+      where: { id },
+      data: { isDeleted: true, deletedAt: new Date() },
+    });
 
-    return deleted;
+    await this.auditService.log({
+      userId: userId || 'system',
+      action: 'ARCHIVE_CUSTOMER',
+      details: { customerId: id, name: customer.name, segment: customer.segment, industry: customer.industry },
+    });
+
+    return archived;
   }
 
-  async bulkUpdate(ids: string[], data: Record<string, unknown>, userId?: string) {
+  private async scopeToAccessible(ids: string[], userId: string, userRole: string): Promise<string[]> {
+    const canViewAll = await this.permissionsService.hasPermission(userRole, 'clients:view_all');
+    if (canViewAll) return ids;
+    const accessible = await this.prisma.client.findMany({
+      where: {
+        id: { in: ids },
+        isDeleted: false,
+        ...this.buildAccessFilter(userId),
+      },
+      select: { id: true },
+    });
+    return accessible.map((r) => r.id);
+  }
+
+  async bulkUpdate(ids: string[], data: Record<string, unknown>, userId?: string, userRole?: string) {
     if (!ids?.length) return { count: 0 };
 
-    if (data.accountManagerId) {
-      const manager = await this.prisma.user.findUnique({
-        where: { id: data.accountManagerId as string },
-        select: { id: true },
-      });
-      if (!manager) throw new BadRequestException('Invalid account manager ID');
-    }
+    const accessibleIds = userId && userRole
+      ? await this.scopeToAccessible(ids, userId, userRole)
+      : ids;
 
-    const { accountManager: _rel, ...rest } = data;
+    const { accountManager: _rel, accountManagerId: _mgr, ...rest } = data;
     const result = await this.prisma.client.updateMany({
-      where: { id: { in: ids } },
+      where: { id: { in: accessibleIds } },
       data: rest,
     });
 
     await this.auditService.log({
       userId: userId || 'system',
       action: 'BULK_UPDATE_CUSTOMERS',
-      details: { ids, updates: data as Prisma.InputJsonValue, count: result.count },
+      details: { ids: accessibleIds, updates: data as Prisma.InputJsonValue, count: result.count },
     });
 
     return result;
   }
 
-  async bulkDelete(ids: string[], userId?: string) {
+  async bulkDelete(ids: string[], userId?: string, userRole?: string) {
     if (!ids?.length) return { count: 0 };
 
-    const result = await this.prisma.client.deleteMany({ where: { id: { in: ids } } });
+    const accessibleIds = userId && userRole
+      ? await this.scopeToAccessible(ids, userId, userRole)
+      : ids;
+
+    const result = await this.prisma.client.updateMany({
+      where: { id: { in: accessibleIds } },
+      data: { isDeleted: true, deletedAt: new Date() },
+    });
 
     await this.auditService.log({
       userId: userId || 'system',
-      action: 'BULK_DELETE_CUSTOMERS',
-      details: { ids, count: result.count },
+      action: 'BULK_ARCHIVE_CUSTOMERS',
+      details: { ids: accessibleIds, count: result.count },
     });
 
     return result;

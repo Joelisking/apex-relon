@@ -42,3 +42,9 @@ PHASE1-PHASE2-TESTING.md
 FUTURE_FIXES.md
 backend/preview-emails.mjs
 DEMO_WALKTHROUGH.md
+customers-module-audit.md
+leads-module-audit.md
+permissions-module-audit.md
+projects-module-audit.md
+fixes/*
+docs/*

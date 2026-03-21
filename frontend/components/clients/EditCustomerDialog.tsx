@@ -136,6 +136,7 @@ export function EditCustomerDialog({
   };
 
   const handleClose = () => {
+    form.reset(buildDefaults(client));
     onOpenChange(false);
   };
 

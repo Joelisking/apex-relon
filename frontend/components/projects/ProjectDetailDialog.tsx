@@ -313,19 +313,6 @@ export function ProjectDetailDialog({
               </div>
             </div>
 
-            {/* ── Executing Company ─────────────────────────────────────── */}
-            {project.executingCompany && (
-              <div className="px-5 py-3 border-b border-border/40">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium shrink-0">
-                    Executing Co.
-                  </span>
-                  <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                    {project.executingCompany}
-                  </span>
-                </div>
-              </div>
-            )}
 
             {/* ── Financials ───────────────────────────────────────────── */}
             <div className="px-5 py-4 border-b border-border/40">

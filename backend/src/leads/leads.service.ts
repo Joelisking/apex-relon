@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { AiService } from '../ai/ai.service';
@@ -10,6 +11,7 @@ import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/notification-types.constants';
 import { WorkflowsService } from '../workflows/workflows.service';
+import { PermissionsService } from '../permissions/permissions.service';
 import { CreateLeadRepDto } from './dto/create-lead-rep.dto';
 import { Prisma } from '@prisma/client';
 import { buildLeadSummaryPrompt } from '../ai/prompts';
@@ -23,29 +25,22 @@ export class LeadsService {
     private auditService: AuditService,
     private notificationsService: NotificationsService,
     private workflowsService: WorkflowsService,
+    private permissionsService: PermissionsService,
   ) {}
 
   async findAll(userId?: string, userRole?: string, year?: string) {
-    // Build query filters based on role
     const where: Record<string, unknown> = {};
 
-    if (userRole === 'SALES') {
-      // Sales executives see only their assigned leads
-      where.assignedToId = userId;
-    } else if (userRole === 'BDM') {
-      // BDMs see their team's leads — fetch only IDs (lean query)
-      const teamMembers = await this.prisma.user.findMany({
-        where: { managerId: userId },
-        select: { id: true },
-      });
-      const teamMemberIds = teamMembers.map((m) => m.id);
-      where.assignedToId = { in: [...teamMemberIds, userId] };
-    } else if (userRole === 'DESIGNER') {
-      where.designerId = userId;
-    } else if (userRole === 'QS') {
-      where.qsId = userId;
+    const canViewAll = userRole
+      ? await this.permissionsService.hasPermission(userRole, 'leads:view_all')
+      : false;
+
+    if (!canViewAll && userId) {
+      where.OR = [
+        { assignedToId: userId },
+        { teamMembers: { some: { userId } } },
+      ];
     }
-    // CEO and ADMIN see all leads (no filter)
 
     // Optional year filter on likelyStartDate
     if (year) {
@@ -139,36 +134,18 @@ export class LeadsService {
     });
 
     if (!lead) {
-      return null;
+      throw new NotFoundException('Lead not found');
     }
 
     // Check access permissions
-    if (userRole === 'SALES' && lead.assignedToId !== userId) {
-      throw new Error('You do not have permission to view this lead');
-    }
-
-    if (userRole === 'DESIGNER' && lead.designerId !== userId) {
-      throw new Error('You do not have permission to view this lead');
-    }
-
-    if (userRole === 'QS' && lead.qsId !== userId) {
-      throw new Error('You do not have permission to view this lead');
-    }
-
-    if (userRole === 'BDM') {
-      const teamMembers = await this.prisma.user.findMany({
-        where: { managerId: userId },
-        select: { id: true },
-      });
-      const teamMemberIds = teamMembers.map((m) => m.id);
-      const canAccess =
-        lead.assignedToId === userId ||
-        teamMemberIds.includes(lead.assignedToId || '');
-
-      if (!canAccess) {
-        throw new Error(
-          'You do not have permission to view this lead',
-        );
+    if (userRole && userId) {
+      const canViewAll = await this.permissionsService.hasPermission(userRole, 'leads:view_all');
+      if (!canViewAll) {
+        const isAssigned = lead.assignedToId === userId;
+        const isTeamMember = lead.teamMembers?.some((m) => m.userId === userId);
+        if (!isAssigned && !isTeamMember) {
+          throw new ForbiddenException('You do not have permission to view this lead');
+        }
       }
     }
 
@@ -609,7 +586,7 @@ export class LeadsService {
     return this.prisma.leadRep.delete({ where: { id: repId } });
   }
 
-  async bulkUpdate(ids: string[], data: Record<string, unknown>, userId?: string) {
+  async bulkUpdate(ids: string[], data: Record<string, unknown>, userId?: string, userRole?: string) {
     if (!ids || ids.length === 0) return { count: 0 };
 
     // Validate stage if provided
@@ -617,8 +594,24 @@ export class LeadsService {
       await this.validateStage(data.stage as string);
     }
 
+    // Restrict to accessible records when user lacks leads:view_all
+    let accessibleIds = ids;
+    if (userId && userRole) {
+      const canViewAll = await this.permissionsService.hasPermission(userRole, 'leads:view_all');
+      if (!canViewAll) {
+        const accessible = await this.prisma.lead.findMany({
+          where: {
+            id: { in: ids },
+            OR: [{ assignedToId: userId }, { teamMembers: { some: { userId } } }],
+          },
+          select: { id: true },
+        });
+        accessibleIds = accessible.map((r) => r.id);
+      }
+    }
+
     const result = await this.prisma.lead.updateMany({
-      where: { id: { in: ids } },
+      where: { id: { in: accessibleIds } },
       data: data as Prisma.LeadUpdateManyMutationInput,
     });
 
@@ -636,14 +629,30 @@ export class LeadsService {
     return result;
   }
 
-  async bulkDelete(ids: string[], userId?: string) {
+  async bulkDelete(ids: string[], userId?: string, userRole?: string) {
     if (!ids || ids.length === 0) return { count: 0, skipped: 0 };
+
+    // Restrict to accessible records when user lacks leads:view_all
+    let scopedIds = ids;
+    if (userId && userRole) {
+      const canViewAll = await this.permissionsService.hasPermission(userRole, 'leads:view_all');
+      if (!canViewAll) {
+        const accessible = await this.prisma.lead.findMany({
+          where: {
+            id: { in: ids },
+            OR: [{ assignedToId: userId }, { teamMembers: { some: { userId } } }],
+          },
+          select: { id: true },
+        });
+        scopedIds = accessible.map((r) => r.id);
+      }
+    }
 
     // Find leads that cannot be deleted because they have an associated Project.
     // Project.leadId has no explicit onDelete, so the DB will reject deletions
     // with a FK constraint error (P2003) for those rows.
     const blockedLeads = await this.prisma.project.findMany({
-      where: { leadId: { in: ids } },
+      where: { leadId: { in: scopedIds } },
       select: { leadId: true },
     });
 
@@ -653,8 +662,8 @@ export class LeadsService {
         .filter((id): id is string => id !== null),
     );
 
-    const deletableIds = ids.filter((id) => !blockedIds.has(id));
-    const skipped = blockedIds.size;
+    const deletableIds = scopedIds.filter((id) => !blockedIds.has(id));
+    const skipped = (ids.length - scopedIds.length) + blockedIds.size;
 
     if (deletableIds.length === 0) {
       return { count: 0, skipped };

@@ -257,8 +257,6 @@ export default function EnhancedDashboard({
   const [period, setPeriod] = useState<'week' | 'month' | 'quarter'>(
     initialPeriod,
   );
-  const [executingCompany, setExecutingCompany] =
-    useState<string>('');
   const [aiSummary, setAiSummary] =
     useState<ExecutiveSummaryResponse | null>(null);
   const [loadingAI, setLoadingAI] = useState(false);
@@ -267,22 +265,15 @@ export default function EnhancedDashboard({
   const [loadingPipeline, setLoadingPipeline] = useState(false);
   const [pipelineExpanded, setPipelineExpanded] = useState(false);
 
-  const { data: executingCompanyOptions = [] } = useQuery({
-    queryKey: ['dropdown-options', 'executing_company'],
-    queryFn: () =>
-      settingsApi.getDropdownOptions('executing_company'),
-    staleTime: 10 * 60 * 1000,
-  });
-
   const {
     data: metrics,
     isLoading,
     isFetching,
     error,
   } = useQuery<DashboardMetrics>({
-    queryKey: ['dashboard-metrics', period, executingCompany],
+    queryKey: ['dashboard-metrics', period],
     queryFn: () =>
-      dashboardApi.getMetrics(period, executingCompany || undefined),
+      dashboardApi.getMetrics(period),
     staleTime: 5 * 60 * 1000, // 5 minutes — dashboard data doesn't change second-to-second
     placeholderData: keepPreviousData, // show previous period's data while new period loads
   });
@@ -470,27 +461,6 @@ export default function EnhancedDashboard({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {executingCompanyOptions.length > 0 && (
-            <Select
-              value={executingCompany || '__all__'}
-              onValueChange={(v) =>
-                setExecutingCompany(v === '__all__' ? '' : v)
-              }>
-              <SelectTrigger className="h-9 w-50">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">
-                  All Executing Companies
-                </SelectItem>
-                {executingCompanyOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
           <Button
             variant={period === 'week' ? 'default' : 'outline'}
             onClick={() => setPeriod('week')}

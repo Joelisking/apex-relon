@@ -94,7 +94,7 @@ Built with **Next.js 16** (App Router) and a **NestJS** backend.
 │        │                                                        │
 │        ▼                                                        │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │  Prisma ORM  →  MySQL (Docker / hosted)  │  GCP Storage  │  │
+│  │  Prisma ORM  →  PostgreSQL (Docker / hosted)│  GCP Storage │  │
 │  └──────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -103,7 +103,7 @@ Built with **Next.js 16** (App Router) and a **NestJS** backend.
 | -------- | --------------------------------------------------------------------------------------------------------- |
 | Frontend | Next.js 16 (App Router), React 19, Tailwind CSS, Shadcn/Radix, React Query, Recharts, dnd-kit, react-big-calendar |
 | Backend  | NestJS, Passport.js (JWT), Prisma ORM, Resend (email), @nestjs/schedule (cron), pdfmake (PDF)             |
-| Database | MySQL (Docker Compose or hosted)                                                                          |
+| Database | PostgreSQL (Docker Compose or hosted)                                                                     |
 | Storage  | Google Cloud Storage (private buckets, signed-URL streaming)                                              |
 | AI       | Anthropic Claude, OpenAI GPT-4o, Google Gemini (runtime switch)                                           |
 | Integrations | QuickBooks Online (OAuth 2.0, bidirectional sync, webhooks)                                           |
@@ -122,7 +122,7 @@ Relon-Apex/
 │   │   ├── schema.prisma           # Full data schema
 │   │   ├── seed.ts                 # Base data seeder
 │   │   ├── seed.demo.ts            # Extended demo data seeder
-│   │   └── migrations/             # MySQL migrations
+│   │   └── migrations/             # PostgreSQL migrations
 │   ├── src/
 │   │   ├── main.ts                 # Entry: port 4000, /api prefix, CORS, validation
 │   │   ├── app.module.ts           # Root module — global guards (JWT + Permissions)
@@ -224,7 +224,7 @@ Relon-Apex/
 ### Prerequisites
 
 - Node.js 18+
-- Docker (for MySQL via Docker Compose) or a hosted MySQL database
+- Docker (for PostgreSQL via Docker Compose) or a hosted PostgreSQL database
 - At least one AI API key (Anthropic, OpenAI, or Google)
 
 ### 1. Install Dependencies
@@ -239,7 +239,7 @@ cd ../frontend && npm install
 **Backend** (`backend/.env`):
 
 ```env
-DATABASE_URL="mysql://user:pass@host:3306/db"
+DATABASE_URL="postgresql://user:pass@host:5432/db"
 JWT_SECRET=your-jwt-secret
 JWT_EXPIRES_IN=7d
 PORT=4000
@@ -278,7 +278,7 @@ NEXT_PUBLIC_API_URL=http://localhost:4000/api
 
 ```bash
 cd backend
-docker-compose up -d      # Starts MySQL on port 3306
+docker-compose up -d      # Starts PostgreSQL on port 5432
 ```
 
 ### 4. Setup Database
@@ -373,7 +373,7 @@ Browser → Next.js Middleware (check token cookie)
                  │
                  ├─ JwtAuthGuard (validate token, check user active)
                  ├─ PermissionsGuard (check @Permissions() decorator)
-                 └─ Controller → Service → Prisma → MySQL
+                 └─ Controller → Service → Prisma → PostgreSQL
 ```
 
 ### Data Flow: Lead Lifecycle
@@ -438,7 +438,6 @@ The main dashboard (`/dashboard`) is a fully customizable, drag-and-drop executi
 - **AI Executive Summary** — On-demand overview covering what changed, what's at risk, what needs attention, and key insights
 - **AI Pipeline Insights** — Bottleneck analysis, win probability by stage, urgent leads, recommendations
 - **Period filtering** — Week / Month / Quarter
-- **Executing company filter** — Filter all metrics by company
 
 ### Leads (Prospective Projects)
 
@@ -508,7 +507,7 @@ Active project tracking (`/projects`) covers delivery and cost management:
 
 - **Dual views** — Kanban board (by status) + sortable data table
 - **Project stats bar** — Total projects, active, completed, total contracted value, total costs
-- **Date range + executing company filters**
+- **Date range filters**
 - **Full project detail** — Status history timeline, cost logs, activities, files
 - **Status tracking** — Planning → Active → On Hold → Completed → Cancelled (each change recorded in ProjectStatusHistory)
 - **Complete project dialog** — Captures end-of-project value and completion date
@@ -800,7 +799,7 @@ The admin panel (`/admin/*`) provides full system configuration:
 **Dropdown Options** (`/admin/dropdown-options`):
 
 - Configure dynamic dropdowns used throughout the system
-- Categories: urgency, activity type, meeting type, file category, cost category, client segment, individual type, project status, project risk status, executing company
+- Categories: urgency, activity type, meeting type, file category, cost category, client segment, individual type, project status, project risk status
 - Reorder, activate/deactivate, protect system options
 
 **Service Types** (`/admin/service-types`):
@@ -1295,7 +1294,7 @@ WorkflowRule ─┬── trigger → event type
 
 | Method | Endpoint                       | Permission       | Description                                     |
 | ------ | ------------------------------ | ---------------- | ----------------------------------------------- |
-| GET    | `/dashboard/metrics`           | `dashboard:view` | Full metrics (`?period=`, `?executingCompany=`) |
+| GET    | `/dashboard/metrics`           | `dashboard:view` | Full metrics (`?period=`)                       |
 | GET    | `/dashboard/executive-summary` | `dashboard:view` | AI executive summary (`?provider=`)             |
 | GET    | `/dashboard/revenue-breakdown` | `dashboard:view` | Revenue by client/project                       |
 | GET    | `/dashboard/project-analytics` | `dashboard:view` | Projects by status + at-risk                    |
@@ -1458,7 +1457,7 @@ WorkflowRule ─┬── trigger → event type
 
 | Provider         | Model                        | Best For                             | API Key                                                 |
 | ---------------- | ---------------------------- | ------------------------------------ | ------------------------------------------------------- |
-| Anthropic Claude | `claude-sonnet-4-5-20250929` | Complex reasoning, detailed analysis | [console.anthropic.com](https://console.anthropic.com/) |
+| Anthropic Claude | `claude-sonnet-4-6`          | Complex reasoning, detailed analysis | [console.anthropic.com](https://console.anthropic.com/) |
 | OpenAI GPT       | `gpt-4o`                     | Structured JSON responses            | [platform.openai.com](https://platform.openai.com/)     |
 | Google Gemini    | `gemini-3-flash-preview`     | Fast responses, cost efficiency      | [ai.google.dev](https://ai.google.dev/)                 |
 
@@ -1490,7 +1489,7 @@ AI_DEFAULT_PROVIDER=anthropic  # or 'openai' or 'gemini'
 
 | Variable             | Required | Description                             |
 | -------------------- | -------- | --------------------------------------- |
-| `DATABASE_URL`       | Yes      | MySQL connection string                 |
+| `DATABASE_URL`       | Yes      | PostgreSQL connection string            |
 | `JWT_SECRET`         | Yes      | Secret key for JWT signing              |
 | `JWT_EXPIRES_IN`     | No       | Token expiry (default: `7d`)            |
 | `PORT`               | No       | Server port (default: `4000`)           |
@@ -1535,9 +1534,9 @@ npx prisma db seed         # Seed base data
 npm run seed:demo          # Seed extended demo data
 npx prisma studio          # DB GUI at localhost:5555
 
-# Docker (MySQL)
-docker-compose up -d       # Start MySQL container
-docker-compose down        # Stop MySQL container
+# Docker (PostgreSQL)
+docker-compose up -d       # Start PostgreSQL container
+docker-compose down        # Stop PostgreSQL container
 ```
 
 ### Frontend (run from `frontend/`)
@@ -1555,7 +1554,7 @@ npm run lint               # ESLint
 ### Backend not starting
 
 - Verify `DATABASE_URL` is correct in `backend/.env`
-- Ensure MySQL is running (`docker-compose up -d` if using Docker)
+- Ensure PostgreSQL is running (`docker-compose up -d` if using Docker)
 - Run `npx prisma generate` if you see Prisma client errors
 - Check port 4000 isn't already in use
 
@@ -1615,7 +1614,7 @@ npm run lint               # ESLint
 | Tables       | TanStack Table                                                              |
 | Search       | cmdk (Command Palette)                                                      |
 | Backend      | NestJS, TypeScript, Passport.js (JWT), @nestjs/schedule                     |
-| Database     | MySQL, Prisma ORM                                                           |
+| Database     | PostgreSQL, Prisma ORM                                                      |
 | Storage      | Google Cloud Storage                                                        |
 | Email        | Resend                                                                      |
 | AI           | Anthropic SDK, OpenAI SDK, Google Generative AI SDK                         |

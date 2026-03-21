@@ -13,9 +13,8 @@ export class CustomerAiService {
     private readonly healthFlagsService: CustomerHealthFlagsService,
   ) {}
 
-  async generateHealthReport(id: string, provider?: string) {
-    const customer = await this.crudService.findOne(id);
-    if (!customer) throw new Error('Customer not found');
+  async generateHealthReport(id: string, provider?: string, userId?: string, userRole?: string) {
+    const customer = await this.crudService.findOne(id, userId, userRole);
 
     const report = await this.aiService.generateClientHealth(customer, provider);
 
@@ -27,9 +26,8 @@ export class CustomerAiService {
     return report;
   }
 
-  async generateUpsellStrategy(id: string, provider?: string) {
-    const customer = await this.crudService.findOne(id);
-    if (!customer) throw new Error('Customer not found');
+  async generateUpsellStrategy(id: string, provider?: string, userId?: string, userRole?: string) {
+    const customer = await this.crudService.findOne(id, userId, userRole);
 
     const strategy = await this.aiService.generateUpsellStrategy(customer, provider);
 
@@ -40,9 +38,8 @@ export class CustomerAiService {
     return strategy;
   }
 
-  async updateHealthStatus(id: string, provider?: string) {
-    const customer = await this.crudService.findOne(id);
-    if (!customer) throw new Error('Customer not found');
+  async updateHealthStatus(id: string, provider?: string, userId?: string, userRole?: string) {
+    const customer = await this.crudService.findOne(id, userId, userRole);
 
     if (customer.statusOverride) {
       return {
@@ -75,9 +72,8 @@ export class CustomerAiService {
     };
   }
 
-  async overrideHealthStatus(id: string, status: string, reason: string, _userId: string) {
-    const customer = await this.crudService.findOne(id);
-    if (!customer) throw new Error('Customer not found');
+  async overrideHealthStatus(id: string, status: string, reason: string, userId: string, userRole?: string) {
+    const customer = await this.crudService.findOne(id, userId, userRole);
 
     await this.crudService.update(id, { status, statusOverride: true, statusOverrideReason: reason });
 

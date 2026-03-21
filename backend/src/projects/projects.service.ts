@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { WorkflowsService } from '../workflows/workflows.service';
+import { PermissionsService } from '../permissions/permissions.service';
 import { Prisma } from '@prisma/client';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -18,6 +19,7 @@ export class ProjectsService {
     private prisma: PrismaService,
     private auditService: AuditService,
     private workflowsService: WorkflowsService,
+    private permissionsService: PermissionsService,
   ) {}
 
   private readonly projectInclude = {
@@ -44,13 +46,14 @@ export class ProjectsService {
   async findAll(userId: string, userRole: string) {
     const where: Record<string, unknown> = {};
 
-    // Role-based filtering
-    if (userRole === 'SALES') {
-      where.projectManagerId = userId;
-    } else if (userRole === 'DESIGNER') {
-      where.designerId = userId;
-    } else if (userRole === 'QS') {
-      where.qsId = userId;
+    const canViewAll = await this.permissionsService.hasPermission(userRole, 'projects:view_all');
+    if (!canViewAll) {
+      where.OR = [
+        { projectManagerId: userId },
+        { designerId: userId },
+        { qsId: userId },
+        { assignments: { some: { userId } } },
+      ];
     }
 
     return this.prisma.project.findMany({
@@ -64,7 +67,7 @@ export class ProjectsService {
    * Create a new project
    */
   async create(createProjectDto: CreateProjectDto, userId?: string) {
-    const { clientId, leadId, status, ...projectData } =
+    const { clientId, leadId, status, teamMemberIds, ...projectData } =
       createProjectDto;
 
     // Verify client exists
@@ -101,6 +104,18 @@ export class ProjectsService {
       },
       include: this.projectInclude,
     });
+
+    // Create team member assignments if provided
+    if (teamMemberIds?.length) {
+      await this.prisma.projectAssignment.createMany({
+        data: teamMemberIds.map((userId) => ({
+          projectId: project.id,
+          userId,
+          role: 'Team Member',
+        })),
+        skipDuplicates: true,
+      });
+    }
 
     // Update client project counts
     await this.updateClientProjectCounts(clientId);
@@ -206,9 +221,12 @@ export class ProjectsService {
       throw new NotFoundException(`Project with ID ${id} not found`);
     }
 
+    // Extract client-level fields before passing to Prisma (Project model doesn't have these)
+    const { segment, industry, ...projectUpdateData } = updateProjectDto;
+
     const project = await this.prisma.project.update({
       where: { id },
-      data: updateProjectDto,
+      data: projectUpdateData,
       include: this.projectInclude,
     });
 
@@ -230,6 +248,17 @@ export class ProjectsService {
           },
         });
       }
+    }
+
+    // Bidirectional sync: push segment/industry back to client
+    if (segment || industry) {
+      await this.prisma.client.update({
+        where: { id: existingProject.clientId },
+        data: {
+          ...(segment && { segment }),
+          ...(industry && { industry }),
+        },
+      });
     }
 
     // Audit log
@@ -303,99 +332,6 @@ export class ProjectsService {
     });
 
     return { message: 'Project deleted successfully' };
-  }
-
-  /**
-   * Convert a won lead to a project
-   */
-  async convertLead(
-    leadId: string,
-    clientId: string,
-    projectManagerId?: string,
-    userId?: string,
-  ) {
-    // Verify lead exists and is Won
-    const lead = await this.prisma.lead.findUnique({
-      where: { id: leadId },
-    });
-
-    if (!lead) {
-      throw new NotFoundException(`Lead with ID ${leadId} not found`);
-    }
-
-    if (lead.stage !== 'Won') {
-      throw new BadRequestException(
-        'Only Won leads can be converted to projects',
-      );
-    }
-
-    // Verify client exists
-    const client = await this.prisma.client.findUnique({
-      where: { id: clientId },
-    });
-
-    if (!client) {
-      throw new NotFoundException(
-        `Client with ID ${clientId} not found`,
-      );
-    }
-
-    // Check if project already exists for this lead
-    const existingProject = await this.prisma.project.findFirst({
-      where: { leadId },
-    });
-
-    if (existingProject) {
-      throw new BadRequestException(
-        'A project already exists for this lead',
-      );
-    }
-
-    // Determine first project pipeline stage
-    const firstStage = await this.prisma.pipelineStage.findFirst({
-      where: { pipelineType: 'project' },
-      orderBy: { sortOrder: 'asc' },
-    });
-
-    // Create project from lead
-    const project = await this.prisma.project.create({
-      data: {
-        name: `${lead.company} - ${lead.projectName || 'Project'}`,
-        clientId,
-        leadId,
-        status: firstStage?.name ?? 'Planning',
-        contractedValue: lead.contractedValue ?? lead.expectedValue,
-        description: lead.notes || undefined,
-        projectManagerId:
-          projectManagerId || lead.assignedToId || undefined,
-        designerId: lead.designerId || undefined,
-        qsId: lead.qsId || undefined,
-      },
-      include: this.projectInclude,
-    });
-
-    // Update lead to mark it as converted
-    await this.prisma.lead.update({
-      where: { id: leadId },
-      data: { convertedToClientId: clientId },
-    });
-
-    // Update client project counts
-    await this.updateClientProjectCounts(clientId);
-
-    // Record initial status in history
-    if (userId) {
-      await this.prisma.projectStatusHistory.create({
-        data: {
-          projectId: project.id,
-          fromStatus: null,
-          toStatus: project.status,
-          changedBy: userId,
-        },
-      });
-    }
-
-    return project;
   }
 
   // --- Cost Logs ---
@@ -474,8 +410,30 @@ export class ProjectsService {
     ids: string[],
     data: Record<string, unknown>,
     userId?: string,
+    userRole?: string,
   ) {
     if (!ids || ids.length === 0) return { count: 0 };
+
+    // Restrict to accessible records when user lacks projects:view_all
+    let accessibleIds = ids;
+    if (userId && userRole) {
+      const canViewAll = await this.permissionsService.hasPermission(userRole, 'projects:view_all');
+      if (!canViewAll) {
+        const accessible = await this.prisma.project.findMany({
+          where: {
+            id: { in: ids },
+            OR: [
+              { projectManagerId: userId },
+              { designerId: userId },
+              { qsId: userId },
+              { assignments: { some: { userId } } },
+            ],
+          },
+          select: { id: true },
+        });
+        accessibleIds = accessible.map((r) => r.id);
+      }
+    }
 
     // When a status change is requested we need per-row side-effects:
     // recording ProjectStatusHistory entries and refreshing client project counts.
@@ -489,13 +447,13 @@ export class ProjectsService {
 
     if (data.status) {
       projectSnapshots = await this.prisma.project.findMany({
-        where: { id: { in: ids } },
+        where: { id: { in: accessibleIds } },
         select: { id: true, clientId: true, status: true },
       });
     }
 
     const result = await this.prisma.project.updateMany({
-      where: { id: { in: ids } },
+      where: { id: { in: accessibleIds } },
       data: data as Prisma.ProjectUpdateManyMutationInput,
     });
 
@@ -533,7 +491,7 @@ export class ProjectsService {
       userId: userId || 'system',
       action: 'BULK_UPDATE_PROJECTS',
       details: {
-        ids,
+        ids: accessibleIds,
         updates: data as Prisma.InputJsonValue,
         count: result.count,
       },
@@ -542,12 +500,33 @@ export class ProjectsService {
     return result;
   }
 
-  async bulkDelete(ids: string[], userId?: string) {
+  async bulkDelete(ids: string[], userId?: string, userRole?: string) {
     if (!ids || ids.length === 0) return { count: 0 };
+
+    // Restrict to accessible records when user lacks projects:view_all
+    let accessibleIds = ids;
+    if (userId && userRole) {
+      const canViewAll = await this.permissionsService.hasPermission(userRole, 'projects:view_all');
+      if (!canViewAll) {
+        const accessible = await this.prisma.project.findMany({
+          where: {
+            id: { in: ids },
+            OR: [
+              { projectManagerId: userId },
+              { designerId: userId },
+              { qsId: userId },
+              { assignments: { some: { userId } } },
+            ],
+          },
+          select: { id: true },
+        });
+        accessibleIds = accessible.map((r) => r.id);
+      }
+    }
 
     // Fetch the distinct clientIds before deletion so we can update counts afterward.
     const projectsToDelete = await this.prisma.project.findMany({
-      where: { id: { in: ids } },
+      where: { id: { in: accessibleIds } },
       select: { clientId: true },
     });
 
@@ -556,7 +535,7 @@ export class ProjectsService {
     ];
 
     const result = await this.prisma.project.deleteMany({
-      where: { id: { in: ids } },
+      where: { id: { in: accessibleIds } },
     });
 
     // Refresh project counts for every affected client, mirroring remove().
@@ -568,7 +547,7 @@ export class ProjectsService {
       userId: userId || 'system',
       action: 'BULK_DELETE_PROJECTS',
       details: {
-        ids,
+        ids: accessibleIds,
         count: result.count,
       },
     });

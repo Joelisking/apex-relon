@@ -2,6 +2,8 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { CustomerCrudService } from '../services/customer-crud.service';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Permissions } from '../../permissions/permissions.decorator';
+import { CreateClientDto } from '../dto/create-client.dto';
+import { UpdateClientDto } from '../dto/update-client.dto';
 
 interface AuthenticatedUser {
   id: string;
@@ -28,20 +30,20 @@ export class CustomersController {
   @Post()
   @Permissions('clients:create')
   create(
-    @Body() body: Record<string, unknown>,
+    @Body() dto: CreateClientDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.crudService.create(body, user?.id);
+    return this.crudService.create(dto as unknown as Record<string, unknown>, user?.id);
   }
 
   @Patch(':id')
   @Permissions('clients:edit')
   update(
     @Param('id') id: string,
-    @Body() body: Record<string, unknown>,
+    @Body() dto: UpdateClientDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.crudService.update(id, body, user?.id);
+    return this.crudService.update(id, dto as Record<string, unknown>, user?.id);
   }
 
   @Delete(':id')
@@ -56,7 +58,7 @@ export class CustomersController {
     @Body() body: { ids: string[]; data: Record<string, unknown> },
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.crudService.bulkUpdate(body.ids, body.data, user?.id);
+    return this.crudService.bulkUpdate(body.ids, body.data, user?.id, user?.role);
   }
 
   @Post('bulk-delete')
@@ -65,6 +67,6 @@ export class CustomersController {
     @Body() body: { ids: string[] },
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.crudService.bulkDelete(body.ids, user?.id);
+    return this.crudService.bulkDelete(body.ids, user?.id, user?.role);
   }
 }

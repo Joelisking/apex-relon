@@ -169,7 +169,7 @@ export default function ModernLeadsView({
     ? allUsers
     : ((allUsers as { users?: Manager[] })?.users ?? []);
   const managers: Manager[] = allUsersArr.filter(
-    (u) => u.role === 'BDM' || u.role === 'SALES',
+    (u) => u.role === 'BDM' || u.role === 'SALES' || u.role === 'ADMIN' || u.role === 'CEO',
   );
   const clients = clientList;
 
@@ -190,8 +190,6 @@ export default function ModernLeadsView({
     currentYear,
   );
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [executingCompanyFilter, setExecutingCompanyFilter] =
-    useState<string>('');
   const isCustom = !!(dateRange?.from || dateRange?.to);
 
   const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
@@ -229,22 +227,10 @@ export default function ModernLeadsView({
     staleTime: 10 * 60 * 1000, // Stages rarely change
   });
 
-  const { data: executingCompanyOptions = [] } = useQuery({
-    queryKey: ['dropdown-options', 'executing_company'],
-    queryFn: () =>
-      settingsApi.getDropdownOptions('executing_company'),
-    staleTime: 10 * 60 * 1000,
-  });
-
   // Apply filter whenever leads or filter state changes
   useEffect(() => {
     setFilteredLeads(
       leads.filter((l) => {
-        if (
-          executingCompanyFilter &&
-          l.executingCompany !== executingCompanyFilter
-        )
-          return false;
         if (isCustom) {
           if (!l.likelyStartDate) return true; // undated leads always shown
           const d = new Date(l.likelyStartDate as string);
@@ -271,7 +257,6 @@ export default function ModernLeadsView({
     selectedYear,
     dateRange,
     isCustom,
-    executingCompanyFilter,
   ]);
 
   // Load activities when a lead is selected
@@ -645,32 +630,6 @@ export default function ModernLeadsView({
           placeholder="Filter by date range"
           numberOfMonths={2}
         />
-        {executingCompanyOptions.length > 0 && (
-          <>
-            <span className="text-muted-foreground text-sm mx-1">
-              |
-            </span>
-            <Select
-              value={executingCompanyFilter || '__all__'}
-              onValueChange={(v) =>
-                setExecutingCompanyFilter(v === '__all__' ? '' : v)
-              }>
-              <SelectTrigger className="h-9 w-50">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">
-                  All Executing Companies
-                </SelectItem>
-                {executingCompanyOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </>
-        )}
       </div>
 
       <CreateLeadDialog
@@ -849,7 +808,6 @@ export default function ModernLeadsView({
         lead={leadToConvert}
         open={convertDialogOpen}
         onOpenChange={setConvertDialogOpen}
-        managers={managers}
       />
 
       {/* Bulk Delete Confirmation */}

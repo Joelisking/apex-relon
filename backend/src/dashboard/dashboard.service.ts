@@ -86,7 +86,8 @@ export class DashboardService {
 
   async getMetrics(
     period: 'week' | 'month' | 'quarter' = 'month',
-    executingCompany?: string,
+    userId: string = '',
+    userPermissions: string[] = [],
   ): Promise<DashboardMetrics> {
     const now = new Date();
     const _periodStart = this.getPeriodStart(period, now);
@@ -99,9 +100,16 @@ export class DashboardService {
       now.getTime() - 6 * 30 * 24 * 60 * 60 * 1000,
     );
 
-    // Scoped filters — empty object means no restriction
-    const lf = executingCompany ? { executingCompany } : {};
-    const pf = executingCompany ? { executingCompany } : {};
+    // Scoped filters — applied to all queries based on user permissions
+    const lf: Record<string, unknown> = userPermissions.includes('leads:view_all')
+      ? {}
+      : { OR: [{ assignedToId: userId }, { teamMembers: { some: { userId } } }] };
+
+    const pf: Record<string, unknown> = userPermissions.includes('projects:view_all')
+      ? {}
+      : { OR: [{ projectManagerId: userId }, { assignments: { some: { userId } } }] };
+
+    const canViewAllClients = userPermissions.includes('clients:view_all');
 
     // Run all aggregation queries in parallel — no full table scans
     const [
@@ -279,9 +287,10 @@ export class DashboardService {
         clientName: c.name,
         revenue: c.revenue,
       }));
-      activeClients = await this.prisma.client.count({
-        where: { status: 'Active' },
-      });
+      // Only users with clients:view_all get the full active client count
+      activeClients = canViewAllClients
+        ? await this.prisma.client.count({ where: { status: 'Active' } })
+        : revenueByClient.filter((c) => clientMap.get(c.clientId)?.status === 'Active').length;
     }
 
     // ── Derive totals from stage counts ──────────────────────────────
@@ -427,7 +436,13 @@ export class DashboardService {
 
   async getRevenueTrend(
     period: 'week' | 'month' | 'quarter' = 'month',
+    userId: string = '',
+    userPermissions: string[] = [],
   ): Promise<{ month: string; revenue: number }[]> {
+    const pf: Record<string, unknown> = userPermissions.includes('projects:view_all')
+      ? {}
+      : { OR: [{ projectManagerId: userId }, { assignments: { some: { userId } } }] };
+
     // Helper: sum revenue for completed projects in a date range.
     // Falls back to updatedAt when completedDate is null (projects completed
     // via EditProjectDialog which does not set completedDate).
@@ -440,6 +455,7 @@ export class DashboardService {
             { completedDate: { gte: start, lt: end } },
             { completedDate: null, updatedAt: { gte: start, lt: end } },
           ],
+          ...pf,
         },
         select: { endOfProjectValue: true, contractedValue: true },
       });
@@ -506,7 +522,11 @@ export class DashboardService {
     return months;
   }
 
-  async getLeadVolumeTrend() {
+  async getLeadVolumeTrend(userId: string = '', userPermissions: string[] = []) {
+    const lf: Record<string, unknown> = userPermissions.includes('leads:view_all')
+      ? {}
+      : { OR: [{ assignedToId: userId }, { teamMembers: { some: { userId } } }] };
+
     const weeks: { week: string; count: number; start: string }[] = [];
     for (let i = 11; i >= 0; i--) {
       const start = new Date();
@@ -515,21 +535,25 @@ export class DashboardService {
       const end = new Date(start);
       end.setDate(end.getDate() + 7);
       const count = await this.prisma.lead.count({
-        where: { createdAt: { gte: start, lt: end } },
+        where: { createdAt: { gte: start, lt: end }, ...lf },
       });
       weeks.push({ week: `W${12 - i}`, count, start: start.toISOString().split('T')[0] });
     }
     return weeks;
   }
 
-  async getPipelineInsights() {
+  async getPipelineInsights(userId: string = '', userPermissions: string[] = []) {
+    const lf: Record<string, unknown> = userPermissions.includes('leads:view_all')
+      ? {}
+      : { OR: [{ assignedToId: userId }, { teamMembers: { some: { userId } } }] };
+
     const [leads, pipelineAgg] = await Promise.all([
       this.prisma.lead.findMany({
-        where: { stage: { notIn: ['Won', 'Lost'] } },
+        where: { stage: { notIn: ['Won', 'Lost'] }, ...lf },
         select: { id: true, stage: true, urgency: true, expectedValue: true, updatedAt: true },
       }),
       this.prisma.lead.aggregate({
-        where: { stage: { notIn: ['Won', 'Lost'] } },
+        where: { stage: { notIn: ['Won', 'Lost'] }, ...lf },
         _sum: { expectedValue: true },
         _count: { id: true },
       }),
@@ -554,8 +578,8 @@ export class DashboardService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const [wonCount, closedCount] = await Promise.all([
-      this.prisma.lead.count({ where: { stage: 'Won', updatedAt: { gte: thirtyDaysAgo } } }),
-      this.prisma.lead.count({ where: { stage: { in: ['Won', 'Lost'] }, updatedAt: { gte: thirtyDaysAgo } } }),
+      this.prisma.lead.count({ where: { stage: 'Won', updatedAt: { gte: thirtyDaysAgo }, ...lf } }),
+      this.prisma.lead.count({ where: { stage: { in: ['Won', 'Lost'] }, updatedAt: { gte: thirtyDaysAgo }, ...lf } }),
     ]);
     const winRate = closedCount > 0 ? Math.round((wonCount / closedCount) * 100) : 0;
 

@@ -8,6 +8,14 @@ const URGENCY_HEX: Record<string, string> = {
   Medium: '#f59e0b',
   Low: '#10b981',
 };
+function urgencyColor(urgency?: string | null): string {
+  if (!urgency) return URGENCY_HEX.Low;
+  return (
+    URGENCY_HEX[urgency] ??
+    URGENCY_HEX[urgency.charAt(0).toUpperCase() + urgency.slice(1).toLowerCase()] ??
+    URGENCY_HEX.Low
+  );
+}
 
 const RISK_CHIP: Record<string, string> = {
   High: 'text-red-700 bg-red-50 border-red-200',
@@ -60,7 +68,7 @@ export function LeadCardContent({ lead }: { lead: Lead }) {
     lead.stage !== 'Lost' &&
     new Date(lead.likelyStartDate) < new Date();
 
-  const accentColor = URGENCY_HEX[lead.urgency] ?? URGENCY_HEX.Low;
+  const accentColor = urgencyColor(lead.urgency);
   const daysSinceContact = lead.metrics?.daysSinceLastContact ?? 0;
   const activityCount = lead.metrics?.activityCount ?? 0;
   const stale = daysSinceContact > 14;

@@ -29,27 +29,21 @@ const BUILT_IN_ROLES = [
 
 const SEEDED_ROLES = [
   {
-    key: 'BDM',
-    label: 'Business Development Manager',
-    color: 'orange',
+    key: 'OWNER',
+    label: 'Owner',
+    color: 'violet',
     isBuiltIn: false,
   },
   {
-    key: 'SALES',
-    label: 'Sales Representative',
+    key: 'PROJECT_MANAGER',
+    label: 'Project Manager',
+    color: 'blue',
+    isBuiltIn: false,
+  },
+  {
+    key: 'SURVEY_CREW_CHIEF',
+    label: 'Survey Crew Chief',
     color: 'emerald',
-    isBuiltIn: false,
-  },
-  {
-    key: 'DESIGNER',
-    label: 'Designer',
-    color: 'rose',
-    isBuiltIn: false,
-  },
-  {
-    key: 'QS',
-    label: 'Quantity Surveyor',
-    color: 'cyan',
     isBuiltIn: false,
   },
 ];

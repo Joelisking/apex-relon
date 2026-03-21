@@ -92,16 +92,9 @@ export class PermissionsService implements OnModuleInit {
   }
 
   private async seedDefaults(): Promise<void> {
-    // Fast-path: skip the full upsert loop when the table already has data.
-    const existingCount = await this.prisma.rolePermission.count();
-    if (existingCount > 0) {
-      this.logger.log(
-        `Role permissions already seeded (${existingCount} entries). Skipping.`,
-      );
-      return;
-    }
-
     // Additive upsert: adds new permissions without wiping admin-customised ones.
+    // No fast-path skip — new roles/permissions added to DEFAULT_ROLE_PERMISSIONS
+    // must be seeded on every startup; the inner findUnique guards against duplicates.
     this.logger.log('Seeding / ensuring default role permissions...');
     let added = 0;
 

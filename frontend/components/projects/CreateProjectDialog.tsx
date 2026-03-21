@@ -30,12 +30,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Users, X } from 'lucide-react';
+import { CreatableSelect } from '@/components/ui/creatable-select';
 import { toast } from 'sonner';
 import { projectsApi } from '@/lib/api/projects-client';
 import { usersApi, type UserResponse } from '@/lib/api/users-client';
-import { clientsApi, leadsApi } from '@/lib/api/client';
+import { clientsApi, leadsApi, settingsApi } from '@/lib/api/client';
 import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
+import type { DropdownOption } from '@/lib/types';
 
 const formSchema = z.object({
   clientId: z.string().min(1, 'Client is required'),
@@ -45,7 +48,9 @@ const formSchema = z.object({
   contractedValue: z.coerce.number().min(0, 'Value must be positive'),
   endOfProjectValue: z.coerce.number().optional().nullable(),
   estimatedDueDate: z.string().optional(),
+  closedDate: z.string().optional(),
   projectManagerId: z.string().optional(),
+  riskStatus: z.string().optional(),
   description: z.string().optional(),
 });
 
@@ -70,13 +75,17 @@ export function CreateProjectDialog({
   >([]);
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
+  const [riskOptions, setRiskOptions] = useState<DropdownOption[]>([]);
+  const [pendingTeamMemberIds, setPendingTeamMemberIds] = useState<string[]>([]);
 
   type FormValues = z.infer<typeof formSchema>;
   const form = useForm<FormValues, unknown, FormValues>({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
     defaultValues: {
+      name: '',
       status: 'Planning',
       contractedValue: 0,
+      endOfProjectValue: 0,
     },
   });
 
@@ -96,8 +105,8 @@ export function CreateProjectDialog({
           setLeads(Array.isArray(leadsData) ? leadsData : []);
           setUsers(usersRes.users || []);
           setProjectStages(stages);
-          // Default status to first stage
-          if (stages.length > 0 && !form.getValues('status')) {
+          // Default status to first pipeline stage
+          if (stages.length > 0) {
             form.setValue('status', stages[0].name);
           }
         } catch (error) {
@@ -105,6 +114,10 @@ export function CreateProjectDialog({
         }
       };
       fetchData();
+      settingsApi
+        .getDropdownOptions('project_risk_status')
+        .then(setRiskOptions)
+        .catch(console.error);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -133,11 +146,17 @@ export function CreateProjectDialog({
         estimatedDueDate: values.estimatedDueDate
           ? new Date(values.estimatedDueDate).toISOString()
           : undefined,
+        closedDate: values.closedDate
+          ? new Date(values.closedDate).toISOString()
+          : undefined,
+        teamMemberIds:
+          pendingTeamMemberIds.length > 0 ? pendingTeamMemberIds : undefined,
       });
       toast.success('Project created successfully');
       onProjectCreated();
       onOpenChange(false);
       form.reset();
+      setPendingTeamMemberIds([]);
     } catch (error) {
       toast.error('Failed to create project');
       console.error(error);
@@ -149,6 +168,23 @@ export function CreateProjectDialog({
   const pms = users.filter((u) =>
     ['ADMIN', 'CEO', 'SALES', 'BDM'].includes(u.role),
   );
+
+  const availableUsers = users.filter(
+    (u) => !pendingTeamMemberIds.includes(u.id),
+  );
+  const addedMembers = users.filter((u) =>
+    pendingTeamMemberIds.includes(u.id),
+  );
+
+  function addTeamMember(userId: string) {
+    if (userId && !pendingTeamMemberIds.includes(userId)) {
+      setPendingTeamMemberIds((prev) => [...prev, userId]);
+    }
+  }
+
+  function removeTeamMember(userId: string) {
+    setPendingTeamMemberIds((prev) => prev.filter((id) => id !== userId));
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -284,6 +320,7 @@ export function CreateProjectDialog({
                         min="0"
                         step="0.01"
                         {...field}
+                        onFocus={(e) => e.target.select()}
                       />
                     </FormControl>
                     <FormMessage />
@@ -304,11 +341,12 @@ export function CreateProjectDialog({
                         min="0"
                         step="0.01"
                         {...field}
-                        value={field.value ?? ''}
+                        value={field.value ?? 0}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) =>
                           field.onChange(
                             e.target.value === ''
-                              ? undefined
+                              ? 0
                               : e.target.value,
                           )
                         }
@@ -319,7 +357,7 @@ export function CreateProjectDialog({
                 )}
               />
 
-              {/* Est Due Date - Native Date Input */}
+              {/* Est Due Date */}
               <FormField
                 control={form.control}
                 name="estimatedDueDate"
@@ -331,6 +369,53 @@ export function CreateProjectDialog({
                         value={field.value}
                         onChange={field.onChange}
                         placeholder="Pick a date"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Closed Date */}
+              <FormField
+                control={form.control}
+                name="closedDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Closed Date</FormLabel>
+                    <FormControl>
+                      <DatePicker
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Pick a date"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Risk Status */}
+              <FormField
+                control={form.control}
+                name="riskStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Risk Status</FormLabel>
+                    <FormControl>
+                      <CreatableSelect
+                        options={riskOptions}
+                        value={field.value || undefined}
+                        onChange={field.onChange}
+                        placeholder="Select risk status"
+                        onOptionsChange={setRiskOptions}
+                        onOptionCreated={(label) =>
+                          settingsApi.createDropdownOption({
+                            category: 'project_risk_status',
+                            value: label.toLowerCase().replace(/\s+/g, '_'),
+                            label,
+                          })
+                        }
                       />
                     </FormControl>
                     <FormMessage />
@@ -384,6 +469,65 @@ export function CreateProjectDialog({
                 </FormItem>
               )}
             />
+
+            {/* Team Members */}
+            {users.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold">Team Members</span>
+                </div>
+
+                {addedMembers.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {addedMembers.map((u) => (
+                      <div
+                        key={u.id}
+                        className="flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1">
+                        <span className="text-sm font-medium">{u.name}</span>
+                        {u.role && (
+                          <Badge
+                            variant="secondary"
+                            className="h-4 px-1 text-[10px]">
+                            {u.role}
+                          </Badge>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeTeamMember(u.id)}
+                          className="ml-0.5 text-muted-foreground hover:text-destructive">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {availableUsers.length > 0 && (
+                  <Select
+                    value=""
+                    onValueChange={(val) => {
+                      if (val) addTeamMember(val);
+                    }}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Add a team member..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableUsers.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.name}
+                          {u.role && (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {u.role}
+                            </span>
+                          )}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
 
             <DialogFooter>
               <Button

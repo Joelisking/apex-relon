@@ -19,6 +19,7 @@ import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { Permissions } from '../permissions/permissions.decorator';
 
 interface AuthenticatedUser {
   id: string;
@@ -30,7 +31,8 @@ interface AuthenticatedUser {
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @Public()
+  @UseGuards(JwtAuthGuard)
+  @Permissions('users:create')
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() registerDto: RegisterDto) {

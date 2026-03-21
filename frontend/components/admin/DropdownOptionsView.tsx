@@ -63,25 +63,16 @@ const CATEGORIES: Array<{
   value: string;
   label: string;
   description: string;
+  group: string;
   hasColor: boolean;
   hasIcon: boolean;
   hasMeetingType: boolean;
-  isServiceType?: boolean;
 }> = [
   {
-    value: 'activity_type',
-    label: 'Activity Types',
-    description:
-      'Types of activities logged in timelines (calls, meetings, etc.)',
-    hasColor: true,
-    hasIcon: true,
-    hasMeetingType: true,
-  },
-  {
-    value: 'meeting_type',
-    label: 'Meeting Types',
-    description:
-      'Sub-types for meeting activities (virtual, in-person, etc.)',
+    value: 'lead_source',
+    label: 'Lead Sources',
+    description: 'How prospective projects were sourced (Referral, INDOT, Website, etc.)',
+    group: 'Leads',
     hasColor: false,
     hasIcon: false,
     hasMeetingType: false,
@@ -89,49 +80,9 @@ const CATEGORIES: Array<{
   {
     value: 'urgency',
     label: 'Urgency Levels',
-    description:
-      'Urgency levels for prospective projects (Low, Medium, High)',
+    description: 'Urgency levels for prospective projects (Low, Medium, High)',
+    group: 'Leads',
     hasColor: true,
-    hasIcon: false,
-    hasMeetingType: false,
-  },
-  {
-    value: 'file_category',
-    label: 'File Categories',
-    description: 'Categories for uploaded files and documents',
-    hasColor: false,
-    hasIcon: false,
-    hasMeetingType: false,
-  },
-  {
-    value: 'cost_category',
-    label: 'Cost Categories',
-    description: 'Categories for project cost log entries',
-    hasColor: false,
-    hasIcon: false,
-    hasMeetingType: false,
-  },
-  {
-    value: 'client_segment',
-    label: 'Customer Company Types',
-    description: 'Company type classifications for customers',
-    hasColor: false,
-    hasIcon: false,
-    hasMeetingType: false,
-  },
-  {
-    value: 'client_industry',
-    label: 'Customer Industries',
-    description: 'Industry classifications for customers (e.g. Government, Construction)',
-    hasColor: false,
-    hasIcon: false,
-    hasMeetingType: false,
-  },
-  {
-    value: 'individual_type',
-    label: 'Contact Roles',
-    description: 'Roles of individual contacts at customer companies',
-    hasColor: false,
     hasIcon: false,
     hasMeetingType: false,
   },
@@ -139,6 +90,7 @@ const CATEGORIES: Array<{
     value: 'project_status',
     label: 'Project Statuses',
     description: 'Status values for active projects',
+    group: 'Projects',
     hasColor: true,
     hasIcon: false,
     hasMeetingType: false,
@@ -147,41 +99,79 @@ const CATEGORIES: Array<{
     value: 'project_risk_status',
     label: 'Project Risk Statuses',
     description: 'Risk status values for project health tracking',
+    group: 'Projects',
     hasColor: true,
     hasIcon: false,
     hasMeetingType: false,
   },
   {
-    value: 'lead_source',
-    label: 'Lead Sources',
-    description: 'How prospective projects were sourced (Referral, INDOT, Website, etc.)',
+    value: 'cost_category',
+    label: 'Cost Categories',
+    description: 'Categories for project cost log entries',
+    group: 'Projects',
     hasColor: false,
     hasIcon: false,
     hasMeetingType: false,
   },
   {
-    value: 'executing_company',
-    label: 'Executing Companies',
-    description:
-      'Companies that can be selected as the executing company for projects and prospective projects',
+    value: 'client_segment',
+    label: 'Customer Company Types',
+    description: 'Company type classifications for customers',
+    group: 'Customers',
     hasColor: false,
     hasIcon: false,
     hasMeetingType: false,
   },
   {
-    value: 'service_type',
-    label: 'Project Types',
-    description:
-      'Service types that can be assigned to prospective projects.',
+    value: 'client_industry',
+    label: 'Customer Industries',
+    description: 'Industry classifications for customers (e.g. Government, Construction)',
+    group: 'Customers',
     hasColor: false,
     hasIcon: false,
     hasMeetingType: false,
-    isServiceType: true,
+  },
+  {
+    value: 'individual_type',
+    label: 'Contact Roles',
+    description: 'Roles of individual contacts at customer companies',
+    group: 'Customers',
+    hasColor: false,
+    hasIcon: false,
+    hasMeetingType: false,
+  },
+  {
+    value: 'activity_type',
+    label: 'Activity Types',
+    description: 'Types of activities logged in timelines (calls, meetings, etc.)',
+    group: 'General',
+    hasColor: true,
+    hasIcon: true,
+    hasMeetingType: true,
+  },
+  {
+    value: 'meeting_type',
+    label: 'Meeting Types',
+    description: 'Sub-types for meeting activities (virtual, in-person, etc.)',
+    group: 'General',
+    hasColor: false,
+    hasIcon: false,
+    hasMeetingType: false,
+  },
+  {
+    value: 'file_category',
+    label: 'File Categories',
+    description: 'Categories for uploaded files and documents',
+    group: 'General',
+    hasColor: false,
+    hasIcon: false,
+    hasMeetingType: false,
   },
   {
     value: 'team_type',
     label: 'Team Types',
     description: 'Types of teams (Sales, Design, Operations, etc.)',
+    group: 'General',
     hasColor: false,
     hasIcon: false,
     hasMeetingType: false,
@@ -199,6 +189,7 @@ export function DropdownOptionsView() {
   const [activeCategory, setActiveCategory] = useState(
     CATEGORIES[0].value,
   );
+  const [categorySearch, setCategorySearch] = useState('');
   const queryClient = useQueryClient();
   const { data: allOptions = [], isLoading: loading } = useQuery({
     queryKey: ['dropdown-options'],
@@ -357,29 +348,41 @@ export function DropdownOptionsView() {
 
       <div className="flex gap-6">
         {/* Category sidebar */}
-        <div className="w-56 shrink-0 space-y-1">
-          {CATEGORIES.map((cat) => (
-            <div key={cat.value}>
-              {cat.isServiceType && (
-                <div className="pt-2 pb-1">
-                  <div className="border-t border-border" />
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium px-3 pt-2">
-                    Other
-                  </p>
-                </div>
-              )}
-              <button
-                onClick={() => setActiveCategory(cat.value)}
-                className={cn(
-                  'w-full text-left rounded-lg px-3 py-2 text-sm transition-colors',
-                  activeCategory === cat.value
-                    ? 'bg-primary text-primary-foreground font-medium'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                )}>
-                {cat.label}
-              </button>
-            </div>
-          ))}
+        <div className="w-56 shrink-0 space-y-2">
+          <Input
+            placeholder="Search..."
+            value={categorySearch}
+            onChange={(e) => setCategorySearch(e.target.value)}
+            className="h-8 text-sm"
+          />
+          {(() => {
+            const filtered = CATEGORIES.filter((cat) =>
+              cat.label.toLowerCase().includes(categorySearch.toLowerCase()),
+            );
+            const groups = Array.from(new Set(filtered.map((c) => c.group)));
+            return groups.map((group) => (
+              <div key={group} className="space-y-0.5">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium px-3 pt-1">
+                  {group}
+                </p>
+                {filtered
+                  .filter((c) => c.group === group)
+                  .map((cat) => (
+                    <button
+                      key={cat.value}
+                      onClick={() => setActiveCategory(cat.value)}
+                      className={cn(
+                        'w-full text-left rounded-lg px-3 py-2 text-sm transition-colors',
+                        activeCategory === cat.value
+                          ? 'bg-primary text-primary-foreground font-medium'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      )}>
+                      {cat.label}
+                    </button>
+                  ))}
+              </div>
+            ));
+          })()}
         </div>
 
         {/* Content */}
@@ -393,12 +396,9 @@ export function DropdownOptionsView() {
             </p>
           </div>
 
-          {catConfig.isServiceType && <ServiceTypesPanel />}
-
           {catConfig.hasMeetingType && <SubtypeCallout />}
 
-          {!catConfig.isServiceType && (
-            <>
+          <>
               <Card>
                 <CardContent className="p-0">
                   {loading ? (
@@ -718,8 +718,7 @@ export function DropdownOptionsView() {
                   )}
                 </CardContent>
               </Card>
-            </>
-          )}
+          </>
         </div>
       </div>
 

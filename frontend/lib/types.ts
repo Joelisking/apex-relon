@@ -94,7 +94,6 @@ export type DropdownCategory =
   | 'individual_type'
   | 'project_status'
   | 'project_risk_status'
-  | 'executing_company'
   | 'lead_source';
 
 export interface LeadRep {
@@ -204,7 +203,6 @@ export interface Lead {
   expectedValue: number;
   contractedValue?: number | null;
   projectName?: string | null;
-  executingCompany?: string | null;
   stage: string;
   serviceTypeId?: string | null;
   serviceType?: ServiceType | null;
@@ -358,7 +356,6 @@ export interface Project {
   designer?: { id: string; name: string; email: string } | null;
   qsId?: string | null;
   qs?: { id: string; name: string; email: string } | null;
-  executingCompany?: string | null;
   costLogs?: CostLog[];
   createdAt?: string;
   updatedAt?: string;
@@ -413,6 +410,7 @@ export interface Client {
   } | null;
 
   // Relationships
+  contacts?: Array<{ firstName: string; lastName: string; email?: string | null; phone?: string | null }>;
   projects?: Project[];
   convertedFromLead?: {
     id: string;
@@ -425,6 +423,8 @@ export interface Client {
   healthFlags?: ClientHealthFlag[];
   suggestedActions?: string[];
 
+  isDeleted?: boolean;
+  deletedAt?: string | Date | null;
   createdAt?: string | Date;
   updatedAt?: string | Date;
 

@@ -52,6 +52,7 @@ export class ProjectsController {
       body.ids,
       body.data,
       user?.id,
+      user?.role,
     );
   }
 
@@ -62,7 +63,7 @@ export class ProjectsController {
     @Body() body: { ids: string[] },
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.projectsService.bulkDelete(body.ids, user?.id);
+    return this.projectsService.bulkDelete(body.ids, user?.id, user?.role);
   }
 
   @Get('client/:clientId')
@@ -99,21 +100,6 @@ export class ProjectsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.projectsService.remove(id, user?.id);
-  }
-
-  @Post('convert-lead/:leadId')
-  @Permissions('projects:create')
-  convertLead(
-    @Param('leadId') leadId: string,
-    @Body() body: { clientId: string; projectManagerId?: string },
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.projectsService.convertLead(
-      leadId,
-      body.clientId,
-      body.projectManagerId,
-      user?.id,
-    );
   }
 
   // --- Cost Logs ---

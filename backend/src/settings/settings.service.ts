@@ -26,6 +26,8 @@ export class SettingsService implements OnModuleInit {
     await this.seedIndividualTypes();
     await this.seedClientIndustries();
     await this.seedLeadSources();
+    await this.seedUrgencyLevels();
+    await this.seedProjectRiskStatus();
   }
 
   private async seedTeamTypes() {
@@ -173,6 +175,46 @@ export class SettingsService implements OnModuleInit {
       });
     }
     this.logger.log('Lead source dropdown options ensured.');
+  }
+
+  private async seedUrgencyLevels() {
+    const OPTIONS = [
+      { value: 'low', label: 'Low', sortOrder: 0 },
+      { value: 'medium', label: 'Medium', sortOrder: 1 },
+      { value: 'high', label: 'High', sortOrder: 2 },
+    ];
+    const existingCount = await this.prisma.dropdownOption.count({
+      where: { category: 'urgency' },
+    });
+    if (existingCount >= OPTIONS.length) return;
+    for (const opt of OPTIONS) {
+      await this.prisma.dropdownOption.upsert({
+        where: { category_value: { category: 'urgency', value: opt.value } },
+        update: {},
+        create: { category: 'urgency', ...opt, isSystem: true, isActive: true },
+      });
+    }
+    this.logger.log('Urgency level dropdown options ensured.');
+  }
+
+  private async seedProjectRiskStatus() {
+    const OPTIONS = [
+      { value: 'On Track', label: 'On Track', sortOrder: 1 },
+      { value: 'At Risk', label: 'At Risk', sortOrder: 2 },
+      { value: 'Blocked', label: 'Blocked', sortOrder: 3 },
+    ];
+    const existingCount = await this.prisma.dropdownOption.count({
+      where: { category: 'project_risk_status' },
+    });
+    if (existingCount >= OPTIONS.length) return;
+    for (const opt of OPTIONS) {
+      await this.prisma.dropdownOption.upsert({
+        where: { category_value: { category: 'project_risk_status', value: opt.value } },
+        update: {},
+        create: { category: 'project_risk_status', ...opt, isSystem: true, isActive: true },
+      });
+    }
+    this.logger.log('Project risk status dropdown options ensured.');
   }
 
   // ── Service Types ──────────────────────────────────────────────────────────

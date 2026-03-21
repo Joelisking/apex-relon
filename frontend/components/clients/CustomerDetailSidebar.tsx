@@ -35,16 +35,6 @@ const STATUS_DOT: Record<string, string> = {
   Dormant: 'bg-amber-400',
 };
 
-function avatarInitials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((n) => n[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-}
-
 function getHealthHex(score: number): string {
   if (score >= 80) return '#10b981';
   if (score >= 60) return '#f59e0b';
@@ -173,7 +163,7 @@ export function CustomerDetailSidebar({
               Lifetime Revenue
             </p>
             <p className="text-[22px] font-bold tabular-nums leading-none text-foreground">
-              ${((client.lifetimeRevenue || 0) / 1000).toFixed(0)}k
+              ${((client.metrics?.totalRevenue || client.lifetimeRevenue || 0) / 1000).toFixed(0)}k
             </p>
           </div>
         </div>
@@ -236,23 +226,6 @@ export function CustomerDetailSidebar({
         </div>
       )}
 
-      {/* Account Manager */}
-      <div className="px-5 py-4 border-b border-border/40">
-        <SectionLabel>Account Manager</SectionLabel>
-        {client.accountManager ? (
-          <div className="flex items-center gap-2">
-            <div
-              className="h-5 w-5 rounded-full bg-secondary flex items-center justify-center shrink-0 text-secondary-foreground font-bold"
-              style={{ fontSize: '7px' }}>
-              {avatarInitials(client.accountManager.name)}
-            </div>
-            <span className="text-xs text-foreground">{client.accountManager.name}</span>
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground/50">Unassigned</p>
-        )}
-      </div>
-
       {/* Actions */}
       <div className="mt-auto px-5 py-4 border-t border-border/40 space-y-1.5">
         {canEdit && (
@@ -272,7 +245,7 @@ export function CustomerDetailSidebar({
             onClick={onDelete}
             className="w-full justify-start gap-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50">
             <Trash2 className="h-3.5 w-3.5" />
-            Delete Customer
+            Archive Customer
           </Button>
         )}
       </div>

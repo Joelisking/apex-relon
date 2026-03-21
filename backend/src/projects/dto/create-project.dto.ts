@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsNumber,
+  IsArray,
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -76,7 +77,9 @@ export class CreateProjectDto {
   @Type(() => Number)
   estimatedRevenue?: number;
 
-  @IsString()
+  @IsArray()
+  @IsString({ each: true })
   @IsOptional()
-  executingCompany?: string;
+  teamMemberIds?: string[];
+
 }

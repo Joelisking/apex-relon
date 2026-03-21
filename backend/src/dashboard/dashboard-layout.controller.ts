@@ -15,7 +15,6 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Permissions } from '../permissions/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import {
   DashboardLayoutService,
@@ -94,7 +93,6 @@ export class DashboardLayoutController {
   }
 
   @Put()
-  @Permissions('dashboard:edit')
   async saveLayout(@CurrentUser() user: AuthenticatedUser, @Body() dto: SaveLayoutDto) {
     return this.dashboardLayoutService.saveLayout(
       user.id,
@@ -103,7 +101,6 @@ export class DashboardLayoutController {
   }
 
   @Delete()
-  @Permissions('dashboard:edit')
   async resetLayout(@CurrentUser() user: AuthenticatedUser) {
     await this.dashboardLayoutService.resetLayout(user.id);
     return this.dashboardLayoutService.getLayout(user.id, user.role);

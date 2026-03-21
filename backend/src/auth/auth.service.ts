@@ -52,8 +52,6 @@ export class AuthService {
   }
 
   async login(user: Record<string, unknown>) {
-    const payload = { email: user.email as string, sub: user.id as string, role: user.role as string };
-
     // Update last login time
     await this.database.user.update({
       where: { id: user.id as string },
@@ -61,6 +59,14 @@ export class AuthService {
     });
 
     const permissions = await this.permissionsService.getPermissionsForRole(user.role as string);
+
+    // Include permissions in the JWT so server components can check them without an extra API call
+    const payload = {
+      email: user.email as string,
+      sub: user.id as string,
+      role: user.role as string,
+      permissions,
+    };
 
     return {
       access_token: this.jwtService.sign(payload),
