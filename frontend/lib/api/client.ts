@@ -88,7 +88,7 @@ export interface CreateClientDto {
   individualType?: string;
   segment: string;
   industry: string;
-  accountManagerId: string;
+  accountManagerId?: string;
   // These fields have defaults and should be calculated, not entered during creation
   lifetimeRevenue?: number;
   status?: string;

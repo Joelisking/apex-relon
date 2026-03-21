@@ -42,7 +42,7 @@ interface SearchableItem {
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Clients', href: '/clients', icon: Building2 },
+  { label: 'Customers', href: '/clients', icon: Building2 },
   { label: 'Prospective Projects', href: '/leads', icon: Users },
   { label: 'Projects', href: '/projects', icon: FolderKanban },
   { label: 'Quotes', href: '/quotes', icon: FileText },
@@ -67,42 +67,45 @@ export function CommandPalette() {
     return () => document.removeEventListener('keydown', down);
   }, []);
 
-  const { data: rawClients = [] } = useQuery<any[]>({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type AnyRecord = any;
+
+  const { data: rawClients = [] } = useQuery<AnyRecord[]>({
     queryKey: ['clients'],
     queryFn: () => api.clients.getAll(),
     staleTime: 60 * 1000,
   });
 
-  const { data: rawLeads = [] } = useQuery<any[]>({
+  const { data: rawLeads = [] } = useQuery<AnyRecord[]>({
     queryKey: ['leads'],
     queryFn: () => api.leads.getAll(),
     staleTime: 60 * 1000,
   });
 
-  const { data: rawProjects = [] } = useQuery<any[]>({
+  const { data: rawProjects = [] } = useQuery<AnyRecord[]>({
     queryKey: ['projects'],
     queryFn: () => projectsApi.getAll(),
     staleTime: 60 * 1000,
   });
 
-  const clients: SearchableItem[] = rawClients.map((c) => ({
-    id: c.id,
+  const clients: SearchableItem[] = rawClients.map((c: AnyRecord) => ({
+    id: c.id ?? '',
     label: c.name || c.contactName || 'Unnamed Client',
     subtitle: c.industry || c.segment,
     type: 'client',
     badge: c.status,
   }));
 
-  const leads: SearchableItem[] = rawLeads.map((l) => ({
-    id: l.id,
+  const leads: SearchableItem[] = rawLeads.map((l: AnyRecord) => ({
+    id: l.id ?? '',
     label: l.contactName || l.name || l.company || 'Unnamed Lead',
     subtitle: l.company || l.stage,
     type: 'lead',
     badge: l.stage,
   }));
 
-  const projects: SearchableItem[] = rawProjects.map((p) => ({
-    id: p.id,
+  const projects: SearchableItem[] = rawProjects.map((p: AnyRecord) => ({
+    id: p.id ?? '',
     label: p.name || 'Unnamed Project',
     subtitle: p.client?.name,
     type: 'project',
@@ -189,7 +192,7 @@ export function CommandPalette() {
             {filteredClients.length > 0 && (
               <>
                 <CommandSeparator />
-                <CommandGroup heading="Clients">
+                <CommandGroup heading="Customers">
                   {filteredClients.map((item) => (
                     <CommandItem
                       key={item.id}

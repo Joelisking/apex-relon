@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -41,7 +41,7 @@ interface ClientHealthFlag {
   icon: string;
 }
 
-interface ClientMetricsPanelProps {
+interface CustomerMetricsPanelProps {
   metrics?: ClientMetrics;
   healthFlags?: ClientHealthFlag[];
   suggestedActions?: string[];
@@ -132,20 +132,25 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 // ── component ──────────────────────────────────────────────────────────────
-export function ClientMetricsPanel({
+export function CustomerMetricsPanel({
   metrics,
   healthFlags = [],
   suggestedActions = [],
   createdAt,
-}: ClientMetricsPanelProps) {
+}: CustomerMetricsPanelProps) {
   const [scoringInfoOpen, setScoringInfoOpen] = useState(false);
 
-  if (!metrics) return null;
-
-  const isNew = createdAt
-    ? (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24) <= 30 &&
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
+  const isNew = useMemo(() => {
+    if (!createdAt || !metrics) return false;
+    return (
+      (nowMs - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24) <= 30 &&
       metrics.activeProjectCount === 0
-    : false;
+    );
+  }, [createdAt, metrics, nowMs]);
+
+  if (!metrics) return null;
 
   const eng = getEngagementMeta(metrics.engagementScore, isNew);
 

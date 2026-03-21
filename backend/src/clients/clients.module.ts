@@ -1,14 +1,31 @@
 import { Module } from '@nestjs/common';
-import { ClientsService } from './clients.service';
-import { ClientMetricsService } from './client-metrics.service';
-import { ClientsController } from './clients.controller';
 import { AiModule } from '../ai/ai.module';
 import { DatabaseModule } from '../database/database.module';
 import { AuditModule } from '../audit/audit.module';
 
+// Services
+import { CustomerMetricsService } from './services/customer-metrics.service';
+import { CustomerHealthFlagsService } from './services/customer-health-flags.service';
+import { CustomerCrudService } from './services/customer-crud.service';
+import { CustomerAiService } from './services/customer-ai.service';
+import { CustomerLeadConversionService } from './services/customer-lead-conversion.service';
+
+// Controllers
+import { CustomersController } from './controllers/customers.controller';
+import { CustomerHealthController } from './controllers/customer-health.controller';
+
+const services = [
+  CustomerMetricsService,
+  CustomerHealthFlagsService,
+  CustomerCrudService,
+  CustomerAiService,
+  CustomerLeadConversionService,
+];
+
 @Module({
   imports: [AiModule, DatabaseModule, AuditModule],
-  controllers: [ClientsController],
-  providers: [ClientsService, ClientMetricsService],
+  controllers: [CustomersController, CustomerHealthController],
+  providers: services,
+  exports: [CustomerCrudService, CustomerMetricsService],
 })
 export class ClientsModule {}

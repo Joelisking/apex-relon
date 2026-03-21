@@ -15,11 +15,11 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api/client';
 
-interface ClientsClientProps {
+interface CustomersClientProps {
   clients: Client[];
 }
 
-const ClientsClient: React.FC<ClientsClientProps> = ({
+const CustomersClient: React.FC<CustomersClientProps> = ({
   clients,
 }) => {
   const router = useRouter();
@@ -415,4 +415,4 @@ const ClientsClient: React.FC<ClientsClientProps> = ({
   );
 };
 
-export default ClientsClient;
+export default CustomersClient;

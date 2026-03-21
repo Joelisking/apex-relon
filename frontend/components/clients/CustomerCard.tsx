@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Heart } from 'lucide-react';
 import type { Client } from '@/lib/types';
 
-interface ClientCardProps {
+interface CustomerCardProps {
   client: Client;
   onClick: () => void;
 }
@@ -37,7 +37,7 @@ const getHealthColor = (score: number) => {
   return 'text-red-600';
 };
 
-export function ClientCard({ client, onClick }: ClientCardProps) {
+export function CustomerCard({ client, onClick }: CustomerCardProps) {
   return (
     <Card
       className="cursor-pointer hover:shadow-lg transition-all"

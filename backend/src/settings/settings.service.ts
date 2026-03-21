@@ -22,6 +22,9 @@ export class SettingsService implements OnModuleInit {
 
   async onModuleInit() {
     await this.seedTeamTypes();
+    await this.seedClientSegments();
+    await this.seedIndividualTypes();
+    await this.seedClientIndustries();
   }
 
   private async seedTeamTypes() {
@@ -70,6 +73,80 @@ export class SettingsService implements OnModuleInit {
     this.logger.log(
       `Team type dropdown options ensured (${added} entries).`,
     );
+  }
+
+  private async seedClientSegments() {
+    const OPTIONS = [
+      { value: 'corporate', label: 'Corporate', sortOrder: 0 },
+      { value: 'sme', label: 'SME', sortOrder: 1 },
+      { value: 'government', label: 'Government', sortOrder: 2 },
+      { value: 'nonprofit', label: 'Non-Profit', sortOrder: 3 },
+      { value: 'individual', label: 'Individual', sortOrder: 4 },
+    ];
+    const existingCount = await this.prisma.dropdownOption.count({
+      where: { category: 'client_segment' },
+    });
+    if (existingCount >= OPTIONS.length) return;
+    for (const opt of OPTIONS) {
+      await this.prisma.dropdownOption.upsert({
+        where: { category_value: { category: 'client_segment', value: opt.value } },
+        update: {},
+        create: { category: 'client_segment', ...opt, isSystem: true, isActive: true },
+      });
+    }
+    this.logger.log('Client segment dropdown options ensured.');
+  }
+
+  private async seedIndividualTypes() {
+    const OPTIONS = [
+      { value: 'owner', label: 'Owner', sortOrder: 0 },
+      { value: 'director', label: 'Director', sortOrder: 1 },
+      { value: 'project_manager', label: 'Project Manager', sortOrder: 2 },
+      { value: 'engineer', label: 'Engineer', sortOrder: 3 },
+      { value: 'architect', label: 'Architect', sortOrder: 4 },
+      { value: 'contractor', label: 'Contractor', sortOrder: 5 },
+      { value: 'other', label: 'Other', sortOrder: 6 },
+    ];
+    const existingCount = await this.prisma.dropdownOption.count({
+      where: { category: 'individual_type' },
+    });
+    if (existingCount >= OPTIONS.length) return;
+    for (const opt of OPTIONS) {
+      await this.prisma.dropdownOption.upsert({
+        where: { category_value: { category: 'individual_type', value: opt.value } },
+        update: {},
+        create: { category: 'individual_type', ...opt, isSystem: true, isActive: true },
+      });
+    }
+    this.logger.log('Individual type dropdown options ensured.');
+  }
+
+  private async seedClientIndustries() {
+    const OPTIONS = [
+      { value: 'government', label: 'Government', sortOrder: 0 },
+      { value: 'construction', label: 'Construction', sortOrder: 1 },
+      { value: 'real_estate', label: 'Real Estate', sortOrder: 2 },
+      { value: 'utilities', label: 'Utilities', sortOrder: 3 },
+      { value: 'transportation', label: 'Transportation / INDOT', sortOrder: 4 },
+      { value: 'telecommunications', label: 'Telecommunications', sortOrder: 5 },
+      { value: 'engineering', label: 'Engineering', sortOrder: 6 },
+      { value: 'environmental', label: 'Environmental', sortOrder: 7 },
+      { value: 'legal', label: 'Legal', sortOrder: 8 },
+      { value: 'agriculture', label: 'Agriculture', sortOrder: 9 },
+      { value: 'other', label: 'Other', sortOrder: 10 },
+    ];
+    const existingCount = await this.prisma.dropdownOption.count({
+      where: { category: 'client_industry' },
+    });
+    if (existingCount >= OPTIONS.length) return;
+    for (const opt of OPTIONS) {
+      await this.prisma.dropdownOption.upsert({
+        where: { category_value: { category: 'client_industry', value: opt.value } },
+        update: {},
+        create: { category: 'client_industry', ...opt, isSystem: true, isActive: true },
+      });
+    }
+    this.logger.log('Client industry dropdown options ensured.');
   }
 
   // ── Service Types ──────────────────────────────────────────────────────────

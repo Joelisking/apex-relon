@@ -4,11 +4,11 @@ import { Users, DollarSign, Heart, CheckCircle2, AlertTriangle } from 'lucide-re
 import type { Client } from '@/lib/types';
 import { useCurrency } from '@/lib/context/currency-context';
 
-interface ClientStatsCardsProps {
+interface CustomerStatsCardsProps {
   clients: Client[];
 }
 
-export function ClientStatsCards({ clients }: ClientStatsCardsProps) {
+export function CustomerStatsCards({ clients }: CustomerStatsCardsProps) {
   const { fmt } = useCurrency();
   const totalRevenue = clients.reduce((acc, c) => acc + (c.lifetimeRevenue || 0), 0);
   const activeClients = clients.filter((c) => c.status === 'Active').length;
@@ -24,7 +24,7 @@ export function ClientStatsCards({ clients }: ClientStatsCardsProps) {
 
   const stats = [
     {
-      label: 'Total Clients',
+      label: 'Total Customers',
       sublabel: 'In portfolio',
       value: String(clients.length),
       icon: Users,
@@ -40,7 +40,7 @@ export function ClientStatsCards({ clients }: ClientStatsCardsProps) {
       alert: false,
     },
     {
-      label: 'Active Clients',
+      label: 'Active Customers',
       sublabel: 'Currently active',
       value: String(activeClients),
       icon: CheckCircle2,

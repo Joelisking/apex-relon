@@ -28,7 +28,7 @@ import { contactsApi } from '@/lib/api/contacts-client';
 import { ContactDialog } from '@/components/contacts/ContactDialog';
 import type { Contact } from '@/lib/types';
 
-interface ClientContactsListProps {
+interface CustomerContactsListProps {
   clientId: string;
   canEdit: boolean;
 }
@@ -37,7 +37,7 @@ function contactInitials(contact: Contact): string {
   return `${contact.firstName[0] ?? ''}${contact.lastName[0] ?? ''}`.toUpperCase();
 }
 
-export function ClientContactsList({ clientId, canEdit }: ClientContactsListProps) {
+export function CustomerContactsList({ clientId, canEdit }: CustomerContactsListProps) {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);

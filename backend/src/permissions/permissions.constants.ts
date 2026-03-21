@@ -194,6 +194,23 @@ export const ALL_PERMISSIONS: PermissionDefinition[] = [
   { key: 'quotes:edit', label: 'Edit Quotes', module: 'Quotes' },
   { key: 'quotes:delete', label: 'Delete Quotes', module: 'Quotes' },
 
+  // QuickBooks
+  {
+    key: 'quickbooks:manage',
+    label: 'Manage QuickBooks Connection',
+    module: 'QuickBooks',
+  },
+  {
+    key: 'quickbooks:sync',
+    label: 'Trigger QuickBooks Sync',
+    module: 'QuickBooks',
+  },
+  {
+    key: 'quickbooks:invoices',
+    label: 'Create QuickBooks Invoices',
+    module: 'QuickBooks',
+  },
+
   // Workflows
   {
     key: 'workflows:view',
@@ -277,6 +294,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'workflows:create',
     'workflows:edit',
     'workflows:delete',
+    'quickbooks:manage',
+    'quickbooks:sync',
+    'quickbooks:invoices',
   ],
   BDM: [
     'leads:view',

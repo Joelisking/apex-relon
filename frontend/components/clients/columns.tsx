@@ -47,7 +47,9 @@ export function getClientColumns(
       header: ({ table }) => (
         <Checkbox
           checked={table.getIsAllPageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          onCheckedChange={(value) =>
+            table.toggleAllPageRowsSelected(!!value)
+          }
           aria-label="Select all"
         />
       ),
@@ -65,11 +67,14 @@ export function getClientColumns(
     {
       accessorKey: 'name',
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Client" />
+        <DataTableColumnHeader column={column} title="Customer" />
       ),
       cell: ({ row }) => {
         const client = row.original;
-        const displayName = getClientDisplayName(client, clientDisplayMode);
+        const displayName = getClientDisplayName(
+          client,
+          clientDisplayMode,
+        );
         const subtitle = getClientSubtitle(client, clientDisplayMode);
         return (
           <div className="flex items-center gap-2.5">
@@ -81,7 +86,9 @@ export function getClientColumns(
             <div>
               <p className="text-sm font-medium">{displayName}</p>
               {subtitle ? (
-                <p className="text-xs text-muted-foreground">{subtitle}</p>
+                <p className="text-xs text-muted-foreground">
+                  {subtitle}
+                </p>
               ) : null}
             </div>
           </div>
@@ -120,12 +127,15 @@ export function getClientColumns(
       cell: ({ row }) => {
         const status = row.getValue('status') as string;
         const key = status.toLowerCase();
-        const colors = STATUS_COLORS[key] ?? 'bg-muted text-muted-foreground';
+        const colors =
+          STATUS_COLORS[key] ?? 'bg-muted text-muted-foreground';
         const dot = STATUS_DOT[key] ?? 'bg-muted-foreground/30';
         return (
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${colors}`}>
-            <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
+            <span
+              className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`}
+            />
             {status}
           </span>
         );
@@ -140,12 +150,17 @@ export function getClientColumns(
       cell: ({ row }) => {
         const score = row.getValue('healthScore') as number | null;
         if (score == null) {
-          return <span className="text-xs text-muted-foreground/40">—</span>;
+          return (
+            <span className="text-xs text-muted-foreground/40">
+              —
+            </span>
+          );
         }
         return (
-          <div className="flex items-center gap-2 min-w-[80px]">
+          <div className="flex items-center gap-2 min-w-20">
             <Progress value={score} className="h-1.5 w-12" />
-            <span className={`text-xs font-medium ${getHealthColor(score)}`}>
+            <span
+              className={`text-xs font-medium ${getHealthColor(score)}`}>
               {score}%
             </span>
           </div>

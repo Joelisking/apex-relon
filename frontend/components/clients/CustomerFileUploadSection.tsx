@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { clientFilesApi, type FileUpload } from '@/lib/api/client-files';
 import { formatDistanceToNow } from 'date-fns';
 
-interface ClientFileUploadSectionProps {
+interface CustomerFileUploadSectionProps {
   clientId: string;
   files: FileUpload[];
   currentUserId: string;
@@ -43,12 +43,12 @@ const formatFileSize = (bytes: number): string => {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 };
 
-export function ClientFileUploadSection({
+export function CustomerFileUploadSection({
   clientId,
   files,
   currentUserId,
   onFilesChanged,
-}: ClientFileUploadSectionProps) {
+}: CustomerFileUploadSectionProps) {
   const [uploading, setUploading] = useState(false);
   const [category, setCategory] = useState<string>('other');
   const fileInputRef = useRef<HTMLInputElement>(null);

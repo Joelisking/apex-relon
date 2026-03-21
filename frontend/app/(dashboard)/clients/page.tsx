@@ -1,4 +1,4 @@
-import ModernClientsView from '@/components/clients/ModernClientsView';
+import ModernCustomersView from '@/components/clients/ModernCustomersView';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
@@ -24,5 +24,5 @@ export default async function ClientsPage() {
     redirect('/login');
   }
 
-  return <ModernClientsView currentUser={currentUser} />;
+  return <ModernCustomersView currentUser={currentUser} />;
 }

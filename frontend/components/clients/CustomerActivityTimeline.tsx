@@ -32,19 +32,19 @@ import type { DropdownOption } from '@/lib/types';
 import { getActivityIcon } from '@/lib/activity-icon-map';
 import { formatDistanceToNow, format } from 'date-fns';
 
-interface ClientActivityTimelineProps {
+interface CustomerActivityTimelineProps {
   clientId: string;
   activities: Activity[];
   currentUserId: string;
   onActivityAdded: () => void;
 }
 
-export function ClientActivityTimeline({
+export function CustomerActivityTimeline({
   clientId,
   activities,
   currentUserId,
   onActivityAdded,
-}: ClientActivityTimelineProps) {
+}: CustomerActivityTimelineProps) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activityTypes, setActivityTypes] = useState<

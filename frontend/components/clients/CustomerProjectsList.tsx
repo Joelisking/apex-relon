@@ -40,7 +40,7 @@ import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
 import { ProjectDetailDialog } from '@/components/projects/ProjectDetailDialog';
 import { format } from 'date-fns';
 
-interface ClientProjectsListProps {
+interface CustomerProjectsListProps {
   clientId: string;
   projects: Project[];
   accountManagers: Array<{ id: string; name: string; email: string }>;
@@ -106,13 +106,13 @@ function fmtValue(v: number): string {
 }
 
 // ── component ──────────────────────────────────────────────────────────────
-export function ClientProjectsList({
+export function CustomerProjectsList({
   clientId,
   projects,
   accountManagers,
   onProjectsChanged,
   currentUserId,
-}: ClientProjectsListProps) {
+}: CustomerProjectsListProps) {
   const { user, hasPermission } = useAuth();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);

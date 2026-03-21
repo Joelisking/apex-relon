@@ -1,8 +1,8 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import * as crypto from 'crypto';
-import { QuickBooksSyncService } from './quickbooks-sync.service';
-import { QuickBooksService } from './quickbooks.service';
 import { PrismaService } from '../database/prisma.service';
+import { QbTokenService } from './services/qb-token.service';
+import { QbPaymentService } from './services/qb-payment.service';
 
 @Injectable()
 export class QuickBooksWebhookService {
@@ -10,8 +10,8 @@ export class QuickBooksWebhookService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly qbService: QuickBooksService,
-    private readonly syncService: QuickBooksSyncService,
+    private readonly qbToken: QbTokenService,
+    private readonly qbPayment: QbPaymentService,
   ) {}
 
   verifySignature(payload: string, signature: string): boolean {
@@ -31,12 +31,15 @@ export class QuickBooksWebhookService {
     if (!this.verifySignature(rawBody, signature)) {
       throw new UnauthorizedException('Invalid QB webhook signature');
     }
-
     const notifications: any[] = payload?.eventNotifications ?? [];
     for (const notification of notifications) {
-      const entities: any[] = notification?.dataChangeEvent?.entities ?? [];
-      for (const entity of entities) {
-        await this.handleEntityChange(entity);
+      for (const entity of notification?.dataChangeEvent?.entities ?? []) {
+        await this.handleEntityChange(entity).catch((e) =>
+          this.logger.error(
+            `Failed to handle QB webhook for ${entity.name} ${entity.id}`,
+            e?.message,
+          ),
+        );
       }
     }
   }
@@ -45,26 +48,23 @@ export class QuickBooksWebhookService {
     name: string;
     id: string;
     operation: string;
-    lastUpdated: string;
   }): Promise<void> {
     this.logger.log(`QB webhook: ${entity.operation} ${entity.name} ${entity.id}`);
-
-    try {
-      switch (entity.name) {
-        case 'Customer':
-          await this.handleCustomerChange(entity.id, entity.operation);
-          break;
-        case 'Invoice':
-          await this.handleInvoiceChange(entity.id, entity.operation);
-          break;
-        case 'Payment':
-          await this.qbService.syncPayments();
-          break;
-        default:
-          this.logger.debug(`Unhandled QB entity type: ${entity.name}`);
-      }
-    } catch (e) {
-      this.logger.error(`Failed to handle QB webhook for ${entity.name} ${entity.id}`, e?.message);
+    switch (entity.name) {
+      case 'Customer':
+        await this.handleCustomerChange(entity.id, entity.operation);
+        break;
+      case 'Invoice':
+        await this.handleInvoiceChange(entity.id, entity.operation);
+        break;
+      case 'Payment':
+        await this.qbPayment.syncPayments();
+        break;
+      case 'Item':
+        await this.handleItemChange(entity.id, entity.operation);
+        break;
+      default:
+        this.logger.debug(`Unhandled QB entity type: ${entity.name}`);
     }
   }
 
@@ -77,26 +77,18 @@ export class QuickBooksWebhookService {
       return;
     }
 
-    // Re-sync the specific customer
-    const { client: qbClient } = await this.qbService.getApiClient();
+    const { client: qbClient } = await this.qbToken.getApiClient();
     const res = await qbClient.get(`/customer/${qbCustomerId}`);
     const customer = res?.Customer;
     if (!customer) return;
 
-    const email = customer.PrimaryEmailAddr?.Address ?? null;
-    const existing = await this.prisma.client.findFirst({
-      where: { qbCustomerId },
-    });
-
+    const existing = await this.prisma.client.findFirst({ where: { qbCustomerId } });
     if (existing) {
-      // QB wins for contact info on updates from QB
       await this.prisma.client.update({
         where: { id: existing.id },
         data: {
-          ...(email && { email }),
-          ...(customer.PrimaryPhone?.FreeFormNumber && {
-            phone: customer.PrimaryPhone.FreeFormNumber,
-          }),
+          ...(customer.PrimaryEmailAddr?.Address && { email: customer.PrimaryEmailAddr.Address }),
+          ...(customer.PrimaryPhone?.FreeFormNumber && { phone: customer.PrimaryPhone.FreeFormNumber }),
         },
       });
     }
@@ -121,8 +113,7 @@ export class QuickBooksWebhookService {
       return;
     }
 
-    // Check payment status
-    const { client: qbClient } = await this.qbService.getApiClient();
+    const { client: qbClient } = await this.qbToken.getApiClient();
     const res = await qbClient.get(`/invoice/${qbInvoiceId}`);
     const invoice = res?.Invoice;
     if (!invoice) return;
@@ -136,6 +127,57 @@ export class QuickBooksWebhookService {
     await this.prisma.quote.updateMany({
       where: { qbInvoiceId },
       data: { qbPaymentStatus: paymentStatus },
+    });
+  }
+
+  private async handleItemChange(qbItemId: string, operation: string): Promise<void> {
+    if (operation === 'Delete') {
+      await this.prisma.serviceItem.updateMany({
+        where: { qbItemId },
+        data: { qbItemId: null },
+      });
+      await this.prisma.quickBooksSync.create({
+        data: { direction: 'QB_TO_CRM', entityType: 'Item', externalId: qbItemId, status: 'success' },
+      });
+      return;
+    }
+
+    const { client: qbClient, realmId } = await this.qbToken.getApiClient();
+    const res = await qbClient.get(`/item/${qbItemId}`);
+    const item = res?.Item;
+    if (!item || item.Type !== 'Service') return;
+
+    let existing = await this.prisma.serviceItem.findFirst({ where: { qbItemId } });
+
+    if (existing) {
+      await this.prisma.serviceItem.update({
+        where: { id: existing.id },
+        data: {
+          ...(item.Description != null && { description: item.Description }),
+          ...(item.UnitPrice != null && { defaultPrice: item.UnitPrice }),
+        },
+      });
+    } else {
+      existing = await this.prisma.serviceItem.create({
+        data: {
+          name: item.Name ?? '',
+          description: item.Description ?? null,
+          defaultPrice: item.UnitPrice ?? null,
+          qbItemId,
+          isActive: true,
+        },
+      });
+    }
+
+    await this.prisma.quickBooksSync.create({
+      data: {
+        realmId,
+        direction: 'QB_TO_CRM',
+        entityType: 'Item',
+        externalId: qbItemId,
+        internalId: existing.id,
+        status: 'success',
+      },
     });
   }
 }

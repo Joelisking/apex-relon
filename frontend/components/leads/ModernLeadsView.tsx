@@ -407,7 +407,7 @@ export default function ModernLeadsView({
       l.stage || '',
       l.expectedValue ?? '',
       l.source || '',
-      (l as any).assignedTo?.name || '',
+      (l as unknown as { assignedTo?: { name?: string } }).assignedTo?.name || '',
     ]);
     const csv = [headers, ...rows]
       .map((r) =>
@@ -783,7 +783,7 @@ export default function ModernLeadsView({
                 options: [
                   ...new Set(
                     filteredLeads.map(
-                      (l) => (l as any).assignedTo?.name || 'Unassigned',
+                      (l) => (l as unknown as { assignedTo?: { name?: string } }).assignedTo?.name || 'Unassigned',
                     ),
                   ),
                 ].map((v) => ({ label: v, value: v })),

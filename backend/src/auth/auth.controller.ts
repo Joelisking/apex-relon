@@ -69,7 +69,10 @@ export class AuthController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() changePasswordDto: ChangePasswordDto,
   ) {
-    return this.authService.changePassword(user.id, changePasswordDto);
+    return this.authService.changePassword(
+      user.id,
+      changePasswordDto,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -80,7 +83,10 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Patch('profile')
-  async updateProfile(@CurrentUser() user: AuthenticatedUser, @Body() updateData: { name?: string; phone?: string }) {
+  async updateProfile(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() updateData: { name?: string; phone?: string },
+  ) {
     return this.authService.updateProfile(user.id, updateData);
   }
 
@@ -102,7 +108,9 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('permissions')
   async getPermissions(@CurrentUser() user: AuthenticatedUser) {
-    const permissions = await this.authService.getUserPermissions(user.id);
+    const permissions = await this.authService.getUserPermissions(
+      user.id,
+    );
     return { permissions };
   }
 }

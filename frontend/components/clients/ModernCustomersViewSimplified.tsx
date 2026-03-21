@@ -5,34 +5,25 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import type { Client } from '@/lib/types';
-import { CreateClientDialog } from './CreateClientDialog';
-import { ClientStatsCards } from './ClientStatsCards';
-import { ClientCard } from './ClientCard';
-import { ClientDetailDialog } from './ClientDetailDialog';
+import { CreateCustomerDialog } from './CreateCustomerDialog';
+import { CustomerStatsCards } from './CustomerStatsCards';
+import { CustomerCard } from './CustomerCard';
+import { CustomerDetailDialog } from './CustomerDetailDialog';
 import { useAuth } from '@/contexts/auth-context';
 
-interface Manager {
-  id: string;
-  name: string;
-  email: string;
-  teamName?: string;
-}
-
-interface ModernClientsViewProps {
+interface ModernCustomersViewSimplifiedProps {
   clients: Client[];
   currentUser: {
     id: string;
     role: string;
     name?: string;
   };
-  managers: Manager[];
 }
 
-export default function ModernClientsView({
+export default function ModernCustomersViewSimplified({
   clients: initialClients,
   currentUser,
-  managers,
-}: ModernClientsViewProps) {
+}: ModernCustomersViewSimplifiedProps) {
   const router = useRouter();
   const { hasPermission } = useAuth();
   const [selectedClient, setSelectedClient] = useState<Client | null>(
@@ -71,20 +62,18 @@ export default function ModernClientsView({
       </div>
 
       {/* Create Client Dialog */}
-      <CreateClientDialog
+      <CreateCustomerDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
-        currentUser={currentUser}
-        managers={managers}
       />
 
       {/* Stats Cards */}
-      <ClientStatsCards clients={initialClients} />
+      <CustomerStatsCards clients={initialClients} />
 
       {/* Client Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {initialClients.map((client) => (
-          <ClientCard
+          <CustomerCard
             key={client.id}
             client={client}
             onClick={() => setSelectedClient(client)}
@@ -93,12 +82,11 @@ export default function ModernClientsView({
       </div>
 
       {/* Client Detail Dialog */}
-      <ClientDetailDialog
+      <CustomerDetailDialog
         client={selectedClient}
         open={!!selectedClient}
         onClose={handleCloseDialog}
         currentUserId={currentUser.id}
-        accountManagers={managers}
         onClientUpdated={handleClientUpdated}
       />
     </div>

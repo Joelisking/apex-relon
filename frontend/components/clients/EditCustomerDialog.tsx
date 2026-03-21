@@ -16,39 +16,21 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { CreatableSelect } from '@/components/ui/creatable-select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface Manager {
-  id: string;
-  name: string;
-  teamName?: string;
-}
-
-interface EditClientDialogProps {
+interface EditCustomerDialogProps {
   client: Client;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  currentUser: {
-    id: string;
-    role: string;
-  };
-  managers: Manager[];
   onClientUpdated?: (client: Client) => void;
 }
 
@@ -64,21 +46,18 @@ const editClientSchema = z.object({
   website: z.string().url('Invalid URL').optional().or(z.literal('')),
   individualName: z.string().optional(),
   individualType: z.string().optional(),
-  segment: z.string().min(1, 'Segment is required'),
-  industry: z.string().min(2, 'Industry is required'),
-  accountManager: z.string().min(1, 'Account manager is required'),
+  segment: z.string().optional(),
+  industry: z.string().optional(),
 });
 
 type EditClientFormData = z.infer<typeof editClientSchema>;
 
-export function EditClientDialog({
+export function EditCustomerDialog({
   client,
   open,
   onOpenChange,
-  currentUser,
-  managers,
   onClientUpdated,
-}: EditClientDialogProps) {
+}: EditCustomerDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [segmentOptions, setSegmentOptions] = useState<
     DropdownOption[]
@@ -108,7 +87,6 @@ export function EditClientDialog({
     individualType: c.individualType || undefined,
     segment: c.segment || '',
     industry: c.industry || '',
-    accountManager: c.accountManagerId || c.accountManager?.id || '',
   });
 
   const form = useForm<EditClientFormData>({
@@ -133,12 +111,11 @@ export function EditClientDialog({
         website: data.website || undefined,
         individualName: data.individualName || undefined,
         individualType: data.individualType || undefined,
-        segment: data.segment,
-        industry: data.industry,
-        accountManager: data.accountManager,
+        segment: data.segment || undefined,
+        industry: data.industry || undefined,
       });
 
-      toast.success('Client updated', {
+      toast.success('Customer updated', {
         description: `${data.name} has been updated successfully.`,
       });
 
@@ -148,8 +125,8 @@ export function EditClientDialog({
       const msg =
         error instanceof Error
           ? error.message
-          : 'An error occurred while updating the client.';
-      toast.error('Failed to update client', {
+          : 'An error occurred while updating the customer.';
+      toast.error('Failed to update customer', {
         description: msg,
       });
     } finally {
@@ -165,9 +142,9 @@ export function EditClientDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Client</DialogTitle>
+          <DialogTitle>Edit Customer</DialogTitle>
           <DialogDescription>
-            Update the details for this client.
+            Update the details for this customer.
           </DialogDescription>
         </DialogHeader>
 
@@ -185,10 +162,6 @@ export function EditClientDialog({
                     <FormControl>
                       <Input placeholder="Jane Smith" {...field} />
                     </FormControl>
-                    <FormDescription>
-                      For sole traders or individuals. Full contacts can be
-                      added after creation.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -199,38 +172,23 @@ export function EditClientDialog({
                 name="individualType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Type of Individual</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {individualTypeOptions.length > 0
-                          ? individualTypeOptions.map((t) => (
-                              <SelectItem
-                                key={t.value}
-                                value={t.value}>
-                                {t.label}
-                              </SelectItem>
-                            ))
-                          : [
-                              'Owner',
-                              'Director',
-                              'Architect',
-                              'Builder',
-                              'PM',
-                              'Other',
-                            ].map((t) => (
-                              <SelectItem key={t} value={t}>
-                                {t}
-                              </SelectItem>
-                            ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Contact Role</FormLabel>
+                    <FormControl>
+                      <CreatableSelect
+                        options={individualTypeOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select role"
+                        onOptionsChange={setIndividualTypeOptions}
+                        onOptionCreated={(label) =>
+                          settingsApi.createDropdownOption({
+                            category: 'individual_type',
+                            value: label.toLowerCase().replace(/\s+/g, '_'),
+                            label,
+                          })
+                        }
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -331,33 +289,23 @@ export function EditClientDialog({
                 name="segment"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Segment</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select segment" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {segmentOptions.length > 0
-                          ? segmentOptions.map((s) => (
-                              <SelectItem
-                                key={s.value}
-                                value={s.value}>
-                                {s.label}
-                              </SelectItem>
-                            ))
-                          : ['Corporate', 'SME', 'Multinational'].map(
-                              (s) => (
-                                <SelectItem key={s} value={s}>
-                                  {s}
-                                </SelectItem>
-                              ),
-                            )}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Customer Company Type</FormLabel>
+                    <FormControl>
+                      <CreatableSelect
+                        options={segmentOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select company type"
+                        onOptionsChange={setSegmentOptions}
+                        onOptionCreated={(label) =>
+                          settingsApi.createDropdownOption({
+                            category: 'client_segment',
+                            value: label.toLowerCase().replace(/\s+/g, '_'),
+                            label,
+                          })
+                        }
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -377,38 +325,6 @@ export function EditClientDialog({
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="accountManager"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Account Manager</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={currentUser.role === 'BDM'}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a manager" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {managers.map((manager) => (
-                        <SelectItem
-                          key={manager.id}
-                          value={manager.id}>
-                          {manager.name}{' '}
-                          {manager.teamName &&
-                            `(${manager.teamName})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <div className="flex justify-end gap-2 pt-4">
               <Button
