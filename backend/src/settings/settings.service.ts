@@ -25,6 +25,7 @@ export class SettingsService implements OnModuleInit {
     await this.seedClientSegments();
     await this.seedIndividualTypes();
     await this.seedClientIndustries();
+    await this.seedLeadSources();
   }
 
   private async seedTeamTypes() {
@@ -147,6 +148,31 @@ export class SettingsService implements OnModuleInit {
       });
     }
     this.logger.log('Client industry dropdown options ensured.');
+  }
+
+  private async seedLeadSources() {
+    const OPTIONS = [
+      { value: 'referral', label: 'Referral', sortOrder: 0 },
+      { value: 'repeat_client', label: 'Repeat Client', sortOrder: 1 },
+      { value: 'indot', label: 'INDOT / Government', sortOrder: 2 },
+      { value: 'website', label: 'Website / Online', sortOrder: 3 },
+      { value: 'cold_call', label: 'Cold Call', sortOrder: 4 },
+      { value: 'bid_board', label: 'Bid Board', sortOrder: 5 },
+      { value: 'networking', label: 'Networking / Event', sortOrder: 6 },
+      { value: 'other', label: 'Other', sortOrder: 7 },
+    ];
+    const existingCount = await this.prisma.dropdownOption.count({
+      where: { category: 'lead_source' },
+    });
+    if (existingCount >= OPTIONS.length) return;
+    for (const opt of OPTIONS) {
+      await this.prisma.dropdownOption.upsert({
+        where: { category_value: { category: 'lead_source', value: opt.value } },
+        update: {},
+        create: { category: 'lead_source', ...opt, isSystem: true, isActive: true },
+      });
+    }
+    this.logger.log('Lead source dropdown options ensured.');
   }
 
   // ── Service Types ──────────────────────────────────────────────────────────

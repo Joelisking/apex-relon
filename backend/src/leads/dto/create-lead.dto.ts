@@ -5,6 +5,7 @@ import {
   IsNumber,
   IsDate,
   IsEmail,
+  IsArray,
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -82,15 +83,8 @@ export class CreateLeadDto {
   @Type(() => Number)
   contractedValue?: number;
 
-  @IsString()
+  @IsArray()
+  @IsString({ each: true })
   @IsOptional()
-  qsId?: string;
-
-  @IsString()
-  @IsOptional()
-  designerId?: string;
-
-  @IsString()
-  @IsOptional()
-  executingCompany?: string;
+  teamMemberIds?: string[];
 }

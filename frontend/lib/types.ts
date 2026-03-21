@@ -94,7 +94,8 @@ export type DropdownCategory =
   | 'individual_type'
   | 'project_status'
   | 'project_risk_status'
-  | 'executing_company';
+  | 'executing_company'
+  | 'lead_source';
 
 export interface LeadRep {
   id: string;
@@ -225,21 +226,12 @@ export interface Lead {
     role: string;
   } | null;
 
-  // Designer/QS assignments
-  designerId?: string | null;
-  designer?: {
+  // Team members
+  teamMembers?: Array<{
     id: string;
-    name: string;
-    email: string;
-    role: string;
-  } | null;
-  qsId?: string | null;
-  qs?: {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-  } | null;
+    userId: string;
+    user: { id: string; name: string; role: string };
+  }>;
 
   // Client relationship (for repeat business)
   clientId?: string | null;
@@ -247,9 +239,6 @@ export interface Lead {
     id: string;
     name: string;
   } | null;
-
-  // Reps
-  reps?: LeadRep[];
 
   createdAt?: string | Date;
   updatedAt?: string | Date;

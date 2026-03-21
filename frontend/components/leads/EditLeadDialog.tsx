@@ -36,13 +36,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface UserOption {
   id: string;
   name: string;
+  role?: string;
   teamName?: string;
 }
 
@@ -66,6 +68,7 @@ interface EditLeadDialogProps {
   currentUser: { id: string; role: string };
   managers: UserOption[];
   serviceTypes?: ServiceType[];
+  allUsers?: UserOption[];
   designers?: UserOption[];
   qsUsers?: UserOption[];
   clients?: ClientOption[];
@@ -92,13 +95,11 @@ const editLeadSchema = z.object({
   stage: z.string().min(1, 'Stage is required'),
   serviceTypeId: z.string().optional(),
   urgency: z.enum(['Low', 'Medium', 'High']),
+  source: z.string().optional(),
   likelyStartDate: z.string().optional(),
   notes: z.string().optional(),
   assignedTo: z.string().optional(),
   clientId: z.string().min(1, 'Client is required'),
-  qsId: z.string().optional(),
-  designerId: z.string().optional(),
-  executingCompany: z.string().optional(),
 });
 
 type EditLeadFormData = z.infer<typeof editLeadSchema>;
@@ -121,8 +122,7 @@ export function EditLeadDialog({
   currentUser,
   managers,
   serviceTypes = [],
-  designers = [],
-  qsUsers = [],
+  allUsers = [],
   clients = [],
   leads = [],
   onLeadUpdated,
@@ -134,11 +134,11 @@ export function EditLeadDialog({
   const [urgencyOptions, setUrgencyOptions] = useState<
     DropdownOption[]
   >([]);
-  const [executingCompanyOptions, setExecutingCompanyOptions] =
-    useState<DropdownOption[]>([]);
+  const [sourceOptions, setSourceOptions] = useState<DropdownOption[]>([]);
   const [knownContacts, setKnownContacts] = useState<KnownContact[]>(
     [],
   );
+  const [teamMemberIds, setTeamMemberIds] = useState<string[]>([]);
   const datalistId = useId();
 
   useEffect(() => {
@@ -151,8 +151,8 @@ export function EditLeadDialog({
       .then(setUrgencyOptions)
       .catch(console.error);
     settingsApi
-      .getDropdownOptions('executing_company')
-      .then(setExecutingCompanyOptions)
+      .getDropdownOptions('lead_source')
+      .then(setSourceOptions)
       .catch(console.error);
   }, []);
 
@@ -166,15 +166,13 @@ export function EditLeadDialog({
     stage: l.stage || 'New',
     serviceTypeId: l.serviceTypeId || '',
     urgency: (l.urgency as 'Low' | 'Medium' | 'High') || 'Medium',
+    source: l.source || '',
     likelyStartDate: toDateString(l.likelyStartDate),
     notes: l.notes || '',
     assignedTo:
       l.assignedToId ||
       (currentUser.role === 'BDM' ? currentUser.id : ''),
     clientId: l.clientId || '',
-    qsId: l.qsId || '',
-    designerId: l.designerId || '',
-    executingCompany: l.executingCompany || '',
   });
 
   const form = useForm<EditLeadFormData>({
@@ -182,9 +180,12 @@ export function EditLeadDialog({
     defaultValues: buildDefaults(lead),
   });
 
-  // Re-populate form when the lead prop changes (e.g. dialog opens for a different lead)
+  // Re-populate form and team members when lead prop changes
   useEffect(() => {
     form.reset(buildDefaults(lead));
+    setTeamMemberIds(
+      (lead.teamMembers ?? []).map((tm) => tm.userId),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lead.id]);
 
@@ -226,6 +227,33 @@ export function EditLeadDialog({
     }
   }
 
+  // Team members
+  const addedMembers = allUsers.filter((u) =>
+    teamMemberIds.includes(u.id),
+  );
+  const availableUsers = allUsers.filter(
+    (u) => !teamMemberIds.includes(u.id),
+  );
+
+  async function addTeamMember(userId: string) {
+    if (!userId || teamMemberIds.includes(userId)) return;
+    try {
+      await leadsApi.addTeamMember(lead.id, userId);
+      setTeamMemberIds((prev) => [...prev, userId]);
+    } catch {
+      toast.error('Failed to add team member');
+    }
+  }
+
+  async function removeTeamMember(userId: string) {
+    try {
+      await leadsApi.removeTeamMember(lead.id, userId);
+      setTeamMemberIds((prev) => prev.filter((id) => id !== userId));
+    } catch {
+      toast.error('Failed to remove team member');
+    }
+  }
+
   const onSubmit = async (data: EditLeadFormData) => {
     setIsSubmitting(true);
     try {
@@ -239,15 +267,13 @@ export function EditLeadDialog({
         stage: data.stage,
         serviceTypeId: data.serviceTypeId || undefined,
         urgency: data.urgency,
+        source: data.source || undefined,
         likelyStartDate: data.likelyStartDate
           ? new Date(data.likelyStartDate)
           : undefined,
         notes: data.notes || undefined,
         assignedToId: data.assignedTo || undefined,
         clientId: data.clientId,
-        qsId: data.qsId || undefined,
-        designerId: data.designerId || undefined,
-        executingCompany: data.executingCompany || undefined,
       });
 
       toast.success('Prospective project updated', {
@@ -340,37 +366,6 @@ export function EditLeadDialog({
               )}
             />
 
-            {/* Executing Company */}
-            <FormField
-              control={form.control}
-              name="executingCompany"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Executing Company</FormLabel>
-                  <Select
-                    onValueChange={(val) =>
-                      field.onChange(val === 'none' ? '' : val)
-                    }
-                    value={field.value || 'none'}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select company" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {executingCompanyOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <div className="grid grid-cols-2 gap-4">
               {/* Contact Name with autocomplete */}
               <FormField
@@ -430,7 +425,7 @@ export function EditLeadDialog({
                     <FormLabel>Phone</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="+61 400 000 000"
+                        placeholder="+1 555 000 0000"
                         {...field}
                       />
                     </FormControl>
@@ -508,6 +503,37 @@ export function EditLeadDialog({
                 )}
               />
             )}
+
+            {/* Source */}
+            <FormField
+              control={form.control}
+              name="source"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Source</FormLabel>
+                  <Select
+                    onValueChange={(val) =>
+                      field.onChange(val === 'none' ? '' : val)
+                    }
+                    value={field.value || 'none'}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="How was this sourced?" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">Unknown</SelectItem>
+                      {sourceOptions.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-3 gap-4">
               <FormField
@@ -617,98 +643,36 @@ export function EditLeadDialog({
             </div>
 
             {/* Assignment */}
-            <div className="grid grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="assignedTo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assigned To</FormLabel>
-                    <Select
-                      onValueChange={(val) =>
-                        field.onChange(val === 'none' ? '' : val)
-                      }
-                      value={field.value || 'none'}
-                      disabled={currentUser.role === 'BDM'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select person" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {managers.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>
-                            {m.name} {m.teamName && `(${m.teamName})`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="designerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Designer</FormLabel>
-                    <Select
-                      onValueChange={(val) =>
-                        field.onChange(val === 'none' ? '' : val)
-                      }
-                      value={field.value || 'none'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select designer" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {designers.map((d) => (
-                          <SelectItem key={d.id} value={d.id}>
-                            {d.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="qsId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>QS</FormLabel>
-                    <Select
-                      onValueChange={(val) =>
-                        field.onChange(val === 'none' ? '' : val)
-                      }
-                      value={field.value || 'none'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select QS" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {qsUsers.map((q) => (
-                          <SelectItem key={q.id} value={q.id}>
-                            {q.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="assignedTo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Assigned To</FormLabel>
+                  <Select
+                    onValueChange={(val) =>
+                      field.onChange(val === 'none' ? '' : val)
+                    }
+                    value={field.value || 'none'}
+                    disabled={currentUser.role === 'BDM'}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select person" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {managers.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name} {m.teamName && `(${m.teamName})`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -728,6 +692,69 @@ export function EditLeadDialog({
                 </FormItem>
               )}
             />
+
+            {/* Team Members */}
+            {allUsers.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold">
+                    Team Members
+                  </span>
+                </div>
+
+                {addedMembers.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {addedMembers.map((u) => (
+                      <div
+                        key={u.id}
+                        className="flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1">
+                        <span className="text-sm font-medium">
+                          {u.name}
+                        </span>
+                        {u.role && (
+                          <Badge
+                            variant="secondary"
+                            className="h-4 px-1 text-[10px]">
+                            {u.role}
+                          </Badge>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeTeamMember(u.id)}
+                          className="ml-0.5 text-muted-foreground hover:text-destructive">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {availableUsers.length > 0 && (
+                  <Select
+                    value=""
+                    onValueChange={(val) => {
+                      if (val) addTeamMember(val);
+                    }}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Add a team member..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableUsers.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.name}
+                          {u.role && (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {u.role}
+                            </span>
+                          )}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 pt-4">
               <Button

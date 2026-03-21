@@ -41,9 +41,7 @@ export interface CreateLeadDto {
   notes?: string;
   assignedToId?: string;
   clientId?: string;
-  qsId?: string;
-  designerId?: string;
-  executingCompany?: string;
+  teamMemberIds?: string[];
 }
 
 export interface UpdateLeadDto {
@@ -66,10 +64,7 @@ export interface UpdateLeadDto {
   aiRecommendations?: string;
   clientId?: string;
   assignedToId?: string;
-  qsId?: string;
-  designerId?: string;
   dealClosedAt?: string;
-  executingCompany?: string;
 }
 
 export interface CreateLeadRepDto {
@@ -312,6 +307,21 @@ export const leadsApi = {
       {
         method: 'DELETE',
       },
+      serverToken,
+    ),
+
+  // Team member management
+  addTeamMember: (leadId: string, userId: string, serverToken?: string) =>
+    apiFetch<{ id: string; userId: string; user: { id: string; name: string; role: string } }>(
+      `/leads/${leadId}/team-members`,
+      { method: 'POST', body: JSON.stringify({ userId }) },
+      serverToken,
+    ),
+
+  removeTeamMember: (leadId: string, userId: string, serverToken?: string) =>
+    apiFetch<void>(
+      `/leads/${leadId}/team-members/${userId}`,
+      { method: 'DELETE' },
       serverToken,
     ),
 

@@ -62,12 +62,6 @@ export class LeadsService {
         assignedTo: {
           select: { id: true, name: true, email: true, role: true },
         },
-        designer: {
-          select: { id: true, name: true, email: true, role: true },
-        },
-        qs: {
-          select: { id: true, name: true, email: true, role: true },
-        },
         serviceType: {
           select: { id: true, name: true },
         },
@@ -75,6 +69,11 @@ export class LeadsService {
           select: { id: true, name: true },
         },
         reps: true,
+        teamMembers: {
+          include: {
+            user: { select: { id: true, name: true, role: true } },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -118,12 +117,6 @@ export class LeadsService {
         assignedTo: {
           select: { id: true, name: true, email: true, role: true },
         },
-        designer: {
-          select: { id: true, name: true, email: true, role: true },
-        },
-        qs: {
-          select: { id: true, name: true, email: true, role: true },
-        },
         serviceType: {
           select: { id: true, name: true },
         },
@@ -131,6 +124,11 @@ export class LeadsService {
           select: { id: true, name: true },
         },
         reps: true,
+        teamMembers: {
+          include: {
+            user: { select: { id: true, name: true, role: true } },
+          },
+        },
         stageHistory: {
           orderBy: { createdAt: 'asc' },
           include: {
@@ -194,9 +192,18 @@ export class LeadsService {
       await this.validateStage(data.stage as string);
     }
 
+    const { teamMemberIds, ...leadData } = data as Record<string, unknown> & { teamMemberIds?: string[] };
+
     const lead = await this.prisma.lead.create({
-      data: data as Prisma.LeadCreateInput,
+      data: leadData as Prisma.LeadCreateInput,
     });
+
+    if (teamMemberIds && teamMemberIds.length > 0) {
+      await this.prisma.leadTeamMember.createMany({
+        data: teamMemberIds.map((uid) => ({ leadId: lead.id, userId: uid })),
+        skipDuplicates: true,
+      });
+    }
 
     // Record initial stage in stage history
     if (userId) {
@@ -538,6 +545,23 @@ export class LeadsService {
         metrics,
       };
     }
+  }
+
+  // ============================================================
+  // Team member management
+  // ============================================================
+
+  async addTeamMember(leadId: string, userId: string) {
+    return this.prisma.leadTeamMember.upsert({
+      where: { leadId_userId: { leadId, userId } },
+      create: { leadId, userId },
+      update: {},
+      include: { user: { select: { id: true, name: true, role: true } } },
+    });
+  }
+
+  async removeTeamMember(leadId: string, userId: string) {
+    await this.prisma.leadTeamMember.deleteMany({ where: { leadId, userId } });
   }
 
   // ============================================================

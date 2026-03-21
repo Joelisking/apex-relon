@@ -152,6 +152,14 @@ const CATEGORIES: Array<{
     hasMeetingType: false,
   },
   {
+    value: 'lead_source',
+    label: 'Lead Sources',
+    description: 'How prospective projects were sourced (Referral, INDOT, Website, etc.)',
+    hasColor: false,
+    hasIcon: false,
+    hasMeetingType: false,
+  },
+  {
     value: 'executing_company',
     label: 'Executing Companies',
     description:

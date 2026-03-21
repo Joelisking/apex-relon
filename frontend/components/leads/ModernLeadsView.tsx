@@ -171,12 +171,6 @@ export default function ModernLeadsView({
   const managers: Manager[] = allUsersArr.filter(
     (u) => u.role === 'BDM' || u.role === 'SALES',
   );
-  const designers: Manager[] = allUsersArr.filter(
-    (u) => u.role === 'DESIGNER',
-  );
-  const qsUsers: Manager[] = allUsersArr.filter(
-    (u) => u.role === 'QS',
-  );
   const clients = clientList;
 
   const currentYear = new Date().getFullYear();
@@ -685,8 +679,7 @@ export default function ModernLeadsView({
         currentUser={currentUser}
         managers={managers}
         serviceTypes={serviceTypes}
-        designers={designers}
-        qsUsers={qsUsers}
+        allUsers={allUsersArr}
         clients={clients}
         leads={leads}
         onLeadCreated={(newLead) =>
@@ -830,8 +823,7 @@ export default function ModernLeadsView({
         }
         managers={managers}
         serviceTypes={serviceTypes}
-        designers={designers}
-        qsUsers={qsUsers}
+        allUsers={allUsersArr}
         clients={clients}
         leads={leads}
         onLeadUpdated={handleLeadUpdated}

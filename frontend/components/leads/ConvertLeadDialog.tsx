@@ -100,8 +100,8 @@ export function ConvertLeadDialog({
               : new Date(lead.dealClosedAt).toISOString().split('T')[0])
           : '',
         projectManagerId: lead.assignedToId || '',
-        designerId: lead.designerId || '',
-        qsId: lead.qsId || '',
+        designerId: '',
+        qsId: '',
         description: lead.notes || '',
       });
     }

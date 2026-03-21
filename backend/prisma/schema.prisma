@@ -43,6 +43,7 @@ model Lead {
   contacts            LeadContact[]
   files               File[]
   reps                LeadRep[]
+  teamMembers         LeadTeamMember[]
   assignedTo          User?               @relation("LeadAssignments", fields: [assignedToId], references: [id])
   client              Client?             @relation("ClientLeads", fields: [clientId], references: [id])
   convertedToClient   Client?             @relation("LeadConversion", fields: [convertedToClientId], references: [id])
@@ -79,6 +80,20 @@ model LeadRep {
 
   @@index([leadId])
   @@map("lead_reps")
+}
+
+model LeadTeamMember {
+  id        String   @id @default(uuid())
+  leadId    String
+  userId    String
+  createdAt DateTime @default(now())
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user      User     @relation("LeadTeamMemberAssignments", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, userId])
+  @@index([leadId])
+  @@index([userId])
+  @@map("lead_team_members")
 }
 
 model ServiceType {
@@ -329,6 +344,7 @@ model User {
   assignedLeads           Lead[]                  @relation("LeadAssignments")
   designedLeads           Lead[]                  @relation("LeadDesignerAssignments")
   qsLeads                 Lead[]                  @relation("LeadQSAssignments")
+  leadTeamMemberships     LeadTeamMember[]        @relation("LeadTeamMemberAssignments")
   notifications           Notification[]          @relation("UserNotifications")
   notificationPreferences NotificationPreference? @relation("UserNotificationPreferences")
   tasks                   Task[]                  @relation("TaskAssignments")

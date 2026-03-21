@@ -57,7 +57,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import type { Lead, LeadRep, ServiceType } from '@/lib/types';
+import type { Lead, ServiceType } from '@/lib/types';
 import type { Activity as ActivityType } from '@/lib/api/activities-client';
 import type { FileUpload } from '@/lib/api/files-client';
 import { leadsApi } from '@/lib/api/client';
@@ -105,6 +105,7 @@ interface LeadDetailsDialogProps {
   // Edit support
   managers?: UserOption[];
   serviceTypes?: ServiceType[];
+  allUsers?: UserOption[];
   designers?: UserOption[];
   qsUsers?: UserOption[];
   clients?: ClientOption[];
@@ -194,22 +195,6 @@ export function LeadDetailsDialog({
   leads = [],
   onLeadUpdated,
 }: LeadDetailsDialogProps) {
-  const [reps, setReps] = useState<LeadRep[]>([]);
-  const [addingRep, setAddingRep] = useState(false);
-  const [newRep, setNewRep] = useState({
-    name: '',
-    phone: '',
-    email: '',
-  });
-  const [editingRepId, setEditingRepId] = useState<string | null>(
-    null,
-  );
-  const [editRepData, setEditRepData] = useState({
-    name: '',
-    phone: '',
-    email: '',
-  });
-  const [repLoading, setRepLoading] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [draftEmailLoading, setDraftEmailLoading] = useState(false);
   const [draftEmail, setDraftEmail] = useState<{
@@ -219,70 +204,7 @@ export function LeadDetailsDialog({
   } | null>(null);
   const [draftEmailOpen, setDraftEmailOpen] = useState(false);
 
-  useEffect(() => {
-    setReps(selectedLead?.reps || []);
-    setAddingRep(false);
-    setEditingRepId(null);
-  }, [selectedLead?.id]);
 
-  const handleAddRep = async () => {
-    if (!selectedLead || !newRep.name.trim()) {
-      toast.error('Name is required');
-      return;
-    }
-    setRepLoading(true);
-    try {
-      const created = await leadsApi.createRep(selectedLead.id, {
-        name: newRep.name.trim(),
-        phone: newRep.phone.trim() || undefined,
-        email: newRep.email.trim() || undefined,
-      });
-      setReps((prev) => [...prev, created]);
-      setNewRep({ name: '', phone: '', email: '' });
-      setAddingRep(false);
-      toast.success('Rep added');
-    } catch {
-      toast.error('Failed to add rep');
-    } finally {
-      setRepLoading(false);
-    }
-  };
-
-  const handleSaveRep = async (repId: string) => {
-    if (!selectedLead) return;
-    setRepLoading(true);
-    try {
-      const updated = await leadsApi.updateRep(
-        selectedLead.id,
-        repId,
-        {
-          name: editRepData.name.trim(),
-          phone: editRepData.phone.trim() || undefined,
-          email: editRepData.email.trim() || undefined,
-        },
-      );
-      setReps((prev) =>
-        prev.map((r) => (r.id === repId ? updated : r)),
-      );
-      setEditingRepId(null);
-      toast.success('Rep updated');
-    } catch {
-      toast.error('Failed to update rep');
-    } finally {
-      setRepLoading(false);
-    }
-  };
-
-  const handleDeleteRep = async (repId: string) => {
-    if (!selectedLead) return;
-    try {
-      await leadsApi.deleteRep(selectedLead.id, repId);
-      setReps((prev) => prev.filter((r) => r.id !== repId));
-      toast.success('Rep removed');
-    } catch {
-      toast.error('Failed to remove rep');
-    }
-  };
 
   const handleDraftEmail = async (emailType: string) => {
     if (!selectedLead) return;
@@ -513,17 +435,10 @@ export function LeadDetailsDialog({
                     {selectedLead.assignedTo?.name || 'Unassigned'}
                   </span>
                 </StatRow>
-                {selectedLead.designer && (
-                  <StatRow label="Designer">
+                {selectedLead.teamMembers && selectedLead.teamMembers.length > 0 && (
+                  <StatRow label="Team">
                     <span className="text-xs">
-                      {selectedLead.designer.name}
-                    </span>
-                  </StatRow>
-                )}
-                {selectedLead.qs && (
-                  <StatRow label="QS">
-                    <span className="text-xs">
-                      {selectedLead.qs.name}
+                      {selectedLead.teamMembers.map((tm) => tm.user.name).join(', ')}
                     </span>
                   </StatRow>
                 )}
@@ -827,80 +742,8 @@ export function LeadDetailsDialog({
                   />
                 </TabsContent>
 
-                {/* ── Contacts: reps + client contacts ── */}
+                {/* ── Contacts ── */}
                 <TabsContent value="contacts" className="mt-0 p-6 space-y-6">
-                  <section className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground flex items-center gap-1.5">
-                        <Users className="h-3.5 w-3.5" />
-                        Project Reps
-                      </h3>
-                      {hasPermission('leads:edit') && !addingRep && (
-                        <Button variant="outline" size="sm" onClick={() => setAddingRep(true)} className="h-7 text-xs px-2.5 gap-1">
-                          <Plus className="h-3 w-3" /> Add Rep
-                        </Button>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      {reps.length === 0 && !addingRep && (
-                        <p className="text-[13px] text-muted-foreground">No reps added yet.</p>
-                      )}
-                      {reps.map((rep) =>
-                        editingRepId === rep.id ? (
-                          <div key={rep.id} className="rounded-xl border border-border/60 p-3 space-y-2 bg-muted/20">
-                            <Input value={editRepData.name} onChange={(e) => setEditRepData((p) => ({ ...p, name: e.target.value }))} placeholder="Name *" className="h-8 text-sm" />
-                            <div className="grid grid-cols-2 gap-2">
-                              <Input value={editRepData.phone} onChange={(e) => setEditRepData((p) => ({ ...p, phone: e.target.value }))} placeholder="Phone" className="h-8 text-sm" />
-                              <Input value={editRepData.email} onChange={(e) => setEditRepData((p) => ({ ...p, email: e.target.value }))} placeholder="Email" className="h-8 text-sm" />
-                            </div>
-                            <div className="flex gap-1.5 justify-end">
-                              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setEditingRepId(null)}>Cancel</Button>
-                              <Button size="sm" className="h-7 text-xs" onClick={() => handleSaveRep(rep.id)} disabled={repLoading || !editRepData.name.trim()}>
-                                {repLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div key={rep.id} className="flex items-start justify-between rounded-xl border border-border/50 px-3.5 py-2.5 bg-muted/10">
-                            <div className="space-y-0.5 min-w-0">
-                              <p className="text-[13px] font-medium">{rep.name}</p>
-                              <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
-                                {rep.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{rep.phone}</span>}
-                                {rep.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{rep.email}</span>}
-                              </div>
-                            </div>
-                            {hasPermission('leads:edit') && (
-                              <div className="flex gap-0.5 shrink-0 ml-2">
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { setEditingRepId(rep.id); setEditRepData({ name: rep.name, phone: rep.phone || '', email: rep.email || '' }); }}>
-                                  <Pencil className="h-3 w-3" />
-                                </Button>
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteRep(rep.id)}>
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        ),
-                      )}
-                      {addingRep && (
-                        <div className="rounded-xl border border-dashed border-border p-3 space-y-2 bg-muted/10">
-                          <Input value={newRep.name} onChange={(e) => setNewRep((p) => ({ ...p, name: e.target.value }))} placeholder="Name *" className="h-8 text-sm" autoFocus
-                            onKeyDown={(e) => { if (e.key === 'Enter') handleAddRep(); if (e.key === 'Escape') { setAddingRep(false); setNewRep({ name: '', phone: '', email: '' }); } }} />
-                          <div className="grid grid-cols-2 gap-2">
-                            <Input value={newRep.phone} onChange={(e) => setNewRep((p) => ({ ...p, phone: e.target.value }))} placeholder="Phone" className="h-8 text-sm" />
-                            <Input value={newRep.email} onChange={(e) => setNewRep((p) => ({ ...p, email: e.target.value }))} placeholder="Email" className="h-8 text-sm" />
-                          </div>
-                          <div className="flex gap-1.5 justify-end">
-                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setAddingRep(false); setNewRep({ name: '', phone: '', email: '' }); }}>Cancel</Button>
-                            <Button size="sm" className="h-7 text-xs gap-1" onClick={handleAddRep} disabled={repLoading || !newRep.name.trim()}>
-                              {repLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Plus className="h-3 w-3" />Add</>}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </section>
-
                   {selectedLead.clientId && (
                     <>
                       <hr className="border-border/40" />

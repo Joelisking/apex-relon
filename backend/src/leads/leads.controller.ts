@@ -107,6 +107,26 @@ export class LeadsController {
     return this.leadsService.draftEmail(id, emailType || 'follow-up');
   }
 
+  // --- Team member sub-routes ---
+
+  @Post(':id/team-members')
+  @Permissions('leads:edit')
+  addTeamMember(
+    @Param('id') id: string,
+    @Body('userId') userId: string,
+  ) {
+    return this.leadsService.addTeamMember(id, userId);
+  }
+
+  @Delete(':id/team-members/:userId')
+  @Permissions('leads:edit')
+  removeTeamMember(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.leadsService.removeTeamMember(id, userId);
+  }
+
   // --- Rep sub-routes ---
 
   @Post(':id/reps')
