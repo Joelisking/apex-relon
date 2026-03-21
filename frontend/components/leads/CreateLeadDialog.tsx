@@ -338,270 +338,262 @@ export function CreateLeadDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create Prospective Project</DialogTitle>
-          <DialogDescription>
-            Add a new prospective project and link it to an existing
-            client.
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-lg font-semibold">Create Prospective Project</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Add a new prospective project and link it to an existing client.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-4">
-            {/* Client - required */}
-            <FormField
-              control={form.control}
-              name="clientId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Client <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a customer" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {clients.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.individualName
-                            ? `${c.individualName} (${c.name})`
-                            : c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 
-            {/* Project Name - full width to signal importance */}
-            <FormField
-              control={form.control}
-              name="projectName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Project Name{' '}
-                    <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="e.g., Office Fitout - Level 3"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* Contact Name with autocomplete from previous leads */}
-              <FormField
-                control={form.control}
-                name="contactName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contact Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="John Doe"
-                        list={datalistId}
-                        value={field.value}
-                        onChange={(e) =>
-                          handleContactNameChange(e.target.value)
-                        }
-                        onBlur={field.onBlur}
-                      />
-                    </FormControl>
-                    {knownContacts.length > 0 && (
-                      <datalist id={datalistId}>
-                        {knownContacts.map((c) => (
-                          <option key={c.name} value={c.name} />
-                        ))}
-                      </datalist>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="john@acme.com"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="+1 555 000 0000"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="expectedValue"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Expected Value ($)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        {...field}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) =>
-                          field.onChange(
-                            parseFloat(e.target.value) || 0,
-                          )
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="likelyStartDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Likely Start Date</FormLabel>
-                    <FormControl>
-                      <DatePicker
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Pick a date"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {watchedStage === 'Won' && (
-              <FormField
-                control={form.control}
-                name="contractedValue"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contracted Value ($)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        {...field}
-                        value={field.value ?? ''}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) =>
-                          field.onChange(
-                            e.target.value
-                              ? parseFloat(e.target.value)
-                              : undefined,
-                          )
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* Source */}
-            <FormField
-              control={form.control}
-              name="source"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Source</FormLabel>
-                  <FormControl>
-                    <CreatableSelect
-                      options={sourceOptions}
-                      value={field.value || undefined}
-                      onChange={field.onChange}
-                      placeholder="How was this sourced?"
-                      onOptionsChange={setSourceOptions}
-                      onOptionCreated={(label) =>
-                        settingsApi.createDropdownOption({
-                          category: 'lead_source',
-                          value: label.toLowerCase().replace(/\s+/g, '_'),
-                          label,
-                        })
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="stage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Stage</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}>
+            {/* ── Project ─────────────────────────────────────────── */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Project</p>
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="clientId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Client <span className="text-destructive">*</span></FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a client" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {clients.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.individualName ? `${c.individualName} (${c.name})` : c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="projectName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Name <span className="text-destructive">*</span></FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
+                        <Input placeholder="e.g., CR 500W – Boundary Survey" {...field} />
                       </FormControl>
-                      <SelectContent>
-                        {pipelineStages.map((s) => (
-                          <SelectItem key={s.name} value={s.name}>
-                            {s.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
 
-              <div>
-                <p className="text-sm font-medium leading-none mb-2">Service Categories &amp; Types</p>
+            <div className="border-t border-border/50" />
+
+            {/* ── Contact ─────────────────────────────────────────── */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Contact</p>
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="contactName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Jane Smith"
+                          list={datalistId}
+                          value={field.value}
+                          onChange={(e) => handleContactNameChange(e.target.value)}
+                          onBlur={field.onBlur}
+                        />
+                      </FormControl>
+                      {knownContacts.length > 0 && (
+                        <datalist id={datalistId}>
+                          {knownContacts.map((c) => <option key={c.name} value={c.name} />)}
+                        </datalist>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="jane@client.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+1 555 000 0000" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="expectedValue"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Expected Value ($)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          {...field}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="likelyStartDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Likely Start Date</FormLabel>
+                      <FormControl>
+                        <DatePicker value={field.value} onChange={field.onChange} placeholder="Pick a date" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="border-t border-border/50" />
+
+            {/* ── Pipeline ────────────────────────────────────────── */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Pipeline</p>
+              <div className="grid grid-cols-3 gap-3">
+                <FormField
+                  control={form.control}
+                  name="stage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stage</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {pipelineStages.map((s) => (
+                            <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="urgency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Urgency</FormLabel>
+                      <FormControl>
+                        <CreatableSelect
+                          options={urgencyOptions}
+                          value={field.value || undefined}
+                          onChange={field.onChange}
+                          placeholder="Select urgency"
+                          onOptionsChange={setUrgencyOptions}
+                          onOptionCreated={(label) =>
+                            settingsApi.createDropdownOption({
+                              category: 'urgency',
+                              value: label.toLowerCase().replace(/\s+/g, '_'),
+                              label,
+                            })
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="source"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Source</FormLabel>
+                      <FormControl>
+                        <CreatableSelect
+                          options={sourceOptions}
+                          value={field.value || undefined}
+                          onChange={field.onChange}
+                          placeholder="How was this sourced?"
+                          onOptionsChange={setSourceOptions}
+                          onOptionCreated={(label) =>
+                            settingsApi.createDropdownOption({
+                              category: 'lead_source',
+                              value: label.toLowerCase().replace(/\s+/g, '_'),
+                              label,
+                            })
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {watchedStage === 'Won' && (
+                <FormField
+                  control={form.control}
+                  name="contractedValue"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contracted Value ($)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          {...field}
+                          value={field.value ?? ''}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Service Categories & Types — full width */}
+              <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
+                <p className="text-sm font-medium mb-3">Service Categories &amp; Types</p>
                 <ServiceTypeSelector
                   categories={serviceCategories}
                   selectedCategoryIds={selectedCategoryIds}
@@ -610,89 +602,103 @@ export function CreateLeadDialog({
                   onServiceTypeToggle={toggleServiceType}
                 />
               </div>
+            </div>
 
+            <div className="border-t border-border/50" />
+
+            {/* ── Assignment ──────────────────────────────────────── */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Assignment</p>
               <FormField
                 control={form.control}
-                name="urgency"
+                name="assignedTo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Urgency</FormLabel>
-                    <FormControl>
-                      <CreatableSelect
-                        options={urgencyOptions}
-                        value={field.value || undefined}
-                        onChange={field.onChange}
-                        placeholder="Select urgency"
-                        onOptionsChange={setUrgencyOptions}
-                        onOptionCreated={(label) =>
-                          settingsApi.createDropdownOption({
-                            category: 'urgency',
-                            value: label.toLowerCase().replace(/\s+/g, '_'),
-                            label,
-                          })
-                        }
-                      />
-                    </FormControl>
+                    <FormLabel>Project Manager</FormLabel>
+                    <Popover open={pmOpen && canViewAllLeads} onOpenChange={(o) => canViewAllLeads && setPmOpen(o)}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            disabled={!canViewAllLeads}
+                            className="w-full justify-between font-normal">
+                            {field.value
+                              ? (managers.find((m) => m.id === field.value)?.name ?? 'Select person')
+                              : 'None'}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search users..." />
+                          <CommandList>
+                            <CommandEmpty>No users found.</CommandEmpty>
+                            <CommandItem value="none" onSelect={() => { field.onChange(''); setPmOpen(false); }}>
+                              <Check className={`mr-2 h-4 w-4 ${!field.value ? 'opacity-100' : 'opacity-0'}`} />
+                              None
+                            </CommandItem>
+                            {managers.map((m) => (
+                              <CommandItem
+                                key={m.id}
+                                value={m.name}
+                                onSelect={() => { field.onChange(m.id); setPmOpen(false); }}>
+                                <Check className={`mr-2 h-4 w-4 ${field.value === m.id ? 'opacity-100' : 'opacity-0'}`} />
+                                {m.name}
+                                {m.teamName && <span className="ml-2 text-xs text-muted-foreground">{m.teamName}</span>}
+                              </CommandItem>
+                            ))}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {allUsers.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-sm font-medium">Team Members</span>
+                  </div>
+                  {addedMembers.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {addedMembers.map((u) => (
+                        <div key={u.id} className="flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1">
+                          <span className="text-sm">{u.name}</span>
+                          {u.role && <Badge variant="secondary" className="h-4 px-1 text-[10px]">{u.role}</Badge>}
+                          <button type="button" onClick={() => removeTeamMember(u.id)} className="ml-0.5 text-muted-foreground hover:text-destructive">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {availableUsers.length > 0 && (
+                    <Select value="" onValueChange={(val) => { if (val) addTeamMember(val); }}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Add a team member..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableUsers.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.name}
+                            {u.role && <span className="ml-2 text-xs text-muted-foreground">{u.role}</span>}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Assignment */}
-            <FormField
-              control={form.control}
-              name="assignedTo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project Manager</FormLabel>
-                  <Popover open={pmOpen && canViewAllLeads} onOpenChange={(o) => canViewAllLeads && setPmOpen(o)}>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          disabled={!canViewAllLeads}
-                          className="w-full justify-between font-normal">
-                          {field.value
-                            ? (managers.find((m) => m.id === field.value)?.name ?? 'Select person')
-                            : 'None'}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Search users..." />
-                        <CommandList>
-                          <CommandEmpty>No users found.</CommandEmpty>
-                          <CommandItem
-                            value="none"
-                            onSelect={() => { field.onChange(''); setPmOpen(false); }}>
-                            <Check className={`mr-2 h-4 w-4 ${!field.value ? 'opacity-100' : 'opacity-0'}`} />
-                            None
-                          </CommandItem>
-                          {managers.map((m) => (
-                            <CommandItem
-                              key={m.id}
-                              value={m.name}
-                              onSelect={() => { field.onChange(m.id); setPmOpen(false); }}>
-                              <Check className={`mr-2 h-4 w-4 ${field.value === m.id ? 'opacity-100' : 'opacity-0'}`} />
-                              {m.name}
-                              {m.teamName && (
-                                <span className="ml-2 text-xs text-muted-foreground">{m.teamName}</span>
-                              )}
-                            </CommandItem>
-                          ))}
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="border-t border-border/50" />
 
+            {/* ── Notes ───────────────────────────────────────────── */}
             <FormField
               control={form.control}
               name="notes"
@@ -701,7 +707,7 @@ export function CreateLeadDialog({
                   <FormLabel>Notes</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Additional information about this project..."
+                      placeholder="Additional context, site details, special requirements…"
                       className="resize-none"
                       rows={3}
                       {...field}
@@ -712,82 +718,11 @@ export function CreateLeadDialog({
               )}
             />
 
-            {/* Team Members */}
-            {allUsers.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-semibold">
-                    Team Members
-                  </span>
-                </div>
-
-                {addedMembers.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {addedMembers.map((u) => (
-                      <div
-                        key={u.id}
-                        className="flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1">
-                        <span className="text-sm font-medium">
-                          {u.name}
-                        </span>
-                        {u.role && (
-                          <Badge
-                            variant="secondary"
-                            className="h-4 px-1 text-[10px]">
-                            {u.role}
-                          </Badge>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => removeTeamMember(u.id)}
-                          className="ml-0.5 text-muted-foreground hover:text-destructive">
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {availableUsers.length > 0 && (
-                  <Select
-                    value=""
-                    onValueChange={(val) => {
-                      if (val) addTeamMember(val);
-                    }}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Add a team member..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableUsers.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.name}
-                          {u.role && (
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              {u.role}
-                            </span>
-                          )}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}>
-                Cancel
-              </Button>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating…</>
                 ) : (
                   'Create Prospective Project'
                 )}
