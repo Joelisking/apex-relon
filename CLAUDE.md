@@ -20,7 +20,7 @@
 - You may read, write, and edit files freely. For destructive git operations (reset, force push, branch delete), confirm first.
 - Do NOT auto-commit unless explicitly asked.
 - **Interactive CLI commands** (e.g. `prisma migrate dev`, `git rebase -i`) require a TTY and cannot be run by Claude. When you need one, give the user the exact command to paste and run themselves (prefix with `! ` if in the Claude Code prompt).
-- **Prisma schema changes:** Always use `npx prisma db push && npx prisma generate` — NOT `prisma migrate dev`. This project has migration drift history and `migrate dev` will prompt to wipe all data. `db push` applies the diff safely and is non-interactive.
+- **Prisma schema changes:** Use `npx prisma migrate dev --name <description>` to create a migration file, then commit it. The migration will be applied automatically at deployment via `prisma migrate deploy` in the Dockerfile. Do NOT use `prisma db push` for schema changes — it bypasses migration tracking and will cause deployment failures. The drift issue that previously required `db push` has been resolved (all 22 migrations baselined on 2026-03-21).
 
 ---
 

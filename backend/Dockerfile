@@ -31,13 +31,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Non-root user
 RUN groupadd -g 1001 nodejs && useradd -r -u 1001 -g nodejs nestjs
 
-# Install production deps only
+# Install production deps + prisma CLI (needed for migrate deploy at startup)
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && npm install prisma
 
-# Copy generated Prisma client from builder
+# Copy generated Prisma client and schema
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --chown=nestjs:nodejs prisma ./prisma
 
 # Copy compiled app
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
@@ -51,4 +52,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD node -e "const http=require('http');http.get('http://localhost:'+(process.env.PORT||8080)+'/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1));"
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
