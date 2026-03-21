@@ -71,7 +71,7 @@ export function CreateProjectDialog({
 }: CreateProjectDialogProps) {
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<
-    { id: string; name: string; individualName?: string }[]
+    { id: string; name: string; individualName?: string; county?: string | null }[]
   >([]);
   const [leads, setLeads] = useState<
     { id: string; contactName: string; company: string }[]

@@ -40,6 +40,7 @@ export interface Project {
   serviceType?: { id: string; name: string } | null;
   categoryIds?: string[];
   serviceTypeIds?: string[];
+  county?: string | null;
   projectManagerId?: string;
   projectManager?: {
     id: string;
@@ -134,6 +135,7 @@ export interface CreateProjectDto {
   teamMemberIds?: string[];
   categoryIds?: string[];
   serviceTypeIds?: string[];
+  county?: string;
 }
 
 // Client-side only - synchronous cookie reading
