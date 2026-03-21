@@ -110,7 +110,7 @@ export function getClientColumns(
     {
       accessorKey: 'segment',
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Segment" />
+        <DataTableColumnHeader column={column} title="Company Type" />
       ),
       cell: ({ row }) => (
         <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium bg-muted text-muted-foreground">

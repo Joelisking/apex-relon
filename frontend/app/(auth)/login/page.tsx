@@ -149,12 +149,6 @@ function LoginForm() {
         </form>
       </Form>
 
-      <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{' '}
-        <Link href="/register" className="text-foreground font-medium hover:underline">
-          Sign up
-        </Link>
-      </p>
     </div>
   );
 }

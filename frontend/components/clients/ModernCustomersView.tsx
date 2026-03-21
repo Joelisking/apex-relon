@@ -159,7 +159,7 @@ export default function ModernCustomersView({ currentUser }: ModernCustomersView
               },
               {
                 columnId: 'segment',
-                title: 'Segment',
+                title: 'Company Type',
                 options: [...new Set(clients.map((c) => c.segment).filter(Boolean))].map((v) => ({ label: v!, value: v! })),
               },
               {
