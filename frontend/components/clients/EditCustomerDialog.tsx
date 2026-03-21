@@ -59,12 +59,9 @@ export function EditCustomerDialog({
   onClientUpdated,
 }: EditCustomerDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [segmentOptions, setSegmentOptions] = useState<
-    DropdownOption[]
-  >([]);
-  const [individualTypeOptions, setIndividualTypeOptions] = useState<
-    DropdownOption[]
-  >([]);
+  const [segmentOptions, setSegmentOptions] = useState<DropdownOption[]>([]);
+  const [individualTypeOptions, setIndividualTypeOptions] = useState<DropdownOption[]>([]);
+  const [industryOptions, setIndustryOptions] = useState<DropdownOption[]>([]);
 
   useEffect(() => {
     settingsApi
@@ -74,6 +71,10 @@ export function EditCustomerDialog({
     settingsApi
       .getDropdownOptions('individual_type')
       .then(setIndividualTypeOptions)
+      .catch(console.error);
+    settingsApi
+      .getDropdownOptions('client_industry')
+      .then(setIndustryOptions)
       .catch(console.error);
   }, []);
 
@@ -318,7 +319,20 @@ export function EditCustomerDialog({
                   <FormItem>
                     <FormLabel>Industry</FormLabel>
                     <FormControl>
-                      <Input placeholder="Technology" {...field} />
+                      <CreatableSelect
+                        options={industryOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select industry"
+                        onOptionsChange={setIndustryOptions}
+                        onOptionCreated={(label) =>
+                          settingsApi.createDropdownOption({
+                            category: 'client_industry',
+                            value: label.toLowerCase().replace(/\s+/g, '_'),
+                            label,
+                          })
+                        }
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

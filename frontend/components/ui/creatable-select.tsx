@@ -51,7 +51,7 @@ export function CreatableSelect({
     try {
       const created = await onOptionCreated(newLabel.trim());
       onOptionsChange([...options, created]);
-      onChange(created.value);
+      onChange(created.label);
       setIsAdding(false);
       setNewLabel('');
     } catch {
@@ -118,7 +118,7 @@ export function CreatableSelect({
           </span>
         </SelectItem>
         {options.map((opt) => (
-          <SelectItem key={opt.value} value={opt.value}>
+          <SelectItem key={opt.value} value={opt.label}>
             {opt.label}
           </SelectItem>
         ))}

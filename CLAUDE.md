@@ -137,14 +137,21 @@ Relon-Apex/
 ### Configurable Dropdown Pattern (STANDARD)
 Any form field that accepts a finite set of string values (e.g. industry, segment, role, status, category) **must** use `CreatableSelect` backed by the `DropdownOption` system — never a plain `<Input>` or hard-coded `<Select>`. This gives admins control over options without code changes.
 
+**How `CreatableSelect` works (important):**
+- The component stores and emits the **label** (human-readable display string, e.g. `"Government"`), NOT the `value` key (e.g. `"government"`).
+- `DropdownOption.value` is a dedup key used internally in the DB — it never flows into form fields or gets stored on the entity.
+- `DropdownOption.label` is what gets stored on the entity (e.g. `client.industry = "Government"`).
+- Matching in the `<Select>` is done by `opt.label`, so the `value` prop passed to `<CreatableSelect>` must be the label string (e.g. the DB value already stored for that entity).
+
 **Pattern for a new dropdown field:**
 1. Add a new `category` string (e.g. `'client_industry'`) to `DropdownCategory` in `frontend/lib/types.ts`.
-2. Add seed data in `backend/src/settings/settings.service.ts` → `onModuleInit()` using the same `upsert` / count-guard pattern as existing seeds.
+2. Add seed data in `backend/src/settings/settings.service.ts` → `onModuleInit()` using the same `upsert` / count-guard pattern as existing seeds. Seed labels in Title Case.
 3. Register the category in the `CATEGORIES` array in `frontend/components/admin/DropdownOptionsView.tsx` (set `hasColor`/`hasIcon` as needed).
 4. In the form component:
    - Add a `useState<DropdownOption[]>([])` for the options.
    - Fetch with `settingsApi.getDropdownOptions('<category>')` in `useEffect`.
    - Render `<CreatableSelect>` with `onOptionCreated` calling `settingsApi.createDropdownOption({ category, value: label.toLowerCase().replace(/\s+/g, '_'), label })`.
+   - The form field default/loaded value should be the **label string** (what's stored in the DB).
 5. The `"Add new..."` option is always the **first** item in the dropdown list (this is built into `CreatableSelect` via `ADD_NEW_SENTINEL`).
 
 See `frontend/components/clients/CreateCustomerDialog.tsx` → `industry` field as the canonical example.
