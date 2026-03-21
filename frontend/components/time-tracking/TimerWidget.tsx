@@ -24,6 +24,7 @@ export function TimerWidget({ onSaved }: TimerWidgetProps) {
   const [elapsedHours, setElapsedHours] = useState(0);
 
   // Restore timer from localStorage on mount
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const saved = localStorage.getItem(TIMER_KEY);
     if (saved) {
@@ -32,6 +33,7 @@ export function TimerWidget({ onSaved }: TimerWidgetProps) {
       setElapsed(Math.floor((Date.now() - t.startedAt) / 1000));
     }
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Tick
   useEffect(() => {

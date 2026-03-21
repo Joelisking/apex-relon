@@ -1,12 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   AlertTriangle,
   TrendingUp,
   Clock,
-  Users,
   RefreshCw,
   Bot,
   FolderOpen,
@@ -139,8 +138,8 @@ export function BottleneckDashboard() {
       await analyticsFetch('/ai-report', { method: 'POST' });
       await refetchReport();
       toast.success('AI bottleneck report generated');
-    } catch (e: any) {
-      toast.error(e.message ?? 'Failed to generate report');
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Failed to generate report');
     } finally {
       setGeneratingReport(false);
     }
@@ -324,7 +323,7 @@ export function BottleneckDashboard() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Project</TableHead>
-                  <TableHead>Client</TableHead>
+                  <TableHead>Customer</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Days Stale</TableHead>
                 </TableRow>
@@ -370,7 +369,7 @@ export function BottleneckDashboard() {
             <div className="text-center py-6">
               <Bot className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
               <p className="text-sm text-muted-foreground mb-3">
-                No AI report generated yet. Click "Generate AI Report" to analyze your bottlenecks.
+                No AI report generated yet. Click &quot;Generate AI Report&quot; to analyze your bottlenecks.
               </p>
               <Button size="sm" onClick={handleGenerateReport} disabled={generatingReport}>
                 {generatingReport ? (

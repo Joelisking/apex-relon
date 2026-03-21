@@ -113,16 +113,24 @@ const CATEGORIES: Array<{
   },
   {
     value: 'client_segment',
-    label: 'Client Segments',
-    description: 'Business segments for client classification',
+    label: 'Customer Company Types',
+    description: 'Company type classifications for customers',
+    hasColor: false,
+    hasIcon: false,
+    hasMeetingType: false,
+  },
+  {
+    value: 'client_industry',
+    label: 'Customer Industries',
+    description: 'Industry classifications for customers (e.g. Government, Construction)',
     hasColor: false,
     hasIcon: false,
     hasMeetingType: false,
   },
   {
     value: 'individual_type',
-    label: 'Individual Types',
-    description: 'Types of individual contacts at client companies',
+    label: 'Contact Roles',
+    description: 'Roles of individual contacts at customer companies',
     hasColor: false,
     hasIcon: false,
     hasMeetingType: false,
@@ -289,8 +297,8 @@ export function DropdownOptionsView() {
   };
 
   const handleAdd = async () => {
-    if (!newOption.value.trim() || !newOption.label.trim()) {
-      toast.error('Value and label are required');
+    if (!newOption.label.trim()) {
+      toast.error('Label is required');
       return;
     }
     setAdding(true);
@@ -403,7 +411,6 @@ export function DropdownOptionsView() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Label</TableHead>
-                          <TableHead>Value</TableHead>
                           {catConfig.hasColor && (
                             <TableHead>Color</TableHead>
                           )}
@@ -452,12 +459,6 @@ export function DropdownOptionsView() {
                                 </span>
                               )}
                             </TableCell>
-                            <TableCell>
-                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                                {opt.value}
-                              </code>
-                            </TableCell>
-
                             {catConfig.hasColor && (
                               <TableCell>
                                 {editingId === opt.id ? (
@@ -643,22 +644,6 @@ export function DropdownOptionsView() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleAdd();
                         }}
-                      />
-                    </div>
-                    <div className="space-y-1 min-w-[140px]">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Value
-                      </label>
-                      <Input
-                        value={newOption.value}
-                        onChange={(e) =>
-                          setNewOption((s) => ({
-                            ...s,
-                            value: e.target.value,
-                          }))
-                        }
-                        placeholder="auto-generated"
-                        className="h-8 text-sm font-mono text-muted-foreground"
                       />
                     </div>
                     {catConfig.hasColor && (

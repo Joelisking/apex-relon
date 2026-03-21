@@ -62,8 +62,8 @@ export default function QuotesTable({
         throw new Error(err.message ?? 'Failed to send to QuickBooks');
       }
       toast.success('Invoice created in QuickBooks');
-    } catch (e: any) {
-      toast.error(e.message ?? 'Failed to send to QuickBooks');
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Failed to send to QuickBooks');
     }
   };
 

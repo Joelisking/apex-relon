@@ -134,6 +134,21 @@ Relon-Apex/
 - TypeScript strict mode.
 - Use `mcp__next-devtools__nextjs_index` and `mcp__next-devtools__nextjs_call` for runtime diagnostics.
 
+### Configurable Dropdown Pattern (STANDARD)
+Any form field that accepts a finite set of string values (e.g. industry, segment, role, status, category) **must** use `CreatableSelect` backed by the `DropdownOption` system — never a plain `<Input>` or hard-coded `<Select>`. This gives admins control over options without code changes.
+
+**Pattern for a new dropdown field:**
+1. Add a new `category` string (e.g. `'client_industry'`) to `DropdownCategory` in `frontend/lib/types.ts`.
+2. Add seed data in `backend/src/settings/settings.service.ts` → `onModuleInit()` using the same `upsert` / count-guard pattern as existing seeds.
+3. Register the category in the `CATEGORIES` array in `frontend/components/admin/DropdownOptionsView.tsx` (set `hasColor`/`hasIcon` as needed).
+4. In the form component:
+   - Add a `useState<DropdownOption[]>([])` for the options.
+   - Fetch with `settingsApi.getDropdownOptions('<category>')` in `useEffect`.
+   - Render `<CreatableSelect>` with `onOptionCreated` calling `settingsApi.createDropdownOption({ category, value: label.toLowerCase().replace(/\s+/g, '_'), label })`.
+5. The `"Add new..."` option is always the **first** item in the dropdown list (this is built into `CreatableSelect` via `ADD_NEW_SENTINEL`).
+
+See `frontend/components/clients/CreateCustomerDialog.tsx` → `industry` field as the canonical example.
+
 ### AI Integration
 - Multi-provider support: Anthropic Claude (primary), OpenAI GPT-4o, Google Gemini.
 - AI features live in `backend/src/ai/`.

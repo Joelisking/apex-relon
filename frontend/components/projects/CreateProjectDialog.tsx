@@ -168,13 +168,13 @@ export function CreateProjectDialog({
                 name="clientId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Client *</FormLabel>
+                    <FormLabel>Customer *</FormLabel>
                     <Select
                       onValueChange={handleClientChange}
                       defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a client" />
+                          <SelectValue placeholder="Select a customer" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>

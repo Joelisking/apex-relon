@@ -40,7 +40,7 @@ export default function QuoteEditorForm({
   onChange,
   onLineItemsChange,
 }: QuoteEditorFormProps) {
-  const { rawValues, getRaw, setRaw, clearRaw, parseRaw } = useNumericInput();
+  const { getRaw, setRaw, clearRaw, parseRaw } = useNumericInput();
 
   return (
     <div className="space-y-6">

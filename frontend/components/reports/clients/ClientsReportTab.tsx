@@ -83,7 +83,7 @@ export function ClientsReportTab({ filters }: ClientsReportTabProps) {
 
   useEffect(() => {
     if (error) {
-      toast.error('Failed to load clients reports', {
+      toast.error('Failed to load customers reports', {
         description: (error as Error).message,
       });
     }
@@ -140,7 +140,7 @@ export function ClientsReportTab({ filters }: ClientsReportTabProps) {
   const revenueColumns: ColumnDef<ClientRevenueRow>[] = [
     {
       accessorKey: 'clientName',
-      header: 'Client',
+      header: 'Customer',
     },
     {
       accessorKey: 'segment',
@@ -195,11 +195,11 @@ export function ClientsReportTab({ filters }: ClientsReportTabProps) {
   const handleExportKPIs = () => {
     const kpiData = [
       {
-        Metric: 'Total Clients',
+        Metric: 'Total Customers',
         Value: overview.totalClients,
       },
       {
-        Metric: 'Active Clients',
+        Metric: 'Active Customers',
         Value: overview.activeClients,
       },
       {
@@ -223,11 +223,11 @@ export function ClientsReportTab({ filters }: ClientsReportTabProps) {
       revenueAnalysis.slice(0, 10),
       `top-10-clients-revenue-${filters.period ?? 'custom'}-${new Date().toISOString().split('T')[0]}`,
       [
-        { key: 'clientName', label: 'Client Name' },
+        { key: 'clientName', label: 'Customer Name' },
         { key: 'lifetimeRevenue', label: 'Lifetime Revenue' },
       ],
     );
-    toast.success('Top clients exported successfully');
+    toast.success('Top customers exported successfully');
   };
 
   const handleExportRetentionMetrics = () => {
@@ -236,7 +236,7 @@ export function ClientsReportTab({ filters }: ClientsReportTabProps) {
       `client-retention-metrics-${filters.period ?? 'custom'}-${new Date().toISOString().split('T')[0]}`,
       [
         { key: 'status', label: 'Status' },
-        { key: 'count', label: 'Client Count' },
+        { key: 'count', label: 'Customer Count' },
         { key: 'percentage', label: 'Percentage' },
       ],
     );
@@ -255,7 +255,7 @@ export function ClientsReportTab({ filters }: ClientsReportTabProps) {
         { key: 'period', label: 'Period' },
         {
           key: 'avgActivitiesPerClient',
-          label: 'Avg Activities per Client',
+          label: 'Avg Activities per Customer',
         },
       ],
     );
@@ -330,14 +330,14 @@ export function ClientsReportTab({ filters }: ClientsReportTabProps) {
         cols={4}
         stats={[
           {
-            label: 'Total Clients',
+            label: 'Total Customers',
             sublabel: 'All time',
             value: String(overview.totalClients),
             icon: Users,
             highlight: true,
           },
           {
-            label: 'Active Clients',
+            label: 'Active Customers',
             sublabel: 'Currently active',
             value: String(overview.activeClients),
             icon: TrendingUp,
@@ -365,7 +365,7 @@ export function ClientsReportTab({ filters }: ClientsReportTabProps) {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-semibold">
-                  Top 10 Clients by Revenue
+                  Top 10 Customers by Revenue
                 </CardTitle>
                 <CardDescription>
                   Highest revenue contributors
@@ -434,7 +434,7 @@ export function ClientsReportTab({ filters }: ClientsReportTabProps) {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-semibold">
-                  Client Status Distribution
+                  Customer Status Distribution
                 </CardTitle>
                 <CardDescription>Retention metrics</CardDescription>
               </div>
@@ -509,7 +509,7 @@ export function ClientsReportTab({ filters }: ClientsReportTabProps) {
                   Engagement Trends
                 </CardTitle>
                 <CardDescription>
-                  Client activity over time
+                  Customer activity over time
                 </CardDescription>
               </div>
               {canExport && (
@@ -635,7 +635,7 @@ export function ClientsReportTab({ filters }: ClientsReportTabProps) {
                 Health Score by Segment
               </CardTitle>
               <CardDescription>
-                Average health scores across client segments
+                Average health scores across customer segments
               </CardDescription>
             </div>
             {canExport && (
@@ -691,9 +691,9 @@ export function ClientsReportTab({ filters }: ClientsReportTabProps) {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
-            Client Revenue Analysis
+            Customer Revenue Analysis
           </CardTitle>
-          <CardDescription>Detailed client metrics</CardDescription>
+          <CardDescription>Detailed customer metrics</CardDescription>
         </CardHeader>
         <CardContent>
           <DataTable

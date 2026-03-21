@@ -146,7 +146,7 @@ export default function QuoteRecipientPicker({
 
         {/* Client picker */}
         <div>
-          <label className={LABEL_CLASS}>Client</label>
+          <label className={LABEL_CLASS}>Customer</label>
           <Popover open={clientOpen} onOpenChange={setClientOpen}>
             <PopoverTrigger asChild>
               <Button

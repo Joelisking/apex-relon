@@ -46,6 +46,7 @@ export function WidgetConfigPanel({
 
   useEffect(() => {
     if (widget) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle(widget.config.title || '');
       setMetric((widget.config.metric as string) || '');
       setDateRange((widget.config.dateRange as string) || 'month');

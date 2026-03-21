@@ -28,6 +28,7 @@ export function useDashboardLayout() {
   });
 
   // Initialize from localStorage draft or server data
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!user) return;
     if (!localWidgets && data) {
@@ -44,6 +45,7 @@ export function useDashboardLayout() {
       }
     }
   }, [data, localWidgets, user, storageKey]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const updateWidgets = useCallback((widgets: WidgetConfig[]) => {
     setLocalWidgets(widgets);

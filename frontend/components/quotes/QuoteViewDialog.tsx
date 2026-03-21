@@ -47,8 +47,8 @@ export default function QuoteViewDialog({ quote, open, onOpenChange }: QuoteView
       }
       const data = await res.json();
       toast.success(`Invoice created in QuickBooks (ID: ${data.qbInvoiceId})`);
-    } catch (e: any) {
-      toast.error(e.message ?? 'Failed to create QuickBooks invoice');
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Failed to create QuickBooks invoice');
     } finally {
       setIsSendingToQb(false);
     }

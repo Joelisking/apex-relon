@@ -301,7 +301,7 @@ export function EditLeadDialog({
                     value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a client" />
+                        <SelectValue placeholder="Select a customer" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

@@ -124,7 +124,7 @@ export function ProjectsReportTab({
     },
     {
       accessorKey: 'clientName',
-      header: 'Client',
+      header: 'Customer',
     },
     {
       accessorKey: 'status',

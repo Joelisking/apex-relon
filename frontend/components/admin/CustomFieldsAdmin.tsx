@@ -6,7 +6,6 @@ import {
   Trash2,
   Pencil,
   Loader2,
-  GripVertical,
   ToggleLeft,
   ToggleRight,
   Settings2,
@@ -56,7 +55,7 @@ const fieldTypes = [
 
 const entityTypes = [
   { value: 'LEAD', label: 'Leads' },
-  { value: 'CLIENT', label: 'Clients' },
+  { value: 'CLIENT', label: 'Customers' },
   { value: 'PROJECT', label: 'Projects' },
 ];
 

@@ -89,7 +89,7 @@ const PROMPTS = [
   },
   {
     key: 'clientHealthPrompt' as keyof PromptState,
-    label: 'Client Health Scoring',
+    label: 'Customer Health Scoring',
     desc: 'Vars: {{name}}, {{segment}}, {{lifetimeRevenue}}',
     rows: 10,
   },
@@ -133,8 +133,8 @@ const FEATURES: {
   },
   {
     icon: Users,
-    label: 'Client Health Monitoring',
-    desc: 'Track client engagement and identify at-risk accounts before they churn',
+    label: 'Customer Health Monitoring',
+    desc: 'Track customer engagement and identify at-risk accounts before they churn',
     colorClass: 'text-emerald-600',
     bgClass: 'bg-emerald-50',
     dotClass: 'bg-emerald-400',
@@ -143,7 +143,7 @@ const FEATURES: {
   {
     icon: Zap,
     label: 'Upsell Opportunity Detection',
-    desc: 'Identify cross-sell and upsell opportunities based on client history and patterns',
+    desc: 'Identify cross-sell and upsell opportunities based on customer history and patterns',
     colorClass: 'text-violet-600',
     bgClass: 'bg-violet-50',
     dotClass: 'bg-violet-400',

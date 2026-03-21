@@ -60,8 +60,8 @@ const triggers = [
   { value: 'LEAD_CREATED', label: 'Lead Created' },
   { value: 'LEAD_UPDATED', label: 'Lead Updated' },
   { value: 'LEAD_STAGE_CHANGED', label: 'Lead Stage Changed' },
-  { value: 'CLIENT_CREATED', label: 'Client Created' },
-  { value: 'CLIENT_UPDATED', label: 'Client Updated' },
+  { value: 'CLIENT_CREATED', label: 'Customer Created' },
+  { value: 'CLIENT_UPDATED', label: 'Customer Updated' },
   { value: 'PROJECT_CREATED', label: 'Project Created' },
   { value: 'PROJECT_UPDATED', label: 'Project Updated' },
   { value: 'TASK_CREATED', label: 'Task Created' },
@@ -82,7 +82,7 @@ const actionTypes = [
 const testEntityTypes = [
   { value: 'LEAD', label: 'Lead' },
   { value: 'PROJECT', label: 'Project' },
-  { value: 'CLIENT', label: 'Client' },
+  { value: 'CLIENT', label: 'Customer' },
   { value: 'TASK', label: 'Task' },
 ];
 

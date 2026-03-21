@@ -227,13 +227,13 @@ export function EditProjectDialog({
                 name="clientId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Client *</FormLabel>
+                    <FormLabel>Customer *</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a client" />
+                          <SelectValue placeholder="Select a customer" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>

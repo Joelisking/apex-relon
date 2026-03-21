@@ -22,7 +22,7 @@ const PREFERENCE_ITEMS: { key: PreferenceKey; label: string }[] = [
   { key: 'leadStale', label: 'Stale lead alert (14+ days)' },
   { key: 'leadStageChanged', label: 'Lead stage changes' },
   { key: 'projectAtRisk', label: 'Project at risk alert' },
-  { key: 'clientDormant', label: 'Dormant client alert (30+ days)' },
+  { key: 'clientDormant', label: 'Dormant customer alert (30+ days)' },
   { key: 'emailDigest', label: 'Daily email digest' },
 ];
 

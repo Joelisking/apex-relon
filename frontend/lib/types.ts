@@ -90,6 +90,7 @@ export type DropdownCategory =
   | 'file_category'
   | 'cost_category'
   | 'client_segment'
+  | 'client_industry'
   | 'individual_type'
   | 'project_status'
   | 'project_risk_status'

@@ -91,7 +91,7 @@ export function MetricsCards({
         trend="neutral"
       />
       <MetricCard
-        title="Active Clients"
+        title="Active Customers"
         value={activeClients}
         change="+2 this month"
         trend="up"

@@ -107,6 +107,7 @@ export function TimeEntryDialog({
   const selectedItem = serviceItems.find((si) => si.id === serviceItemId);
   const subtasks = selectedItem?.subtasks ?? [];
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (entry) {
       setDate(entry.date.split('T')[0]);
@@ -126,6 +127,7 @@ export function TimeEntryDialog({
       setServiceItemSubtaskId('');
     }
   }, [entry, open, initialHours, initialProjectId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Reset subtask when service item changes
   const handleServiceItemChange = (val: string) => {

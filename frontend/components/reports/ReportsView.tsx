@@ -123,7 +123,7 @@ export function ReportsView() {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="leads">Leads</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
-          <TabsTrigger value="clients">Clients</TabsTrigger>
+          <TabsTrigger value="clients">Customers</TabsTrigger>
           <TabsTrigger value="reps">Sales Reps</TabsTrigger>
         </TabsList>
 

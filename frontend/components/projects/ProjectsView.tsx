@@ -100,16 +100,15 @@ export default function ProjectsView({
     staleTime: 10 * 60 * 1000,
   });
 
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  const { data: allUsers = [] } = useQuery<any[]>({
+  type UserRecord = { id: string; name: string; role: string };
+  const { data: allUsers = [] } = useQuery<UserRecord[]>({
     queryKey: ['users'],
     queryFn: () => api.admin.getUsers(),
     staleTime: 5 * 60 * 1000,
   });
-  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   const managers = Array.isArray(allUsers)
-    ? allUsers.filter((u: any) =>
+    ? allUsers.filter((u) =>
         ['BDM', 'SALES', 'ADMIN', 'CEO'].includes(u.role),
       )
     : [];
@@ -117,7 +116,6 @@ export default function ProjectsView({
   // Keep local state in sync with query cache for optimistic updates
   useEffect(() => {
     if (queryProjects) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalProjects(queryProjects);
     }
   }, [queryProjects]);
@@ -680,7 +678,7 @@ export default function ProjectsView({
                 <SelectValue placeholder="Select a manager..." />
               </SelectTrigger>
               <SelectContent>
-                {managers.map((m: any) => (
+                {managers.map((m) => (
                   <SelectItem key={m.id} value={m.id}>
                     {m.name}
                   </SelectItem>

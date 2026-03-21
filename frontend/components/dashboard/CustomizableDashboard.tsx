@@ -340,6 +340,7 @@ export default function CustomizableDashboard({ initialPeriod = 'month' }: Props
 
   // Reset toolbar position when exiting edit mode
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!isEditMode) setToolbarPos(null);
   }, [isEditMode]);
 

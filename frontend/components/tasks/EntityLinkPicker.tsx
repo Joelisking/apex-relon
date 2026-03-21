@@ -61,8 +61,8 @@ const TYPE_META = {
     badge: 'bg-violet-50 text-violet-700 border border-violet-200',
   },
   CLIENT: {
-    label: 'Client',
-    plural: 'Clients',
+    label: 'Customer',
+    plural: 'Customers',
     icon: Briefcase,
     dot: 'bg-blue-500',
     pill: 'bg-blue-100 text-blue-700 border-blue-200',

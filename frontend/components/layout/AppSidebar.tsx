@@ -153,7 +153,7 @@ const mainNavItems: Array<{
     icon: LayoutDashboard,
   },
   {
-    title: 'Clients',
+    title: 'Customers',
     href: '/clients',
     icon: Building2,
     permission: 'clients:view',
