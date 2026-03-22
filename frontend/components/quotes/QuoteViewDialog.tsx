@@ -62,8 +62,17 @@ export default function QuoteViewDialog({ quote, open, onOpenChange }: QuoteView
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       const quoteNumber = String(quote.quoteNumber).padStart(4, '0');
+      const entityName =
+        quote.project?.name ??
+        quote.lead?.company ??
+        quote.lead?.contactName ??
+        quote.client?.name ??
+        null;
+      const safeName = entityName
+        ? `-${entityName.replace(/[^a-z0-9]/gi, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')}`
+        : '';
       a.href = url;
-      a.download = `quote-${quoteNumber}.pdf`;
+      a.download = `quote-${quoteNumber}${safeName}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {

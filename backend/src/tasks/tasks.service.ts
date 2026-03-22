@@ -10,6 +10,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/notification-types.constants';
 import { WorkflowsService } from '../workflows/workflows.service';
 import { PermissionsService } from '../permissions/permissions.service';
+import { EmailService } from '../email/email.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
@@ -26,6 +27,7 @@ export class TasksService {
     private notificationsService: NotificationsService,
     private workflowsService: WorkflowsService,
     private permissionsService: PermissionsService,
+    private emailService: EmailService,
   ) {}
 
   async findAll(filters: {
@@ -134,9 +136,7 @@ export class TasksService {
     // Notify assignee if different from creator
     if (task.assignedToId && task.assignedToId !== userId) {
       try {
-        const pref = await this.notificationsService.getPreferences(
-          task.assignedToId,
-        );
+        const pref = await this.notificationsService.getPreferences(task.assignedToId);
         if (pref.taskAssigned) {
           await this.notificationsService.create({
             userId: task.assignedToId,
@@ -147,8 +147,25 @@ export class TasksService {
             entityId: task.entityId ?? undefined,
           });
         }
+        // Send assignment email if assignee has an email address
+        if (task.assignedTo?.email) {
+          await this.emailService.sendTaskAssignedEmail(
+            task.assignedTo.email,
+            task.assignedTo.name,
+            {
+              id: task.id,
+              title: task.title,
+              dueDate: task.dueDate ?? null,
+              dueTime: task.dueTime ?? null,
+              priority: task.priority,
+              entityType: task.entityType ?? null,
+              entityName: null,
+            },
+            task.createdBy.name,
+          );
+        }
       } catch (err) {
-        this.logger.warn(`Failed to send task-assigned notification: ${err}`);
+        this.logger.warn(`Failed to send task-assigned notification/email: ${err}`);
       }
     }
 
@@ -218,6 +235,43 @@ export class TasksService {
         taskType: { select: { id: true, name: true } },
       },
     });
+
+    // Notify new assignee when task is reassigned to a different person
+    const assigneeChanged =
+      dto.assignedToId &&
+      dto.assignedToId !== existing.assignedToId &&
+      dto.assignedToId !== userId;
+    if (assigneeChanged && task.assignedTo?.email) {
+      try {
+        const pref = await this.notificationsService.getPreferences(task.assignedToId!);
+        if (pref.taskAssigned) {
+          await this.notificationsService.create({
+            userId: task.assignedToId!,
+            type: NotificationType.TASK_ASSIGNED,
+            title: 'New task assigned',
+            message: `You've been assigned "${task.title}"`,
+            entityType: task.entityType ?? undefined,
+            entityId: task.entityId ?? undefined,
+          });
+        }
+        await this.emailService.sendTaskAssignedEmail(
+          task.assignedTo.email,
+          task.assignedTo.name,
+          {
+            id: task.id,
+            title: task.title,
+            dueDate: task.dueDate ?? null,
+            dueTime: task.dueTime ?? null,
+            priority: task.priority,
+            entityType: task.entityType ?? null,
+            entityName: null,
+          },
+          task.createdBy.name,
+        );
+      } catch (err) {
+        this.logger.warn(`Failed to send task-reassigned notification/email: ${err}`);
+      }
+    }
 
     if (dto.status === DONE_STATUS) {
       this.workflowsService.triggerRules('TASK_COMPLETED', 'TASK', task.id, task as unknown as Record<string, unknown>);

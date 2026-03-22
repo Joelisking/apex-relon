@@ -10,6 +10,7 @@ import {
   type UserResponse,
   type UpdateUserRequest,
 } from '@/lib/api/users-client';
+import { rolesApi, type RoleResponse } from '@/lib/api/roles-client';
 import { getTeams } from '@/lib/api/teams-client';
 import { Team } from '@/lib/types';
 import {
@@ -58,6 +59,7 @@ export function UpdateUserDialog({
 }: UpdateUserDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<RoleResponse[]>([]);
 
   const form = useForm<UpdateUserFormData>({
     resolver: zodResolver(updateUserSchema),
@@ -73,6 +75,7 @@ export function UpdateUserDialog({
   useEffect(() => {
     if (open) {
       loadTeams();
+      loadRoles();
     }
   }, [open]);
 
@@ -81,12 +84,7 @@ export function UpdateUserDialog({
       form.reset({
         email: user.email,
         name: user.name,
-        role: user.role as
-          | 'ADMIN'
-          | 'BDM'
-          | 'SALES'
-          | 'DESIGNER'
-          | 'QS',
+        role: user.role,
         teamId: user.teamId || user.team?.id || '',
         managerId: user.managerId || '',
       });
@@ -102,16 +100,24 @@ export function UpdateUserDialog({
     }
   };
 
-  // Determine allowed roles based on current user's role
-  const getAllowedRoles = (): Array<
-    'ADMIN' | 'BDM' | 'SALES' | 'DESIGNER' | 'QS'
-  > => {
+  const loadRoles = async () => {
+    try {
+      const data = await rolesApi.getAll();
+      setAvailableRoles(data);
+    } catch (error) {
+      console.error('Failed to load roles', error);
+    }
+  };
+
+  const getAllowedRoles = (): RoleResponse[] => {
+    if (currentUserRole === 'BDM') {
+      return availableRoles.filter((r) => r.key === 'SALES');
+    }
+    if (currentUserRole === 'ADMIN') {
+      return availableRoles.filter((r) => r.key !== 'CEO' && r.key !== 'ADMIN');
+    }
     if (currentUserRole === 'CEO') {
-      return ['ADMIN', 'BDM', 'SALES', 'DESIGNER', 'QS'];
-    } else if (currentUserRole === 'ADMIN') {
-      return ['BDM', 'SALES', 'DESIGNER', 'QS'];
-    } else if (currentUserRole === 'BDM') {
-      return ['SALES'];
+      return availableRoles.filter((r) => r.key !== 'CEO');
     }
     return [];
   };
@@ -221,8 +227,8 @@ export function UpdateUserDialog({
                     </FormControl>
                     <SelectContent>
                       {allowedRoles.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {role}
+                        <SelectItem key={role.key} value={role.key}>
+                          {role.label}
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -14,6 +14,51 @@ export interface DigestTask {
   status: string;
 }
 
+export interface TaskEmailData {
+  id: string;
+  title: string;
+  dueDate: Date | null;
+  dueTime: string | null;
+  priority: string;
+  entityType?: string | null;
+  entityName?: string | null;
+}
+
+const DEFAULT_DUE_TIME = '9:00 AM';
+
+function formatTaskDueDate(dueDate: Date | null, dueTime: string | null): string {
+  if (!dueDate) return 'No due date';
+  const datePart = dueDate.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const timePart = dueTime ? formatDueTime(dueTime) : DEFAULT_DUE_TIME;
+  return `${datePart} at ${timePart}`;
+}
+
+function formatDueTime(t: string): string {
+  const [hStr, mStr] = t.split(':');
+  const h = parseInt(hStr ?? '9', 10);
+  const m = parseInt(mStr ?? '0', 10);
+  const period = h < 12 ? 'AM' : 'PM';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+function taskInfoCard(task: TaskEmailData): string {
+  const rows: { label: string; value: string }[] = [
+    { label: 'Task', value: task.title },
+    { label: 'Due', value: formatTaskDueDate(task.dueDate, task.dueTime) },
+    { label: 'Priority', value: task.priority },
+  ];
+  if (task.entityType && task.entityName) {
+    rows.push({ label: task.entityType, value: task.entityName });
+  }
+  return infoCard(rows);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared design tokens (email-safe: no CSS variables)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -453,6 +498,126 @@ export class EmailService {
       html,
       text: textLines.join('\n'),
       label: 'Daily Digest',
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Task Assigned
+  // ─────────────────────────────────────────────────────────────────────────
+  async sendTaskAssignedEmail(
+    to: string,
+    name: string,
+    task: TaskEmailData,
+    assignedByName: string,
+  ): Promise<void> {
+    const tasksUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/tasks`;
+
+    const body = `
+      ${greeting(name)}
+      ${paragraph(`<strong>${assignedByName}</strong> has assigned you a new task.`)}
+      ${taskInfoCard(task)}
+      ${task.dueDate
+        ? alertBox(`This task is due on <strong>${formatTaskDueDate(task.dueDate, task.dueTime)}</strong>.`)
+        : ''}
+      ${ctaButton('View My Tasks', tasksUrl)}
+      ${signature()}
+    `;
+
+    const html = shell({
+      preheader: `New task: "${task.title}" — assigned by ${assignedByName}`,
+      headerLabel: 'Task Assigned',
+      headerIcon: '✓',
+      body,
+    });
+
+    const text = [
+      `Hello, ${name}.`,
+      '',
+      `${assignedByName} has assigned you a new task: "${task.title}"`,
+      task.dueDate ? `Due: ${formatTaskDueDate(task.dueDate, task.dueTime)}` : '',
+      `Priority: ${task.priority}`,
+      '',
+      `View your tasks: ${tasksUrl}`,
+      '',
+      'The Relon Team',
+    ].filter(Boolean).join('\n');
+
+    await this.send({
+      to,
+      subject: `New Task Assigned: "${task.title}"`,
+      html,
+      text,
+      label: 'Task Assigned',
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Task Reminder (2 days / 1 day / same day)
+  // ─────────────────────────────────────────────────────────────────────────
+  async sendTaskReminderEmail(
+    to: string,
+    name: string,
+    task: TaskEmailData,
+    daysUntilDue: 0 | 1 | 2,
+  ): Promise<void> {
+    const tasksUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/tasks`;
+
+    const urgencyLabels: Record<0 | 1 | 2, string> = {
+      0: 'due today',
+      1: 'due tomorrow',
+      2: 'due in 2 days',
+    };
+    const urgencyLabel = urgencyLabels[daysUntilDue];
+    const alertType: 'danger' | 'warning' = daysUntilDue === 0 ? 'danger' : 'warning';
+
+    const dueAt = formatTaskDueDate(task.dueDate, task.dueTime);
+
+    const body = `
+      ${greeting(name)}
+      ${paragraph(`This is a reminder that you have a task <strong>${urgencyLabel}</strong>.`)}
+      ${taskInfoCard(task)}
+      ${alertBox(
+        daysUntilDue === 0
+          ? `This task is due <strong>today at ${task.dueTime ? formatDueTime(task.dueTime) : DEFAULT_DUE_TIME}</strong>. Please complete it as soon as possible.`
+          : `This task is due on <strong>${dueAt}</strong>.`,
+        alertType,
+      )}
+      ${ctaButton('View My Tasks', tasksUrl)}
+      ${signature()}
+    `;
+
+    const subjectMap: Record<0 | 1 | 2, string> = {
+      0: `Task Due Today: "${task.title}"`,
+      1: `Reminder — Task Due Tomorrow: "${task.title}"`,
+      2: `Reminder — Task Due in 2 Days: "${task.title}"`,
+    };
+
+    const html = shell({
+      preheader: `Task ${urgencyLabel}: "${task.title}" — ${dueAt}`,
+      headerLabel: 'Task Reminder',
+      headerIcon: '⏰',
+      accentColor: daysUntilDue === 0 ? T.danger : T.gold,
+      body,
+    });
+
+    const text = [
+      `Hello, ${name}.`,
+      '',
+      `Reminder: "${task.title}" is ${urgencyLabel}.`,
+      `Due: ${dueAt}`,
+      `Priority: ${task.priority}`,
+      '',
+      `View your tasks: ${tasksUrl}`,
+      '',
+      'The Relon Team',
+    ].join('\n');
+
+    await this.send({
+      to,
+      subject: subjectMap[daysUntilDue],
+      html,
+      text,
+      label: 'Task Reminder',
     });
   }
 

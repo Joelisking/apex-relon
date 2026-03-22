@@ -520,6 +520,11 @@ export function TaskDialog({
                 value={form.dueTime ?? ''}
                 onChange={(v) => setForm({ ...form, dueTime: v })}
               />
+              {!form.dueTime && form.dueDate && (
+                <p className="text-xs text-muted-foreground">
+                  No time set — reminders will assume 9:00 AM.
+                </p>
+              )}
             </div>
           </div>
 
