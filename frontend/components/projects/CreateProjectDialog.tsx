@@ -70,6 +70,7 @@ export function CreateProjectDialog({
   onProjectCreated,
 }: CreateProjectDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [isLoadingStages, setIsLoadingStages] = useState(true);
   const [clients, setClients] = useState<
     { id: string; name: string; individualName?: string; county?: string | null }[]
   >([]);
@@ -107,7 +108,7 @@ export function CreateProjectDialog({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
     defaultValues: {
       name: '',
-      status: 'Planning',
+      status: '',
       contractedValue: 0,
       endOfProjectValue: 0,
     },
@@ -129,10 +130,7 @@ export function CreateProjectDialog({
           setLeads(Array.isArray(leadsData) ? leadsData : []);
           setUsers(usersRes.users || []);
           setProjectStages(stages);
-          // Default status to first pipeline stage
-          if (stages.length > 0) {
-            form.setValue('status', stages[0].name);
-          }
+          setIsLoadingStages(false);
         } catch (error) {
           console.error('Failed to load form data', error);
         }
@@ -149,6 +147,13 @@ export function CreateProjectDialog({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Auto-select first stage once stages are loaded
+  useEffect(() => {
+    if (projectStages.length > 0 && !form.getValues('status')) {
+      form.setValue('status', projectStages[0].name, { shouldDirty: true });
+    }
+  }, [projectStages]);
 
   // Auto-generate name and populate county when client changes
   const handleClientChange = (clientId: string) => {
@@ -322,10 +327,10 @@ export function CreateProjectDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Stage</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingStages}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select stage" />
+                          <SelectValue placeholder={isLoadingStages ? 'Loading stages…' : 'Select stage'} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
