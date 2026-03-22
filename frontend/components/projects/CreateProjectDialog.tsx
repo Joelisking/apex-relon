@@ -191,10 +191,6 @@ export function CreateProjectDialog({
   const handleClientChange = (clientId: string) => {
     const client = clients.find((c) => c.id === clientId);
     if (client) {
-      if (!form.getValues('name')) {
-        const displayName = client.individualName || client.name;
-        form.setValue('name', `${displayName} - Project`);
-      }
       if (client.county) form.setValue('county', client.county);
     }
     form.setValue('clientId', clientId);
