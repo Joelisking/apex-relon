@@ -168,15 +168,15 @@ export default function TasksView() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-display tracking-tight">Tasks</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-display tracking-tight">Tasks</h1>
+          <p className="text-sm text-muted-foreground hidden sm:block">
             Manage your tasks and follow-ups
           </p>
         </div>
         {canCreate && (
-          <Button onClick={openCreate} size="sm">
+          <Button onClick={openCreate} size="sm" className="shrink-0">
             <Plus className="mr-2 h-4 w-4" />
             New Task
           </Button>
@@ -187,9 +187,9 @@ export default function TasksView() {
       {summary && (
         <div className="rounded-xl border border-border/60 bg-card shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
           {/* My stats */}
-          <div className="grid grid-cols-4 gap-px bg-border/60">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border/60">
             {teamSummary && (
-              <div className="col-span-4 px-5 py-1.5 bg-muted/30 border-b border-border/40">
+              <div className="col-span-2 sm:col-span-4 px-5 py-1.5 bg-muted/30 border-b border-border/40">
                 <p className="text-[10px] uppercase tracking-[0.06em] font-medium text-muted-foreground">My Tasks</p>
               </div>
             )}
@@ -220,8 +220,8 @@ export default function TasksView() {
 
           {/* Team totals row */}
           {teamSummary && (
-            <div className="grid grid-cols-4 gap-px bg-border/60 border-t border-border/60">
-              <div className="col-span-4 px-5 py-1.5 bg-muted/30 border-b border-border/40">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border/60 border-t border-border/60">
+              <div className="col-span-2 sm:col-span-4 px-5 py-1.5 bg-muted/30 border-b border-border/40">
                 <p className="text-[10px] uppercase tracking-[0.06em] font-medium text-muted-foreground">
                   Team ({teamSummary.members.length} member{teamSummary.members.length !== 1 ? 's' : ''})
                 </p>
@@ -255,7 +255,7 @@ export default function TasksView() {
       )}
 
       {/* Filters + view toggle */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full h-8 text-xs">
             <SelectValue placeholder="Status" />
@@ -342,24 +342,28 @@ export default function TasksView() {
       {/* Task List */}
       {loading ? (
         <div className="rounded-xl border border-border/60 overflow-hidden animate-pulse">
-          <div className="bg-muted/40 px-4 py-2.5 grid grid-cols-[2rem_1fr_6rem_7rem_8rem_5rem_2rem] gap-4 border-b border-border/40">
-            {[...Array(7)].map((_, i) => (
-              <div key={i} className="h-2.5 bg-muted rounded" />
-            ))}
+          <div className="bg-muted/40 px-4 py-2.5 grid grid-cols-[2rem_1fr_2rem] md:grid-cols-[2rem_1fr_6rem_7rem_8rem_5rem_2rem] gap-4 border-b border-border/40">
+            <div className="h-2.5 bg-muted rounded" />
+            <div className="h-2.5 bg-muted rounded" />
+            <div className="h-2.5 bg-muted rounded hidden md:block" />
+            <div className="h-2.5 bg-muted rounded hidden md:block" />
+            <div className="h-2.5 bg-muted rounded hidden md:block" />
+            <div className="h-2.5 bg-muted rounded hidden md:block" />
+            <div className="h-2.5 bg-muted rounded" />
           </div>
           {[...Array(6)].map((_, i) => (
             <div
               key={i}
-              className="px-4 py-3 grid grid-cols-[2rem_1fr_6rem_7rem_8rem_5rem_2rem] gap-4 border-b border-border/40 last:border-0">
+              className="px-4 py-3 grid grid-cols-[2rem_1fr_2rem] md:grid-cols-[2rem_1fr_6rem_7rem_8rem_5rem_2rem] gap-4 border-b border-border/40 last:border-0">
               <div className="h-4 bg-muted rounded-full w-4 self-center" />
               <div className="space-y-1.5">
                 <div className="h-3.5 bg-muted rounded w-3/4" />
                 <div className="h-2.5 bg-muted rounded w-1/2" />
               </div>
-              <div className="h-5 bg-muted rounded-full w-14 self-center" />
-              <div className="h-3.5 bg-muted rounded w-20 self-center" />
-              <div className="h-3.5 bg-muted rounded w-24 self-center" />
-              <div className="h-5 bg-muted rounded-full w-16 self-center" />
+              <div className="h-5 bg-muted rounded-full w-14 self-center hidden md:block" />
+              <div className="h-3.5 bg-muted rounded w-20 self-center hidden md:block" />
+              <div className="h-3.5 bg-muted rounded w-24 self-center hidden md:block" />
+              <div className="h-5 bg-muted rounded-full w-16 self-center hidden md:block" />
               <div className="h-4 bg-muted rounded w-4 self-center" />
             </div>
           ))}

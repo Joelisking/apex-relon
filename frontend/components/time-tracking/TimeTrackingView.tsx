@@ -227,14 +227,14 @@ export function TimeTrackingView() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-3xl font-display tracking-tight">Time Tracking</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-display tracking-tight">Time Tracking</h1>
+          <p className="text-muted-foreground mt-1 hidden sm:block">
             Log hours, track billability, and monitor project budgets.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <TimerWidget onSaved={() => queryClient.invalidateQueries({ queryKey: ['time-entries'] })} />
           <Button
             size="sm"
@@ -298,7 +298,7 @@ export function TimeTrackingView() {
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-4">
             <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -329,16 +329,16 @@ export function TimeTrackingView() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="my-time">
-            <Clock className="h-4 w-4 mr-1.5" />
-            My Time
+            <Clock className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">My Time</span>
           </TabsTrigger>
           <TabsTrigger value="team-time">
-            <Users className="h-4 w-4 mr-1.5" />
-            Team Time
+            <Users className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">Team Time</span>
           </TabsTrigger>
           <TabsTrigger value="timesheet">
-            <CalendarDays className="h-4 w-4 mr-1.5" />
-            Timesheet
+            <CalendarDays className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">Timesheet</span>
           </TabsTrigger>
         </TabsList>
 
@@ -414,13 +414,13 @@ export function TimeTrackingView() {
         <TabsContent value="timesheet">
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <CardTitle className="text-sm">Weekly Timesheet</CardTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => shiftWeek(-1)}>
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <span className="text-sm font-medium tabular-nums">
+                  <span className="text-xs sm:text-sm font-medium tabular-nums">
                     {formatDate(weekStart)} – {timesheet?.endDate ? formatDate(timesheet.endDate) : '…'}
                   </span>
                   <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => shiftWeek(1)}>

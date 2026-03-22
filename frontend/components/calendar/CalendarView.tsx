@@ -110,8 +110,8 @@ export function CalendarView() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-display tracking-tight">Calendar</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-display tracking-tight">Calendar</h1>
+          <p className="text-muted-foreground hidden sm:block">
             Task due dates, project timelines, and crew scheduling
           </p>
         </div>
@@ -154,7 +154,7 @@ export function CalendarView() {
         </div>
 
         {activeView !== 'crew' && (
-          <div className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="ml-auto hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
             <Info className="h-3.5 w-3.5" />
             Tasks without a due date are not shown
           </div>

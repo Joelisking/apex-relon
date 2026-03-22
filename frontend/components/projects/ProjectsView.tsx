@@ -319,21 +319,21 @@ export default function ProjectsView({
   const PROJECT_STATUSES = projectStages.map((s) => s.name);
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-display tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-display tracking-tight">
             Projects
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground hidden sm:block">
             {filteredProjects.length} project
             {filteredProjects.length !== 1 ? 's' : ''} across all
             clients
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isFetching && !isLoading && (
             <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
           )}

@@ -301,8 +301,8 @@ function CustomWidgetGrid({
       : metricCards.length === 2
         ? 'grid-cols-2'
         : metricCards.length === 3
-          ? 'grid-cols-3'
-          : 'grid-cols-4';
+          ? 'grid-cols-2 sm:grid-cols-3'
+          : 'grid-cols-2 sm:grid-cols-4';
 
   return (
     <DndContext
@@ -337,7 +337,7 @@ function CustomWidgetGrid({
           <SortableContext
             items={otherWidgets.map((w) => w.id)}
             strategy={rectSortingStrategy}>
-            <div data-widget-grid className="grid grid-cols-12 gap-4 auto-rows-[180px]">
+            <div data-widget-grid className="grid grid-cols-12 gap-3 sm:gap-4 auto-rows-[160px] sm:auto-rows-[180px]">
               {otherWidgets.map((widget, i) => (
                 <SortableWidget
                   key={widget.id}
@@ -500,6 +500,16 @@ export default function CustomizableDashboard({ initialPeriod = 'month' }: Props
     .edit-toolbar-enter {
       animation: editToolbarIn 0.22s ease both;
     }
+    @media (max-width: 639px) {
+      [data-widget-grid] {
+        grid-template-columns: 1fr !important;
+        auto-rows: auto !important;
+      }
+      [data-widget-grid] > * {
+        grid-column: 1 / -1 !important;
+        grid-row: auto !important;
+      }
+    }
   `;
 
   // ------------------------------------------------------------------
@@ -511,7 +521,7 @@ export default function CustomizableDashboard({ initialPeriod = 'month' }: Props
         <style>{WIDGET_ANIMATIONS}</style>
         <div className="space-y-5">
           {/* Header row */}
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             {/* Period selector — pill tabs */}
             <div className="inline-flex items-center gap-0.5 p-1 rounded-full bg-muted/50 border border-border/40">
               {(Object.keys(PERIOD_LABELS) as Array<keyof typeof PERIOD_LABELS>).map((p) => (
@@ -537,22 +547,20 @@ export default function CustomizableDashboard({ initialPeriod = 'month' }: Props
                   Unsaved layout
                 </span>
               )}
-              {hasPermission('dashboard:edit') && (
-                <button
-                  onClick={() => setIsEditMode(true)}
-                  disabled={isLoading}
-                  className={cn(
-                    'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full',
-                    'text-xs font-medium text-muted-foreground',
-                    'border border-border/50 hover:border-border',
-                    'hover:bg-muted/40 hover:text-foreground',
-                    'transition-all duration-150',
-                    'disabled:opacity-40 disabled:cursor-not-allowed',
-                  )}>
-                  <LayoutDashboard className="h-3.5 w-3.5" />
-                  Customize
-                </button>
-              )}
+              <button
+                onClick={() => setIsEditMode(true)}
+                disabled={isLoading}
+                className={cn(
+                  'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full',
+                  'text-xs font-medium text-muted-foreground',
+                  'border border-border/50 hover:border-border',
+                  'hover:bg-muted/40 hover:text-foreground',
+                  'transition-all duration-150',
+                  'disabled:opacity-40 disabled:cursor-not-allowed',
+                )}>
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                Customize
+              </button>
             </div>
           </div>
 

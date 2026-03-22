@@ -85,9 +85,9 @@ export function ProjectKanbanBoard({
   if (stagesLoading) {
     return (
       <ScrollArea className="w-full">
-        <div className="flex gap-3 pb-4 min-w-[1200px]">
+        <div className="flex gap-3 pb-4 min-w-[900px]">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex-1 min-w-96 rounded-xl border bg-muted/20 p-3 space-y-3">
+            <div key={i} className="flex-1 min-w-64 rounded-xl border bg-muted/20 p-3 space-y-3">
               <Skeleton className="h-5 w-28 rounded" />
               <Skeleton className="h-3 w-20 rounded" />
               <div className="space-y-2 pt-1">
@@ -143,7 +143,7 @@ export function ProjectKanbanBoard({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}>
       <ScrollArea className="w-full">
-        <div className="flex gap-3 pb-4 min-w-[1200px]">
+        <div className="flex gap-3 pb-4 min-w-[900px]">
           {grouped.map((column) => {
             const hexColor = columnHex(
               column.color,
@@ -158,7 +158,7 @@ export function ProjectKanbanBoard({
             return (
               <div
                 key={column.key}
-                className="flex-1 min-w-96 rounded-xl border border-border/50 bg-muted/20 overflow-hidden flex flex-col"
+                className="flex-1 min-w-64 rounded-xl border border-border/50 bg-muted/20 overflow-hidden flex flex-col"
                 style={{
                   borderTopColor: hexColor,
                   borderTopWidth: '2px',
