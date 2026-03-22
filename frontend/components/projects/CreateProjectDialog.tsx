@@ -38,7 +38,10 @@ import { projectsApi } from '@/lib/api/projects-client';
 import { usersApi, type UserResponse } from '@/lib/api/users-client';
 import { clientsApi, leadsApi, settingsApi } from '@/lib/api/client';
 import { useQuery } from '@tanstack/react-query';
-import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
+import {
+  pipelineApi,
+  type PipelineStage,
+} from '@/lib/api/pipeline-client';
 import type { DropdownOption, ServiceCategory } from '@/lib/types';
 import { ServiceTypeSelector } from '@/components/settings/ServiceTypeSelector';
 
@@ -46,7 +49,7 @@ const formSchema = z.object({
   clientId: z.string().min(1, 'Client is required'),
   leadId: z.string().optional(),
   name: z.string().min(1, 'Project name is required'),
-  status: z.string().default('Planning'),
+  status: z.string().default(''),
   contractedValue: z.coerce.number().min(0, 'Value must be positive'),
   endOfProjectValue: z.coerce.number().optional().nullable(),
   estimatedDueDate: z.string().optional(),
@@ -72,20 +75,38 @@ export function CreateProjectDialog({
   const [loading, setLoading] = useState(false);
   const [isLoadingStages, setIsLoadingStages] = useState(true);
   const [clients, setClients] = useState<
-    { id: string; name: string; individualName?: string; county?: string | null }[]
+    {
+      id: string;
+      name: string;
+      individualName?: string;
+      county?: string | null;
+    }[]
   >([]);
   const [leads, setLeads] = useState<
     { id: string; contactName: string; company: string }[]
   >([]);
   const [users, setUsers] = useState<UserResponse[]>([]);
-  const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
-  const [riskOptions, setRiskOptions] = useState<DropdownOption[]>([]);
-  const [countyOptions, setCountyOptions] = useState<DropdownOption[]>([]);
-  const [pendingTeamMemberIds, setPendingTeamMemberIds] = useState<string[]>([]);
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
-  const [selectedServiceTypeIds, setSelectedServiceTypeIds] = useState<string[]>([]);
+  const [projectStages, setProjectStages] = useState<PipelineStage[]>(
+    [],
+  );
+  const [riskOptions, setRiskOptions] = useState<DropdownOption[]>(
+    [],
+  );
+  const [countyOptions, setCountyOptions] = useState<
+    DropdownOption[]
+  >([]);
+  const [pendingTeamMemberIds, setPendingTeamMemberIds] = useState<
+    string[]
+  >([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<
+    string[]
+  >([]);
+  const [selectedServiceTypeIds, setSelectedServiceTypeIds] =
+    useState<string[]>([]);
 
-  const { data: serviceCategories = [] } = useQuery<ServiceCategory[]>({
+  const { data: serviceCategories = [] } = useQuery<
+    ServiceCategory[]
+  >({
     queryKey: ['service-categories'],
     queryFn: () => settingsApi.getServiceCategories(),
     staleTime: 10 * 60 * 1000,
@@ -93,13 +114,17 @@ export function CreateProjectDialog({
 
   function toggleCategory(id: string) {
     setSelectedCategoryIds((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
+      prev.includes(id)
+        ? prev.filter((c) => c !== id)
+        : [...prev, id],
     );
   }
 
   function toggleServiceType(id: string) {
     setSelectedServiceTypeIds((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+      prev.includes(id)
+        ? prev.filter((s) => s !== id)
+        : [...prev, id],
     );
   }
 
@@ -126,7 +151,12 @@ export function CreateProjectDialog({
               usersApi.getUsers(),
               pipelineApi.getStages('project'),
             ]);
-          setClients(clientsData.map((c) => ({ ...c, individualName: c.individualName ?? undefined })));
+          setClients(
+            clientsData.map((c) => ({
+              ...c,
+              individualName: c.individualName ?? undefined,
+            })),
+          );
           setLeads(Array.isArray(leadsData) ? leadsData : []);
           setUsers(usersRes.users || []);
           setProjectStages(stages);
@@ -145,13 +175,15 @@ export function CreateProjectDialog({
         .then(setCountyOptions)
         .catch(console.error);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // Auto-select first stage once stages are loaded
   useEffect(() => {
     if (projectStages.length > 0 && !form.getValues('status')) {
-      form.setValue('status', projectStages[0].name, { shouldDirty: true });
+      form.setValue('status', projectStages[0].name, {
+        shouldDirty: true,
+      });
     }
   }, [projectStages]);
 
@@ -185,9 +217,17 @@ export function CreateProjectDialog({
           ? new Date(values.closedDate).toISOString()
           : undefined,
         teamMemberIds:
-          pendingTeamMemberIds.length > 0 ? pendingTeamMemberIds : undefined,
-        categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
-        serviceTypeIds: selectedServiceTypeIds.length > 0 ? selectedServiceTypeIds : undefined,
+          pendingTeamMemberIds.length > 0
+            ? pendingTeamMemberIds
+            : undefined,
+        categoryIds:
+          selectedCategoryIds.length > 0
+            ? selectedCategoryIds
+            : undefined,
+        serviceTypeIds:
+          selectedServiceTypeIds.length > 0
+            ? selectedServiceTypeIds
+            : undefined,
       });
       toast.success('Project created successfully');
       onProjectCreated();
@@ -222,7 +262,9 @@ export function CreateProjectDialog({
   }
 
   function removeTeamMember(userId: string) {
-    setPendingTeamMemberIds((prev) => prev.filter((id) => id !== userId));
+    setPendingTeamMemberIds((prev) =>
+      prev.filter((id) => id !== userId),
+    );
   }
 
   return (
@@ -257,9 +299,9 @@ export function CreateProjectDialog({
                           <SelectItem
                             key={client.id}
                             value={client.id}>
-                            {client.individualName
-                              ? `${client.individualName} (${client.name})`
-                              : client.name}
+                            {client.name
+                              ? `${client.name}`
+                              : client.individualName}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -327,15 +369,26 @@ export function CreateProjectDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Stage</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingStages}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={isLoadingStages}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={isLoadingStages ? 'Loading stages…' : 'Select stage'} />
+                          <SelectValue
+                            placeholder={
+                              isLoadingStages
+                                ? 'Loading stages…'
+                                : 'Select stage'
+                            }
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {projectStages.map((stage) => (
-                          <SelectItem key={stage.id} value={stage.name}>
+                          <SelectItem
+                            key={stage.id}
+                            value={stage.name}>
                             {stage.name}
                           </SelectItem>
                         ))}
@@ -436,7 +489,9 @@ export function CreateProjectDialog({
 
               {/* Service Categories & Types */}
               <div>
-                <p className="text-sm font-medium leading-none mb-2">Service Categories &amp; Types</p>
+                <p className="text-sm font-medium leading-none mb-2">
+                  Service Categories &amp; Types
+                </p>
                 <ServiceTypeSelector
                   categories={serviceCategories}
                   selectedCategoryIds={selectedCategoryIds}
@@ -463,7 +518,9 @@ export function CreateProjectDialog({
                         onOptionCreated={(label) =>
                           settingsApi.createDropdownOption({
                             category: 'project_risk_status',
-                            value: label.toLowerCase().replace(/\s+/g, '_'),
+                            value: label
+                              .toLowerCase()
+                              .replace(/\s+/g, '_'),
                             label,
                           })
                         }
@@ -501,7 +558,6 @@ export function CreateProjectDialog({
                   </FormItem>
                 )}
               />
-
             </div>
 
             <FormField
@@ -520,7 +576,9 @@ export function CreateProjectDialog({
                       onOptionCreated={(label) =>
                         settingsApi.createDropdownOption({
                           category: 'county',
-                          value: label.toLowerCase().replace(/[.\s]+/g, '_'),
+                          value: label
+                            .toLowerCase()
+                            .replace(/[.\s]+/g, '_'),
                           label,
                         })
                       }
@@ -553,7 +611,9 @@ export function CreateProjectDialog({
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-semibold">Team Members</span>
+                  <span className="text-sm font-semibold">
+                    Team Members
+                  </span>
                 </div>
 
                 {addedMembers.length > 0 && (
@@ -562,7 +622,9 @@ export function CreateProjectDialog({
                       <div
                         key={u.id}
                         className="flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1">
-                        <span className="text-sm font-medium">{u.name}</span>
+                        <span className="text-sm font-medium">
+                          {u.name}
+                        </span>
                         {u.role && (
                           <Badge
                             variant="secondary"

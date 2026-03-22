@@ -43,7 +43,7 @@ import type { DropdownOption, Lead } from '@/lib/types';
 
 const formSchema = z.object({
   projectName: z.string().min(1, 'Project name is required'),
-  status: z.string().default('Planning'),
+  status: z.string().default(''),
   contractedValue: z.coerce.number().min(0, 'Value must be positive'),
   endOfProjectValue: z.coerce.number().optional().nullable(),
   startDate: z.string().optional(),
