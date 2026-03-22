@@ -230,9 +230,7 @@ export function EditProjectDialog({
     }
   };
 
-  const pms = users.filter((u) =>
-    ['ADMIN', 'CEO', 'SALES', 'BDM'].includes(u.role),
-  );
+  const pms = users;
 
   const availableUsers = users.filter(
     (u) => !assignments.some((a) => a.userId === u.id),

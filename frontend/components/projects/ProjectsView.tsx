@@ -109,11 +109,7 @@ export default function ProjectsView({
     staleTime: 5 * 60 * 1000,
   });
 
-  const managers = Array.isArray(allUsers)
-    ? allUsers.filter((u) =>
-        ['BDM', 'SALES', 'ADMIN', 'CEO'].includes(u.role),
-      )
-    : [];
+  const managers = Array.isArray(allUsers) ? allUsers : [];
 
   // Keep local state in sync with query cache for optimistic updates
   useEffect(() => {

@@ -49,9 +49,7 @@ export default function ModernCustomersView({ currentUser }: ModernCustomersView
     staleTime: 5 * 60 * 1000,
   });
 
-  const managers = allUsers
-    .filter((u) => u.role === 'BDM' || u.role === 'SALES')
-    .map((u) => ({ id: u.id, name: u.name, email: u.email }));
+  const managers = allUsers.map((u) => ({ id: u.id, name: u.name, email: u.email }));
 
   const handleClientUpdated = () => {
     queryClient.invalidateQueries({ queryKey: ['clients'] });
