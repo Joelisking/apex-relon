@@ -72,15 +72,30 @@ export function ConvertLeadDialog({
   const [pmUsers, setPmUsers] = useState<UserResponse[]>([]);
   const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
 
+  const leadClosedDate = lead?.dealClosedAt
+    ? (typeof lead.dealClosedAt === 'string'
+        ? lead.dealClosedAt.split('T')[0]
+        : new Date(lead.dealClosedAt).toISOString().split('T')[0])
+    : '';
+
   const form = useForm<FormValues, unknown, FormValues>({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
     defaultValues: {
+      projectName: lead?.projectName || (lead ? `${lead.company} - ${lead.serviceType?.name || 'Project'}` : ''),
       status: 'Planning',
-      contractedValue: 0,
+      contractedValue: lead?.contractedValue ?? lead?.expectedValue ?? 0,
+      endOfProjectValue: undefined,
+      startDate: '',
+      estimatedDueDate: '',
+      closedDate: leadClosedDate,
+      projectManagerId: lead?.assignedToId || '',
+      designerId: '',
+      qsId: '',
+      description: lead?.notes || '',
     },
   });
 
-  // Reset form with lead data when dialog opens
+  // Re-sync form when lead or open changes (handles LeadDetailView where component stays mounted)
   useEffect(() => {
     if (open && lead) {
       form.reset({

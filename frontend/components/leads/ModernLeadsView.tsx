@@ -786,6 +786,7 @@ export default function ModernLeadsView({
 
       {/* Convert Lead Dialog */}
       <ConvertLeadDialog
+        key={leadToConvert?.id ?? 'convert-dialog'}
         lead={leadToConvert}
         open={convertDialogOpen}
         onOpenChange={setConvertDialogOpen}
