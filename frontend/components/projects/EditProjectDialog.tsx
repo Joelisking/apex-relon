@@ -33,6 +33,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Users, X } from 'lucide-react';
 import { CreatableSelect } from '@/components/ui/creatable-select';
+import { UserPicker } from '@/components/ui/user-picker';
 import { toast } from 'sonner';
 import { projectsApi, type Project, type ProjectAssignment } from '@/lib/api/projects-client';
 import { usersApi, type UserResponse } from '@/lib/api/users-client';
@@ -516,22 +517,16 @@ export function EditProjectDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Project Manager</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value ?? ''}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select PM" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {pms.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <UserPicker
+                        users={pms}
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
+                        placeholder="Select PM"
+                        allowUnassigned
+                        unassignedLabel="None"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

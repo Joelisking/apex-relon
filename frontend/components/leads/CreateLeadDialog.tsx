@@ -50,21 +50,8 @@ import {
   Loader2,
   Users,
   X,
-  ChevronsUpDown,
-  Check,
 } from 'lucide-react';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Command,
-  CommandEmpty,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
+import { UserPicker } from '@/components/ui/user-picker';
 import { toast } from 'sonner';
 
 interface UserOption {
@@ -199,7 +186,6 @@ export function CreateLeadDialog({
   const [knownContacts, setKnownContacts] = useState<KnownContact[]>(
     [],
   );
-  const [pmOpen, setPmOpen] = useState(false);
   const [autoLinkedContactId, setAutoLinkedContactId] = useState<string | null>(null);
   const datalistId = useId();
 
@@ -771,70 +757,17 @@ export function CreateLeadDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Project Manager</FormLabel>
-                    <Popover
-                      open={pmOpen && canViewAllLeads}
-                      onOpenChange={(o) =>
-                        canViewAllLeads && setPmOpen(o)
-                      }>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            disabled={!canViewAllLeads}
-                            className="w-full justify-between font-normal">
-                            {field.value
-                              ? (managers.find(
-                                  (m) => m.id === field.value,
-                                )?.name ?? 'Select person')
-                              : 'None'}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-[--radix-popover-trigger-width] p-0"
-                        align="start">
-                        <Command>
-                          <CommandInput placeholder="Search users..." />
-                          <CommandList>
-                            <CommandEmpty>
-                              No users found.
-                            </CommandEmpty>
-                            <CommandItem
-                              value="none"
-                              onSelect={() => {
-                                field.onChange('');
-                                setPmOpen(false);
-                              }}>
-                              <Check
-                                className={`mr-2 h-4 w-4 ${!field.value ? 'opacity-100' : 'opacity-0'}`}
-                              />
-                              None
-                            </CommandItem>
-                            {managers.map((m) => (
-                              <CommandItem
-                                key={m.id}
-                                value={m.name}
-                                onSelect={() => {
-                                  field.onChange(m.id);
-                                  setPmOpen(false);
-                                }}>
-                                <Check
-                                  className={`mr-2 h-4 w-4 ${field.value === m.id ? 'opacity-100' : 'opacity-0'}`}
-                                />
-                                {m.name}
-                                {m.teamName && (
-                                  <span className="ml-2 text-xs text-muted-foreground">
-                                    {m.teamName}
-                                  </span>
-                                )}
-                              </CommandItem>
-                            ))}
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <UserPicker
+                        users={managers}
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
+                        placeholder="None"
+                        allowUnassigned
+                        unassignedLabel="None"
+                        disabled={!canViewAllLeads}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

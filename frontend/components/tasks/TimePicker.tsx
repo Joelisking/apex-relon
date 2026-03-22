@@ -12,7 +12,12 @@ import { cn } from '@/lib/utils';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const DISPLAY_HOURS = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+
+function buildMinutes(step: number): number[] {
+  const result: number[] = [];
+  for (let i = 0; i < 60; i += step) result.push(i);
+  return result;
+}
 const PERIODS = ['AM', 'PM'];
 const ITEM_H = 36; // px — height of each row
 const COL_H = 180; // px — visible height of each column (shows 5 items)
@@ -131,16 +136,20 @@ function ScrollColumn<T extends number | string>({
 interface TimePickerProps {
   value: string;
   onChange: (value: string) => void;
+  minuteStep?: number;
 }
 
-export function TimePicker({ value, onChange }: TimePickerProps) {
+export function TimePicker({ value, onChange, minuteStep = 5 }: TimePickerProps) {
   const [open, setOpen] = useState(false);
+  const minutes = buildMinutes(minuteStep);
 
   const { h, m, p } = value ? parseTime(value) : { h: 9, m: 0, p: 'AM' as const };
+  // Snap m to nearest valid step
+  const snappedM = minutes.includes(m) ? m : minutes.reduce((a, b) => Math.abs(b - m) < Math.abs(a - m) ? b : a, minutes[0]);
 
-  const setH = (newH: number) => onChange(buildTime(newH, m, p));
+  const setH = (newH: number) => onChange(buildTime(newH, snappedM, p));
   const setM = (newM: number) => onChange(buildTime(h, newM, p));
-  const setP = (newP: string) => onChange(buildTime(h, m, newP as 'AM' | 'PM'));
+  const setP = (newP: string) => onChange(buildTime(h, snappedM, newP as 'AM' | 'PM'));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -191,7 +200,7 @@ export function TimePicker({ value, onChange }: TimePickerProps) {
             :
           </span>
           <span className="text-2xl font-bold tabular-nums tracking-tight leading-none">
-            {String(m).padStart(2, '0')}
+            {String(snappedM).padStart(2, '0')}
           </span>
           <span className="ml-1.5 text-xs font-semibold text-muted-foreground/70 self-center">
             {p}
@@ -222,8 +231,8 @@ export function TimePicker({ value, onChange }: TimePickerProps) {
             open={open}
           />
           <ScrollColumn
-            items={MINUTES}
-            selected={m}
+            items={minutes}
+            selected={snappedM}
             onSelect={setM}
             format={(v) => String(v).padStart(2, '0')}
             open={open}
