@@ -240,14 +240,14 @@ export class LeadsService {
         });
 
         // Auto-set dates based on stage transitions (use client-provided date if present)
-        if (data.stage === 'Won' || data.stage === 'Lost') {
+        if (data.stage === 'Closed Won' || data.stage === 'Won' || data.stage === 'Closed Lost' || data.stage === 'Lost') {
           data.dealClosedAt = data.dealClosedAt
             ? new Date(data.dealClosedAt as string)
             : new Date();
         }
 
         // Auto-accept open quotes when lead moves to Won
-        if (data.stage === 'Won') {
+        if (data.stage === 'Closed Won' || data.stage === 'Won') {
           const qs = await this.prisma.quoteSettings.findFirst();
           if (qs?.enableLeadIntegration !== false) {
             await this.prisma.quote.updateMany({

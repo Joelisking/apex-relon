@@ -186,8 +186,8 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
   const activityCount = lead.metrics?.activityCount ?? 0;
   const fileCount = lead.metrics?.fileCount ?? 0;
   const stale = daysSinceContact > 14;
-  const isOverdue = lead.likelyStartDate && lead.stage !== 'Won' && lead.stage !== 'Lost' && new Date(lead.likelyStartDate) < new Date();
-  const isWon = lead.stage === 'Won';
+  const isOverdue = lead.likelyStartDate && lead.stage !== 'Closed Won' && lead.stage !== 'Won' && lead.stage !== 'Closed Lost' && lead.stage !== 'Lost' && new Date(lead.likelyStartDate) < new Date();
+  const isWon = lead.stage === 'Closed Won' || lead.stage === 'Won';
   const isConverted = !!lead.convertedToClientId;
   const accentColor = urgencyColor(lead.urgency);
   const companyOrName = lead.company || lead.contactName || 'Unknown';

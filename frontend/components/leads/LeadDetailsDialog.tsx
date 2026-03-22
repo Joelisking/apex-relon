@@ -247,7 +247,7 @@ export function LeadDetailsDialog({
     selectedLead.stage !== 'Lost' &&
     new Date(selectedLead.likelyStartDate) < new Date();
 
-  const isWon = selectedLead.stage === 'Won';
+  const isWon = selectedLead.stage === 'Closed Won' || selectedLead.stage === 'Won';
   const isConverted = !!selectedLead.convertedToClientId;
 
   const accentColor = urgencyColor(selectedLead.urgency);

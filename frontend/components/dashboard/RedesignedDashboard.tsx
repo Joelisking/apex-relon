@@ -60,7 +60,7 @@ export default function RedesignedDashboard({
       0,
     );
 
-    const wonLeads = leads.filter((l) => l.stage === 'Won');
+    const wonLeads = leads.filter((l) => l.stage === 'Closed Won' || l.stage === 'Won');
     const won = wonLeads.length;
 
     const conversionRateNum =

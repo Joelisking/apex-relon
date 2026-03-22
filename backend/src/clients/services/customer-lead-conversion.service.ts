@@ -36,7 +36,7 @@ export class CustomerLeadConversionService {
     });
 
     if (!lead) throw new NotFoundException('Lead not found');
-    if (lead.stage !== 'Won') throw new BadRequestException('Only Won leads can be converted to a project');
+    if (lead.stage !== 'Closed Won' && lead.stage !== 'Won') throw new BadRequestException('Only Closed Won leads can be converted to a project');
     if (lead.convertedToClientId) throw new BadRequestException('Lead has already been converted');
     if (!lead.clientId || !lead.client) throw new BadRequestException('Lead must have an associated client before conversion');
 

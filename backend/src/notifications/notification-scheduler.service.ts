@@ -110,7 +110,7 @@ export class NotificationSchedulerService {
 
   private async checkStaleLeads() {
     const staleThreshold = new Date(Date.now() - 14 * 86400000);
-    const closedStageNames = ['Won', 'Lost', 'Closed'];
+    const closedStageNames = ['Closed Won', 'Won', 'Closed Lost', 'Lost', 'Closed'];
 
     const leads = await this.prisma.lead.findMany({
       where: {

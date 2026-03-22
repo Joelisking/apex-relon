@@ -179,7 +179,7 @@ export class WorkflowsService {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - (days as number));
       const leads = await this.prisma.lead.findMany({
-        where: { updatedAt: { lt: cutoff }, stage: { notIn: ['Won', 'Lost'] } },
+        where: { updatedAt: { lt: cutoff }, stage: { notIn: ['Closed Won', 'Won', 'Closed Lost', 'Lost'] } },
       });
       for (const lead of leads) {
         this.triggerRules('DAYS_SINCE_CONTACT', 'LEAD', lead.id, lead as unknown as Record<string, unknown>);

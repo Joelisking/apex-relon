@@ -719,7 +719,7 @@ export function CreateLeadDialog({
                 />
               </div>
 
-              {watchedStage === 'Won' && (
+              {(watchedStage === 'Closed Won' || watchedStage === 'Won') && (
                 <FormField
                   control={form.control}
                   name="contractedValue"

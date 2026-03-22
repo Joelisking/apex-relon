@@ -97,7 +97,7 @@ export class RepsReportingService {
       include: {
         assignedLeads: {
           where: {
-            stage: { in: ['Won', 'Lost'] },
+            stage: { in: ['Closed Won', 'Won', 'Closed Lost', 'Lost'] },
             dealClosedAt: closedDateFilter,
           },
         },
@@ -118,10 +118,10 @@ export class RepsReportingService {
     for (const rep of reps) {
       const leads = rep.assignedLeads;
 
-      const wonLeads = leads.filter((l) => l.stage === 'Won');
+      const wonLeads = leads.filter((l) => l.stage === 'Closed Won' || l.stage === 'Won');
       const closedProjects = wonLeads.length;
       const lostLeads = leads.filter(
-        (l) => l.stage === 'Lost',
+        (l) => l.stage === 'Closed Lost' || l.stage === 'Lost',
       ).length;
       const closedTotal = closedProjects + lostLeads;
       const conversionRate =
@@ -180,7 +180,7 @@ export class RepsReportingService {
       include: {
         assignedLeads: {
           where: {
-            stage: { in: ['Won', 'Lost'] },
+            stage: { in: ['Closed Won', 'Won', 'Closed Lost', 'Lost'] },
             dealClosedAt: closedDateFilter,
           },
         },

@@ -31,7 +31,7 @@ export function PipelineStats({
     return acc + ((l.expectedValue || 0) * probability) / 100;
   }, 0);
 
-  const wonLeads = leads.filter((l) => l.stage === 'Won');
+  const wonLeads = leads.filter((l) => l.stage === 'Closed Won' || l.stage === 'Won');
   const closedWonValue = wonLeads.reduce(
     (acc, l) => acc + (l.contractedValue ?? l.expectedValue ?? 0),
     0,

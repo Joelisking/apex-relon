@@ -542,7 +542,7 @@ export function EditLeadDialog({
               />
             </div>
 
-            {watchedStage === 'Won' && (
+            {(watchedStage === 'Closed Won' || watchedStage === 'Won') && (
               <FormField
                 control={form.control}
                 name="contractedValue"

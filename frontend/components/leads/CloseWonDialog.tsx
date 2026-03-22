@@ -77,7 +77,7 @@ export function CloseWonDialog({
     if (!lead) return;
     try {
       await api.leads.update(lead.id, {
-        stage: 'Won',
+        stage: 'Closed Won',
         contractedValue: values.contractedValue,
         dealClosedAt: values.dealClosedAt,
       });

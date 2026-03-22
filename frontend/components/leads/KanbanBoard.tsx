@@ -86,7 +86,7 @@ export function KanbanBoard({
     cardSlot: React.ReactNode,
   ) => {
     const hexColor = stageHex(stage.color);
-    const isWon = stage.name === 'Won';
+    const isWon = stage.name === 'Closed Won' || stage.name === 'Won';
     const probability = stage.probability ?? 0;
     const stageExpectedValue = stageLeads.reduce(
       (acc, l) => acc + (l.expectedValue || 0),

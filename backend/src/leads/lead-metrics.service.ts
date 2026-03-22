@@ -66,7 +66,7 @@ export class LeadMetricsService {
         this.prisma.stageHistory.findMany({
           where: {
             leadId: { in: leadIds },
-            toStage: { in: ['Quoted', 'Won'] },
+            toStage: { in: ['Quoted', 'Closed Won', 'Won'] },
           },
           orderBy: { createdAt: 'asc' },
         }),
@@ -114,7 +114,7 @@ export class LeadMetricsService {
       const quotedStage = stageHistory.find(
         (h) => h.toStage === 'Quoted',
       );
-      const wonStage = stageHistory.find((h) => h.toStage === 'Won');
+      const wonStage = stageHistory.find((h) => h.toStage === 'Closed Won' || h.toStage === 'Won');
 
       const daysToQuotation = quotedStage
         ? Math.floor(
@@ -256,7 +256,9 @@ export class LeadMetricsService {
     // 🚩 No contact in 14+ days
     if (
       metrics.daysSinceLastContact >= 14 &&
+      status !== 'Closed Won' &&
       status !== 'Won' &&
+      status !== 'Closed Lost' &&
       status !== 'Lost'
     ) {
       flags.push({
@@ -271,7 +273,9 @@ export class LeadMetricsService {
     // ⚠️ In pipeline 60+ days
     if (
       metrics.daysInPipeline >= 60 &&
+      status !== 'Closed Won' &&
       status !== 'Won' &&
+      status !== 'Closed Lost' &&
       status !== 'Lost'
     ) {
       flags.push({
@@ -287,7 +291,9 @@ export class LeadMetricsService {
       leadValue &&
       leadValue >= 50000 &&
       metrics.daysSinceLastContact >= 7 &&
+      status !== 'Closed Won' &&
       status !== 'Won' &&
+      status !== 'Closed Lost' &&
       status !== 'Lost'
     ) {
       flags.push({
@@ -310,7 +316,9 @@ export class LeadMetricsService {
 
     // ⭐ High probability of closing (positive indicator)
     const isHighProbability =
+      status !== 'Closed Won' &&
       status !== 'Won' &&
+      status !== 'Closed Lost' &&
       status !== 'Lost' &&
       // Recent activity with files uploaded
       ((metrics.daysSinceLastContact <= 3 &&

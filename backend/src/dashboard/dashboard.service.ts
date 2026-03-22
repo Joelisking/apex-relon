@@ -132,7 +132,7 @@ export class DashboardService {
       }),
       // Open pipeline value and avg deal size
       this.prisma.lead.aggregate({
-        where: { stage: { notIn: ['Won', 'Lost'] }, ...lf },
+        where: { stage: { notIn: ['Closed Won', 'Won', 'Closed Lost', 'Lost'] }, ...lf },
         _sum: { expectedValue: true },
         _avg: { expectedValue: true },
         _count: { id: true },
@@ -145,7 +145,7 @@ export class DashboardService {
       }),
       // Top 5 high-value open deals
       this.prisma.lead.findMany({
-        where: { stage: { notIn: ['Won', 'Lost'] }, ...lf },
+        where: { stage: { notIn: ['Closed Won', 'Won', 'Closed Lost', 'Lost'] }, ...lf },
         select: {
           id: true,
           company: true,
@@ -158,7 +158,7 @@ export class DashboardService {
       // Stalled leads (open + not updated in 30+ days)
       this.prisma.lead.findMany({
         where: {
-          stage: { notIn: ['Won', 'Lost'] },
+          stage: { notIn: ['Closed Won', 'Won', 'Closed Lost', 'Lost'] },
           updatedAt: { lt: thirtyDaysAgo },
           ...lf,
         },
@@ -301,8 +301,8 @@ export class DashboardService {
       (a, b) => a + b,
       0,
     );
-    const wonLeads = stageCountMap['Won'] ?? 0;
-    const lostLeads = stageCountMap['Lost'] ?? 0;
+    const wonLeads = (stageCountMap['Closed Won'] ?? 0) + (stageCountMap['Won'] ?? 0);
+    const lostLeads = (stageCountMap['Closed Lost'] ?? 0) + (stageCountMap['Lost'] ?? 0);
     const closedLeads = wonLeads + lostLeads;
     const winRate =
       closedLeads > 0
@@ -549,11 +549,11 @@ export class DashboardService {
 
     const [leads, pipelineAgg] = await Promise.all([
       this.prisma.lead.findMany({
-        where: { stage: { notIn: ['Won', 'Lost'] }, ...lf },
+        where: { stage: { notIn: ['Closed Won', 'Won', 'Closed Lost', 'Lost'] }, ...lf },
         select: { id: true, stage: true, urgency: true, expectedValue: true, updatedAt: true },
       }),
       this.prisma.lead.aggregate({
-        where: { stage: { notIn: ['Won', 'Lost'] }, ...lf },
+        where: { stage: { notIn: ['Closed Won', 'Won', 'Closed Lost', 'Lost'] }, ...lf },
         _sum: { expectedValue: true },
         _count: { id: true },
       }),
@@ -578,8 +578,8 @@ export class DashboardService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const [wonCount, closedCount] = await Promise.all([
-      this.prisma.lead.count({ where: { stage: 'Won', updatedAt: { gte: thirtyDaysAgo }, ...lf } }),
-      this.prisma.lead.count({ where: { stage: { in: ['Won', 'Lost'] }, updatedAt: { gte: thirtyDaysAgo }, ...lf } }),
+      this.prisma.lead.count({ where: { stage: { in: ['Closed Won', 'Won'] }, updatedAt: { gte: thirtyDaysAgo }, ...lf } }),
+      this.prisma.lead.count({ where: { stage: { in: ['Closed Won', 'Won', 'Closed Lost', 'Lost'] }, updatedAt: { gte: thirtyDaysAgo }, ...lf } }),
     ]);
     const winRate = closedCount > 0 ? Math.round((wonCount / closedCount) * 100) : 0;
 
@@ -615,7 +615,9 @@ export class DashboardService {
       'Contacted',
       'Quoted',
       'Negotiation',
+      'Closed Won',
       'Won',
+      'Closed Lost',
       'Lost',
     ];
 

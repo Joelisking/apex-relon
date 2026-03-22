@@ -72,7 +72,7 @@ export class LeadsReportingService {
 
     // Active leads (no date filter) — pipeline value, forecast, overdue are always "current state"
     const activeLeads = await this.prisma.lead.findMany({
-      where: { ...roleFilter, stage: { notIn: ['Won', 'Lost'] } },
+      where: { ...roleFilter, stage: { notIn: ['Closed Won', 'Won', 'Closed Lost', 'Lost'] } },
       include: { assignedTo: true },
     });
 
@@ -80,16 +80,16 @@ export class LeadsReportingService {
     const closedLeads = await this.prisma.lead.findMany({
       where: {
         ...roleFilter,
-        stage: { in: ['Won', 'Lost'] },
+        stage: { in: ['Closed Won', 'Won', 'Closed Lost', 'Lost'] },
         ...(dateRange ? { dealClosedAt: dateRange } : {}),
       },
     });
 
     const wonLeads = closedLeads.filter(
-      (l) => l.stage === 'Won',
+      (l) => l.stage === 'Closed Won' || l.stage === 'Won',
     ).length;
     const lostLeads = closedLeads.filter(
-      (l) => l.stage === 'Lost',
+      (l) => l.stage === 'Closed Lost' || l.stage === 'Lost',
     ).length;
     const closedCount = wonLeads + lostLeads;
     const conversionRate =
@@ -242,7 +242,7 @@ export class LeadsReportingService {
       'Contacted',
       'Quoted',
       'Negotiation',
-      'Won',
+      'Closed Won',
     ];
 
     const stageCounts: { [key: string]: number } = {};
@@ -288,7 +288,9 @@ export class LeadsReportingService {
     return leads
       .filter((l) => {
         if (
+          l.stage === 'Closed Won' ||
           l.stage === 'Won' ||
+          l.stage === 'Closed Lost' ||
           l.stage === 'Lost' ||
           !l.likelyStartDate
         )
@@ -356,10 +358,10 @@ export class LeadsReportingService {
     return Array.from(repMap.entries())
       .map(([repId, data]) => {
         const wonLeads = data.leads.filter(
-          (l) => l.stage === 'Won',
+          (l) => l.stage === 'Closed Won' || l.stage === 'Won',
         ).length;
         const lostLeads = data.leads.filter(
-          (l) => l.stage === 'Lost',
+          (l) => l.stage === 'Closed Lost' || l.stage === 'Lost',
         ).length;
         const closedLeads = wonLeads + lostLeads;
         const conversionRate =
@@ -367,7 +369,7 @@ export class LeadsReportingService {
             ? Math.round((wonLeads / closedLeads) * 100)
             : 0;
         const totalRevenue = data.leads
-          .filter((l) => l.stage === 'Won')
+          .filter((l) => l.stage === 'Closed Won' || l.stage === 'Won')
           .reduce(
             (sum: number, l) =>
               sum + (l.contractedValue ?? l.expectedValue),

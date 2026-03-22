@@ -50,7 +50,7 @@ export class ForecastService {
 
     // All active (non-closed) leads for weighted pipeline calculation
     const activeLeads = await this.prisma.lead.findMany({
-      where: { stage: { notIn: ['Won', 'Lost'] } },
+      where: { stage: { notIn: ['Closed Won', 'Won', 'Closed Lost', 'Lost'] } },
       select: { expectedValue: true, stage: true },
     });
     const weightedPipeline = activeLeads.reduce((sum, lead) => {
@@ -63,7 +63,7 @@ export class ForecastService {
     const monthEnd = new Date(currentYear, currentMonth, 0, 23, 59, 59);
     const wonThisMonthAgg = await this.prisma.lead.aggregate({
       where: {
-        stage: 'Won',
+        stage: { in: ['Closed Won', 'Won'] },
         dealClosedAt: { gte: monthStart, lte: monthEnd },
       },
       _sum: { contractedValue: true },
@@ -85,7 +85,7 @@ export class ForecastService {
 
     const wonLastMonthAgg = await this.prisma.lead.aggregate({
       where: {
-        stage: 'Won',
+        stage: { in: ['Closed Won', 'Won'] },
         dealClosedAt: { gte: lastMonthStart, lte: lastMonthEnd },
       },
       _sum: { contractedValue: true },
@@ -154,7 +154,7 @@ export class ForecastService {
       // Actual won revenue closed in this calendar month
       const wonAgg = await this.prisma.lead.aggregate({
         where: {
-          stage: 'Won',
+          stage: { in: ['Closed Won', 'Won'] },
           dealClosedAt: { gte: monthStart, lte: monthEnd },
         },
         _sum: { contractedValue: true },
@@ -167,7 +167,7 @@ export class ForecastService {
       const isCurrentMonth = i === 0;
       const leadsForMonth = await this.prisma.lead.findMany({
         where: {
-          stage: { notIn: ['Won', 'Lost'] },
+          stage: { notIn: ['Closed Won', 'Won', 'Closed Lost', 'Lost'] },
           OR: [
             { likelyStartDate: { gte: monthStart, lte: monthEnd } },
             ...(isCurrentMonth ? [{ likelyStartDate: null }] : []),

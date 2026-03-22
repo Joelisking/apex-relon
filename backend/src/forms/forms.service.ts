@@ -268,7 +268,7 @@ export class FormsService {
     let wonLeads = 0;
     if (leadIds.length > 0) {
       wonLeads = await this.prisma.lead.count({
-        where: { id: { in: leadIds }, stage: 'Won' },
+        where: { id: { in: leadIds }, stage: { in: ['Closed Won', 'Won'] } },
       });
     }
 

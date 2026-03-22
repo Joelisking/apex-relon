@@ -324,7 +324,7 @@ export default function ModernLeadsView({
       ),
     );
 
-    if (newStage === 'Won') {
+    if (newStage === 'Closed Won') {
       // For Won: defer the API call — CloseWonDialog will submit stage + details atomically
       if (lead) {
         setPendingWonRevert(oldLeads);
