@@ -46,13 +46,13 @@ export const WIDGET_PERMISSION_MAP: Record<WidgetType, string[]> = Object.fromEn
 // Single source of truth for metrics.
 // Add requiredPermissions here when adding a new metric.
 export const AVAILABLE_METRICS = [
-  { value: 'totalRevenue',    label: 'Total Revenue',       requiredPermissions: ['reports:view'] },
-  { value: 'monthlyRevenue',  label: 'Monthly Revenue',     requiredPermissions: ['reports:view'] },
-  { value: 'quarterlyRevenue',label: 'Quarterly Revenue',   requiredPermissions: ['reports:view'] },
+  { value: 'totalRevenue',    label: 'Total Revenue',       requiredPermissions: ['reports:view', 'clients:view'] },
+  { value: 'monthlyRevenue',  label: 'Monthly Revenue',     requiredPermissions: ['reports:view', 'clients:view'] },
+  { value: 'quarterlyRevenue',label: 'Quarterly Revenue',   requiredPermissions: ['reports:view', 'clients:view'] },
   { value: 'pipelineValue',   label: 'Pipeline Value',      requiredPermissions: ['leads:view'] },
   { value: 'totalLeads',      label: 'Total Leads',         requiredPermissions: ['leads:view'] },
   { value: 'wonLeads',        label: 'Won Leads',           requiredPermissions: ['leads:view'] },
-  { value: 'winRate',         label: 'Win Rate',            requiredPermissions: ['leads:view'] },
+  { value: 'winRate',         label: 'Win Rate',            requiredPermissions: ['leads:view', 'clients:view'] },
   { value: 'avgDealSize',     label: 'Avg Deal Size',       requiredPermissions: ['leads:view'] },
   { value: 'activeClients',   label: 'Active Clients',      requiredPermissions: ['clients:view'] },
   { value: 'totalProjects',   label: 'Total Projects',      requiredPermissions: ['projects:view'] },

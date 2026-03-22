@@ -71,6 +71,41 @@ function canShowWidget(
 }
 
 // ---------------------------------------------------------------------------
+// Row-fill helper
+// Expands the last widget in each 12-column row to fill remaining space,
+// so permission-filtered layouts never leave awkward empty gaps.
+// ---------------------------------------------------------------------------
+function computeEffectiveWidths(widgets: WidgetConfig[]): Map<string, number> {
+  const result = new Map<string, number>();
+  let col = 0;
+
+  for (let i = 0; i < widgets.length; i++) {
+    const w = widgets[i];
+    const ww = Math.min(w.size.w, 12);
+
+    // Wrap to next row if this widget overflows
+    if (col > 0 && col + ww > 12) col = 0;
+
+    const next = widgets[i + 1];
+    const nextWw = next ? Math.min(next.size.w, 12) : 0;
+    const remaining = 12 - col - ww;
+    const nextFits = next != null && col + ww + nextWw <= 12;
+
+    if (!nextFits && remaining > 0) {
+      // Last widget in this row — expand to fill
+      result.set(w.id, ww + remaining);
+      col = 0;
+    } else {
+      result.set(w.id, ww);
+      col += ww;
+      if (col >= 12) col = 0;
+    }
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Resize handle
 // ---------------------------------------------------------------------------
 function ResizeHandle({
@@ -132,6 +167,7 @@ function SortableWidget({
   onResize,
   period,
   index = 0,
+  effectiveW,
 }: {
   widget: WidgetConfig;
   metrics: DashboardMetrics | undefined;
@@ -141,6 +177,7 @@ function SortableWidget({
   onResize?: (id: string, w: number) => void;
   period: 'week' | 'month' | 'quarter';
   index?: number;
+  effectiveW?: number;
 }) {
   const {
     attributes,
@@ -151,12 +188,13 @@ function SortableWidget({
     isDragging,
   } = useSortable({ id: widget.id, disabled: !isEditMode });
 
+  const colSpan = effectiveW ?? Math.min(widget.size.w, 12);
   const dynamicStyle = inMetricBar
     ? { transform: CSS.Transform.toString(transform), transition }
     : {
         transform: CSS.Transform.toString(transform),
         transition,
-        gridColumn: `span ${Math.min(widget.size.w, 12)}`,
+        gridColumn: `span ${colSpan}`,
         gridRow: `span ${widget.size.h}`,
       };
 
@@ -255,6 +293,7 @@ function CustomWidgetGrid({
 }) {
   const metricCards = widgets.filter((w) => w.type === 'MetricCard');
   const otherWidgets = widgets.filter((w) => w.type !== 'MetricCard');
+  const effectiveWidths = computeEffectiveWidths(otherWidgets);
 
   const metricGridCols =
     metricCards.length === 1
@@ -309,6 +348,7 @@ function CustomWidgetGrid({
                   onResize={onResize}
                   period={period}
                   index={metricCards.length + i}
+                  effectiveW={isEditMode ? undefined : effectiveWidths.get(widget.id)}
                 />
               ))}
             </div>
