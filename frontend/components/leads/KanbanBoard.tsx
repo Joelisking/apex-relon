@@ -11,8 +11,8 @@ import {
   SensorOptions,
 } from '@dnd-kit/core';
 import type { Lead } from '@/lib/types';
-import { DEFAULT_PIPELINE_STAGES } from './constants';
 import { LeadCardContent, DraggableLeadCard } from './LeadCard';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Maps Tailwind bg-color class → hex for inline styles (avoids Tailwind purging dynamic classes)
 const BG_TO_HEX: Record<string, string> = {
@@ -51,7 +51,8 @@ interface KanbanBoardProps {
   activeDragId: string | null;
   activeLead: Lead | null;
   setSelectedLead: (lead: Lead | null) => void;
-  stages?: StageConfig[];
+  stages: StageConfig[];
+  stagesLoading?: boolean;
 }
 
 // Droppable Column Component
@@ -77,8 +78,30 @@ export function KanbanBoard({
   activeLead,
   setSelectedLead,
   stages,
+  stagesLoading,
 }: KanbanBoardProps) {
-  const pipelineStages = stages || DEFAULT_PIPELINE_STAGES;
+  if (stagesLoading) {
+    return (
+      <ScrollArea className="w-full">
+        <div className="flex gap-3 pb-4 min-w-[1200px]">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex-shrink-0 w-72 rounded-xl border bg-muted/20 p-3 space-y-3">
+              <Skeleton className="h-5 w-32 rounded" />
+              <Skeleton className="h-3 w-20 rounded" />
+              <div className="space-y-2 pt-1">
+                <Skeleton className="h-24 w-full rounded-lg" />
+                <Skeleton className="h-24 w-full rounded-lg" />
+                <Skeleton className="h-24 w-full rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
+    );
+  }
+
+  const pipelineStages = stages;
 
   const renderColumn = (
     stage: StageConfig,

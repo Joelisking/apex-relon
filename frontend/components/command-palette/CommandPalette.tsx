@@ -217,7 +217,7 @@ export function CommandPalette() {
                     <CommandItem
                       key={item.id}
                       value={`client-${item.id}`}
-                      onSelect={() => navigate('/clients')}
+                      onSelect={() => navigate(`/clients/${item.id}`)}
                       className="flex items-center gap-2">
                       <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="flex-1 truncate">
@@ -249,7 +249,7 @@ export function CommandPalette() {
                     <CommandItem
                       key={item.id}
                       value={`lead-${item.id}`}
-                      onSelect={() => navigate('/leads')}
+                      onSelect={() => navigate(`/leads/${item.id}`)}
                       className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="flex-1 truncate">
@@ -281,7 +281,7 @@ export function CommandPalette() {
                     <CommandItem
                       key={item.id}
                       value={`project-${item.id}`}
-                      onSelect={() => navigate('/projects')}
+                      onSelect={() => navigate(`/projects/${item.id}`)}
                       className="flex items-center gap-2">
                       <FolderKanban className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="flex-1 truncate">

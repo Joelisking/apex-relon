@@ -96,7 +96,7 @@ export default function ProjectsView({
     staleTime: 60 * 1000,
   });
 
-  const { data: projectStages = [] } = useQuery<PipelineStage[]>({
+  const { data: projectStages = [], isLoading: stagesLoading } = useQuery<PipelineStage[]>({
     queryKey: ['pipeline-stages', 'project'],
     queryFn: () => pipelineApi.getStages('project'),
     staleTime: 10 * 60 * 1000,
@@ -434,6 +434,7 @@ export default function ProjectsView({
           onProjectClick={handleProjectClick}
           onStatusChange={handleProjectStatusChange}
           stages={projectStages}
+          stagesLoading={stagesLoading}
         />
       ) : (
         <>
@@ -493,21 +494,18 @@ export default function ProjectsView({
               {
                 columnId: 'status',
                 title: 'Status',
-                options: [
-                  'Planning',
-                  'Active',
-                  'On Hold',
-                  'Completed',
-                  'Cancelled',
-                ].map((v) => ({ label: v, value: v })),
+                options: projectStages.map((s) => ({ label: s.name, value: s.name })),
               },
               {
                 columnId: 'riskStatus',
                 title: 'Risk',
-                options: ['On Track', 'At Risk', 'Blocked'].map((v) => ({
-                  label: v,
-                  value: v,
-                })),
+                options: [
+                  ...new Set(
+                    filteredProjects
+                      .map((p) => p.riskStatus)
+                      .filter(Boolean),
+                  ),
+                ].map((v) => ({ label: v as string, value: v as string })),
               },
               {
                 columnId: 'projectManager',

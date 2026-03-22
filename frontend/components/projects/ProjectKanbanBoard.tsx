@@ -14,6 +14,7 @@ import {
 } from '@dnd-kit/core';
 import { ProjectCard, DraggableProjectCard } from './ProjectCard';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { Project } from '@/lib/api/projects-client';
 import type { PipelineStage } from '@/lib/api/pipeline-client';
 
@@ -46,19 +47,12 @@ function columnHex(color: string | undefined, label: string): string {
   return STATUS_HEX[label] ?? '#6b7280';
 }
 
-const DEFAULT_COLUMNS = [
-  { key: 'Planning', label: 'Planning', probability: 0 },
-  { key: 'Active', label: 'Active', probability: 0 },
-  { key: 'On Hold', label: 'On Hold', probability: 0 },
-  { key: 'Completed', label: 'Completed', probability: 0 },
-  { key: 'Cancelled', label: 'Cancelled', probability: 0 },
-];
-
 interface ProjectKanbanBoardProps {
   projects: Project[];
   onProjectClick: (project: Project) => void;
   onStatusChange: (projectId: string, newStatus: string) => void;
-  stages?: PipelineStage[];
+  stages: PipelineStage[];
+  stagesLoading?: boolean;
 }
 
 // Droppable column wrapper
@@ -78,6 +72,7 @@ export function ProjectKanbanBoard({
   onProjectClick,
   onStatusChange,
   stages,
+  stagesLoading,
 }: ProjectKanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -87,15 +82,33 @@ export function ProjectKanbanBoard({
     }),
   );
 
-  const columns =
-    stages && stages.length > 0
-      ? stages.map((s) => ({
-          key: s.name,
-          label: s.name,
-          color: s.color,
-          probability: s.probability,
-        }))
-      : DEFAULT_COLUMNS.map((c) => ({ ...c, color: undefined }));
+  if (stagesLoading) {
+    return (
+      <ScrollArea className="w-full">
+        <div className="flex gap-3 pb-4 min-w-[1200px]">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex-1 min-w-96 rounded-xl border bg-muted/20 p-3 space-y-3">
+              <Skeleton className="h-5 w-28 rounded" />
+              <Skeleton className="h-3 w-20 rounded" />
+              <div className="space-y-2 pt-1">
+                <Skeleton className="h-28 w-full rounded-lg" />
+                <Skeleton className="h-28 w-full rounded-lg" />
+                <Skeleton className="h-28 w-full rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
+    );
+  }
+
+  const columns = stages.map((s) => ({
+    key: s.name,
+    label: s.name,
+    color: s.color,
+    probability: s.probability,
+  }));
 
   const grouped = columns.map((col) => ({
     ...col,

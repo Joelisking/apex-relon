@@ -222,10 +222,10 @@ export default function ModernLeadsView({
   const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
 
-  const { data: pipelineStages = [] } = useQuery<PipelineStage[]>({
+  const { data: pipelineStages = [], isLoading: stagesLoading } = useQuery<PipelineStage[]>({
     queryKey: ['pipeline-stages', 'prospective_project'],
     queryFn: () => pipelineApi.getStages('prospective_project'),
-    staleTime: 10 * 60 * 1000, // Stages rarely change
+    staleTime: 10 * 60 * 1000,
   });
 
   // Apply filter whenever leads or filter state changes
@@ -761,9 +761,8 @@ export default function ModernLeadsView({
           activeDragId={activeDragId}
           activeLead={activeLead}
           setSelectedLead={(lead) => { if (lead) router.push(`/leads/${lead.id}`); }}
-          stages={
-            pipelineStages.length > 0 ? pipelineStages : undefined
-          }
+          stages={pipelineStages}
+          stagesLoading={stagesLoading}
         />
       )}
 
