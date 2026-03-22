@@ -275,7 +275,11 @@ export function CreateProjectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Project</DialogTitle>
+          <DialogTitle>
+            {initialClientId
+              ? `Create Project for ${clients.find((c) => c.id === initialClientId)?.name ?? clients.find((c) => c.id === initialClientId)?.individualName ?? 'Customer'}`
+              : 'Create New Project'}
+          </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
