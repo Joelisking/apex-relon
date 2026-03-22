@@ -40,6 +40,13 @@ function canCompleteTask(task: Task, currentUserId?: string): boolean {
   return task.createdById === currentUserId;
 }
 
+function canEditTask(task: Task, currentUserId?: string, canEditAll?: boolean): boolean {
+  if (canEditAll) return true;
+  if (!currentUserId) return false;
+  if (task.assignedToId) return task.assignedToId === currentUserId;
+  return task.createdById === currentUserId;
+}
+
 interface LinkedTasksSectionProps {
   entityType: string;
   entityId: string;
@@ -57,6 +64,8 @@ export function LinkedTasksSection({
   const [uncompleteTarget, setUncompleteTarget] = useState<Task | null>(null);
 
   const canAssign = hasPermission('tasks:assign');
+  const canEdit = hasPermission('tasks:edit');
+  const canEditAll = hasPermission('tasks:edit_all');
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['entity-tasks', entityType, entityId],
@@ -214,7 +223,9 @@ export function LinkedTasksSection({
                 <button
                   type="button"
                   className="min-w-0 flex-1 text-left"
+                  disabled={!canEdit || !canEditTask(task, user?.id, canEditAll)}
                   onClick={() => {
+                    if (!canEdit || !canEditTask(task, user?.id, canEditAll)) return;
                     setEditingTask(task);
                     setAddOpen(true);
                   }}>

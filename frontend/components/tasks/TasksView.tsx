@@ -109,6 +109,12 @@ export default function TasksView() {
   };
 
   const openEdit = (task: Task) => {
+    if (!canEditAll) {
+      const isOwner = task.assignedToId
+        ? task.assignedToId === user?.id
+        : task.createdById === user?.id;
+      if (!isOwner) return;
+    }
     setEditingTask(task);
     if (canAssign && assignableUsers.length === 0) {
       usersApi
@@ -163,6 +169,7 @@ export default function TasksView() {
 
   const canCreate = hasPermission('tasks:create');
   const canEdit = hasPermission('tasks:edit');
+  const canEditAll = hasPermission('tasks:edit_all');
   const canDelete = hasPermission('tasks:delete');
 
   return (
@@ -389,6 +396,7 @@ export default function TasksView() {
         <TeamTasksView
           members={teamSummary.members}
           canEdit={canEdit}
+          canEditAll={canEditAll}
           canDelete={canDelete}
           currentUserId={user?.id}
           onComplete={handleComplete}
@@ -401,6 +409,7 @@ export default function TasksView() {
         <TaskCardView
           tasks={tasks}
           canEdit={canEdit}
+          canEditAll={canEditAll}
           canDelete={canDelete}
           currentUserId={user?.id}
           onComplete={handleComplete}
@@ -412,6 +421,7 @@ export default function TasksView() {
         <TaskTableView
           tasks={tasks}
           canEdit={canEdit}
+          canEditAll={canEditAll}
           canDelete={canDelete}
           currentUserId={user?.id}
           onComplete={handleComplete}

@@ -10,6 +10,7 @@ import { TaskTableView } from './TaskTableView';
 interface MemberRowProps {
   member: MemberTaskSummary;
   canEdit: boolean;
+  canEditAll?: boolean;
   canDelete: boolean;
   currentUserId?: string;
   onComplete: (taskId: string, completionNote: string) => Promise<void>;
@@ -21,6 +22,7 @@ interface MemberRowProps {
 function MemberRow({
   member,
   canEdit,
+  canEditAll,
   canDelete,
   currentUserId,
   onComplete,
@@ -110,6 +112,7 @@ function MemberRow({
             <TaskTableView
               tasks={tasks}
               canEdit={canEdit}
+              canEditAll={canEditAll}
               canDelete={canDelete}
               currentUserId={currentUserId}
               onComplete={onComplete}
@@ -127,6 +130,7 @@ function MemberRow({
 interface TeamTasksViewProps {
   members: MemberTaskSummary[];
   canEdit: boolean;
+  canEditAll?: boolean;
   canDelete: boolean;
   currentUserId?: string;
   onComplete: (taskId: string, completionNote: string) => Promise<void>;
@@ -139,6 +143,7 @@ interface TeamTasksViewProps {
 export function TeamTasksView({
   members,
   canEdit,
+  canEditAll,
   canDelete,
   currentUserId,
   onComplete,
@@ -165,6 +170,7 @@ export function TeamTasksView({
             key={member.id}
             member={member}
             canEdit={canEdit}
+            canEditAll={canEditAll}
             canDelete={canDelete}
             currentUserId={currentUserId}
             onComplete={onComplete}

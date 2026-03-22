@@ -178,6 +178,19 @@ export class TasksService {
     const existing = await this.prisma.task.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Task not found');
 
+    // Ownership check: users without tasks:edit_all can only edit their own tasks
+    const canEditAll = userRole
+      ? await this.permissionsService.hasPermission(userRole, 'tasks:edit_all')
+      : false;
+    if (!canEditAll) {
+      const isOwner = existing.assignedToId
+        ? userId === existing.assignedToId
+        : userId === existing.createdById;
+      if (!isOwner) {
+        throw new ForbiddenException('You can only edit tasks assigned to you');
+      }
+    }
+
     if (dto.assignedToId && dto.assignedToId !== userId && userRole) {
       const canAssign = await this.permissionsService.hasPermission(userRole, 'tasks:assign');
       if (!canAssign) throw new ForbiddenException('Cannot assign tasks to other users');

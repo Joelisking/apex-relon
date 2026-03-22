@@ -189,6 +189,7 @@ export const ALL_PERMISSIONS: PermissionDefinition[] = [
   { key: 'tasks:view', label: 'View Tasks', module: 'Tasks' },
   { key: 'tasks:create', label: 'Create Tasks', module: 'Tasks' },
   { key: 'tasks:edit', label: 'Edit Tasks', module: 'Tasks' },
+  { key: 'tasks:edit_all', label: 'Edit All Tasks (not just own)', module: 'Tasks' },
   { key: 'tasks:delete', label: 'Delete Tasks', module: 'Tasks' },
   {
     key: 'tasks:view_all',
@@ -311,6 +312,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'tasks:view',
     'tasks:create',
     'tasks:edit',
+    'tasks:edit_all',
     'tasks:delete',
     'notifications:view',
     'quotes:view',
@@ -359,6 +361,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'tasks:view_all',
     'tasks:create',
     'tasks:edit',
+    'tasks:edit_all',
     'tasks:delete',
     'tasks:assign',
     'quotes:view',

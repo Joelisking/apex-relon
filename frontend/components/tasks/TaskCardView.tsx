@@ -42,6 +42,7 @@ const priorityAccent: Record<string, string> = {
 interface TaskCardViewProps {
   tasks: Task[];
   canEdit: boolean;
+  canEditAll?: boolean;
   canDelete: boolean;
   currentUserId?: string;
   onComplete: (taskId: string, completionNote: string) => Promise<void>;
@@ -56,9 +57,17 @@ function canCompleteTask(task: Task, currentUserId?: string): boolean {
   return task.createdById === currentUserId;
 }
 
+function canEditTask(task: Task, currentUserId?: string, canEditAll?: boolean): boolean {
+  if (canEditAll) return true;
+  if (!currentUserId) return false;
+  if (task.assignedToId) return task.assignedToId === currentUserId;
+  return task.createdById === currentUserId;
+}
+
 export function TaskCardView({
   tasks,
   canEdit,
+  canEditAll,
   canDelete,
   currentUserId,
   onComplete,
@@ -153,7 +162,7 @@ export function TaskCardView({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {canEdit && (
+                      {canEdit && canEditTask(task, currentUserId, canEditAll) && (
                         <DropdownMenuItem onClick={() => onEdit(task)}>
                           <Pencil className="mr-2 h-3.5 w-3.5" />
                           Edit
