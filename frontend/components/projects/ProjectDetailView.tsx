@@ -34,6 +34,7 @@ import { ProjectAssignmentPanel } from './ProjectAssignmentPanel';
 import { ProjectDetailHeader } from './ProjectDetailHeader';
 import { ProjectOverviewPanel } from './ProjectOverviewPanel';
 import { PageBreadcrumbs } from '../layout/PageBreadcrumbs';
+import { ProjectSwitcher } from './ProjectSwitcher';
 import {
   projectsApi,
   type Project,
@@ -256,7 +257,15 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
         <PageBreadcrumbs
           items={[
             { label: 'Projects', href: '/projects' },
-            { label: breadcrumbLabel },
+            {
+              label: breadcrumbLabel,
+              node: (
+                <ProjectSwitcher
+                  currentProjectId={project.id}
+                  currentProjectName={breadcrumbLabel}
+                />
+              ),
+            },
           ]}
         />
       </div>

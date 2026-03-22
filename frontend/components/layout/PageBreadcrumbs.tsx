@@ -14,6 +14,7 @@ import {
 interface BreadcrumbEntry {
   label: string;
   href?: string;
+  node?: React.ReactNode;
 }
 
 interface PageBreadcrumbsProps {
@@ -30,7 +31,9 @@ export function PageBreadcrumbs({ items }: PageBreadcrumbsProps) {
             <React.Fragment key={i}>
               {i > 0 && <BreadcrumbSeparator />}
               <BreadcrumbItem>
-                {isLast || !item.href ? (
+                {item.node ? (
+                  item.node
+                ) : isLast || !item.href ? (
                   <BreadcrumbPage>{item.label}</BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild>

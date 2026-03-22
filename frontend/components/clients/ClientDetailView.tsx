@@ -39,6 +39,7 @@ import { toast } from 'sonner';
 import { LinkedTasksSection } from '../tasks/LinkedTasksSection';
 import { LinkedQuotesSection } from '../quotes/LinkedQuotesSection';
 import { PageBreadcrumbs } from '../layout/PageBreadcrumbs';
+import { ClientSwitcher } from './ClientSwitcher';
 
 interface ClientDetailViewProps {
   clientId: string;
@@ -224,7 +225,15 @@ export function ClientDetailView({
         <PageBreadcrumbs
           items={[
             { label: 'Clients', href: '/clients' },
-            { label: clientDisplayName },
+            {
+              label: clientDisplayName,
+              node: (
+                <ClientSwitcher
+                  currentClientId={client.id}
+                  currentClientName={clientDisplayName}
+                />
+              ),
+            },
           ]}
         />
       </div>

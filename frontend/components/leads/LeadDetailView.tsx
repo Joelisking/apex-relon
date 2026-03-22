@@ -45,6 +45,7 @@ import { LinkedTasksSection } from '../tasks/LinkedTasksSection';
 import { LinkedQuotesSection } from '../quotes/LinkedQuotesSection';
 import { LeadContactsSection } from '../contacts/LeadContactsSection';
 import { PageBreadcrumbs } from '../layout/PageBreadcrumbs';
+import { LeadSwitcher } from './LeadSwitcher';
 import { useAuth } from '@/contexts/auth-context';
 import { toast } from 'sonner';
 
@@ -260,7 +261,15 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
         <PageBreadcrumbs
           items={[
             { label: 'Leads', href: '/leads' },
-            { label: lead.projectName || lead.contactName || 'Lead' },
+            {
+              label: lead.projectName || lead.contactName || 'Lead',
+              node: (
+                <LeadSwitcher
+                  currentLeadId={lead.id}
+                  currentLeadName={lead.projectName || lead.contactName || 'Lead'}
+                />
+              ),
+            },
           ]}
         />
       </div>
