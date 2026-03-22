@@ -5,13 +5,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { CreatableSelect } from '@/components/ui/creatable-select';
 import {
   Table,
   TableBody,
@@ -134,21 +128,22 @@ export function CostLogsSection({
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Category</Label>
-              <Select
+              <CreatableSelect
+                options={costCategories}
                 value={form.category}
-                onValueChange={(v) => setForm({ ...form, category: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {costCategories.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(v) => setForm({ ...form, category: v })}
+                placeholder="Select or create..."
+                onOptionsChange={setCostCategories}
+                onOptionCreated={async (label) => {
+                  const newOpt = await settingsApi.createDropdownOption({
+                    value: label.toLowerCase().replace(/\s+/g, '_'),
+                    label,
+                    category: 'cost_category',
+                  });
+                  setCostCategories((prev) => [...prev, newOpt]);
+                  return newOpt;
+                }}
+              />
             </div>
           </div>
           <div className="space-y-1">

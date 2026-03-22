@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, IsEnum, IsOptional } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail()
@@ -11,7 +11,7 @@ export class RegisterDto {
   @IsString()
   name: string;
 
-  @IsEnum(['CEO', 'ADMIN', 'BDM', 'SALES', 'DESIGNER', 'QS'])
   @IsOptional()
+  @IsString()
   role?: string;
 }
