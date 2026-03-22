@@ -80,9 +80,16 @@ export function ProjectDetailHeader({
           </div>
 
           <div className="flex-1 min-w-0">
-            <h1 className="text-[18px] font-semibold leading-tight text-foreground">
-              {project.name}
-            </h1>
+            <div className="flex items-baseline gap-2.5 flex-wrap">
+              <h1 className="text-[18px] font-semibold leading-tight text-foreground">
+                {project.name}
+              </h1>
+              {project.jobNumber && (
+                <span className="text-[13px] font-mono font-bold tracking-wide text-primary bg-primary/8 border border-primary/25 rounded px-2 py-0.5 leading-none shrink-0">
+                  {project.jobNumber}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2 mt-0.5">
               {project.client && (
                 <Link
@@ -90,11 +97,6 @@ export function ProjectDetailHeader({
                   className="text-[13px] text-muted-foreground hover:text-primary transition-colors">
                   {project.client.name}
                 </Link>
-              )}
-              {project.jobNumber && (
-                <span className="text-[11px] font-mono text-muted-foreground/60 border border-border/50 rounded px-1.5 py-0.5">
-                  {project.jobNumber}
-                </span>
               )}
             </div>
             <div className="flex flex-wrap gap-1.5 mt-2.5">

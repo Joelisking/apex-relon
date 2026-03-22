@@ -89,9 +89,16 @@ function ProjectCardContent({
       <div className="px-3.5 py-3">
         {/* Name + Risk chip */}
         <div className="flex items-start justify-between gap-2 mb-1.5">
-          <h4 className="text-sm font-semibold leading-snug line-clamp-2 text-foreground flex-1 min-w-0">
-            {project.name}
-          </h4>
+          <div className="flex-1 min-w-0">
+            {project.jobNumber && (
+              <p className="text-[10px] font-mono font-bold tracking-wide text-primary mb-0.5">
+                {project.jobNumber}
+              </p>
+            )}
+            <h4 className="text-sm font-semibold leading-snug line-clamp-2 text-foreground">
+              {project.name}
+            </h4>
+          </div>
           <span
             className={`inline-flex items-center gap-1 text-[11px] font-medium rounded-full px-2 py-0.5 border shrink-0 ${risk.classes}`}>
             <RiskIcon className="h-2.5 w-2.5" />

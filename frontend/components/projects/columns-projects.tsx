@@ -45,6 +45,20 @@ export const projectColumns: ColumnDef<Project>[] = [
     enableHiding: false,
   },
   {
+    accessorKey: 'jobNumber',
+    header: 'Job #',
+    cell: ({ row }) => {
+      const jobNumber = row.original.jobNumber;
+      return jobNumber ? (
+        <span className="font-mono text-xs font-bold text-primary whitespace-nowrap">
+          {jobNumber}
+        </span>
+      ) : (
+        <span className="text-muted-foreground/40 text-xs">—</span>
+      );
+    },
+  },
+  {
     accessorKey: 'name',
     header: 'Project',
     cell: ({ row }) => (
