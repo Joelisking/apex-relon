@@ -398,44 +398,42 @@ export function ProjectDetailDialog({
             <div className="px-5 py-4 border-b border-border/40">
               <SectionLabel>Team</SectionLabel>
               <div className="space-y-2">
-                {(
-                  [
-                    { role: 'PM', person: project.projectManager },
-                    { role: 'QS', person: project.qs },
-                    { role: 'Designer', person: project.designer },
-                  ] as {
-                    role: string;
-                    person?: { name: string } | null;
-                  }[]
-                ).map(({ role, person }) => (
-                  <div key={role} className="flex items-center gap-2">
-                    {person ? (
-                      <>
+                {!project.projectManager && (project.assignments ?? []).length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground">No team members assigned.</p>
+                ) : (
+                  <>
+                    {project.projectManager && (
+                      <div className="flex items-center gap-2">
                         <div
                           className="h-5 w-5 rounded-full bg-secondary flex items-center justify-center shrink-0 text-secondary-foreground font-bold"
                           style={{ fontSize: '7px' }}>
-                          {avatarInitials(person.name)}
+                          {avatarInitials(project.projectManager.name)}
                         </div>
                         <span className="text-[11px] text-foreground flex-1 truncate">
-                          {person.name}
+                          {project.projectManager.name}
                         </span>
                         <span className="text-[10px] text-muted-foreground shrink-0">
-                          {role}
+                          Project Manager
                         </span>
-                      </>
-                    ) : (
-                      <>
-                        <div className="h-5 w-5 rounded-full bg-muted shrink-0" />
-                        <span className="text-[11px] text-muted-foreground flex-1">
-                          Unassigned
-                        </span>
-                        <span className="text-[10px] text-muted-foreground shrink-0">
-                          {role}
-                        </span>
-                      </>
+                      </div>
                     )}
-                  </div>
-                ))}
+                    {(project.assignments ?? []).map((a) => (
+                      <div key={a.id} className="flex items-center gap-2">
+                        <div
+                          className="h-5 w-5 rounded-full bg-secondary flex items-center justify-center shrink-0 text-secondary-foreground font-bold"
+                          style={{ fontSize: '7px' }}>
+                          {avatarInitials(a.user.name)}
+                        </div>
+                        <span className="text-[11px] text-foreground flex-1 truncate">
+                          {a.user.name}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground shrink-0">
+                          {a.role}
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             </div>
 
@@ -624,11 +622,6 @@ export function ProjectDetailDialog({
                       </h3>
                       <ProjectAssignmentPanel
                         projectId={project.id}
-                        excludeUserIds={[
-                          project.projectManagerId,
-                          project.designerId,
-                          project.qsId,
-                        ].filter(Boolean) as string[]}
                       />
                     </div>
                   </div>

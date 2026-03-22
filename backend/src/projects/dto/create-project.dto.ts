@@ -48,18 +48,6 @@ export class CreateProjectDto {
   @IsOptional()
   description?: string;
 
-  @IsString()
-  @IsOptional()
-  projectManagerId?: string;
-
-  @IsString()
-  @IsOptional()
-  designerId?: string;
-
-  @IsString()
-  @IsOptional()
-  qsId?: string;
-
   @IsOptional()
   @Type(() => Date)
   estimatedDueDate?: Date;
@@ -76,6 +64,10 @@ export class CreateProjectDto {
   @IsOptional()
   @Type(() => Number)
   estimatedRevenue?: number;
+
+  @IsString()
+  @IsOptional()
+  projectManagerId?: string;
 
   @IsArray()
   @IsString({ each: true })

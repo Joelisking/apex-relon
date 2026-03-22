@@ -32,14 +32,6 @@ const BAR_COLORS = [
   '#6d28d9', // violet-700
 ];
 
-// Semantic colors for project status
-const STATUS_COLORS: Record<string, string> = {
-  Active:     '#3b82f6',
-  Completed:  '#10b981',
-  'On Hold':  '#f59e0b',
-  Cancelled:  '#ef4444',
-  Planning:   '#6366f1',
-};
 
 export function BarChartWidget({ widget, metrics }: Props) {
   const { symbol } = useCurrency();
@@ -65,7 +57,6 @@ export function BarChartWidget({ widget, metrics }: Props) {
   }
 
   const isCurrency = metric === 'revenueByClient';
-  const isStatus = metric === 'projectsByStatus';
 
   const tooltipStyle = {
     contentStyle: {
@@ -143,11 +134,7 @@ export function BarChartWidget({ widget, metrics }: Props) {
                 {chartData.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={
-                      isStatus
-                        ? (STATUS_COLORS[entry.name] ?? BAR_COLORS[index % BAR_COLORS.length])
-                        : BAR_COLORS[index % BAR_COLORS.length]
-                    }
+                    fill={BAR_COLORS[index % BAR_COLORS.length]}
                   />
                 ))}
               </Bar>

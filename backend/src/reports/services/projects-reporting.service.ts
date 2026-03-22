@@ -237,9 +237,9 @@ export class ProjectsReportingService {
     // Scope: canViewAll = see everything; has teamId = own team; else = self only
     if (!user.canViewAll) {
       if (user.teamId) {
-        where.projectManager = { teamId: user.teamId };
+        where.assignments = { some: { user: { teamId: user.teamId } } };
       } else {
-        where.projectManagerId = user.id;
+        where.assignments = { some: { userId: user.id } };
       }
     }
 

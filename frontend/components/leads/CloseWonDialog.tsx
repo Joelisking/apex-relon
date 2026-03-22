@@ -23,10 +23,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Loader2, Trophy, FolderOpen } from 'lucide-react';
+import { Loader2, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api/client';
-import { useAuth } from '@/contexts/auth-context';
 import type { Lead } from '@/lib/types';
 
 const formSchema = z.object({
@@ -40,7 +39,7 @@ interface CloseWonDialogProps {
   lead: Lead | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: (updatedLead: Lead, convertToProject: boolean) => void;
+  onSuccess: (updatedLead: Lead) => void;
 }
 
 export function CloseWonDialog({
@@ -49,7 +48,6 @@ export function CloseWonDialog({
   onOpenChange,
   onSuccess,
 }: CloseWonDialogProps) {
-  const { hasPermission } = useAuth();
   const form = useForm<FormValues, unknown, FormValues>({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
     defaultValues: {
@@ -70,10 +68,7 @@ export function CloseWonDialog({
     }
   }, [open, lead, form]);
 
-  const handleSubmit = async (
-    values: FormValues,
-    convertToProject: boolean,
-  ) => {
+  const handleSubmit = async (values: FormValues) => {
     if (!lead) return;
     try {
       await api.leads.update(lead.id, {
@@ -87,7 +82,7 @@ export function CloseWonDialog({
         dealClosedAt: values.dealClosedAt,
       };
       onOpenChange(false);
-      onSuccess(updatedLead, convertToProject);
+      onSuccess(updatedLead);
     } catch {
       toast.error('Failed to update deal details');
     }
@@ -171,33 +166,15 @@ export function CloseWonDialog({
               </Button>
               <Button
                 type="button"
-                variant="secondary"
                 disabled={isSubmitting}
-                onClick={form.handleSubmit((values) =>
-                  handleSubmit(values, false),
-                )}>
+                onClick={form.handleSubmit(handleSubmit)}>
                 {isSubmitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Trophy className="mr-2 h-4 w-4" />
                 )}
-                Mark as Won
+                Close Won
               </Button>
-              {hasPermission('clients:convert') && (
-                <Button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={form.handleSubmit((values) =>
-                    handleSubmit(values, true),
-                  )}>
-                  {isSubmitting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <FolderOpen className="mr-2 h-4 w-4" />
-                  )}
-                  Won & Convert
-                </Button>
-              )}
             </DialogFooter>
           </form>
         </Form>

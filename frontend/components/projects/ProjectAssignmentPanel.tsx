@@ -15,17 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { projectsApi, type ProjectAssignment } from '@/lib/api/projects-client';
 import { usersApi } from '@/lib/api/users-client';
+import { rolesApi } from '@/lib/api/roles-client';
 import { useAuth } from '@/contexts/auth-context';
-
-const CREW_ROLES = [
-  'Party Chief',
-  'Field Crew',
-  'Survey Technician',
-  'Office Admin',
-  'Project Manager',
-  'Designer',
-  'QS',
-];
 
 interface ProjectAssignmentPanelProps {
   projectId: string;
@@ -53,6 +44,14 @@ export function ProjectAssignmentPanel({
     queryKey: ['users-list'],
     queryFn: () => usersApi.getUsers(),
   });
+
+  const { data: rolesData = [] } = useQuery({
+    queryKey: ['roles'],
+    queryFn: () => rolesApi.getAll(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const crewRoles = rolesData.map((r) => r.label);
 
   const allUsers = usersData?.users ?? [];
   const assignedUserIds = new Set(assignments.map((a) => a.userId));
@@ -154,7 +153,7 @@ export function ProjectAssignmentPanel({
             <SelectValue placeholder="Role..." />
           </SelectTrigger>
           <SelectContent>
-            {CREW_ROLES.map((r) => (
+            {crewRoles.map((r) => (
               <SelectItem key={r} value={r} className="text-xs">
                 {r}
               </SelectItem>

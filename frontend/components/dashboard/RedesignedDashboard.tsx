@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { pipelineApi } from '@/lib/api/pipeline-client';
 import {
   Card,
   CardHeader,
@@ -33,6 +35,24 @@ import type { Lead, Client, DashboardMetrics } from '@/lib/types';
 import { REVENUE_DATA } from '@/lib/constants';
 import { useCurrency } from '@/lib/context/currency-context';
 
+const BG_TO_HEX: Record<string, string> = {
+  'bg-gray-400': '#9ca3af',
+  'bg-gray-500': '#6b7280',
+  'bg-blue-500': '#3b82f6',
+  'bg-purple-500': '#a855f7',
+  'bg-orange-500': '#f97316',
+  'bg-green-500': '#22c55e',
+  'bg-red-500': '#ef4444',
+  'bg-yellow-500': '#eab308',
+  'bg-teal-500': '#14b8a6',
+  'bg-pink-500': '#ec4899',
+  'bg-indigo-500': '#6366f1',
+};
+
+const FALLBACK_COLORS = [
+  '#6366f1', '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899',
+];
+
 interface DashboardClientProps {
   leads: Lead[];
   clients: Client[];
@@ -49,6 +69,12 @@ export default function RedesignedDashboard({
   } | null>(null);
 
   const { fmtFull, symbol } = useCurrency();
+
+  const { data: stageData = [] } = useQuery({
+    queryKey: ['pipeline-stages', 'prospective_project'],
+    queryFn: () => pipelineApi.getStages('prospective_project'),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const { metrics } = useMemo(() => {
     const totalRevenue = clients.reduce(
@@ -82,39 +108,31 @@ export default function RedesignedDashboard({
   }, [leads, clients]);
 
   const pipelineData = useMemo(() => {
-    const counts: { [key: string]: number } = {};
-    const stageColors: { [key: string]: string } = {
-      New: 'oklch(0.55 0.08 155)',
-      Contacted: 'oklch(0.70 0.12 85)',
-      Qualified: 'oklch(0.22 0.02 50)',
-      Proposal: 'oklch(0.58 0.10 35)',
-      Negotiation: 'oklch(0.55 0.03 250)',
-      Won: 'oklch(0.55 0.08 155)',
-      Lost: 'oklch(0.50 0.01 50)',
+    if (stageData.length === 0) return [];
+    const counts: Record<string, number> = {};
+    stageData.forEach((s) => (counts[s.name] = 0));
+
+    // Normalize aliases: "Won"→"Closed Won", "Lost"→"Closed Lost"
+    const normalize = (stage: string) => {
+      if (stage === 'Won' && counts['Closed Won'] !== undefined) return 'Closed Won';
+      if (stage === 'Lost' && counts['Closed Lost'] !== undefined) return 'Closed Lost';
+      if (stage === 'Closed Won' && counts['Won'] !== undefined && counts['Closed Won'] === undefined) return 'Won';
+      if (stage === 'Closed Lost' && counts['Lost'] !== undefined && counts['Closed Lost'] === undefined) return 'Lost';
+      return stage;
     };
-    const stages = [
-      'New',
-      'Contacted',
-      'Qualified',
-      'Proposal',
-      'Negotiation',
-      'Won',
-      'Lost',
-    ];
 
-    stages.forEach((stage) => (counts[stage] = 0));
     leads.forEach((l) => {
-      if (counts[l.stage] !== undefined) counts[l.stage]++;
+      const key = normalize(l.stage);
+      if (counts[key] !== undefined) counts[key]++;
     });
-
-    return Object.keys(counts)
-      .map((name) => ({
-        name,
-        value: counts[name],
-        color: stageColors[name],
+    return stageData
+      .map((stage, idx) => ({
+        name: stage.name,
+        value: counts[stage.name] ?? 0,
+        color: BG_TO_HEX[stage.color] ?? FALLBACK_COLORS[idx % FALLBACK_COLORS.length],
       }))
       .filter((d) => d.value > 0);
-  }, [leads]);
+  }, [leads, stageData]);
 
   const handleGenerateInsight = async () => {
     setLoadingAI(true);

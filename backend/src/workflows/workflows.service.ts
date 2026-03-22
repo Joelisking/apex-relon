@@ -16,9 +16,9 @@ import { Prisma } from '@prisma/client';
 // Allowlist of fields that workflow UPDATE_FIELD / ASSIGN_USER actions may write.
 // Only explicitly listed columns per entity type are permitted.
 const ALLOWED_UPDATE_FIELDS: Record<string, string[]> = {
-  LEAD: ['stage', 'urgency', 'source', 'channel', 'notes', 'assignedToId', 'designerId', 'qsId', 'expectedValue'],
+  LEAD: ['stage', 'urgency', 'source', 'channel', 'notes', 'assignedToId', 'expectedValue'],
   CLIENT: ['status', 'notes', 'assignedToId'],
-  PROJECT: ['status', 'notes', 'riskStatus', 'assignedToId', 'designerId', 'qsId'],
+  PROJECT: ['status', 'notes', 'riskStatus', 'assignedToId'],
 };
 
 @Injectable()

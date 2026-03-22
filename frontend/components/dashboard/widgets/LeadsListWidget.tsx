@@ -30,12 +30,21 @@ function getAvatarColor(name: string) {
   return AVATAR_COLORS[code % AVATAR_COLORS.length];
 }
 
-const STAGE_PILL: Record<string, string> = {
-  Qualified:    'bg-blue-50 text-blue-700 border-blue-200',
-  Proposal:     'bg-violet-50 text-violet-700 border-violet-200',
-  Negotiation:  'bg-amber-50 text-amber-700 border-amber-200',
-  'Closed Won': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-};
+const STAGE_PILL_COLORS = [
+  'bg-blue-50 text-blue-700 border-blue-200',
+  'bg-violet-50 text-violet-700 border-violet-200',
+  'bg-amber-50 text-amber-700 border-amber-200',
+  'bg-emerald-50 text-emerald-700 border-emerald-200',
+  'bg-rose-50 text-rose-700 border-rose-200',
+  'bg-cyan-50 text-cyan-700 border-cyan-200',
+  'bg-orange-50 text-orange-700 border-orange-200',
+  'bg-indigo-50 text-indigo-700 border-indigo-200',
+];
+
+function getStagePillColor(stage: string): string {
+  const code = stage.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return STAGE_PILL_COLORS[code % STAGE_PILL_COLORS.length];
+}
 
 export function LeadsListWidget({ widget }: Props) {
   const title = widget.config.title || 'Recent Leads';
@@ -95,8 +104,7 @@ export function LeadsListWidget({ widget }: Props) {
               .slice(0, 2)
               .toUpperCase();
             const avatarColor = getAvatarColor(displayName);
-            const stageColor =
-              STAGE_PILL[lead.stage] ?? 'bg-muted text-muted-foreground border-border/60';
+            const stageColor = getStagePillColor(lead.stage);
 
             return (
               <div

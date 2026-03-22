@@ -92,9 +92,12 @@ export function LeadDetailHeader({
 
           <div className="flex-1 min-w-0">
             <h1 className="text-[18px] font-semibold leading-tight text-foreground">
-              {lead.contactName || lead.name}
+              {lead.projectName || lead.company || lead.contactName || lead.name}
             </h1>
-            {lead.company && (
+            {(lead.projectName || lead.company) && lead.contactName && (
+              <p className="text-[13px] text-muted-foreground mt-0.5">{lead.contactName}</p>
+            )}
+            {lead.projectName && lead.company && (
               <p className="text-[13px] text-muted-foreground mt-0.5">{lead.company}</p>
             )}
             <div className="flex flex-wrap items-center gap-1.5 mt-2.5">

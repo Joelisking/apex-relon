@@ -14,7 +14,7 @@ export class CustomerLeadConversionService {
 
   async convertLeadToClient(
     leadId: string,
-    projectManagerId?: string,
+    pmUserId?: string,
     projectData?: {
       name?: string;
       contractedValue?: number;
@@ -44,7 +44,7 @@ export class CustomerLeadConversionService {
 
     const customer = lead.client;
 
-    // Duplicate project check (from Endpoint B)
+    // Duplicate project check
     const existingProject = await this.prisma.project.findFirst({ where: { leadId } });
     if (existingProject) throw new BadRequestException('A project already exists for this lead');
 
@@ -74,16 +74,26 @@ export class CustomerLeadConversionService {
         estimatedDueDate: projectData?.estimatedDueDate ? new Date(projectData.estimatedDueDate) : undefined,
         closedDate: projectData?.closedDate ? new Date(projectData.closedDate) : undefined,
         description: projectData?.description ?? lead.notes ?? undefined,
-        projectManagerId: projectManagerId || lead.assignedToId || undefined,
         serviceTypeId: lead.serviceTypeId || undefined,
         categoryIds: lead.categoryIds ?? [],
         serviceTypeIds: lead.serviceTypeIds ?? [],
         county: lead.county ?? undefined,
       },
-      include: {
-        projectManager: { select: { id: true, name: true, email: true } },
-      },
     });
+
+    // Add PM as a ProjectAssignment if provided or fall back to lead's assigned user
+    const resolvedPmId = pmUserId || lead.assignedToId;
+    if (resolvedPmId) {
+      await this.prisma.projectAssignment.create({
+        data: {
+          projectId: project.id,
+          userId: resolvedPmId,
+          role: 'Project Manager',
+        },
+      }).catch(() => {
+        // Silently ignore if already assigned
+      });
+    }
 
     // Mark lead as converted
     await this.prisma.lead.update({
@@ -95,7 +105,7 @@ export class CustomerLeadConversionService {
     await this.recomputeClientProjectCounts(customer.id);
 
     // Record initial status history
-    const actorId = userId || projectManagerId || lead.assignedToId || 'system';
+    const actorId = userId || resolvedPmId || 'system';
     await this.prisma.projectStatusHistory.create({
       data: {
         projectId: project.id,

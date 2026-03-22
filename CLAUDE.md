@@ -164,11 +164,21 @@ See `frontend/components/clients/CreateCustomerDialog.tsx` → `industry` field 
 - Use `claude-developer-platform` skill when writing Anthropic SDK code.
 - Default to `claude-sonnet-4-6` for production AI features.
 
+### Roles Are Always Dynamic — Never Hardcode Them
+
+**STRICT RULE:** Role names must never be hardcoded anywhere in the codebase — not in frontend components, not in backend DTOs, not in constants arrays.
+
+- **Frontend:** Use `rolesApi.getAll()` (via `useQuery`) to fetch available roles and derive any role-based UI (dropdowns, filters, display labels) from that response.
+- **Backend DTOs:** Use `@IsString()` on role fields — never `@IsEnum(['CEO', 'ADMIN', ...])` or any hardcoded role array.
+- **Project team sections:** Do not hardcode named-role slots (e.g. "QS", "Designer"). Use the `ProjectAssignment` table and derive the role label from the roles API.
+- **Crew role dropdowns:** Always populated from `rolesApi.getAll()`, never from a local `const CREW_ROLES = [...]` array.
+
+This applies to any context: user forms, project assignments, kanban filters, dashboard widgets, pipeline logic, email templates, DTOs.
+
 ### Surveying Domain Context
 - Pipeline stages use surveying lifecycle (Inquiry → Field Work → Processing → Delivery).
 - Key custom fields: Parcel Number, County, Township/Section/Range, INDOT Des Number, Crew Lead.
 - Service types: Topographic, Boundary, ROW Engineering, Construction Staking, ALTA/NSPS, Cell Tower, Subdivision Plat, Environmental.
-- Roles: Owner, Project Manager, Party Chief, Survey Technician, Field Crew, Office Admin.
 
 ---
 

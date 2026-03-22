@@ -75,7 +75,10 @@ function ProjectCardContent({
     ? (contractedValue * stageProbability) / 100
     : null;
 
-  const pmName = project.projectManager?.name;
+  const pmAssignment = project.assignments?.find((a) =>
+    a.role.toLowerCase().includes('manager'),
+  );
+  const pmName = pmAssignment?.user.name ?? null;
   const pmInitials = pmName ? avatarInitials(pmName) : null;
 
   return (
@@ -137,26 +140,7 @@ function ProjectCardContent({
             )}
         </div>
 
-        {/* Team chips */}
-        {(project.qs || project.designer) && (
-          <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
-            {project.qs && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground bg-muted border border-border/50 rounded-full px-2 py-0.5">
-                QS: {firstNameLastInitial(project.qs.name)}
-              </span>
-            )}
-            {project.designer && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/70 bg-muted/40 border border-border/50 rounded-full px-2 py-0.5">
-                <span
-                  className="h-3.5 w-3.5 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold shrink-0"
-                  style={{ fontSize: '7px' }}>
-                  {avatarInitials(project.designer.name)}
-                </span>
-                Des.
-              </span>
-            )}
-          </div>
-        )}
+
 
         {/* Footer: due date + PM */}
         <div className="flex items-center justify-between pt-2 border-t border-border/40">

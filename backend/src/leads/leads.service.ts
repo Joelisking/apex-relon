@@ -58,7 +58,7 @@ export class LeadsService {
           select: { id: true, name: true, email: true, role: true },
         },
         serviceType: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, category: { select: { id: true, name: true } } },
         },
         client: {
           select: { id: true, name: true },
@@ -113,7 +113,7 @@ export class LeadsService {
           select: { id: true, name: true, email: true, role: true },
         },
         serviceType: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, category: { select: { id: true, name: true } } },
         },
         client: {
           select: { id: true, name: true },

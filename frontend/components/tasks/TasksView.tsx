@@ -37,6 +37,7 @@ export default function TasksView() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('active');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -58,6 +59,9 @@ export default function TasksView() {
         filters.status = statusFilter;
       }
       if (priorityFilter !== 'all') filters.priority = priorityFilter;
+      if (canViewAll && assigneeFilter === 'mine' && user?.id) {
+        filters.assignedToId = user.id;
+      }
 
       const [taskData, summaryData, teamData] = await Promise.all([
         tasksApi.getAll(filters),
@@ -82,7 +86,7 @@ export default function TasksView() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, priorityFilter]);
+  }, [statusFilter, priorityFilter, assigneeFilter, canViewAll, user?.id]);
 
   useEffect(() => {
     fetchTasks();
@@ -281,6 +285,17 @@ export default function TasksView() {
             <SelectItem value="LOW">Low</SelectItem>
           </SelectContent>
         </Select>
+        {canViewAll && (
+          <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+            <SelectTrigger className="w-full h-8 text-xs">
+              <SelectValue placeholder="Assignee" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Assignees</SelectItem>
+              <SelectItem value="mine">Mine Only</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
 
         {/* View toggle */}
         <div className="flex items-center rounded-md border border-border/60 bg-muted/40 p-0.5 shrink-0">

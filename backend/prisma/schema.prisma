@@ -261,8 +261,6 @@ model Project {
   estimatedRevenue  Float?
   totalCost         Float                  @default(0)
   projectManagerId  String?
-  designerId        String?
-  qsId              String?
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
   activities        Activity[]
@@ -270,10 +268,8 @@ model Project {
   files             File[]
   statusHistory     ProjectStatusHistory[]
   client            Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  designer          User?                  @relation("ProjectDesignerAssignments", fields: [designerId], references: [id])
   lead              Lead?                  @relation(fields: [leadId], references: [id])
-  projectManager    User?                  @relation("ProjectManagement", fields: [projectManagerId], references: [id])
-  qs                User?                  @relation("ProjectQSAssignments", fields: [qsId], references: [id])
+  projectManager    User?                  @relation("ProjectManagerAssignments", fields: [projectManagerId], references: [id])
   serviceType       ServiceType?           @relation(fields: [serviceTypeId], references: [id])
   timeEntries       TimeEntry[]            @relation("ProjectTimeEntries")
   budget            ProjectBudget?         @relation("ProjectBudget")
@@ -282,12 +278,11 @@ model Project {
 
   @@index([clientId])
   @@index([leadId])
+  @@index([projectManagerId])
   @@index([serviceTypeId])
   @@index([status])
   @@index([status, completedDate])
   @@index([contractedValue])
-  @@index([designerId])
-  @@index([qsId])
   @@map("projects")
 }
 
@@ -377,10 +372,8 @@ model User {
   timeEntries             TimeEntry[]             @relation("UserTimeEntries")
   userRates               UserRate[]              @relation("UserRates")
   projectStatusChanges    ProjectStatusHistory[]  @relation("ProjectStatusChanges")
-  designedProjects        Project[]               @relation("ProjectDesignerAssignments")
-  managedProjects         Project[]               @relation("ProjectManagement")
-  qsProjects              Project[]               @relation("ProjectQSAssignments")
   projectAssignments      ProjectAssignment[]     @relation("ProjectAssignments")
+  managedProjects         Project[]               @relation("ProjectManagerAssignments")
   stageChanges            StageHistory[]          @relation("StageChanges")
   managedTeams            Team[]                  @relation("ManagerTeams")
   manager                 User?                   @relation("ManagerTeam", fields: [managerId], references: [id])

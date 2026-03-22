@@ -29,10 +29,7 @@ export class CustomerCrudService {
   private buildAccessFilter(userId: string) {
     return {
       OR: [
-        { projects: { some: { OR: [
-          { projectManagerId: userId },
-          { assignments: { some: { userId } } },
-        ] } } },
+        { projects: { some: { assignments: { some: { userId } } } } },
         { leads: { some: { OR: [
           { assignedToId: userId },
           { teamMembers: { some: { userId } } },

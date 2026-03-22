@@ -25,9 +25,15 @@ export function LeadDetailsPanel({ lead, isOverdue }: Props) {
             <span className="text-sm text-muted-foreground">Source</span>
             <span className="text-sm font-medium">{lead.source}</span>
           </div>
+          {lead.serviceType?.category && (
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-sm text-muted-foreground">Category</span>
+              <span className="text-sm font-medium">{lead.serviceType.category.name}</span>
+            </div>
+          )}
           {lead.serviceType && (
             <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-sm text-muted-foreground">Service</span>
+              <span className="text-sm text-muted-foreground">Service Type</span>
               <span className="text-sm font-medium">{lead.serviceType.name}</span>
             </div>
           )}

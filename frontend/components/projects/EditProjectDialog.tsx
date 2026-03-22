@@ -132,7 +132,7 @@ export function EditProjectDialog({
       endOfProjectValue: project.endOfProjectValue ?? undefined,
       estimatedDueDate: toDateInput(project.estimatedDueDate),
       closedDate: toDateInput(project.closedDate),
-      projectManagerId: project.projectManagerId ?? undefined,
+      projectManagerId: project.assignments?.find((a) => a.role.toLowerCase().includes('manager'))?.userId ?? '',
       riskStatus: project.riskStatus ?? '',
       county: project.county ?? '',
       description: project.description ?? '',
@@ -150,7 +150,7 @@ export function EditProjectDialog({
       endOfProjectValue: project.endOfProjectValue ?? undefined,
       estimatedDueDate: toDateInput(project.estimatedDueDate),
       closedDate: toDateInput(project.closedDate),
-      projectManagerId: project.projectManagerId ?? undefined,
+      projectManagerId: project.assignments?.find((a) => a.role.toLowerCase().includes('manager'))?.userId ?? '',
       riskStatus: project.riskStatus ?? '',
       county: project.county ?? '',
       description: project.description ?? '',
@@ -211,6 +211,7 @@ export function EditProjectDialog({
           values.leadId && values.leadId !== 'none'
             ? values.leadId
             : undefined,
+        projectManagerId: values.projectManagerId || undefined,
         estimatedDueDate: values.estimatedDueDate
           ? new Date(values.estimatedDueDate).toISOString()
           : undefined,
@@ -230,8 +231,6 @@ export function EditProjectDialog({
       setLoading(false);
     }
   };
-
-  const pms = users;
 
   const availableUsers = users.filter(
     (u) => !assignments.some((a) => a.userId === u.id),
@@ -382,6 +381,35 @@ export function EditProjectDialog({
                 )}
               />
 
+              {/* Project Manager */}
+              <FormField
+                control={form.control}
+                name="projectManagerId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Manager</FormLabel>
+                    <Select
+                      onValueChange={(val) => field.onChange(val === 'none' ? '' : val)}
+                      value={field.value || 'none'}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select PM" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {users.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               {/* Contracted Value */}
               <FormField
                 control={form.control}
@@ -510,27 +538,6 @@ export function EditProjectDialog({
                 )}
               />
 
-              {/* Project Manager */}
-              <FormField
-                control={form.control}
-                name="projectManagerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project Manager</FormLabel>
-                    <FormControl>
-                      <UserPicker
-                        users={pms}
-                        value={field.value ?? ''}
-                        onChange={field.onChange}
-                        placeholder="Select PM"
-                        allowUnassigned
-                        unassignedLabel="None"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             <FormField

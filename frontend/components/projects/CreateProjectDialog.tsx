@@ -66,12 +66,14 @@ interface CreateProjectDialogProps {
   onOpenChange: (open: boolean) => void;
   onProjectCreated: () => void;
   currentUserId?: string; // Optional but kept for API compatibility
+  initialClientId?: string; // Pre-select and lock client (e.g. when creating from client detail page)
 }
 
 export function CreateProjectDialog({
   open,
   onOpenChange,
   onProjectCreated,
+  initialClientId,
 }: CreateProjectDialogProps) {
   const [loading, setLoading] = useState(false);
   const [isLoadingStages, setIsLoadingStages] = useState(true);
@@ -133,6 +135,7 @@ export function CreateProjectDialog({
   const form = useForm<FormValues, unknown, FormValues>({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
     defaultValues: {
+      clientId: initialClientId ?? '',
       name: '',
       status: '',
       contractedValue: 0,
@@ -152,16 +155,22 @@ export function CreateProjectDialog({
               usersApi.getUsers(),
               pipelineApi.getStages('project'),
             ]);
-          setClients(
-            clientsData.map((c) => ({
-              ...c,
-              individualName: c.individualName ?? undefined,
-            })),
-          );
+          const mappedClients = clientsData.map((c) => ({
+            ...c,
+            individualName: c.individualName ?? undefined,
+          }));
+          setClients(mappedClients);
           setLeads(Array.isArray(leadsData) ? leadsData : []);
           setUsers(usersRes.users || []);
           setProjectStages(stages);
           setIsLoadingStages(false);
+
+          // If a client is pre-selected, auto-fill county from that client
+          if (initialClientId) {
+            form.setValue('clientId', initialClientId);
+            const preselected = mappedClients.find((c) => c.id === initialClientId);
+            if (preselected?.county) form.setValue('county', preselected.county);
+          }
         } catch (error) {
           console.error('Failed to load form data', error);
         }
@@ -274,37 +283,39 @@ export function CreateProjectDialog({
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
-              {/* Client - Required */}
-              <FormField
-                control={form.control}
-                name="clientId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer *</FormLabel>
-                    <Select
-                      onValueChange={handleClientChange}
-                      defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a customer" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {clients.map((client) => (
-                          <SelectItem
-                            key={client.id}
-                            value={client.id}>
-                            {client.name
-                              ? `${client.name}`
-                              : client.individualName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Client - Required (hidden when pre-selected via initialClientId) */}
+              {!initialClientId && (
+                <FormField
+                  control={form.control}
+                  name="clientId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Customer *</FormLabel>
+                      <Select
+                        onValueChange={handleClientChange}
+                        defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a customer" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {clients.map((client) => (
+                            <SelectItem
+                              key={client.id}
+                              value={client.id}>
+                              {client.name
+                                ? `${client.name}`
+                                : client.individualName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {/* Linked Prospective Project (Lead) */}
               <FormField

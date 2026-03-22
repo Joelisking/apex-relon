@@ -126,10 +126,10 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
     }
   };
 
-  const handleCloseWonSuccess = (updatedLead: Lead, convertToProject: boolean) => {
+  const handleCloseWonSuccess = (updatedLead: Lead) => {
     setLead(updatedLead);
     queryClient.invalidateQueries({ queryKey: ['leads'] });
-    if (convertToProject && !updatedLead.convertedToClientId) {
+    if (!updatedLead.convertedToClientId) {
       setConvertDialogOpen(true);
     }
   };
@@ -227,7 +227,7 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
   const isWon = lead.stage === 'Closed Won' || lead.stage === 'Won';
   const isConverted = !!lead.convertedToClientId;
   const accentColor = urgencyColor(lead.urgency);
-  const companyOrName = lead.company || lead.contactName || 'Unknown';
+  const companyOrName = lead.projectName || lead.company || lead.contactName || 'Unknown';
 
   const getTimingBadge = () => {
     if (!lead.likelyStartDate) return null;

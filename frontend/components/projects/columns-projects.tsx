@@ -143,32 +143,6 @@ export const projectColumns: ColumnDef<Project>[] = [
     filterFn: (row, id, value) => value.includes(row.getValue(id)),
   },
   {
-    accessorKey: 'qs',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="QS" />
-    ),
-    cell: ({ row }) => {
-      const qs = row.original.qs;
-      return (
-        <div className="truncate max-w-37.5">{qs?.name || '-'}</div>
-      );
-    },
-  },
-  {
-    accessorKey: 'designer',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Designer" />
-    ),
-    cell: ({ row }) => {
-      const designer = row.original.designer;
-      return (
-        <div className="truncate max-w-37.5">
-          {designer?.name || '-'}
-        </div>
-      );
-    },
-  },
-  {
     accessorKey: 'estimatedDueDate',
     header: 'Due Date',
     cell: ({ row }) =>

@@ -50,8 +50,6 @@ const formSchema = z.object({
   estimatedDueDate: z.string().optional(),
   closedDate: z.string().optional(),
   projectManagerId: z.string().optional(),
-  designerId: z.string().optional(),
-  qsId: z.string().optional(),
   description: z.string().optional(),
   riskStatus: z.string().optional(),
 });
@@ -93,8 +91,6 @@ export function ConvertLeadDialog({
       estimatedDueDate: '',
       closedDate: leadClosedDate,
       projectManagerId: lead?.assignedToId || '',
-      designerId: '',
-      qsId: '',
       description: lead?.notes || '',
       riskStatus: '',
     },
@@ -119,8 +115,6 @@ export function ConvertLeadDialog({
               : new Date(lead.dealClosedAt).toISOString().split('T')[0])
           : '',
         projectManagerId: lead.assignedToId || '',
-        designerId: '',
-        qsId: '',
         description: lead.notes || '',
         riskStatus: '',
       });

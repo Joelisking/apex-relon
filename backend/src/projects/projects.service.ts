@@ -27,8 +27,13 @@ export class ProjectsService {
     client: { select: { id: true, name: true } },
     lead: { select: { id: true, contactName: true, company: true } },
     projectManager: { select: { id: true, name: true, email: true } },
-    designer: { select: { id: true, name: true, email: true } },
-    qs: { select: { id: true, name: true, email: true } },
+    serviceType: {
+      select: {
+        id: true,
+        name: true,
+        category: { select: { id: true, name: true } },
+      },
+    },
     assignments: {
       include: {
         user: { select: { id: true, name: true, email: true, role: true } },
@@ -51,8 +56,6 @@ export class ProjectsService {
     if (!canViewAll) {
       where.OR = [
         { projectManagerId: userId },
-        { designerId: userId },
-        { qsId: userId },
         { assignments: { some: { userId } } },
       ];
     }
@@ -138,7 +141,7 @@ export class ProjectsService {
 
     // Audit log
     await this.auditService.log({
-      userId: createProjectDto.projectManagerId || userId || 'system',
+      userId: userId || 'system',
       action: 'CREATE_PROJECT',
       details: {
         projectId: project.id,
@@ -180,15 +183,6 @@ export class ProjectsService {
       include: {
         client: true,
         lead: true,
-        projectManager: {
-          select: { id: true, name: true, email: true },
-        },
-        designer: {
-          select: { id: true, name: true, email: true },
-        },
-        qs: {
-          select: { id: true, name: true, email: true },
-        },
         assignments: {
           include: {
             user: { select: { id: true, name: true, email: true, role: true } },
@@ -218,9 +212,6 @@ export class ProjectsService {
       const canViewAll = await this.permissionsService.hasPermission(userRole, 'projects:view_all');
       if (!canViewAll) {
         const isAssigned =
-          project.projectManagerId === userId ||
-          project.designerId === userId ||
-          project.qsId === userId ||
           project.assignments.some((a) => a.userId === userId);
         if (!isAssigned) {
           throw new NotFoundException(`Project with ID ${id} not found`);
@@ -247,8 +238,8 @@ export class ProjectsService {
       throw new NotFoundException(`Project with ID ${id} not found`);
     }
 
-    // Extract client-level fields before passing to Prisma (Project model doesn't have these)
-    const { segment, industry, ...projectUpdateData } = updateProjectDto;
+    // Extract non-Prisma fields before passing to Prisma
+    const { segment, industry, teamMemberIds, ...projectUpdateData } = updateProjectDto;
 
     // Auto-set completedDate when transitioning to Completed
     if (
@@ -457,12 +448,7 @@ export class ProjectsService {
         const accessible = await this.prisma.project.findMany({
           where: {
             id: { in: ids },
-            OR: [
-              { projectManagerId: userId },
-              { designerId: userId },
-              { qsId: userId },
-              { assignments: { some: { userId } } },
-            ],
+            assignments: { some: { userId } },
           },
           select: { id: true },
         });
@@ -546,12 +532,7 @@ export class ProjectsService {
         const accessible = await this.prisma.project.findMany({
           where: {
             id: { in: ids },
-            OR: [
-              { projectManagerId: userId },
-              { designerId: userId },
-              { qsId: userId },
-              { assignments: { some: { userId } } },
-            ],
+            assignments: { some: { userId } },
           },
           select: { id: true },
         });

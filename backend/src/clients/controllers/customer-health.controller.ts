@@ -63,7 +63,7 @@ export class CustomerHealthController {
     @Param('leadId') leadId: string,
     @Body()
     body: {
-      projectManagerId?: string;
+      pmUserId?: string;
       projectName?: string;
       contractedValue?: number;
       endOfProjectValue?: number;
@@ -78,7 +78,7 @@ export class CustomerHealthController {
   ) {
     return this.leadConversionService.convertLeadToClient(
       leadId,
-      body.projectManagerId,
+      body.pmUserId,
       {
         name: body.projectName,
         contractedValue: body.contractedValue,

@@ -352,16 +352,12 @@ export default function ModernLeadsView({
     setCloseWonDialogOpen(open);
   };
 
-  const handleCloseWonSuccess = (
-    updatedLead: Lead,
-    convertToProject: boolean,
-  ) => {
+  const handleCloseWonSuccess = (updatedLead: Lead) => {
     setPendingWonRevert(null);
-    // Update the lead in state with the new contractedValue, dealClosedAt, and stage
     setLeads((prev) =>
       prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)),
     );
-    if (convertToProject && !updatedLead.convertedToClientId) {
+    if (!updatedLead.convertedToClientId) {
       setLeadToConvert(updatedLead);
       setConvertDialogOpen(true);
     }

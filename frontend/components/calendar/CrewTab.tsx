@@ -74,19 +74,12 @@ export function CrewTab({ users, projects, weekStart, onWeekChange, onProjectCli
   }, [days, weekStart]);
 
   function getUserProjects(userId: string): Project[] {
-    return projects.filter(
-      (p) =>
-        p.projectManagerId === userId ||
-        p.designerId === userId ||
-        p.qsId === userId ||
-        p.assignments?.some((a) => a.userId === userId),
+    return projects.filter((p) =>
+      p.assignments?.some((a) => a.userId === userId),
     );
   }
 
   function getRoleLabel(project: Project, userId: string): string {
-    if (project.projectManagerId === userId) return 'PM';
-    if (project.designerId === userId) return 'Designer';
-    if (project.qsId === userId) return 'QS';
     return project.assignments?.find((a) => a.userId === userId)?.role ?? '';
   }
 

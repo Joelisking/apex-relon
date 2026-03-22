@@ -40,11 +40,8 @@ function avatarInitials(name: string): string {
 }
 
 export function ProjectOverviewPanel({ project, activities, files, costLogs }: Props) {
-  const team = [
-    { role: 'Project Manager', person: project.projectManager },
-    { role: 'QS', person: project.qs },
-    { role: 'Designer', person: project.designer },
-  ] as { role: string; person?: { name: string } | null }[];
+  const pm = project.projectManager;
+  const team = project.assignments ?? [];
 
   return (
     <div className="space-y-6">
@@ -54,23 +51,34 @@ export function ProjectOverviewPanel({ project, activities, files, costLogs }: P
           <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
             Team
           </p>
-          <div className="rounded-xl border border-border/40 overflow-hidden divide-y divide-border/40">
-            {team.map(({ role, person }) => (
-              <div key={role} className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm text-muted-foreground">{role}</span>
-                {person ? (
+          {!pm && team.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No team members assigned.</p>
+          ) : (
+            <div className="rounded-xl border border-border/40 overflow-hidden divide-y divide-border/40">
+              {pm && (
+                <div className="flex items-center justify-between px-4 py-3">
+                  <span className="text-sm text-muted-foreground">Project Manager</span>
                   <div className="flex items-center gap-2">
                     <div className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-xs shrink-0">
-                      {avatarInitials(person.name)}
+                      {avatarInitials(pm.name)}
                     </div>
-                    <span className="text-sm font-medium">{person.name}</span>
+                    <span className="text-sm font-medium">{pm.name}</span>
                   </div>
-                ) : (
-                  <span className="text-sm text-muted-foreground">Unassigned</span>
-                )}
-              </div>
-            ))}
-          </div>
+                </div>
+              )}
+              {team.map((a) => (
+                <div key={a.id} className="flex items-center justify-between px-4 py-3">
+                  <span className="text-sm text-muted-foreground">{a.role}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-xs shrink-0">
+                      {avatarInitials(a.user.name)}
+                    </div>
+                    <span className="text-sm font-medium">{a.user.name}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Timeline + counts */}
@@ -118,6 +126,37 @@ export function ProjectOverviewPanel({ project, activities, files, costLogs }: P
           </div>
         </div>
       </div>
+
+      {/* Service info */}
+      {(project.serviceType || project.county) && (
+        <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+              Service
+            </p>
+            <div className="rounded-xl border border-border/40 overflow-hidden divide-y divide-border/40">
+              {project.serviceType?.category && (
+                <div className="flex items-center justify-between px-4 py-3">
+                  <span className="text-sm text-muted-foreground">Category</span>
+                  <span className="text-sm font-medium">{project.serviceType.category.name}</span>
+                </div>
+              )}
+              {project.serviceType && (
+                <div className="flex items-center justify-between px-4 py-3">
+                  <span className="text-sm text-muted-foreground">Service Type</span>
+                  <span className="text-sm font-medium">{project.serviceType.name}</span>
+                </div>
+              )}
+              {project.county && (
+                <div className="flex items-center justify-between px-4 py-3">
+                  <span className="text-sm text-muted-foreground">County</span>
+                  <span className="text-sm font-medium">{project.county}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {project.statusHistory && project.statusHistory.length > 0 && (
         <ProjectStageTimeline project={project} />

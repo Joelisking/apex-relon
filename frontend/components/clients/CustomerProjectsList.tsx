@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import {
@@ -13,31 +13,9 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { DatePicker } from '@/components/ui/date-picker';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import {
-  projectsApi,
-  type Project,
-  type CreateProjectDto,
-} from '@/lib/api/projects-client';
-import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
+import { projectsApi, type Project } from '@/lib/api/projects-client';
+import { CreateProjectDialog } from '@/components/projects/CreateProjectDialog';
 import { ProjectDetailDialog } from '@/components/projects/ProjectDetailDialog';
 import { format } from 'date-fns';
 
@@ -48,6 +26,7 @@ interface CustomerProjectsListProps {
   onProjectsChanged: () => void;
   currentUserId: string;
 }
+
 
 // ── chip maps ──────────────────────────────────────────────────────────────
 const RISK_HEX: Record<string, string> = {
@@ -110,73 +89,15 @@ function fmtValue(v: number): string {
 export function CustomerProjectsList({
   clientId,
   projects,
-  accountManagers = [],
   onProjectsChanged,
   currentUserId,
 }: CustomerProjectsListProps) {
   const router = useRouter();
-  const { user, hasPermission } = useAuth();
+  const { hasPermission } = useAuth();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedProject, setSelectedProject] =
-    useState<Project | null>(null);
-  const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
-  const [formData, setFormData] = useState<Partial<CreateProjectDto>>({
-    clientId,
-    contractedValue: 0,
-  });
-
-  useEffect(() => {
-    pipelineApi.getStages('project').then((stages) => {
-      setProjectStages(stages);
-      if (stages.length > 0) {
-        setFormData((prev) => ({ ...prev, status: prev.status ?? stages[0].name }));
-      }
-    }).catch(console.error);
-  }, []);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const canCreate = hasPermission('projects:create');
-
-  const handleCreateProject = async () => {
-    if (!formData.name?.trim()) {
-      toast.error('Please enter a project name');
-      return;
-    }
-    if (!formData.contractedValue || formData.contractedValue <= 0) {
-      toast.error('Please enter a valid project value');
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      await projectsApi.create({
-        name: formData.name!,
-        clientId,
-        status: formData.status || projectStages[0]?.name || '',
-        contractedValue: formData.contractedValue,
-        description: formData.description,
-        projectManagerId: formData.projectManagerId,
-        startDate: formData.startDate,
-        estimatedDueDate: formData.estimatedDueDate,
-        riskStatus: formData.riskStatus,
-        estimatedRevenue: formData.estimatedRevenue,
-      });
-      toast.success('Project created');
-      setFormData({
-        clientId,
-        status: projectStages[0]?.name,
-        contractedValue: 0,
-      });
-      setCreateDialogOpen(false);
-      onProjectsChanged();
-    } catch (error) {
-      toast.error('Failed to create project', {
-        description:
-          error instanceof Error ? error.message : undefined,
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleDeleteProject = async (projectId: string) => {
     if (!confirm('Delete this project?')) return;
@@ -308,9 +229,7 @@ export function CustomerProjectsList({
                         <div
                           className="h-[18px] w-[18px] rounded-full bg-secondary flex items-center justify-center shrink-0 text-secondary-foreground font-bold"
                           style={{ fontSize: '8px' }}>
-                          {avatarInitials(
-                            project.projectManager.name,
-                          )}
+                          {avatarInitials(project.projectManager.name)}
                         </div>
                         <span className="text-[11px] text-muted-foreground">
                           {project.projectManager.name}
@@ -325,206 +244,15 @@ export function CustomerProjectsList({
         </div>
       )}
 
-      {/* Create project dialog */}
-      <Dialog
+      <CreateProjectDialog
         open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Create New Project</DialogTitle>
-            <DialogDescription>
-              Add a new project for this client
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
-                Project Name{' '}
-                <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                placeholder="e.g., Website Redesign"
-                value={formData.name || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
-                Status
-              </Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, status: value })
-                }>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {projectStages.map((stage) => (
-                    <SelectItem key={stage.id} value={stage.name}>
-                      {stage.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
-                Contracted Value ($){' '}
-                <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                type="number"
-                placeholder="0"
-                value={formData.contractedValue || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    contractedValue: parseFloat(e.target.value) || 0,
-                  })
-                }
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
-                Project Manager
-              </Label>
-              <Select
-                value={formData.projectManagerId || ''}
-                onValueChange={(value) =>
-                  setFormData({
-                    ...formData,
-                    projectManagerId: value,
-                  })
-                }>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select project manager" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accountManagers.map((manager) => (
-                    <SelectItem key={manager.id} value={manager.id}>
-                      {manager.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
-                Start Date
-              </Label>
-              <DatePicker
-                value={formData.startDate || ''}
-                onChange={(val) =>
-                  setFormData({ ...formData, startDate: val })
-                }
-                placeholder="Pick a date"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
-                  Est. Due Date
-                </Label>
-                <DatePicker
-                  value={formData.estimatedDueDate || ''}
-                  onChange={(val) =>
-                    setFormData({
-                      ...formData,
-                      estimatedDueDate: val,
-                    })
-                  }
-                  placeholder="Pick a date"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
-                  Risk Status
-                </Label>
-                <Select
-                  value={formData.riskStatus || 'On Track'}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, riskStatus: value })
-                  }>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="On Track">On Track</SelectItem>
-                    <SelectItem value="At Risk">At Risk</SelectItem>
-                    <SelectItem value="High Risk">
-                      High Risk
-                    </SelectItem>
-                    <SelectItem value="Blocked">Blocked</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
-                Est. Revenue
-              </Label>
-              <Input
-                type="number"
-                placeholder="0"
-                value={formData.estimatedRevenue || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    estimatedRevenue: parseFloat(e.target.value) || 0,
-                  })
-                }
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
-                Description
-              </Label>
-              <Textarea
-                placeholder="Project description..."
-                value={formData.description || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    description: e.target.value,
-                  })
-                }
-                rows={3}
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setFormData({ clientId, status: projectStages[0]?.name, contractedValue: 0 });
-                  setCreateDialogOpen(false);
-                }}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleCreateProject}
-                disabled={isSubmitting}>
-                {isSubmitting ? 'Creating…' : 'Create Project'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={setCreateDialogOpen}
+        onProjectCreated={() => {
+          setCreateDialogOpen(false);
+          onProjectsChanged();
+        }}
+        initialClientId={clientId}
+      />
 
     </div>
   );

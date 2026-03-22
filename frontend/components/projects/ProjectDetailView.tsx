@@ -355,7 +355,6 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
                 </h3>
                 <ProjectAssignmentPanel
                   projectId={project.id}
-                  excludeUserIds={[project.projectManagerId, project.designerId, project.qsId].filter(Boolean) as string[]}
                 />
               </div>
             </TabsContent>

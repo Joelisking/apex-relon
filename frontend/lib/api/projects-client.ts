@@ -37,28 +37,12 @@ export interface Project {
   estimatedRevenue?: number;
   totalCost?: number;
   serviceTypeId?: string | null;
-  serviceType?: { id: string; name: string } | null;
+  serviceType?: { id: string; name: string; category?: { id: string; name: string } | null } | null;
   categoryIds?: string[];
   serviceTypeIds?: string[];
   county?: string | null;
   projectManagerId?: string;
-  projectManager?: {
-    id: string;
-    name: string;
-    email: string;
-  };
-  designerId?: string;
-  designer?: {
-    id: string;
-    name: string;
-    email: string;
-  };
-  qsId?: string;
-  qs?: {
-    id: string;
-    name: string;
-    email: string;
-  };
+  projectManager?: { id: string; name: string; email: string };
   assignments?: ProjectAssignment[];
   costLogs?: CostLog[];
   statusHistory?: Array<{
@@ -127,11 +111,11 @@ export interface CreateProjectDto {
   startDate?: string;
   completedDate?: string;
   description?: string;
-  projectManagerId?: string;
   estimatedDueDate?: string;
   closedDate?: string;
   riskStatus?: string;
   estimatedRevenue?: number;
+  projectManagerId?: string;
   teamMemberIds?: string[];
   categoryIds?: string[];
   serviceTypeIds?: string[];

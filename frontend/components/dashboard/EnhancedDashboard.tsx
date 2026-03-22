@@ -439,13 +439,15 @@ export default function EnhancedDashboard({
     (stage) => stage.stage !== 'Lost',
   );
 
-  const statusColors: Record<string, string> = {
-    Planning: 'oklch(0.22 0.02 50)',
-    Active: 'oklch(0.55 0.08 155)',
-    'On Hold': 'oklch(0.70 0.12 85)',
-    Completed: 'oklch(0.55 0.03 250)',
-    Cancelled: 'oklch(0.58 0.10 35)',
-  };
+  const STATUS_COLOR_PALETTE = [
+    'oklch(0.55 0.03 250)',
+    'oklch(0.55 0.08 155)',
+    'oklch(0.70 0.12 85)',
+    'oklch(0.58 0.10 35)',
+    'oklch(0.50 0.01 50)',
+    'oklch(0.22 0.02 50)',
+    'oklch(0.55 0.08 260)',
+  ];
 
   return (
     <div className="min-h-screen space-y-6">
@@ -843,8 +845,7 @@ export default function EnhancedDashboard({
                         className="w-3 h-3 rounded-full"
                         style={{
                           backgroundColor:
-                            statusColors[status.status] ||
-                            'oklch(0.55 0.03 250)',
+                            STATUS_COLOR_PALETTE[idx % STATUS_COLOR_PALETTE.length],
                         }}
                       />
                       <span className="text-sm font-medium">

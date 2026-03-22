@@ -107,7 +107,7 @@ export class DashboardService {
 
     const pf: Record<string, unknown> = userPermissions.includes('projects:view_all')
       ? {}
-      : { OR: [{ projectManagerId: userId }, { assignments: { some: { userId } } }] };
+      : { assignments: { some: { userId } } };
 
     const canViewAllClients = userPermissions.includes('clients:view_all');
 
@@ -372,7 +372,29 @@ export class DashboardService {
     });
 
     // ── Funnel ───────────────────────────────────────────────────────
-    const funnelDropOff = this.calculateFunnelDropOff(stageCountMap);
+    // Normalize aliases so "Won"→"Closed Won" and "Lost"→"Closed Lost"
+    // don't appear as separate rows in the funnel
+    const normalizedStageCountMap = { ...stageCountMap };
+    if (normalizedStageCountMap['Won']) {
+      normalizedStageCountMap['Closed Won'] =
+        (normalizedStageCountMap['Closed Won'] ?? 0) + normalizedStageCountMap['Won'];
+      delete normalizedStageCountMap['Won'];
+    }
+    if (normalizedStageCountMap['Lost']) {
+      normalizedStageCountMap['Closed Lost'] =
+        (normalizedStageCountMap['Closed Lost'] ?? 0) + normalizedStageCountMap['Lost'];
+      delete normalizedStageCountMap['Lost'];
+    }
+
+    const pipelineStageNames = await this.prisma.pipelineStage.findMany({
+      where: { pipelineType: 'prospective_project' },
+      orderBy: { sortOrder: 'asc' },
+      select: { name: true },
+    });
+    const funnelDropOff = this.calculateFunnelDropOff(
+      normalizedStageCountMap,
+      pipelineStageNames.map((s) => s.name),
+    );
 
     // ── Time metrics ─────────────────────────────────────────────────
     const { avgTimeToQuote, avgTimeToClose } =
@@ -441,7 +463,7 @@ export class DashboardService {
   ): Promise<{ month: string; revenue: number }[]> {
     const pf: Record<string, unknown> = userPermissions.includes('projects:view_all')
       ? {}
-      : { OR: [{ projectManagerId: userId }, { assignments: { some: { userId } } }] };
+      : { assignments: { some: { userId } } };
 
     // Helper: sum revenue for completed projects in a date range.
     // Falls back to updatedAt when completedDate is null (projects completed
@@ -609,20 +631,11 @@ export class DashboardService {
 
   private calculateFunnelDropOff(
     stageCountMap: Record<string, number>,
+    stages: string[],
   ): DashboardMetrics['funnelDropOff'] {
-    const stages = [
-      'New',
-      'Contacted',
-      'Quoted',
-      'Negotiation',
-      'Closed Won',
-      'Won',
-      'Closed Lost',
-      'Lost',
-    ];
 
     const result: DashboardMetrics['funnelDropOff'] = [];
-    let previousCount = stageCountMap['New'] ?? 0;
+    let previousCount = stages.length > 0 ? (stageCountMap[stages[0]] ?? 0) : 0;
 
     stages.forEach((stage, idx) => {
       const count = stageCountMap[stage] ?? 0;
