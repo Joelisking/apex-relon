@@ -2,7 +2,6 @@ import {
   IsEmail,
   IsString,
   MinLength,
-  IsEnum,
   IsOptional,
 } from 'class-validator';
 
@@ -14,7 +13,7 @@ export class CreateUserDto {
   @MinLength(3)
   name: string;
 
-  @IsEnum(['CEO', 'ADMIN', 'BDM', 'SALES', 'DESIGNER', 'QS'])
+  @IsString()
   role: string;
 
   @IsOptional()
