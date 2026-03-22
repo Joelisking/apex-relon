@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../../audit/audit.service';
 import { WorkflowsService } from '../../workflows/workflows.service';
+import { generateJobNumber } from '../../projects/projects.util';
 
 @Injectable()
 export class CustomerLeadConversionService {
@@ -23,6 +24,7 @@ export class CustomerLeadConversionService {
       closedDate?: string;
       description?: string;
       status?: string;
+      riskStatus?: string;
     },
     userId?: string,
   ) {
@@ -56,13 +58,16 @@ export class CustomerLeadConversionService {
       resolvedStatus = firstStage?.name ?? 'Planning';
     }
 
+    const jobNumber = await generateJobNumber(this.prisma);
+
     const project = await this.prisma.project.create({
       data: {
         name: projectData?.name || `${lead.company} - ${lead.serviceType?.name || lead.projectName || 'Project'}`,
+        jobNumber,
         clientId: customer.id,
         leadId: lead.id,
         status: resolvedStatus,
-        riskStatus: 'On Track',
+        riskStatus: projectData?.riskStatus || 'On Track',
         contractedValue: projectData?.contractedValue ?? lead.contractedValue ?? lead.expectedValue,
         endOfProjectValue: projectData?.endOfProjectValue ?? undefined,
         startDate: projectData?.startDate ? new Date(projectData.startDate) : undefined,

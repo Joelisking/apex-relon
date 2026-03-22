@@ -72,6 +72,7 @@ export class CustomerHealthController {
       closedDate?: string;
       description?: string;
       status?: string;
+      riskStatus?: string;
     },
     @CurrentUser() user: AuthenticatedUser,
   ) {
@@ -87,6 +88,7 @@ export class CustomerHealthController {
         closedDate: body.closedDate,
         description: body.description,
         status: body.status,
+        riskStatus: body.riskStatus,
       },
       user?.id,
     );

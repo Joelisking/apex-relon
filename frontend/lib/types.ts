@@ -344,6 +344,7 @@ export interface CostLog {
 export interface Project {
   id: string;
   name: string;
+  jobNumber?: string | null;
   clientId?: string;
   client?: { id: string; name: string };
   leadId?: string;

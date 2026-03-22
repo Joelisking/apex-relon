@@ -10,6 +10,7 @@ import { PermissionsService } from '../permissions/permissions.service';
 import { Prisma } from '@prisma/client';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { generateJobNumber } from './projects.util';
 import { CreateCostLogDto } from './dto/create-cost-log.dto';
 import { CreateProjectAssignmentDto } from './dto/create-project-assignment.dto';
 
@@ -94,6 +95,8 @@ export class ProjectsService {
       }
     }
 
+    const jobNumber = await generateJobNumber(this.prisma);
+
     // Create project
     const project = await this.prisma.project.create({
       data: {
@@ -101,6 +104,7 @@ export class ProjectsService {
         clientId,
         leadId: leadId || null,
         status,
+        jobNumber,
       },
       include: this.projectInclude,
     });

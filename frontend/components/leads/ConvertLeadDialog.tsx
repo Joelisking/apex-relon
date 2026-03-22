@@ -35,10 +35,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '@/lib/api/client';
+import { api, settingsApi } from '@/lib/api/client';
 import { usersApi, type UserResponse } from '@/lib/api/users-client';
 import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
-import type { Lead } from '@/lib/types';
+import { CreatableSelect } from '@/components/ui/creatable-select';
+import type { DropdownOption, Lead } from '@/lib/types';
 
 const formSchema = z.object({
   projectName: z.string().min(1, 'Project name is required'),
@@ -52,6 +53,7 @@ const formSchema = z.object({
   designerId: z.string().optional(),
   qsId: z.string().optional(),
   description: z.string().optional(),
+  riskStatus: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -71,6 +73,7 @@ export function ConvertLeadDialog({
   const [isConverting, setIsConverting] = useState(false);
   const [pmUsers, setPmUsers] = useState<UserResponse[]>([]);
   const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
+  const [riskOptions, setRiskOptions] = useState<DropdownOption[]>([]);
 
   const leadClosedDate = lead?.dealClosedAt
     ? (typeof lead.dealClosedAt === 'string'
@@ -92,6 +95,7 @@ export function ConvertLeadDialog({
       designerId: '',
       qsId: '',
       description: lead?.notes || '',
+      riskStatus: '',
     },
   });
 
@@ -117,11 +121,12 @@ export function ConvertLeadDialog({
         designerId: '',
         qsId: '',
         description: lead.notes || '',
+        riskStatus: '',
       });
     }
   }, [open, lead]);
 
-  // Fetch users and stages when dialog opens
+  // Fetch users, stages, and risk options when dialog opens
   useEffect(() => {
     if (open) {
       usersApi.getUsers(undefined, 'projects:create').then((res) => setPmUsers(res.users || [])).catch(console.error);
@@ -131,6 +136,7 @@ export function ConvertLeadDialog({
           form.setValue('status', stages[0].name);
         }
       }).catch(console.error);
+      settingsApi.getDropdownOptions('project_risk_status').then(setRiskOptions).catch(console.error);
     }
   }, [open]);
 
@@ -152,6 +158,7 @@ export function ConvertLeadDialog({
           closedDate: values.closedDate || undefined,
           description: values.description || undefined,
           status: values.status,
+          riskStatus: values.riskStatus || undefined,
         }
       );
 
@@ -357,6 +364,34 @@ export function ConvertLeadDialog({
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Risk Status */}
+              <FormField
+                control={form.control}
+                name="riskStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Risk Status</FormLabel>
+                    <FormControl>
+                      <CreatableSelect
+                        options={riskOptions}
+                        value={field.value || undefined}
+                        onChange={field.onChange}
+                        placeholder="Select risk status"
+                        onOptionsChange={setRiskOptions}
+                        onOptionCreated={(label) =>
+                          settingsApi.createDropdownOption({
+                            category: 'project_risk_status',
+                            value: label.toLowerCase().replace(/\s+/g, '_'),
+                            label,
+                          })
+                        }
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

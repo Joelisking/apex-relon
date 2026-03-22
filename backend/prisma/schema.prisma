@@ -242,6 +242,7 @@ model Client {
 model Project {
   id                String                 @id @default(uuid())
   name              String
+  jobNumber         String?                @unique
   clientId          String
   leadId            String?                @unique
   serviceTypeId     String?

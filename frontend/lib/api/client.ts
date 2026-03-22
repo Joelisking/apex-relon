@@ -498,6 +498,7 @@ export const clientsApi = {
       closedDate?: string;
       description?: string;
       status?: string;
+      riskStatus?: string;
     },
     serverToken?: string,
   ) =>
