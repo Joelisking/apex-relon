@@ -3,6 +3,7 @@
 import { format } from 'date-fns';
 import { ProjectStageTimeline } from './ProjectStageTimeline';
 import type { Project, CostLog } from '@/lib/api/projects-client';
+import type { ServiceCategory } from '@/lib/types';
 
 interface Activity {
   id: string;
@@ -33,15 +34,23 @@ interface Props {
   activities: Activity[];
   files: FileUpload[];
   costLogs: CostLog[];
+  serviceCategories?: ServiceCategory[];
 }
 
 function avatarInitials(name: string): string {
   return name.trim().split(/\s+/).map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
-export function ProjectOverviewPanel({ project, activities, files, costLogs }: Props) {
+export function ProjectOverviewPanel({ project, activities, files, costLogs, serviceCategories = [] }: Props) {
   const pm = project.projectManager;
   const team = project.assignments ?? [];
+  const allServiceTypes = serviceCategories.flatMap((c) => c.serviceTypes ?? []);
+  const resolvedProjectTypes = serviceCategories
+    .filter((c) => project.categoryIds?.includes(c.id))
+    .map((c) => c.name);
+  const resolvedServiceTypes = allServiceTypes
+    .filter((st) => project.serviceTypeIds?.includes(st.id))
+    .map((st) => st.name);
 
   return (
     <div className="space-y-6">
@@ -128,23 +137,23 @@ export function ProjectOverviewPanel({ project, activities, files, costLogs }: P
       </div>
 
       {/* Service info */}
-      {(project.serviceType || project.county) && (
+      {(resolvedProjectTypes.length > 0 || resolvedServiceTypes.length > 0 || project.county) && (
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
               Service
             </p>
             <div className="rounded-xl border border-border/40 overflow-hidden divide-y divide-border/40">
-              {project.serviceType?.category && (
-                <div className="flex items-center justify-between px-4 py-3">
-                  <span className="text-sm text-muted-foreground">Category</span>
-                  <span className="text-sm font-medium">{project.serviceType.category.name}</span>
+              {resolvedProjectTypes.length > 0 && (
+                <div className="flex items-start justify-between px-4 py-3 gap-4">
+                  <span className="text-sm text-muted-foreground shrink-0">Project Type</span>
+                  <span className="text-sm font-medium text-right">{resolvedProjectTypes.join(', ')}</span>
                 </div>
               )}
-              {project.serviceType && (
-                <div className="flex items-center justify-between px-4 py-3">
-                  <span className="text-sm text-muted-foreground">Service Type</span>
-                  <span className="text-sm font-medium">{project.serviceType.name}</span>
+              {resolvedServiceTypes.length > 0 && (
+                <div className="flex items-start justify-between px-4 py-3 gap-4">
+                  <span className="text-sm text-muted-foreground shrink-0">Service Categories</span>
+                  <span className="text-sm font-medium text-right">{resolvedServiceTypes.join(', ')}</span>
                 </div>
               )}
               {project.county && (

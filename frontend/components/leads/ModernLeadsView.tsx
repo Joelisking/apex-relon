@@ -644,8 +644,8 @@ export default function ModernLeadsView({
         }
       />
 
-      {/* Pipeline Stats */}
-      <PipelineStats leads={filteredLeads} stages={pipelineStages} />
+      {/* Pipeline Stats — only shown when user can see all leads, not just assigned ones */}
+      {canMoveStage && hasPermission('leads:view_all') && <PipelineStats leads={filteredLeads} stages={pipelineStages} />}
 
       {/* View Switcher */}
       <div className="flex items-center justify-between">

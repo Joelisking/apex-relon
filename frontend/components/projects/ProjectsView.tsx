@@ -395,8 +395,8 @@ export default function ProjectsView({
         )}
       </div>
 
-      {/* Stats */}
-      {!isLoading && <ProjectStats projects={filteredProjects} />}
+      {/* Stats — only shown when user can see all projects, not just assigned ones */}
+      {!isLoading && canMoveStage && hasPermission('projects:view_all') && <ProjectStats projects={filteredProjects} />}
 
       {/* Content */}
       {isLoading ? (

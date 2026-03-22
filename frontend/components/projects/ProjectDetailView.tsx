@@ -40,6 +40,8 @@ import {
   type Project,
   type CostLog,
 } from '@/lib/api/projects-client';
+import { settingsApi } from '@/lib/api/client';
+import type { ServiceCategory } from '@/lib/types';
 import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -143,6 +145,7 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
   const [files, setFiles] = useState<FileUpload[]>([]);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const loadProjectData = async (signal?: AbortSignal) => {
@@ -175,6 +178,7 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
 
   useEffect(() => {
     pipelineApi.getStages('project').then(setProjectStages).catch(console.error);
+    settingsApi.getServiceCategories().then(setServiceCategories).catch(console.error);
   }, []);
 
   const handleStatusChange = async (newStatus: string) => {
@@ -336,6 +340,7 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
                 activities={activities}
                 files={files}
                 costLogs={costLogs}
+                serviceCategories={serviceCategories}
               />
 
               {project.description && (

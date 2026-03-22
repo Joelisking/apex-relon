@@ -2,14 +2,23 @@
 
 import { User } from 'lucide-react';
 import { StageTimeline } from './StageTimeline';
-import type { Lead } from '@/lib/types';
+import type { Lead, ServiceCategory } from '@/lib/types';
 
 interface Props {
   lead: Lead;
   isOverdue: boolean;
+  serviceCategories?: ServiceCategory[];
 }
 
-export function LeadDetailsPanel({ lead, isOverdue }: Props) {
+export function LeadDetailsPanel({ lead, isOverdue, serviceCategories = [] }: Props) {
+  const allServiceTypes = serviceCategories.flatMap((c) => c.serviceTypes ?? []);
+  const resolvedProjectTypes = serviceCategories
+    .filter((c) => lead.categoryIds?.includes(c.id))
+    .map((c) => c.name);
+  const resolvedServiceTypes = allServiceTypes
+    .filter((st) => lead.serviceTypeIds?.includes(st.id))
+    .map((st) => st.name);
+
   return (
     <div className="grid grid-cols-2 gap-6">
       <div className="space-y-2">
@@ -25,16 +34,16 @@ export function LeadDetailsPanel({ lead, isOverdue }: Props) {
             <span className="text-sm text-muted-foreground">Source</span>
             <span className="text-sm font-medium">{lead.source}</span>
           </div>
-          {lead.serviceType?.category && (
-            <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-sm text-muted-foreground">Category</span>
-              <span className="text-sm font-medium">{lead.serviceType.category.name}</span>
+          {resolvedProjectTypes.length > 0 && (
+            <div className="flex items-start justify-between px-4 py-3 gap-4">
+              <span className="text-sm text-muted-foreground shrink-0">Project Type</span>
+              <span className="text-sm font-medium text-right">{resolvedProjectTypes.join(', ')}</span>
             </div>
           )}
-          {lead.serviceType && (
-            <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-sm text-muted-foreground">Service Type</span>
-              <span className="text-sm font-medium">{lead.serviceType.name}</span>
+          {resolvedServiceTypes.length > 0 && (
+            <div className="flex items-start justify-between px-4 py-3 gap-4">
+              <span className="text-sm text-muted-foreground shrink-0">Service Categories</span>
+              <span className="text-sm font-medium text-right">{resolvedServiceTypes.join(', ')}</span>
             </div>
           )}
           <div className="flex items-center justify-between px-4 py-3">

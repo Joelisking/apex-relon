@@ -26,8 +26,8 @@ import {
   CheckCircle,
   ArrowRight,
 } from 'lucide-react';
-import type { Lead } from '@/lib/types';
-import { api, apiFetch } from '@/lib/api/client';
+import type { Lead, ServiceCategory } from '@/lib/types';
+import { api, apiFetch, settingsApi } from '@/lib/api/client';
 import { activitiesApi, type Activity as ActivityType } from '@/lib/api/activities-client';
 import { filesApi, type FileUpload } from '@/lib/api/files-client';
 import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
@@ -73,6 +73,7 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [closeWonDialogOpen, setCloseWonDialogOpen] = useState(false);
   const [leadStages, setLeadStages] = useState<PipelineStage[]>([]);
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
   const [isUpdatingStage, setIsUpdatingStage] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -105,6 +106,7 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
 
   useEffect(() => {
     pipelineApi.getStages('prospective_project').then(setLeadStages).catch(console.error);
+    settingsApi.getServiceCategories().then(setServiceCategories).catch(console.error);
   }, []);
 
   const handleStageChange = async (newStage: string) => {
@@ -349,7 +351,7 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
               <hr className="border-border/40" />
 
               {/* Details + Timeline */}
-              <LeadDetailsPanel lead={lead} isOverdue={!!isOverdue} />
+              <LeadDetailsPanel lead={lead} isOverdue={!!isOverdue} serviceCategories={serviceCategories} />
 
               <hr className="border-border/40" />
 
