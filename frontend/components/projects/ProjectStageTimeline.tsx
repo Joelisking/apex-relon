@@ -50,11 +50,11 @@ export function ProjectStageTimeline({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-[11px] uppercase tracking-[0.06em] text-muted-foreground flex items-center gap-1.5">
+        <h3 className="font-semibold text-xs uppercase tracking-[0.06em] text-muted-foreground flex items-center gap-1.5">
           <Clock className="h-3 w-3" />
           Status Timeline
         </h3>
-        <span className="text-[10px] text-muted-foreground tabular-nums">
+        <span className="text-xs text-muted-foreground tabular-nums">
           {totalDays}d total
         </span>
       </div>
@@ -90,19 +90,19 @@ export function ProjectStageTimeline({
                 <div className="flex items-baseline justify-between w-full min-w-0">
                   <div className="flex items-baseline gap-2 min-w-0">
                     <span
-                      className={`text-[12px] font-medium leading-snug ${
+                      className={`text-sm font-medium leading-snug ${
                         isCurrent
                           ? 'text-foreground'
                           : 'text-muted-foreground'
                       }`}>
                       {entry.status}
                     </span>
-                    <span className="text-[10px] text-muted-foreground/60 tabular-nums shrink-0">
+                    <span className="text-xs text-muted-foreground tabular-nums shrink-0">
                       {enteredDate}
                     </span>
                   </div>
                   <span
-                    className={`text-[11px] tabular-nums shrink-0 ml-2 ${
+                    className={`text-xs tabular-nums shrink-0 ml-2 ${
                       isCurrent
                         ? 'text-primary font-medium'
                         : 'text-muted-foreground'

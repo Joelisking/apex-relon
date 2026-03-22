@@ -123,7 +123,9 @@ function urgencyColor(urgency?: string | null): string {
   if (!urgency) return URGENCY_HEX.Low;
   return (
     URGENCY_HEX[urgency] ??
-    URGENCY_HEX[urgency.charAt(0).toUpperCase() + urgency.slice(1).toLowerCase()] ??
+    URGENCY_HEX[
+      urgency.charAt(0).toUpperCase() + urgency.slice(1).toLowerCase()
+    ] ??
     URGENCY_HEX.Low
   );
 }
@@ -212,8 +214,6 @@ export function LeadDetailsDialog({
   } | null>(null);
   const [draftEmailOpen, setDraftEmailOpen] = useState(false);
 
-
-
   const handleDraftEmail = async (emailType: string) => {
     if (!selectedLead) return;
     setDraftEmailLoading(true);
@@ -247,7 +247,9 @@ export function LeadDetailsDialog({
     selectedLead.stage !== 'Lost' &&
     new Date(selectedLead.likelyStartDate) < new Date();
 
-  const isWon = selectedLead.stage === 'Closed Won' || selectedLead.stage === 'Won';
+  const isWon =
+    selectedLead.stage === 'Closed Won' ||
+    selectedLead.stage === 'Won';
   const isConverted = !!selectedLead.convertedToClientId;
 
   const accentColor = urgencyColor(selectedLead.urgency);
@@ -428,13 +430,16 @@ export function LeadDetailsDialog({
                     {selectedLead.assignedTo?.name || 'Unassigned'}
                   </span>
                 </StatRow>
-                {selectedLead.teamMembers && selectedLead.teamMembers.length > 0 && (
-                  <StatRow label="Team">
-                    <span className="text-xs">
-                      {selectedLead.teamMembers.map((tm) => tm.user.name).join(', ')}
-                    </span>
-                  </StatRow>
-                )}
+                {selectedLead.teamMembers &&
+                  selectedLead.teamMembers.length > 0 && (
+                    <StatRow label="Team">
+                      <span className="text-xs">
+                        {selectedLead.teamMembers
+                          .map((tm) => tm.user.name)
+                          .join(', ')}
+                      </span>
+                    </StatRow>
+                  )}
                 <StatRow label="Urgency">
                   <span
                     className="inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full"
@@ -605,7 +610,9 @@ export function LeadDetailsDialog({
 
           {/* ─── MAIN CONTENT ─── */}
           <div className="flex-1 overflow-hidden flex flex-col">
-            <Tabs defaultValue="overview" className="flex flex-col flex-1 overflow-hidden">
+            <Tabs
+              defaultValue="overview"
+              className="flex flex-col flex-1 overflow-hidden">
               <div className="px-6 pt-3 border-b border-border/40 shrink-0">
                 <TabsList className="h-8 bg-transparent p-0 gap-1">
                   {[
@@ -613,14 +620,16 @@ export function LeadDetailsDialog({
                     { value: 'contacts', label: 'Contacts' },
                     { value: 'tasks', label: 'Tasks' },
                     { value: 'quotes', label: 'Quotes' },
-                    { value: 'documents', label: `Documents${fileCount > 0 ? ` (${fileCount})` : ''}` },
+                    {
+                      value: 'documents',
+                      label: `Documents${fileCount > 0 ? ` (${fileCount})` : ''}`,
+                    },
                     { value: 'fields', label: 'Fields' },
                   ].map((tab) => (
                     <TabsTrigger
                       key={tab.value}
                       value={tab.value}
-                      className="h-7 px-3 text-xs rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
-                    >
+                      className="h-7 px-3 text-xs rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground">
                       {tab.label}
                     </TabsTrigger>
                   ))}
@@ -629,30 +638,55 @@ export function LeadDetailsDialog({
 
               <div className="flex-1 overflow-y-auto">
                 {/* ── Overview: convert banner + AI + activities ── */}
-                <TabsContent value="overview" className="mt-0 p-6 space-y-6">
-                  {isWon && (
-                    isConverted ? (
+                <TabsContent
+                  value="overview"
+                  className="mt-0 p-6 space-y-6">
+                  {isWon &&
+                    (isConverted ? (
                       <div className="flex items-center justify-between p-3.5 bg-muted/30 border border-border/60 rounded-xl">
                         <div>
-                          <p className="font-semibold text-[13px]">Converted to Project</p>
-                          <p className="text-[12px] text-muted-foreground">This prospective project has been converted</p>
+                          <p className="font-semibold text-[13px]">
+                            Converted to Project
+                          </p>
+                          <p className="text-[12px] text-muted-foreground">
+                            This prospective project has been
+                            converted
+                          </p>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => { onOpenChange(false); router.push('/projects'); }} className="gap-1.5 text-[12px]">
-                          View Projects <ArrowRight className="h-3.5 w-3.5" />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            onOpenChange(false);
+                            router.push('/projects');
+                          }}
+                          className="gap-1.5 text-[12px]">
+                          View Projects{' '}
+                          <ArrowRight className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ) : hasPermission('clients:convert') ? (
                       <div className="flex items-center justify-between p-3.5 bg-emerald-50/60 border border-emerald-200/60 rounded-xl">
                         <div>
-                          <p className="font-semibold text-[13px] text-emerald-900">Ready to convert</p>
-                          <p className="text-[12px] text-emerald-700">Create an active project from this lead</p>
+                          <p className="font-semibold text-[13px] text-emerald-900">
+                            Ready to convert
+                          </p>
+                          <p className="text-[12px] text-emerald-700">
+                            Create an active project from this lead
+                          </p>
                         </div>
-                        <Button size="sm" onClick={() => { setLeadToConvert(selectedLead); setConvertDialogOpen(true); }} className="bg-emerald-600 hover:bg-emerald-700 gap-1.5 text-[12px]">
-                          Convert <ArrowRight className="h-3.5 w-3.5" />
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setLeadToConvert(selectedLead);
+                            setConvertDialogOpen(true);
+                          }}
+                          className="bg-emerald-600 hover:bg-emerald-700 gap-1.5 text-[12px]">
+                          Convert{' '}
+                          <ArrowRight className="h-3.5 w-3.5" />
                         </Button>
                       </div>
-                    ) : null
-                  )}
+                    ) : null)}
 
                   <section className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -663,26 +697,59 @@ export function LeadDetailsDialog({
                       <div className="flex gap-1.5">
                         {hasPermission('leads:analyze') && (
                           <>
-                            <Button variant="outline" size="sm" onClick={handleGenerateAISummary} disabled={summaryLoading} className="h-7 text-xs px-2.5">
-                              {summaryLoading && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleGenerateAISummary}
+                              disabled={summaryLoading}
+                              className="h-7 text-xs px-2.5">
+                              {summaryLoading && (
+                                <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                              )}
                               Summary
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleAnalyzeRisk(selectedLead)} disabled={aiLoading} className="h-7 text-xs px-2.5">
-                              {aiLoading && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handleAnalyzeRisk(selectedLead)
+                              }
+                              disabled={aiLoading}
+                              className="h-7 text-xs px-2.5">
+                              {aiLoading && (
+                                <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                              )}
                               Risk Analysis
                             </Button>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" disabled={draftEmailLoading} className="h-7 text-xs px-2.5">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={draftEmailLoading}
+                                  className="h-7 text-xs px-2.5">
                                   <Mail className="h-3 w-3 mr-1" />
-                                  {draftEmailLoading ? 'Drafting...' : 'Draft Email'}
+                                  {draftEmailLoading
+                                    ? 'Drafting...'
+                                    : 'Draft Email'}
                                   <ChevronDown className="h-3 w-3 ml-1" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent>
-                                {['follow-up', 'introduction', 'proposal', 'check-in', 'closing'].map((type) => (
-                                  <DropdownMenuItem key={type} onClick={() => handleDraftEmail(type)}>
-                                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                                {[
+                                  'follow-up',
+                                  'introduction',
+                                  'proposal',
+                                  'check-in',
+                                  'closing',
+                                ].map((type) => (
+                                  <DropdownMenuItem
+                                    key={type}
+                                    onClick={() =>
+                                      handleDraftEmail(type)
+                                    }>
+                                    {type.charAt(0).toUpperCase() +
+                                      type.slice(1)}
                                   </DropdownMenuItem>
                                 ))}
                               </DropdownMenuContent>
@@ -693,41 +760,71 @@ export function LeadDetailsDialog({
                     </div>
 
                     {selectedLead.aiSummary && (
-                      <div className="rounded-xl bg-muted/30 border border-border/50 p-3.5 text-[13px] text-foreground/80 leading-relaxed">
+                      <div className="rounded-xl bg-muted/30 border border-border/50 p-3.5 text-[13px] text-foreground leading-relaxed">
                         {selectedLead.aiSummary}
                       </div>
                     )}
                     {selectedLead.aiRecommendations && (
                       <div className="space-y-2">
-                        <p className="text-[10px] uppercase tracking-[0.06em] font-semibold text-muted-foreground/60">Recommendations</p>
+                        <p className="text-[10px] uppercase tracking-[0.06em] font-semibold text-muted-foreground/60">
+                          Recommendations
+                        </p>
                         <div className="space-y-1.5">
-                          {selectedLead.aiRecommendations.split(';').map((rec, i) => (
-                            <div key={i} className="flex items-start gap-2 text-[13px]">
-                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-bold text-secondary-foreground mt-0.5">{i + 1}</span>
-                              <span className="text-muted-foreground leading-snug">{rec.trim()}</span>
-                            </div>
-                          ))}
+                          {selectedLead.aiRecommendations
+                            .split(';')
+                            .map((rec, i) => (
+                              <div
+                                key={i}
+                                className="flex items-start gap-2 text-[13px]">
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-bold text-secondary-foreground mt-0.5">
+                                  {i + 1}
+                                </span>
+                                <span className="text-muted-foreground leading-snug">
+                                  {rec.trim()}
+                                </span>
+                              </div>
+                            ))}
                         </div>
                       </div>
                     )}
                     {draftEmailOpen && draftEmail && (
                       <div className="mt-4 rounded-lg border bg-muted/30 p-4 space-y-3">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-sm">Drafted Email</h4>
+                          <h4 className="font-medium text-sm">
+                            Drafted Email
+                          </h4>
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline">{draftEmail.tone}</Badge>
-                            <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(`Subject: ${draftEmail.subject}\n\n${draftEmail.body}`); toast.success('Copied to clipboard'); }}>
+                            <Badge variant="outline">
+                              {draftEmail.tone}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  `Subject: ${draftEmail.subject}\n\n${draftEmail.body}`,
+                                );
+                                toast.success('Copied to clipboard');
+                              }}>
                               <Copy className="h-4 w-4 mr-1" /> Copy
                             </Button>
                           </div>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Subject</p>
-                          <p className="text-sm font-medium">{draftEmail.subject}</p>
+                          <p className="text-xs text-muted-foreground mb-1">
+                            Subject
+                          </p>
+                          <p className="text-sm font-medium">
+                            {draftEmail.subject}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Body</p>
-                          <p className="text-sm whitespace-pre-wrap">{draftEmail.body}</p>
+                          <p className="text-xs text-muted-foreground mb-1">
+                            Body
+                          </p>
+                          <p className="text-sm whitespace-pre-wrap">
+                            {draftEmail.body}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -744,18 +841,27 @@ export function LeadDetailsDialog({
                 </TabsContent>
 
                 {/* ── Contacts ── */}
-                <TabsContent value="contacts" className="mt-0 p-6 space-y-6">
+                <TabsContent
+                  value="contacts"
+                  className="mt-0 p-6 space-y-6">
                   {selectedLead.clientId && (
                     <>
                       <hr className="border-border/40" />
-                      <LeadContactsSection leadId={selectedLead.id} clientId={selectedLead.clientId} canEdit={hasPermission('leads:edit')} />
+                      <LeadContactsSection
+                        leadId={selectedLead.id}
+                        clientId={selectedLead.clientId}
+                        canEdit={hasPermission('leads:edit')}
+                      />
                     </>
                   )}
                 </TabsContent>
 
                 {/* ── Tasks ── */}
                 <TabsContent value="tasks" className="mt-0 p-6">
-                  <LinkedTasksSection entityType="LEAD" entityId={selectedLead.id} />
+                  <LinkedTasksSection
+                    entityType="LEAD"
+                    entityId={selectedLead.id}
+                  />
                 </TabsContent>
 
                 {/* ── Quotes ── */}
@@ -765,7 +871,12 @@ export function LeadDetailsDialog({
 
                 {/* ── Documents ── */}
                 <TabsContent value="documents" className="mt-0 p-6">
-                  <FileUploadSection leadId={selectedLead.id} files={files} currentUserId={currentUser.id} onFilesChanged={() => loadFiles(selectedLead.id)} />
+                  <FileUploadSection
+                    leadId={selectedLead.id}
+                    files={files}
+                    currentUserId={currentUser.id}
+                    onFilesChanged={() => loadFiles(selectedLead.id)}
+                  />
                 </TabsContent>
 
                 {/* ── Custom Fields ── */}
@@ -785,7 +896,6 @@ export function LeadDetailsDialog({
           onOpenChange={setIsEditOpen}
           currentUser={currentUser}
           managers={managers}
-
           allUsers={allUsers}
           clients={clients}
           leads={leads}
@@ -833,14 +943,20 @@ function LeadCustomFields({ leadId }: { leadId: string }) {
     mutationFn: () => {
       const fields = definitions.map((def) => {
         const raw = customValues[def.id] ?? '';
-        let value: string | number | boolean | string[] | null = raw || null;
+        let value: string | number | boolean | string[] | null =
+          raw || null;
         if (def.fieldType === 'NUMBER') {
           const n = parseFloat(raw);
           value = raw !== '' && !isNaN(n) ? n : null;
         } else if (def.fieldType === 'BOOLEAN') {
           value = raw === 'true';
         } else if (def.fieldType === 'MULTI_SELECT') {
-          value = raw ? raw.split(',').map((s) => s.trim()).filter(Boolean) : null;
+          value = raw
+            ? raw
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : null;
         }
         return { definitionId: def.id, value };
       });

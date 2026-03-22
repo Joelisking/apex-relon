@@ -204,15 +204,15 @@ export function CostLogsSection({
             <TableBody>
               {costLogs.map((log) => (
                 <TableRow key={log.id}>
-                  <TableCell className="text-xs">
+                  <TableCell className="text-sm">
                     {format(new Date(log.date), 'MMM d, yyyy')}
                   </TableCell>
-                  <TableCell className="text-xs">{log.category}</TableCell>
-                  <TableCell className="text-xs">{log.description}</TableCell>
-                  <TableCell className="text-xs">
+                  <TableCell className="text-sm">{log.category}</TableCell>
+                  <TableCell className="text-sm">{log.description}</TableCell>
+                  <TableCell className="text-sm">
                     {log.user?.name || '-'}
                   </TableCell>
-                  <TableCell className="text-xs text-right font-medium">
+                  <TableCell className="text-sm text-right font-medium">
                     ${log.amount.toLocaleString()}
                   </TableCell>
                   {canEditCosts && (
@@ -241,17 +241,17 @@ export function CostLogsSection({
       {/* Summary footer */}
       <div className="grid grid-cols-4 gap-3 rounded-lg border p-3">
         <div>
-          <p className="text-xs text-muted-foreground">Total Cost</p>
+          <p className="text-xs font-medium text-muted-foreground">Total Cost</p>
           <p className="text-sm font-semibold">${totalCost.toLocaleString()}</p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Est. Revenue</p>
+          <p className="text-xs font-medium text-muted-foreground">Est. Revenue</p>
           <p className="text-sm font-semibold">
             ${estimatedRevenue.toLocaleString()}
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Gross Margin</p>
+          <p className="text-xs font-medium text-muted-foreground">Gross Margin</p>
           <p
             className={`text-sm font-semibold ${
               grossMargin >= 0 ? 'text-green-600' : 'text-red-600'
@@ -261,7 +261,7 @@ export function CostLogsSection({
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Margin %</p>
+          <p className="text-xs font-medium text-muted-foreground">Margin %</p>
           <p
             className={`text-sm font-semibold ${
               marginPercent >= 0 ? 'text-green-600' : 'text-red-600'

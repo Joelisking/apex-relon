@@ -79,7 +79,7 @@ export function LeadCustomFields({ leadId }: Props) {
 
   return (
     <section className="space-y-4">
-      <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground flex items-center gap-1.5">
+      <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground flex items-center gap-1.5">
         <SlidersHorizontal className="h-3.5 w-3.5" /> Custom Fields
       </h3>
       <div className="space-y-3">
@@ -87,7 +87,7 @@ export function LeadCustomFields({ leadId }: Props) {
           const currentVal = customValues[def.id] ?? '';
           return (
             <div key={def.id} className="space-y-1.5">
-              <label className="text-[11px] font-medium text-muted-foreground/80">
+              <label className="text-xs font-medium text-muted-foreground">
                 {def.label}
                 {def.required && <span className="text-destructive ml-0.5">*</span>}
               </label>

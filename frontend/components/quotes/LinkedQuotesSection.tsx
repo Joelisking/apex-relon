@@ -77,11 +77,11 @@ export function LinkedQuotesSection({
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground/60">
+        <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
           <Receipt className="h-3.5 w-3.5" />
           Quotes
           {quotes.length > 0 && (
-            <span className="ml-0.5 text-muted-foreground/40">
+            <span className="ml-0.5 text-muted-foreground/60">
               · {quotes.length}
             </span>
           )}
@@ -105,11 +105,11 @@ export function LinkedQuotesSection({
       </div>
 
       {isLoading ? (
-        <p className="text-xs text-muted-foreground/40 py-2">
+        <p className="text-xs text-muted-foreground py-2">
           Loading quotes…
         </p>
       ) : quotes.length === 0 ? (
-        <p className="text-xs text-muted-foreground/40 py-3 text-center">
+        <p className="text-xs text-muted-foreground py-3 text-center">
           No quotes yet.
         </p>
       ) : (
@@ -122,7 +122,7 @@ export function LinkedQuotesSection({
                 key={quote.id}
                 className="flex items-center gap-3 px-3 py-2 rounded-lg border border-border/50 bg-background hover:bg-muted/30 transition-colors">
                 {/* Quote number */}
-                <span className="shrink-0 text-xs font-medium text-muted-foreground/60 tabular-nums w-14">
+                <span className="shrink-0 text-xs font-medium text-muted-foreground tabular-nums w-14">
                   #{quote.quoteNumber}
                 </span>
 
@@ -153,7 +153,7 @@ export function LinkedQuotesSection({
 
                 {/* Valid until */}
                 {quote.validUntil && (
-                  <span className="shrink-0 text-[11px] text-muted-foreground/60">
+                  <span className="shrink-0 text-xs text-muted-foreground">
                     Due {format(new Date(quote.validUntil), 'MMM d')}
                   </span>
                 )}

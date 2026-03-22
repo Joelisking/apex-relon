@@ -116,15 +116,15 @@ function avatarInitials(name: string): string {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs uppercase tracking-[0.06em] text-muted-foreground font-semibold mb-3">{children}</p>
+    <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3">{children}</p>
   );
 }
 
 function StatRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-xs font-medium text-foreground text-right">{children}</span>
+    <div className="flex items-center justify-between py-2.5 border-b border-border/30 last:border-0">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium text-foreground text-right">{children}</span>
     </div>
   );
 }
@@ -312,7 +312,7 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
 
               {project.description && (
                 <section className="space-y-2">
-                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground flex items-center gap-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground flex items-center gap-2">
                     <FileText className="h-3 w-3" /> Description
                   </h3>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{project.description}</p>
@@ -350,7 +350,7 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
 
             <TabsContent value="crew" className="mt-0">
               <div className="space-y-3">
-                <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground mb-3">
+                <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground mb-3">
                   Crew Assignments
                 </h3>
                 <ProjectAssignmentPanel

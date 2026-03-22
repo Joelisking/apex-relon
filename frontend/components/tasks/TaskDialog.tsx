@@ -146,6 +146,7 @@ export function TaskDialog({
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignQuery, setAssignQuery] = useState('');
   const [taskTypeOpen, setTaskTypeOpen] = useState(false);
+  const [dueDateOpen, setDueDateOpen] = useState(false);
 
   // Task types filtered by the linked entity's project type
   const [linkedServiceTypeId, setLinkedServiceTypeId] = useState<string | undefined>(undefined);
@@ -455,7 +456,7 @@ export function TaskDialog({
               <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
                 Due Date
               </p>
-              <Popover>
+              <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     type="button"
@@ -481,14 +482,15 @@ export function TaskDialog({
                         ? new Date(form.dueDate + 'T00:00:00')
                         : undefined
                     }
-                    onSelect={(date) =>
+                    onSelect={(date) => {
                       setForm({
                         ...form,
                         dueDate: date
                           ? format(date, 'yyyy-MM-dd')
                           : '',
-                      })
-                    }
+                      });
+                      setDueDateOpen(false);
+                    }}
                     initialFocus
                   />
                   {form.dueDate && (
@@ -497,9 +499,10 @@ export function TaskDialog({
                         variant="ghost"
                         size="sm"
                         className="w-full text-xs text-muted-foreground"
-                        onClick={() =>
-                          setForm({ ...form, dueDate: '' })
-                        }>
+                        onClick={() => {
+                          setForm({ ...form, dueDate: '' });
+                          setDueDateOpen(false);
+                        }}>
                         <X className="mr-1 h-3 w-3" />
                         Clear date
                       </Button>

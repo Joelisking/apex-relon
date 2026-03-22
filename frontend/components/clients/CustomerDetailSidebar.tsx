@@ -43,7 +43,7 @@ function getHealthHex(score: number): string {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs uppercase tracking-[0.06em] text-muted-foreground font-semibold mb-3">
+    <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3">
       {children}
     </p>
   );
@@ -60,10 +60,10 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-start gap-2">
-      <Icon className="h-3 w-3 text-muted-foreground/40 mt-0.5 shrink-0" />
+      <Icon className="h-3.5 w-3.5 text-muted-foreground/40 mt-0.5 shrink-0" />
       <div className="min-w-0">
-        <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.04em]">{label}</p>
-        <p className="text-xs text-foreground break-words">{value}</p>
+        <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">{label}</p>
+        <p className="text-sm text-foreground break-words">{value}</p>
       </div>
     </div>
   );
@@ -115,38 +115,38 @@ export function CustomerDetailSidebar({
       <div className="px-5 pt-4 pb-4 border-b border-border/40">
         <div className="flex items-start gap-3 mb-3">
           <div
-            className="h-9 w-9 rounded-full shrink-0 flex items-center justify-center text-white font-bold text-[13px]"
+            className="h-10 w-10 rounded-full shrink-0 flex items-center justify-center text-white font-bold text-sm"
             style={{ backgroundColor: accentColor }}>
             {clientInitials}
           </div>
           <div className="min-w-0 flex-1 pt-0.5">
-            <h2 className="text-sm font-semibold leading-tight line-clamp-2 text-foreground">
+            <h2 className="text-base font-semibold leading-tight line-clamp-2 text-foreground">
               {clientDisplayName}
             </h2>
             {clientDisplaySubtitle ? (
-              <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+              <p className="text-sm text-muted-foreground truncate mt-0.5">
                 {clientDisplaySubtitle}
               </p>
             ) : client.industry ? (
-              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{client.industry}</p>
+              <p className="text-sm text-muted-foreground truncate mt-0.5">{client.industry}</p>
             ) : null}
           </div>
         </div>
 
         <div className="flex flex-wrap gap-1.5">
           <span
-            className={`inline-flex items-center gap-1.5 text-[11px] font-medium rounded-full px-2.5 py-1 ${statusColors}`}>
+            className={`inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-1 ${statusColors}`}>
             <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot}`} />
             {client.status}
           </span>
           {client.healthScore != null && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium rounded-full px-2.5 py-1 bg-muted text-muted-foreground">
+            <span className="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-1 bg-muted text-muted-foreground">
               <Heart className="h-2.5 w-2.5" />
               {client.healthScore}%
             </span>
           )}
           {client.segment && (
-            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium bg-muted text-muted-foreground">
+            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-muted text-muted-foreground">
               {client.segment}
             </span>
           )}
@@ -158,11 +158,11 @@ export function CustomerDetailSidebar({
         <SectionLabel>Financials</SectionLabel>
         <div className="grid grid-cols-1 gap-px bg-border/40 rounded-lg overflow-hidden">
           <div className="bg-card px-3 py-2.5 space-y-0.5">
-            <p className="text-[9px] uppercase tracking-[0.06em] text-muted-foreground font-medium flex items-center gap-1">
-              <DollarSign className="h-2.5 w-2.5" />
+            <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium flex items-center gap-1">
+              <DollarSign className="h-3 w-3" />
               Lifetime Revenue
             </p>
-            <p className="text-[22px] font-bold tabular-nums leading-none text-foreground">
+            <p className="text-2xl font-bold tabular-nums leading-none text-foreground">
               ${((client.metrics?.totalRevenue || client.lifetimeRevenue || 0) / 1000).toFixed(0)}k
             </p>
           </div>
@@ -171,11 +171,11 @@ export function CustomerDetailSidebar({
         {client.healthScore != null && (
           <div className="mt-3 space-y-1.5">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-[0.04em]">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">
                 Health Score
               </p>
               <span
-                className="text-[11px] font-semibold tabular-nums"
+                className="text-sm font-semibold tabular-nums"
                 style={{ color: getHealthHex(client.healthScore) }}>
                 {client.healthScore}%
               </span>
@@ -196,11 +196,11 @@ export function CustomerDetailSidebar({
             const Icon = m.icon;
             return (
               <div key={m.label} className="bg-card px-2.5 py-2.5 text-center">
-                <p className="text-[18px] font-bold tabular-nums leading-none text-foreground mb-1">
+                <p className="text-lg font-bold tabular-nums leading-none text-foreground mb-1">
                   {m.value}
                 </p>
-                <div className="flex items-center justify-center gap-1 text-[9px] text-muted-foreground uppercase tracking-[0.04em]">
-                  <Icon className="h-2.5 w-2.5" />
+                <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground uppercase tracking-wider">
+                  <Icon className="h-3 w-3" />
                   {m.label}
                 </div>
               </div>

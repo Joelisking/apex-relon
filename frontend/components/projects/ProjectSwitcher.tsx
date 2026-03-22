@@ -11,10 +11,19 @@ interface ProjectSwitcherProps {
 }
 
 function avatarInitials(name: string): string {
-  return name.trim().split(/\s+/).map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 }
 
-export function ProjectSwitcher({ currentProjectId, currentProjectName }: ProjectSwitcherProps) {
+export function ProjectSwitcher({
+  currentProjectId,
+  currentProjectName,
+}: ProjectSwitcherProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -36,12 +45,16 @@ export function ProjectSwitcher({ currentProjectId, currentProjectName }: Projec
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         close();
       }
     }
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    return () =>
+      document.removeEventListener('mousedown', handleClick);
   }, [close]);
 
   function navigate(id: string) {
@@ -52,15 +65,20 @@ export function ProjectSwitcher({ currentProjectId, currentProjectName }: Projec
   const loading = projects === null;
   const filtered = (projects ?? []).filter((p) => {
     const q = query.toLowerCase();
-    return p.name.toLowerCase().includes(q) || (p.jobNumber?.toLowerCase().includes(q) ?? false);
+    return (
+      p.name.toLowerCase().includes(q) ||
+      (p.jobNumber?.toLowerCase().includes(q) ?? false)
+    );
   });
 
   return (
     <div ref={containerRef} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 text-sm font-normal text-foreground/80 hover:text-foreground transition-colors group">
-        <span className="max-w-65 truncate">{currentProjectName}</span>
+        className="inline-flex items-center gap-1 text-sm font-normal text-foreground hover:text-foreground transition-colors group">
+        <span className="max-w-65 truncate">
+          {currentProjectName}
+        </span>
         <ChevronsUpDown className="h-4 w-4 text-muted-foreground/60 shrink-0 group-hover:text-muted-foreground" />
       </button>
 
@@ -76,14 +94,20 @@ export function ProjectSwitcher({ currentProjectId, currentProjectName }: Projec
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
               onKeyDown={(e) => e.key === 'Escape' && close()}
             />
-            <kbd className="text-[10px] text-muted-foreground/50 font-mono border border-border/50 rounded px-1">Esc</kbd>
+            <kbd className="text-[10px] text-muted-foreground/50 font-mono border border-border/50 rounded px-1">
+              Esc
+            </kbd>
           </div>
 
           <div className="max-h-72 overflow-y-auto py-1">
             {loading ? (
-              <p className="text-xs text-muted-foreground text-center py-6">Loading…</p>
+              <p className="text-xs text-muted-foreground text-center py-6">
+                Loading…
+              </p>
             ) : filtered.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-6">No projects found</p>
+              <p className="text-xs text-muted-foreground text-center py-6">
+                No projects found
+              </p>
             ) : (
               filtered.map((p) => {
                 const isCurrent = p.id === currentProjectId;
@@ -98,12 +122,19 @@ export function ProjectSwitcher({ currentProjectId, currentProjectName }: Projec
                       {avatarInitials(p.name)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className={`text-sm truncate ${isCurrent ? 'font-semibold' : 'font-medium'}`}>{p.name}</p>
+                      <p
+                        className={`text-sm truncate ${isCurrent ? 'font-semibold' : 'font-medium'}`}>
+                        {p.name}
+                      </p>
                       {p.jobNumber && (
-                        <p className="text-[10px] font-mono text-muted-foreground/70">{p.jobNumber}</p>
+                        <p className="text-[10px] font-mono text-muted-foreground/70">
+                          {p.jobNumber}
+                        </p>
                       )}
                     </div>
-                    {isCurrent && <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />}
+                    {isCurrent && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                    )}
                   </button>
                 );
               })

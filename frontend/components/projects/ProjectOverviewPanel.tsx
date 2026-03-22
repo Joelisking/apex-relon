@@ -51,24 +51,22 @@ export function ProjectOverviewPanel({ project, activities, files, costLogs }: P
       <div className="grid grid-cols-2 gap-6">
         {/* Team */}
         <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground font-semibold">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
             Team
           </p>
           <div className="rounded-xl border border-border/40 overflow-hidden divide-y divide-border/40">
             {team.map(({ role, person }) => (
-              <div key={role} className="flex items-center justify-between px-4 py-2.5">
-                <span className="text-[11px] text-muted-foreground">{role}</span>
+              <div key={role} className="flex items-center justify-between px-4 py-3">
+                <span className="text-sm text-muted-foreground">{role}</span>
                 {person ? (
-                  <div className="flex items-center gap-1.5">
-                    <div
-                      className="h-5 w-5 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold"
-                      style={{ fontSize: '7px' }}>
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-xs shrink-0">
                       {avatarInitials(person.name)}
                     </div>
-                    <span className="text-[12px] font-medium">{person.name}</span>
+                    <span className="text-sm font-medium">{person.name}</span>
                   </div>
                 ) : (
-                  <span className="text-[12px] text-muted-foreground/50">Unassigned</span>
+                  <span className="text-sm text-muted-foreground">Unassigned</span>
                 )}
               </div>
             ))}
@@ -77,45 +75,45 @@ export function ProjectOverviewPanel({ project, activities, files, costLogs }: P
 
         {/* Timeline + counts */}
         <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground font-semibold">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
             Timeline
           </p>
           <div className="rounded-xl border border-border/40 overflow-hidden divide-y divide-border/40">
             {project.startDate && (
-              <div className="flex items-center justify-between px-4 py-2.5">
-                <span className="text-[11px] text-muted-foreground">Start</span>
-                <span className="text-[12px] font-mono tabular-nums">
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-sm text-muted-foreground">Start</span>
+                <span className="text-sm font-mono tabular-nums">
                   {format(new Date(project.startDate), 'MMM d, yyyy')}
                 </span>
               </div>
             )}
             {project.estimatedDueDate && (
-              <div className="flex items-center justify-between px-4 py-2.5">
-                <span className="text-[11px] text-muted-foreground">Est. Due</span>
-                <span className="text-[12px] font-mono tabular-nums">
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-sm text-muted-foreground">Est. Due</span>
+                <span className="text-sm font-mono tabular-nums">
                   {format(new Date(project.estimatedDueDate), 'MMM d, yyyy')}
                 </span>
               </div>
             )}
             {project.completedDate && (
-              <div className="flex items-center justify-between px-4 py-2.5">
-                <span className="text-[11px] text-muted-foreground">Completed</span>
-                <span className="text-[12px] font-mono tabular-nums text-emerald-700">
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-sm text-muted-foreground">Completed</span>
+                <span className="text-sm font-mono tabular-nums text-emerald-700">
                   {format(new Date(project.completedDate), 'MMM d, yyyy')}
                 </span>
               </div>
             )}
-            <div className="flex items-center justify-between px-4 py-2.5">
-              <span className="text-[11px] text-muted-foreground">Activities</span>
-              <span className="text-[12px] font-mono">{activities.length}</span>
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-sm text-muted-foreground">Activities</span>
+              <span className="text-sm font-mono">{activities.length}</span>
             </div>
-            <div className="flex items-center justify-between px-4 py-2.5">
-              <span className="text-[11px] text-muted-foreground">Files</span>
-              <span className="text-[12px] font-mono">{files.length}</span>
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-sm text-muted-foreground">Files</span>
+              <span className="text-sm font-mono">{files.length}</span>
             </div>
-            <div className="flex items-center justify-between px-4 py-2.5">
-              <span className="text-[11px] text-muted-foreground">Cost Logs</span>
-              <span className="text-[12px] font-mono">{costLogs.length}</span>
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-sm text-muted-foreground">Cost Logs</span>
+              <span className="text-sm font-mono">{costLogs.length}</span>
             </div>
           </div>
         </div>

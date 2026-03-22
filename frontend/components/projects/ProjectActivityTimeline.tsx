@@ -189,7 +189,7 @@ export function ProjectActivityTimeline({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+        <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
           Activity Timeline
         </p>
         <Button
@@ -204,7 +204,7 @@ export function ProjectActivityTimeline({
 
       {activities.length === 0 ? (
         <div className="rounded-xl border border-border/40 border-dashed bg-muted/10 py-8 text-center">
-          <p className="text-[11px] text-muted-foreground/50">
+          <p className="text-xs text-muted-foreground">
             No activities yet
           </p>
         </div>
@@ -241,12 +241,12 @@ export function ProjectActivityTimeline({
                       </span>
                     )}
 
-                    <span className="text-[11px] font-semibold text-foreground">
+                    <span className="text-xs font-semibold text-foreground">
                       {activity.user.name}
                     </span>
 
                     <div className="ml-auto flex items-center gap-2 shrink-0">
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
                         <span className="inline-flex items-center gap-1">
                           <Calendar className="h-2.5 w-2.5" />
                           {format(
@@ -276,12 +276,12 @@ export function ProjectActivityTimeline({
                     </div>
                   </div>
 
-                  <p className="text-[12px] text-foreground leading-snug">
+                  <p className="text-sm text-foreground leading-snug">
                     {activity.reason}
                   </p>
 
                   {activity.notes && (
-                    <p className="text-[11px] text-muted-foreground mt-1 whitespace-pre-wrap leading-snug">
+                    <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap leading-snug">
                       {activity.notes}
                     </p>
                   )}
@@ -327,7 +327,7 @@ export function ProjectActivityTimeline({
 
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
+              <Label className="text-xs uppercase tracking-[0.06em] text-muted-foreground font-semibold">
                 Activity Type
               </Label>
               <Select
@@ -356,7 +356,7 @@ export function ProjectActivityTimeline({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
+                <Label className="text-xs uppercase tracking-[0.06em] text-muted-foreground font-semibold">
                   Date
                 </Label>
                 <DatePicker
@@ -367,7 +367,7 @@ export function ProjectActivityTimeline({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
+                <Label className="text-xs uppercase tracking-[0.06em] text-muted-foreground font-semibold">
                   Time
                 </Label>
                 <Input
@@ -380,7 +380,7 @@ export function ProjectActivityTimeline({
 
             {hasMeetingSubtype && (
               <div className="space-y-1.5">
-                <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
+                <Label className="text-xs uppercase tracking-[0.06em] text-muted-foreground font-semibold">
                   Meeting Type
                 </Label>
                 <Select
@@ -401,7 +401,7 @@ export function ProjectActivityTimeline({
             )}
 
             <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
+              <Label className="text-xs uppercase tracking-[0.06em] text-muted-foreground font-semibold">
                 Reason <span className="text-destructive">*</span>
               </Label>
               <Input
@@ -412,7 +412,7 @@ export function ProjectActivityTimeline({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
+              <Label className="text-xs uppercase tracking-[0.06em] text-muted-foreground font-semibold">
                 Notes{' '}
                 <span className="normal-case tracking-normal font-normal text-muted-foreground/60">
                   (optional)

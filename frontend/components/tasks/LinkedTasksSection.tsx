@@ -127,16 +127,16 @@ export function LinkedTasksSection({
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground/60">
+        <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
           <ClipboardList className="h-3.5 w-3.5" />
           Tasks
           {pending.length > 0 && (
-            <span className="ml-0.5 text-muted-foreground/40">
+            <span className="ml-0.5 text-muted-foreground/60">
               · {pending.length} open
             </span>
           )}
           {cancelled.length > 0 && (
-            <span className="ml-0.5 text-muted-foreground/40">
+            <span className="ml-0.5 text-muted-foreground/60">
               · {cancelled.length} cancelled
             </span>
           )}
@@ -155,11 +155,11 @@ export function LinkedTasksSection({
       </div>
 
       {isLoading ? (
-        <p className="text-xs text-muted-foreground/40 py-2">
+        <p className="text-xs text-muted-foreground py-2">
           Loading tasks...
         </p>
       ) : orderedTasks.length === 0 ? (
-        <p className="text-xs text-muted-foreground/40 py-3 text-center">
+        <p className="text-xs text-muted-foreground py-3 text-center">
           No tasks linked yet.
         </p>
       ) : (
@@ -227,7 +227,7 @@ export function LinkedTasksSection({
                   </p>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     {task.entityName && (
-                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground/50">
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Link2 className="h-3 w-3 shrink-0" />
                         <span className="truncate max-w-[120px]">{task.entityName}</span>
                       </span>
@@ -235,10 +235,10 @@ export function LinkedTasksSection({
                     {task.dueDate && (
                       <span
                         className={cn(
-                          'flex items-center gap-1 text-[11px]',
+                          'flex items-center gap-1 text-xs',
                           isOverdue
                             ? 'text-destructive'
-                            : 'text-muted-foreground/60',
+                            : 'text-muted-foreground',
                         )}>
                         {isOverdue ? (
                           <AlertTriangle className="h-3 w-3" />
@@ -249,7 +249,7 @@ export function LinkedTasksSection({
                       </span>
                     )}
                     {task.assignedTo && (
-                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
                         <User className="h-3 w-3" />
                         {task.assignedTo.name.split(' ')[0]}
                       </span>

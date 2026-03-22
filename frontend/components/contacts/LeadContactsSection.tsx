@@ -46,14 +46,14 @@ function ContactCompactCard({
   return (
     <div className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2 bg-muted/10 hover:bg-muted/20 transition-colors">
       <div className="flex items-center gap-2.5 min-w-0">
-        <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0 text-[10px] font-semibold text-muted-foreground">
+        <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0 text-xs font-semibold text-muted-foreground">
           {contactInitials(contact)}
         </div>
         <div className="min-w-0">
-          <p className="text-[12px] font-medium leading-snug truncate">
+          <p className="text-sm font-medium leading-snug truncate">
             {contact.firstName} {contact.lastName}
           </p>
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {contact.jobTitle && (
               <span className="truncate">{contact.jobTitle}</span>
             )}
@@ -164,7 +164,7 @@ export function LeadContactsSection({
       <div className="space-y-2">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-semibold">
+          <p className="text-xs uppercase tracking-[0.06em] text-muted-foreground font-semibold">
             Client Contacts
           </p>
           {canEdit && clientId && (
@@ -172,7 +172,7 @@ export function LeadContactsSection({
               variant="ghost"
               size="sm"
               onClick={() => setPickerOpen(true)}
-              className="h-6 text-[11px] px-2 gap-1 text-muted-foreground hover:text-foreground">
+              className="h-6 text-xs px-2 gap-1 text-muted-foreground hover:text-foreground">
               <Link2 className="h-3 w-3" />
               Link
             </Button>
@@ -181,7 +181,7 @@ export function LeadContactsSection({
 
         {/* Linked contacts list */}
         {linkedContacts.length === 0 ? (
-          <p className="text-[12px] text-muted-foreground/50 py-1">
+          <p className="text-sm text-muted-foreground py-1">
             No contacts linked.
             {canEdit && clientId && ' Use "Link" to associate contacts.'}
           </p>
@@ -216,10 +216,10 @@ export function LeadContactsSection({
             ) : clientContacts.length === 0 ? (
               <div className="py-8 text-center">
                 <User className="h-7 w-7 mx-auto mb-2 text-muted-foreground/30" />
-                <p className="text-sm text-muted-foreground/60">
+                <p className="text-sm text-muted-foreground">
                   No contacts on the parent client.
                 </p>
-                <p className="text-xs text-muted-foreground/40 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   Add contacts from the client record first.
                 </p>
               </div>
