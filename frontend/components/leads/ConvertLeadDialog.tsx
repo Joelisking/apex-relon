@@ -82,7 +82,7 @@ export function ConvertLeadDialog({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
     defaultValues: {
       projectName: lead?.projectName || (lead ? `${lead.company} - ${lead.serviceType?.name || 'Project'}` : ''),
-      status: 'Planning',
+      status: '',
       contractedValue: lead?.contractedValue ?? lead?.expectedValue ?? 0,
       endOfProjectValue: undefined,
       startDate: '',
@@ -315,7 +315,7 @@ export function ConvertLeadDialog({
                       value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Loading stages…" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>

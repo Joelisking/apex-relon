@@ -30,10 +30,12 @@ import type { Lead } from '@/lib/types';
 import { api, apiFetch } from '@/lib/api/client';
 import { activitiesApi, type Activity as ActivityType } from '@/lib/api/activities-client';
 import { filesApi, type FileUpload } from '@/lib/api/files-client';
+import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
 import { ActivityTimeline } from './ActivityTimeline';
 import { FileUploadSection } from './FileUploadSection';
 import { getProbability, urgencyColor } from './constants';
 import { EditLeadDialog } from './EditLeadDialog';
+import { CloseWonDialog } from './CloseWonDialog';
 import { ConvertLeadDialog } from './ConvertLeadDialog';
 import { LeadDetailHeader } from './LeadDetailHeader';
 import { LeadDetailsPanel } from './LeadDetailsPanel';
@@ -68,6 +70,9 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [closeWonDialogOpen, setCloseWonDialogOpen] = useState(false);
+  const [leadStages, setLeadStages] = useState<PipelineStage[]>([]);
+  const [isUpdatingStage, setIsUpdatingStage] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
 
@@ -96,6 +101,37 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
     loadLeadData(controller.signal);
     return () => controller.abort();
   }, [leadId]);
+
+  useEffect(() => {
+    pipelineApi.getStages('prospective_project').then(setLeadStages).catch(console.error);
+  }, []);
+
+  const handleStageChange = async (newStage: string) => {
+    if (!lead || newStage === lead.stage) return;
+    if (newStage === 'Closed Won') {
+      setCloseWonDialogOpen(true);
+      return;
+    }
+    setIsUpdatingStage(true);
+    try {
+      await api.leads.update(lead.id, { stage: newStage });
+      setLead({ ...lead, stage: newStage });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success(`Stage updated to ${newStage}`);
+    } catch {
+      toast.error('Failed to update stage');
+    } finally {
+      setIsUpdatingStage(false);
+    }
+  };
+
+  const handleCloseWonSuccess = (updatedLead: Lead, convertToProject: boolean) => {
+    setLead(updatedLead);
+    queryClient.invalidateQueries({ queryKey: ['leads'] });
+    if (convertToProject && !updatedLead.convertedToClientId) {
+      setConvertDialogOpen(true);
+    }
+  };
 
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -242,6 +278,9 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
         fileCount={fileCount}
         canEdit={hasPermission('leads:edit')}
         canDelete={hasPermission('leads:delete')}
+        stages={leadStages}
+        isUpdatingStage={isUpdatingStage}
+        onStageChange={handleStageChange}
         onEdit={() => setIsEditOpen(true)}
         onDelete={() => setDeleteDialogOpen(true)}
       />
@@ -354,6 +393,14 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
           }}
         />
       )}
+
+      {/* Close Won Dialog */}
+      <CloseWonDialog
+        lead={lead}
+        open={closeWonDialogOpen}
+        onOpenChange={setCloseWonDialogOpen}
+        onSuccess={handleCloseWonSuccess}
+      />
 
       {/* Convert Dialog */}
       {lead && isWon && !isConverted && (

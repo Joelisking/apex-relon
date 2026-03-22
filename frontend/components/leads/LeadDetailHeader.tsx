@@ -1,8 +1,15 @@
 'use client';
 
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { Lead } from '@/lib/types';
+import type { PipelineStage } from '@/lib/api/pipeline-client';
 
 const RISK_CHIP: Record<string, string> = {
   High: 'text-red-700 bg-red-50 border-red-200',
@@ -29,6 +36,9 @@ interface Props {
   fileCount: number;
   canEdit: boolean;
   canDelete: boolean;
+  stages: PipelineStage[];
+  isUpdatingStage: boolean;
+  onStageChange: (stage: string) => void;
   onEdit: () => void;
   onDelete: () => void;
 }
@@ -50,9 +60,13 @@ export function LeadDetailHeader({
   fileCount,
   canEdit,
   canDelete,
+  stages,
+  isUpdatingStage,
+  onStageChange,
   onEdit,
   onDelete,
 }: Props) {
+  const isClosedFinal = lead.stage === 'Closed Won' || lead.stage === 'Closed Lost';
   return (
     <div className="rounded-xl border border-border/50 overflow-hidden mb-6">
       {/* Accent bar */}
@@ -84,9 +98,35 @@ export function LeadDetailHeader({
               <p className="text-[13px] text-muted-foreground mt-0.5">{lead.company}</p>
             )}
             <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
-              <span className="inline-flex items-center text-[11px] font-semibold rounded-full px-2.5 py-1 bg-secondary border border-border/60">
-                {lead.stage}
-              </span>
+              {canEdit && stages.length > 0 && !isClosedFinal ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      disabled={isUpdatingStage}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2.5 py-1 bg-secondary border border-border/60 hover:bg-accent transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                      {isUpdatingStage ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : null}
+                      {lead.stage}
+                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[160px]">
+                    {stages.map((s) => (
+                      <DropdownMenuItem
+                        key={s.id}
+                        onSelect={() => onStageChange(s.name)}
+                        className={s.name === lead.stage ? 'font-semibold' : ''}>
+                        {s.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <span className="inline-flex items-center text-[11px] font-semibold rounded-full px-2.5 py-1 bg-secondary border border-border/60">
+                  {lead.stage}
+                </span>
+              )}
               <span className="text-[11px] text-muted-foreground tabular-nums">{probability}%</span>
               {timingBadge}
               <span
