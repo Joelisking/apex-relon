@@ -71,6 +71,7 @@ export function ConvertLeadDialog({
 }: ConvertLeadDialogProps) {
   const queryClient = useQueryClient();
   const [isConverting, setIsConverting] = useState(false);
+  const [isLoadingStages, setIsLoadingStages] = useState(true);
   const [pmUsers, setPmUsers] = useState<UserResponse[]>([]);
   const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
   const [riskOptions, setRiskOptions] = useState<DropdownOption[]>([]);
@@ -106,7 +107,7 @@ export function ConvertLeadDialog({
         projectName:
           lead.projectName ||
           `${lead.company} - ${lead.serviceType?.name || 'Project'}`,
-        status: projectStages[0]?.name ?? '',
+        status: '',
         contractedValue:
           lead.contractedValue ?? lead.expectedValue ?? 0,
         endOfProjectValue: undefined,
@@ -130,12 +131,14 @@ export function ConvertLeadDialog({
   useEffect(() => {
     if (open) {
       usersApi.getUsers(undefined, 'projects:create').then((res) => setPmUsers(res.users || [])).catch(console.error);
+      setIsLoadingStages(true);
       pipelineApi.getStages('project').then((stages) => {
         setProjectStages(stages);
         if (stages.length > 0) {
           form.setValue('status', stages[0].name);
         }
-      }).catch(console.error);
+        setIsLoadingStages(false);
+      }).catch((err) => { console.error(err); setIsLoadingStages(false); });
       settingsApi.getDropdownOptions('project_risk_status').then(setRiskOptions).catch(console.error);
     }
   }, [open]);
@@ -319,10 +322,11 @@ export function ConvertLeadDialog({
                     <FormLabel>Status</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      value={field.value}>
+                      value={field.value}
+                      disabled={isLoadingStages}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Loading stages…" />
+                          <SelectValue placeholder={isLoadingStages ? 'Loading stages…' : 'Select stage'} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>

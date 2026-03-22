@@ -216,7 +216,7 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
     );
   }
 
-  const probability = getProbability(lead.stage);
+  const probability = getProbability(lead.stage, leadStages);
   const daysInPipeline = lead.metrics?.daysInPipeline ?? 0;
   const daysSinceContact = lead.metrics?.daysSinceLastContact ?? 0;
   const activityCount = lead.metrics?.activityCount ?? 0;
