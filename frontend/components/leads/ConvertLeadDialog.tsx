@@ -134,14 +134,18 @@ export function ConvertLeadDialog({
       setIsLoadingStages(true);
       pipelineApi.getStages('project').then((stages) => {
         setProjectStages(stages);
-        if (stages.length > 0) {
-          form.setValue('status', stages[0].name);
-        }
         setIsLoadingStages(false);
       }).catch((err) => { console.error(err); setIsLoadingStages(false); });
       settingsApi.getDropdownOptions('project_risk_status').then(setRiskOptions).catch(console.error);
     }
   }, [open]);
+
+  // Auto-select first stage once stages are loaded
+  useEffect(() => {
+    if (projectStages.length > 0 && !form.getValues('status')) {
+      form.setValue('status', projectStages[0].name, { shouldDirty: true });
+    }
+  }, [projectStages]);
 
   const pms = pmUsers;
 
