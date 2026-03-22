@@ -68,7 +68,7 @@ export function CalendarView() {
 
   const { data: usersData } = useQuery({
     queryKey: ['calendar-users'],
-    queryFn: () => usersApi.getUsers(),
+    queryFn: () => usersApi.getUsersDirectory(),
     enabled: activeView === 'crew',
   });
 

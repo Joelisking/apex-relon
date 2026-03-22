@@ -66,7 +66,7 @@ export function LinkedTasksSection({
 
   const { data: usersData } = useQuery({
     queryKey: ['assignable-users'],
-    queryFn: () => usersApi.getUsers(),
+    queryFn: () => usersApi.getUsersDirectory(),
     enabled: canAssign,
   });
   const assignableUsers = usersData?.users ?? [];

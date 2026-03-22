@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { tasksApi } from '@/lib/api/tasks-client';
-import { usersApi, type UserResponse } from '@/lib/api/users-client';
+import { usersApi, type UserDirectoryItem } from '@/lib/api/users-client';
 import type { Task, TaskSummary, TeamTaskSummary } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
@@ -42,9 +42,7 @@ export default function TasksView() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [assignableUsers, setAssignableUsers] = useState<
-    UserResponse[]
-  >([]);
+  const [assignableUsers, setAssignableUsers] = useState<UserDirectoryItem[]>([]);
 
   const canAssign = hasPermission('tasks:assign');
   const canViewAll = hasPermission('tasks:view_all');
@@ -96,7 +94,7 @@ export default function TasksView() {
     setEditingTask(null);
     if (canAssign && assignableUsers.length === 0) {
       usersApi
-        .getUsers()
+        .getUsersDirectory()
         .then(({ users: all }) => {
           const filtered = canViewAll
             ? all
@@ -114,7 +112,7 @@ export default function TasksView() {
     setEditingTask(task);
     if (canAssign && assignableUsers.length === 0) {
       usersApi
-        .getUsers()
+        .getUsersDirectory()
         .then(({ users: all }) => {
           const filtered = canViewAll
             ? all

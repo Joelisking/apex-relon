@@ -26,6 +26,14 @@ export class AdminController {
     private readonly auditService: AuditService,
   ) {}
 
+  @Get('users/directory')
+  @Permissions('users:list_basic')
+  async getUsersDirectory(
+    @Query('hasPermission') hasPermission?: string,
+  ) {
+    return this.adminService.getUsersDirectory(hasPermission);
+  }
+
   @Get('users')
   @Permissions('users:view')
   async getAllUsers(

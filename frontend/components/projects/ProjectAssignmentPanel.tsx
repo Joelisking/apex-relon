@@ -42,7 +42,7 @@ export function ProjectAssignmentPanel({
 
   const { data: usersData } = useQuery({
     queryKey: ['users-list'],
-    queryFn: () => usersApi.getUsers(),
+    queryFn: () => usersApi.getUsersDirectory(),
   });
 
   const { data: rolesData = [] } = useQuery({

@@ -36,7 +36,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, settingsApi } from '@/lib/api/client';
-import { usersApi, type UserResponse } from '@/lib/api/users-client';
+import { usersApi, type UserDirectoryItem } from '@/lib/api/users-client';
 import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import type { DropdownOption, Lead } from '@/lib/types';
@@ -70,7 +70,7 @@ export function ConvertLeadDialog({
   const queryClient = useQueryClient();
   const [isConverting, setIsConverting] = useState(false);
   const [isLoadingStages, setIsLoadingStages] = useState(true);
-  const [pmUsers, setPmUsers] = useState<UserResponse[]>([]);
+  const [pmUsers, setPmUsers] = useState<UserDirectoryItem[]>([]);
   const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
   const [riskOptions, setRiskOptions] = useState<DropdownOption[]>([]);
 
@@ -124,7 +124,7 @@ export function ConvertLeadDialog({
   // Fetch users, stages, and risk options when dialog opens
   useEffect(() => {
     if (open) {
-      usersApi.getUsers(undefined, 'projects:create').then((res) => setPmUsers(res.users || [])).catch(console.error);
+      usersApi.getUsersDirectory('projects:create').then((res) => setPmUsers(res.users || [])).catch(console.error);
       setIsLoadingStages(true);
       pipelineApi.getStages('project').then((stages) => {
         setProjectStages(stages);

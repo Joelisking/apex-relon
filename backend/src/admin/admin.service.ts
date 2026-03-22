@@ -234,6 +234,29 @@ export class AdminService {
   }
 
   /**
+   * Get a lightweight user directory for dropdowns and assignment UIs.
+   * Returns only id/name/role/teamId — does NOT require users:view.
+   */
+  async getUsersDirectory(hasPermissionFilter?: string) {
+    let users = await this.prisma.user.findMany({
+      where: { role: { not: 'SUPER_ADMIN' }, status: 'Active' },
+      select: { id: true, name: true, role: true, teamId: true },
+      orderBy: { name: 'asc' },
+    });
+
+    if (hasPermissionFilter) {
+      const rolePerms = await this.prisma.rolePermission.findMany({
+        where: { permission: hasPermissionFilter },
+        select: { role: true },
+      });
+      const eligibleRoles = new Set(rolePerms.map((rp) => rp.role));
+      users = users.filter((u) => eligibleRoles.has(u.role));
+    }
+
+    return { users };
+  }
+
+  /**
    * Create a new user with hierarchical validation
    */
   async createUser(

@@ -13,10 +13,10 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import type { Project } from '@/lib/api/projects-client';
-import type { UserResponse } from '@/lib/api/users-client';
+import type { UserDirectoryItem } from '@/lib/api/users-client';
 
 interface CrewTabProps {
-  users: UserResponse[];
+  users: UserDirectoryItem[];
   projects: Project[];
   weekStart: Date;
   onWeekChange: (date: Date) => void;

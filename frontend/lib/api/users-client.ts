@@ -1,5 +1,13 @@
 import { apiFetch } from './client';
 
+/** Minimal user shape returned by the directory endpoint — safe for all roles with tasks:assign or similar */
+export interface UserDirectoryItem {
+  id: string;
+  name: string;
+  role: string;
+  teamId?: string | null;
+}
+
 export interface CreateUserRequest {
   email: string;
   name: string;
@@ -51,6 +59,15 @@ export interface CreateUserResponse {
 }
 
 export const usersApi = {
+  async getUsersDirectory(
+    hasPermission?: string,
+  ): Promise<{ users: UserDirectoryItem[] }> {
+    const params = hasPermission
+      ? `?hasPermission=${encodeURIComponent(hasPermission)}`
+      : '';
+    return apiFetch(`/admin/users/directory${params}`);
+  },
+
   async getUsers(
     serverToken?: string,
     hasPermission?: string,

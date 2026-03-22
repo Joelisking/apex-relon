@@ -36,7 +36,7 @@ import { CreatableSelect } from '@/components/ui/creatable-select';
 import { UserPicker } from '@/components/ui/user-picker';
 import { toast } from 'sonner';
 import { projectsApi } from '@/lib/api/projects-client';
-import { usersApi, type UserResponse } from '@/lib/api/users-client';
+import { usersApi, type UserDirectoryItem } from '@/lib/api/users-client';
 import { clientsApi, leadsApi, settingsApi } from '@/lib/api/client';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -88,7 +88,7 @@ export function CreateProjectDialog({
   const [leads, setLeads] = useState<
     { id: string; contactName: string; company: string }[]
   >([]);
-  const [users, setUsers] = useState<UserResponse[]>([]);
+  const [users, setUsers] = useState<UserDirectoryItem[]>([]);
   const [projectStages, setProjectStages] = useState<PipelineStage[]>(
     [],
   );
@@ -152,7 +152,7 @@ export function CreateProjectDialog({
             await Promise.all([
               clientsApi.getAll(),
               leadsApi.getAll(),
-              usersApi.getUsers(),
+              usersApi.getUsersDirectory(),
               pipelineApi.getStages('project'),
             ]);
           const mappedClients = clientsData.map((c) => ({

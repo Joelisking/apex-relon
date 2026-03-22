@@ -31,7 +31,7 @@ import {
 import { tasksApi, type CreateTaskDto } from '@/lib/api/tasks-client';
 import { settingsApi } from '@/lib/api/client';
 import { toast } from 'sonner';
-import { type UserResponse } from '@/lib/api/users-client';
+import { type UserDirectoryItem } from '@/lib/api/users-client';
 import type { Task, TaskType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -39,7 +39,7 @@ interface TaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingTask: Task | null;
-  assignableUsers?: UserResponse[];
+  assignableUsers?: UserDirectoryItem[];
   currentUserId?: string;
   canAssign?: boolean;
   onSaved: () => void;
