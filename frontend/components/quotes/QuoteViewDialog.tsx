@@ -120,23 +120,23 @@ export default function QuoteViewDialog({ quote, open, onOpenChange }: QuoteView
 
               {/* Line Items */}
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground/60 mb-2">
+                <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground mb-2">
                   Line Items
                 </p>
                 <div className="rounded-lg border border-border/60 overflow-hidden">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-muted/40">
-                        <th className="text-left px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60">
+                        <th className="text-left px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
                           Description
                         </th>
-                        <th className="text-right px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 w-16">
+                        <th className="text-right px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground w-16">
                           Qty
                         </th>
-                        <th className="text-right px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 w-28">
+                        <th className="text-right px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground w-28">
                           Unit Price
                         </th>
-                        <th className="text-right px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 w-28">
+                        <th className="text-right px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground w-28">
                           Total
                         </th>
                       </tr>

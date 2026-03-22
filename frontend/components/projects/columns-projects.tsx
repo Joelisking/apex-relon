@@ -54,7 +54,7 @@ export const projectColumns: ColumnDef<Project>[] = [
           {jobNumber}
         </span>
       ) : (
-        <span className="text-muted-foreground/40 text-xs">—</span>
+        <span className="text-muted-foreground text-xs">—</span>
       );
     },
   },

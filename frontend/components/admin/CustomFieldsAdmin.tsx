@@ -243,7 +243,7 @@ export default function CustomFieldsAdmin() {
         </div>
       ) : definitions.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Settings2 className="h-12 w-12 text-muted-foreground/30 mb-4" />
+          <Settings2 className="h-12 w-12 text-muted-foreground mb-4" />
           <p className="text-sm text-muted-foreground">
             No custom fields defined for{' '}
             {entityTypes.find((e) => e.value === entityFilter)?.label}
@@ -262,19 +262,19 @@ export default function CustomFieldsAdmin() {
           <table className="w-full">
             <thead>
               <tr className="bg-muted/40">
-                <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 px-3 py-2">
+                <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-3 py-2">
                   Label
                 </th>
-                <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 px-3 py-2">
+                <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-3 py-2">
                   Key
                 </th>
-                <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 px-3 py-2">
+                <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-3 py-2">
                   Type
                 </th>
-                <th className="text-center text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 px-3 py-2">
+                <th className="text-center text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-3 py-2">
                   Required
                 </th>
-                <th className="text-center text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 px-3 py-2">
+                <th className="text-center text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-3 py-2">
                   Active
                 </th>
                 <th className="w-20 px-3 py-2" />
@@ -315,7 +315,7 @@ export default function CustomFieldsAdmin() {
                         Required
                       </Badge>
                     ) : (
-                      <span className="text-muted-foreground/40 text-xs">
+                      <span className="text-muted-foreground text-xs">
                         —
                       </span>
                     )}
@@ -324,7 +324,7 @@ export default function CustomFieldsAdmin() {
                     {def.isActive ? (
                       <ToggleRight className="h-4 w-4 text-green-600 mx-auto" />
                     ) : (
-                      <ToggleLeft className="h-4 w-4 text-muted-foreground/40 mx-auto" />
+                      <ToggleLeft className="h-4 w-4 text-muted-foreground mx-auto" />
                     )}
                   </td>
                   <td className="px-3 py-2.5">

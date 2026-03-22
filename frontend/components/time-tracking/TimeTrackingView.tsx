@@ -471,7 +471,7 @@ export function TimeTrackingView() {
                                     {h}
                                   </span>
                                 ) : (
-                                  <span className="text-muted-foreground/40">—</span>
+                                  <span className="text-muted-foreground">—</span>
                                 )}
                               </TableCell>
                             );
@@ -488,7 +488,7 @@ export function TimeTrackingView() {
                           const total = timesheet.rows.reduce((sum, row) => sum + (row.days[day] ?? 0), 0);
                           return (
                             <TableCell key={day} className="text-center font-mono text-sm">
-                              {total > 0 ? total : <span className="text-muted-foreground/40">—</span>}
+                              {total > 0 ? total : <span className="text-muted-foreground">—</span>}
                             </TableCell>
                           );
                         })}

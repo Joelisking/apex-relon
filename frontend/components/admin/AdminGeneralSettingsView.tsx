@@ -78,7 +78,7 @@ export function AdminGeneralSettingsView() {
       <div className="rounded-xl border border-border/60 bg-card shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
         {/* Card header */}
         <div className="px-5 py-4 border-b border-border/40 flex items-center gap-2.5">
-          <Monitor className="h-4 w-4 text-muted-foreground/60" />
+          <Monitor className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-semibold text-foreground">
             Display Settings
           </span>
@@ -87,7 +87,7 @@ export function AdminGeneralSettingsView() {
         {/* Option rows */}
         {isLoading ? (
           <div className="px-5 py-8 flex justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/40" />
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <>

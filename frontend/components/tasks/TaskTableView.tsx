@@ -140,7 +140,7 @@ export function TaskTableView({
                         className="mt-0.5"
                       />
                     ) : (
-                      <Circle className="h-4 w-4 text-muted-foreground/40" />
+                      <Circle className="h-4 w-4 text-muted-foreground" />
                     )}
                   </TableCell>
                   <TableCell className="px-3 py-2.5">
@@ -158,13 +158,13 @@ export function TaskTableView({
                     )}
                     {task.entityType && (
                       <span className="flex items-center gap-1 mt-1.5">
-                        <span className="text-[10px] uppercase tracking-[0.04em] text-muted-foreground/40 font-medium leading-none">
+                        <span className="text-[10px] uppercase tracking-[0.04em] text-muted-foreground font-medium leading-none">
                           {task.entityType}
                         </span>
                         {task.entityName && (
                           <>
-                            <span className="text-muted-foreground/30 text-[10px] leading-none">·</span>
-                            <span className="text-[11px] text-muted-foreground/70 font-medium leading-none truncate max-w-[140px]">
+                            <span className="text-muted-foreground text-[10px] leading-none">·</span>
+                            <span className="text-[11px] text-muted-foreground font-medium leading-none truncate max-w-[140px]">
                               {task.entityName}
                             </span>
                           </>
@@ -204,7 +204,7 @@ export function TaskTableView({
                           )}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground/50">
+                        <span className="text-muted-foreground">
                           No due date
                         </span>
                       )}

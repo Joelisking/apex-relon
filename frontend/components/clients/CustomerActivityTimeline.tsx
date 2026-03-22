@@ -199,7 +199,7 @@ export function CustomerActivityTimeline({
 
       {activities.length === 0 ? (
         <div className="rounded-xl border border-border/40 border-dashed bg-muted/10 py-8 text-center">
-          <p className="text-[11px] text-muted-foreground/50">
+          <p className="text-[11px] text-muted-foreground">
             No activities yet
           </p>
         </div>
@@ -413,7 +413,7 @@ export function CustomerActivityTimeline({
             <div className="space-y-1.5">
               <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
                 Notes{' '}
-                <span className="normal-case tracking-normal font-normal text-muted-foreground/60">
+                <span className="normal-case tracking-normal font-normal text-muted-foreground">
                   (optional)
                 </span>
               </Label>

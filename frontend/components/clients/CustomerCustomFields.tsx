@@ -96,7 +96,7 @@ export function CustomerCustomFields({ clientId }: Props) {
             const currentVal = customValues[def.id] ?? '';
             return (
               <div key={def.id} className="space-y-1.5">
-                <label className="text-[11px] font-medium text-muted-foreground/80">
+                <label className="text-[11px] font-medium text-muted-foreground">
                   {def.label}
                   {def.required && <span className="text-destructive ml-0.5">*</span>}
                 </label>

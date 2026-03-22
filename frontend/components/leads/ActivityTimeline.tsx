@@ -380,7 +380,7 @@ export function ActivityTimeline({
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-[0.06em] text-muted-foreground font-semibold">
                 Notes{' '}
-                <span className="normal-case tracking-normal font-normal text-muted-foreground/60">
+                <span className="normal-case tracking-normal font-normal text-muted-foreground">
                   (optional)
                 </span>
               </Label>

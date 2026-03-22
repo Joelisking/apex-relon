@@ -129,7 +129,7 @@ export function UserPicker({
                 !value && 'bg-muted/30',
               )}>
               <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground/25 flex items-center justify-center shrink-0">
-                <User className="h-2.5 w-2.5 text-muted-foreground/40" />
+                <User className="h-2.5 w-2.5 text-muted-foreground" />
               </div>
               <span className="flex-1 text-muted-foreground">{unassignedLabel}</span>
               {!value && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}

@@ -71,7 +71,7 @@ export default function QuoteLineItemsTable({
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground/60">
+        <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
           Line Items
         </p>
         <div className="flex gap-2">
@@ -109,7 +109,7 @@ export default function QuoteLineItemsTable({
           {['Description', 'Qty', 'Unit Price', 'Total', ''].map((h, i) => (
             <span
               key={i}
-              className={`text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 ${
+              className={`text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground ${
                 i === 1 ? 'text-center' : i >= 2 ? 'text-right' : ''
               }`}>
               {h}

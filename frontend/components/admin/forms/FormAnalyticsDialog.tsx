@@ -94,15 +94,15 @@ export function FormAnalyticsDialog({
                         <div className="absolute left-0 top-3 bottom-3 w-0.5 bg-destructive/50 rounded-r-full" />
                       )}
                       <div className="flex items-center gap-1.5 mb-2">
-                        <Icon className="h-3 w-3 text-muted-foreground/40 shrink-0" />
-                        <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium truncate">
+                        <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium truncate">
                           {stat.label}
                         </p>
                       </div>
                       <p className="text-[22px] font-bold tabular-nums leading-none text-foreground mb-1">
                         {stat.value}
                       </p>
-                      <p className="text-[11px] text-muted-foreground/50">
+                      <p className="text-[11px] text-muted-foreground">
                         {stat.sublabel}
                       </p>
                     </div>
@@ -113,7 +113,7 @@ export function FormAnalyticsDialog({
 
             {/* Daily chart */}
             <div>
-              <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground/60 mb-3">
+              <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground mb-3">
                 Submissions — Last 30 Days
               </p>
               {analytics.dailySubmissions.length === 0 ? (
@@ -138,7 +138,7 @@ export function FormAnalyticsDialog({
                           title={`${count} on ${formatDate(date)}`}
                         />
                         <span
-                          className="text-[9px] text-muted-foreground/50 leading-none"
+                          className="text-[9px] text-muted-foreground leading-none"
                           style={{
                             writingMode: 'vertical-rl',
                             textOrientation: 'mixed',

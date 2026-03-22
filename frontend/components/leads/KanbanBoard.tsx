@@ -140,7 +140,7 @@ export function KanbanBoard({
               {stage.name}
             </h3>
           </div>
-          <span className="text-[11px] font-medium text-muted-foreground/60 bg-muted/60 px-2 py-0.5 rounded-full border border-border/40 tabular-nums">
+          <span className="text-[11px] font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-full border border-border/40 tabular-nums">
             {stageLeads.length}
           </span>
         </div>

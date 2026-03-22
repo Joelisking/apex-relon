@@ -100,10 +100,10 @@ export function ProjectStats({ projects }: ProjectStatsProps) {
                   className={`h-3 w-3 shrink-0 ${
                     stat.alert
                       ? 'text-amber-500'
-                      : 'text-muted-foreground/40'
+                      : 'text-muted-foreground'
                   }`}
                 />
-                <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium truncate">
+                <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium truncate">
                   {stat.label}
                 </p>
               </div>
@@ -115,7 +115,7 @@ export function ProjectStats({ projects }: ProjectStatsProps) {
                 {stat.value}
               </p>
 
-              <p className="text-[11px] text-muted-foreground/50">
+              <p className="text-[11px] text-muted-foreground">
                 {stat.sublabel}
               </p>
             </div>

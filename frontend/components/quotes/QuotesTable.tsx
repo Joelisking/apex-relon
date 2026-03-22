@@ -70,7 +70,7 @@ export default function QuotesTable({
   if (quotes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <FileText className="h-12 w-12 text-muted-foreground/30 mb-4" />
+        <FileText className="h-12 w-12 text-muted-foreground mb-4" />
         <p className="text-sm text-muted-foreground">No quotes found</p>
         {canCreate && (
           <Button
@@ -91,22 +91,22 @@ export default function QuotesTable({
       <table className="w-full">
         <thead>
           <tr className="bg-muted/40">
-            <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 px-3 py-2">
+            <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-3 py-2">
               #
             </th>
-            <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 px-3 py-2">
+            <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-3 py-2">
               Recipient
             </th>
-            <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 px-3 py-2 hidden md:table-cell">
+            <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-3 py-2 hidden md:table-cell">
               Status
             </th>
-            <th className="text-right text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 px-3 py-2">
+            <th className="text-right text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-3 py-2">
               Total
             </th>
-            <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 px-3 py-2 hidden md:table-cell">
+            <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-3 py-2 hidden md:table-cell">
               Date
             </th>
-            <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 px-3 py-2 hidden lg:table-cell">
+            <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-3 py-2 hidden lg:table-cell">
               Valid Until
             </th>
             <th className="w-10 px-3 py-2" />

@@ -63,7 +63,7 @@ function MemberRow({
         onClick={handleToggle}
         className="w-full flex items-center gap-3 px-4 py-3 bg-card hover:bg-muted/30 transition-colors text-left"
       >
-        <span className="text-muted-foreground/60">
+        <span className="text-muted-foreground">
           {expanded ? (
             <ChevronDown className="h-3.5 w-3.5" />
           ) : (
@@ -73,26 +73,26 @@ function MemberRow({
 
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium">{member.name}</span>
-          <span className="ml-2 text-[11px] text-muted-foreground/60">{member.role}</span>
+          <span className="ml-2 text-[11px] text-muted-foreground">{member.role}</span>
         </div>
 
         {/* Mini stats */}
         <div className="flex items-center gap-4 shrink-0">
           {member.overdue > 0 && (
             <div className="text-right">
-              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium leading-none mb-0.5">Overdue</p>
+              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium leading-none mb-0.5">Overdue</p>
               <p className="text-[15px] font-bold tabular-nums leading-none text-red-600">{member.overdue}</p>
             </div>
           )}
           {member.dueToday > 0 && (
             <div className="text-right">
-              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium leading-none mb-0.5">Today</p>
+              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium leading-none mb-0.5">Today</p>
               <p className="text-[15px] font-bold tabular-nums leading-none text-amber-600">{member.dueToday}</p>
             </div>
           )}
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium leading-none mb-0.5">Open</p>
-            <p className={cn('text-[15px] font-bold tabular-nums leading-none', isActive ? 'text-foreground' : 'text-muted-foreground/40')}>
+            <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium leading-none mb-0.5">Open</p>
+            <p className={cn('text-[15px] font-bold tabular-nums leading-none', isActive ? 'text-foreground' : 'text-muted-foreground')}>
               {member.total}
             </p>
           </div>
@@ -149,7 +149,7 @@ export function TeamTasksView({
   if (members.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <Users className="h-10 w-10 text-muted-foreground/30 mb-3" />
+        <Users className="h-10 w-10 text-muted-foreground mb-3" />
         <p className="text-sm text-muted-foreground">No team members found</p>
       </div>
     );
@@ -194,7 +194,7 @@ export function TeamTasksView({
     <div className="space-y-5">
       {sortedEntries.map(([groupName, groupMembers]) => (
         <div key={groupName} className="space-y-3">
-          <div className="px-1 py-2 text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">
+          <div className="px-1 py-2 text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
             {groupName}
           </div>
           {groupMembers.map((member) => (

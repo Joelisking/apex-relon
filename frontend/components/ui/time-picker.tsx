@@ -82,7 +82,7 @@ function Segment({
 
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <span className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground/60">
+      <span className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
       <div className="flex flex-col items-center">
@@ -91,7 +91,7 @@ function Segment({
           tabIndex={-1}
           disabled={disabled}
           onClick={increment}
-          className="flex h-5 w-8 items-center justify-center rounded-t text-muted-foreground/50 hover:bg-accent hover:text-foreground transition-colors disabled:opacity-30"
+          className="flex h-5 w-8 items-center justify-center rounded-t text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-30"
         >
           <ChevronUp className="h-3.5 w-3.5" />
         </button>
@@ -115,7 +115,7 @@ function Segment({
           tabIndex={-1}
           disabled={disabled}
           onClick={decrement}
-          className="flex h-5 w-8 items-center justify-center rounded-b text-muted-foreground/50 hover:bg-accent hover:text-foreground transition-colors disabled:opacity-30"
+          className="flex h-5 w-8 items-center justify-center rounded-b text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-30"
         >
           <ChevronDown className="h-3.5 w-3.5" />
         </button>
@@ -169,7 +169,7 @@ export function TimePicker({
       <Segment label="sec" value={s} max={59} onChange={(v) => emit(h24, m, v)} disabled={disabled} />
       {/* AM/PM toggle */}
       <div className="flex flex-col items-center gap-0.5 ml-1">
-        <span className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground/60">
+        <span className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
           &nbsp;
         </span>
         <button

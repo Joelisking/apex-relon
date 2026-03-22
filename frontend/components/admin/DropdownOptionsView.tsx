@@ -371,7 +371,7 @@ export function DropdownOptionsView() {
             const groups = Array.from(new Set(filtered.map((c) => c.group)));
             return groups.map((group) => (
               <div key={group} className="space-y-0.5">
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium px-3 pt-1">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium px-3 pt-1">
                   {group}
                 </p>
                 {filtered

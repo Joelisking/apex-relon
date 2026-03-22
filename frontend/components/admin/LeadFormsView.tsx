@@ -185,15 +185,15 @@ export default function LeadFormsView() {
                     <div className="absolute left-0 top-3 bottom-3 w-0.5 bg-destructive/50 rounded-r-full" />
                   )}
                   <div className="flex items-center gap-1.5 mb-2">
-                    <Icon className="h-3 w-3 text-muted-foreground/40 shrink-0" />
-                    <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium truncate">
+                    <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium truncate">
                       {stat.label}
                     </p>
                   </div>
                   <p className="text-[22px] font-bold tabular-nums leading-none text-foreground mb-1">
                     {stat.value}
                   </p>
-                  <p className="text-[11px] text-muted-foreground/50">
+                  <p className="text-[11px] text-muted-foreground">
                     {stat.sublabel}
                   </p>
                 </div>
@@ -205,7 +205,7 @@ export default function LeadFormsView() {
         {/* Table */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground/60">
+            <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
               All Forms
             </p>
           </div>
@@ -216,11 +216,11 @@ export default function LeadFormsView() {
             </div>
           ) : forms.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-border/60 bg-muted/20">
-              <FormInput className="h-8 w-8 text-muted-foreground/30 mb-3" />
+              <FormInput className="h-8 w-8 text-muted-foreground mb-3" />
               <p className="text-sm font-medium text-muted-foreground">
                 No forms yet
               </p>
-              <p className="text-xs text-muted-foreground/60 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Create your first web-to-lead form to get started
               </p>
               {canManage && (
@@ -238,22 +238,22 @@ export default function LeadFormsView() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border/60 bg-muted/40">
-                    <th className="py-2.5 px-4 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60">
+                    <th className="py-2.5 px-4 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
                       Form Name
                     </th>
-                    <th className="py-2.5 px-4 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 w-[90px]">
+                    <th className="py-2.5 px-4 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground w-[90px]">
                       Fields
                     </th>
-                    <th className="py-2.5 px-4 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 hidden md:table-cell">
+                    <th className="py-2.5 px-4 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground hidden md:table-cell">
                       Target Stage
                     </th>
-                    <th className="py-2.5 px-4 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 hidden lg:table-cell">
+                    <th className="py-2.5 px-4 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground hidden lg:table-cell">
                       Assigned To
                     </th>
-                    <th className="py-2.5 px-4 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 w-[100px] text-center">
+                    <th className="py-2.5 px-4 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground w-[100px] text-center">
                       Submissions
                     </th>
-                    <th className="py-2.5 px-4 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 w-[90px] text-center">
+                    <th className="py-2.5 px-4 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground w-[90px] text-center">
                       Status
                     </th>
                     <th className="py-2.5 px-4 w-[140px]" />
@@ -296,7 +296,7 @@ export default function LeadFormsView() {
                         </td>
                         <td className="py-3 px-4 hidden lg:table-cell text-muted-foreground">
                           {form.assignTo?.name ?? (
-                            <span className="text-[11px] italic text-muted-foreground/40">
+                            <span className="text-[11px] italic text-muted-foreground">
                               Unassigned
                             </span>
                           )}

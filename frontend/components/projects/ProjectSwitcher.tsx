@@ -79,7 +79,7 @@ export function ProjectSwitcher({
         <span className="max-w-65 truncate">
           {currentProjectName}
         </span>
-        <ChevronsUpDown className="h-4 w-4 text-muted-foreground/60 shrink-0 group-hover:text-muted-foreground" />
+        <ChevronsUpDown className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-muted-foreground" />
       </button>
 
       {open && (
@@ -91,10 +91,10 @@ export function ProjectSwitcher({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find project..."
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               onKeyDown={(e) => e.key === 'Escape' && close()}
             />
-            <kbd className="text-[10px] text-muted-foreground/50 font-mono border border-border/50 rounded px-1">
+            <kbd className="text-[10px] text-muted-foreground font-mono border border-border/50 rounded px-1">
               Esc
             </kbd>
           </div>
@@ -127,7 +127,7 @@ export function ProjectSwitcher({
                         {p.name}
                       </p>
                       {p.jobNumber && (
-                        <p className="text-[10px] font-mono text-muted-foreground/70">
+                        <p className="text-[10px] font-mono text-muted-foreground">
                           {p.jobNumber}
                         </p>
                       )}

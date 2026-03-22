@@ -170,7 +170,7 @@ export function AddWidgetDialog({ open, onClose, onAdd, existingCount, hasPermis
                     'shrink-0 mt-0.5 transition-colors',
                     isSelected
                       ? meta.iconColor
-                      : 'text-muted-foreground/40 group-hover:text-muted-foreground/70',
+                      : 'text-muted-foreground group-hover:text-muted-foreground',
                   )}>
                   {meta.icon}
                 </div>
@@ -186,7 +186,7 @@ export function AddWidgetDialog({ open, onClose, onAdd, existingCount, hasPermis
                     )}>
                     {WIDGET_TYPE_LABELS[type]}
                   </p>
-                  <p className="text-[10px] text-muted-foreground/50 leading-tight mt-0.5">
+                  <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
                     {meta.description}
                   </p>
                 </div>
@@ -221,7 +221,7 @@ export function AddWidgetDialog({ open, onClose, onAdd, existingCount, hasPermis
         {/* Metric picker — only shown when MetricCard is selected */}
         {selected === 'MetricCard' && (
           <div className="mt-1 space-y-1.5">
-            <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/50 font-medium">
+            <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
               Which metric?
             </p>
             <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-0.5">

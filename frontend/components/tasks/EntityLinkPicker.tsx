@@ -253,7 +253,7 @@ export function EntityLinkPicker({
     <>
       {/* ── Trigger ── */}
       <div className="space-y-1.5">
-        <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground/50">
+        <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
           Link to Record
         </p>
 
@@ -272,7 +272,7 @@ export function EntityLinkPicker({
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="shrink-0 text-[11px] text-muted-foreground/70 hover:text-foreground transition-colors px-1">
+              className="shrink-0 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-1">
               Change
             </button>
             <div className="w-px h-4 bg-border/60 shrink-0" />
@@ -320,7 +320,7 @@ export function EntityLinkPicker({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name, company…"
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
             {query && (
               <button
@@ -399,10 +399,10 @@ export function EntityLinkPicker({
                             meta.dot,
                           )}
                         />
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                           {meta.plural}
                         </span>
-                        <span className="ml-auto text-[10px] text-muted-foreground/40">
+                        <span className="ml-auto text-[10px] text-muted-foreground">
                           {items.length}
                         </span>
                       </div>

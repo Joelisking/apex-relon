@@ -122,11 +122,11 @@ export function createUserColumns({
           <div>
             <span className="text-xs text-foreground">
               {team || (
-                <span className="text-muted-foreground/50">—</span>
+                <span className="text-muted-foreground">—</span>
               )}
             </span>
             {user.manager && (
-              <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+              <p className="text-[10px] text-muted-foreground mt-0.5">
                 Reports to {user.manager.name}
               </p>
             )}
@@ -167,7 +167,7 @@ export function createUserColumns({
         if (!showEdit && !showDelete) {
           return (
             <div className="text-right">
-              <span className="text-xs text-muted-foreground/30 px-2">
+              <span className="text-xs text-muted-foreground px-2">
                 —
               </span>
             </div>
@@ -182,7 +182,7 @@ export function createUserColumns({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-muted-foreground/50 hover:text-foreground"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                 onClick={() => onEdit(user)}>
                 <Edit className="h-3.5 w-3.5" />
               </Button>
@@ -191,7 +191,7 @@ export function createUserColumns({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-muted-foreground/50 hover:text-red-600 hover:bg-red-50"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600 hover:bg-red-50"
                 onClick={() => onDelete(user)}>
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>

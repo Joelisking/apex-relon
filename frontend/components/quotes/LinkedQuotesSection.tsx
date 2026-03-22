@@ -81,7 +81,7 @@ export function LinkedQuotesSection({
           <Receipt className="h-3.5 w-3.5" />
           Quotes
           {quotes.length > 0 && (
-            <span className="ml-0.5 text-muted-foreground/60">
+            <span className="ml-0.5 text-muted-foreground">
               · {quotes.length}
             </span>
           )}
@@ -90,7 +90,7 @@ export function LinkedQuotesSection({
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 text-xs gap-1 text-muted-foreground/60 hover:text-foreground ml-auto"
+            className="h-6 text-xs gap-1 text-muted-foreground hover:text-foreground ml-auto"
             onClick={() =>
               router.push(
                 leadId

@@ -363,15 +363,15 @@ export function RolesView() {
                   <div className="absolute left-0 top-3 bottom-3 w-0.5 bg-destructive/50 rounded-r-full" />
                 )}
                 <div className="flex items-center gap-1.5 mb-2">
-                  <Icon className="h-3 w-3 text-muted-foreground/40 shrink-0" />
-                  <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium truncate">
+                  <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium truncate">
                     {stat.label}
                   </p>
                 </div>
                 <p className="text-[22px] font-bold tabular-nums leading-none text-foreground mb-1">
                   {stat.value}
                 </p>
-                <p className="text-[11px] text-muted-foreground/50">
+                <p className="text-[11px] text-muted-foreground">
                   {stat.sublabel}
                 </p>
               </div>
@@ -383,10 +383,10 @@ export function RolesView() {
       {/* Roles table */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground/60">
+          <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
             All Roles
           </p>
-          <p className="text-xs text-muted-foreground/50">
+          <p className="text-xs text-muted-foreground">
             Built-in roles cannot be deleted — configure their
             permissions in the Permissions section.
           </p>
@@ -410,16 +410,16 @@ export function RolesView() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border/60 bg-muted/40">
-                  <th className="py-2.5 px-4 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 w-[160px]">
+                  <th className="py-2.5 px-4 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground w-[160px]">
                     Key
                   </th>
-                  <th className="py-2.5 px-4 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60">
+                  <th className="py-2.5 px-4 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
                     Label
                   </th>
-                  <th className="py-2.5 px-4 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 hidden md:table-cell">
+                  <th className="py-2.5 px-4 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground hidden md:table-cell">
                     Description
                   </th>
-                  <th className="py-2.5 px-4 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 w-[80px] text-center">
+                  <th className="py-2.5 px-4 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground w-[80px] text-center">
                     Users
                   </th>
                   <th className="py-2.5 px-4 w-[80px]" />
@@ -455,7 +455,7 @@ export function RolesView() {
                           <TooltipProvider delayDuration={0}>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Lock className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+                                <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
                               </TooltipTrigger>
                               <TooltipContent>
                                 Built-in role
@@ -467,7 +467,7 @@ export function RolesView() {
                     </td>
                     <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">
                       {role.description ?? (
-                        <span className="text-[11px] italic text-muted-foreground/40">
+                        <span className="text-[11px] italic text-muted-foreground">
                           No description
                         </span>
                       )}

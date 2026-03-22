@@ -80,10 +80,10 @@ export function CustomerStatsCards({ clients }: CustomerStatsCardsProps) {
               <div className="flex items-center gap-1.5 mb-2">
                 <Icon
                   className={`h-3 w-3 shrink-0 ${
-                    stat.alert ? 'text-amber-500' : 'text-muted-foreground/40'
+                    stat.alert ? 'text-amber-500' : 'text-muted-foreground'
                   }`}
                 />
-                <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium truncate">
+                <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium truncate">
                   {stat.label}
                 </p>
               </div>
@@ -93,7 +93,7 @@ export function CustomerStatsCards({ clients }: CustomerStatsCardsProps) {
                 }`}>
                 {stat.value}
               </p>
-              <p className="text-[11px] text-muted-foreground/50">{stat.sublabel}</p>
+              <p className="text-[11px] text-muted-foreground">{stat.sublabel}</p>
             </div>
           );
         })}

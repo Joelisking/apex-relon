@@ -258,7 +258,7 @@ export function PermissionsMatrix({ canEdit }: PermissionsMatrixProps) {
         className="flex items-center gap-3 flex-wrap animate-in fade-in slide-in-from-top-1 duration-300"
         style={{ animationFillMode: 'backwards' }}>
         <div className="relative flex-1 min-w-[200px] max-w-xs group">
-          <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground/50 transition-colors duration-200 group-focus-within:text-muted-foreground" />
+          <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground transition-colors duration-200 group-focus-within:text-muted-foreground" />
           <Input
             placeholder="Search permissions…"
             value={search}
@@ -268,7 +268,7 @@ export function PermissionsMatrix({ canEdit }: PermissionsMatrixProps) {
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-2 top-2 text-muted-foreground/50 hover:text-muted-foreground transition-colors duration-150 animate-in fade-in zoom-in-75 duration-150">
+              className="absolute right-2 top-2 text-muted-foreground hover:text-muted-foreground transition-colors duration-150 animate-in fade-in zoom-in-75 duration-150">
               <X className="h-3.5 w-3.5" />
             </button>
           )}
@@ -461,10 +461,10 @@ export function PermissionsMatrix({ canEdit }: PermissionsMatrixProps) {
                       className="sticky left-0 z-10 bg-muted/40 py-2 px-4 border-r border-border/50"
                       style={{ minWidth: 240, width: 240 }}>
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[11px] uppercase tracking-wider text-muted-foreground/70">
+                        <span className="font-semibold text-[11px] uppercase tracking-wider text-muted-foreground">
                           {moduleName}
                         </span>
-                        <span className="text-[10px] text-muted-foreground/40 tabular-nums">
+                        <span className="text-[10px] text-muted-foreground tabular-nums">
                           {modulePerms.length}
                         </span>
                       </div>
@@ -506,7 +506,7 @@ export function PermissionsMatrix({ canEdit }: PermissionsMatrixProps) {
                                           modulePerms,
                                         )
                                       }
-                                      className="text-muted-foreground/50 hover:text-foreground transition-colors duration-150">
+                                      className="text-muted-foreground hover:text-foreground transition-colors duration-150">
                                       {allGranted ? (
                                         <CheckSquare className="h-3.5 w-3.5" />
                                       ) : someGranted ? (
@@ -523,7 +523,7 @@ export function PermissionsMatrix({ canEdit }: PermissionsMatrixProps) {
                                 </Tooltip>
                               </TooltipProvider>
                             ) : null}
-                            <span className="text-[10px] text-muted-foreground/50 tabular-nums">
+                            <span className="text-[10px] text-muted-foreground tabular-nums">
                               {grantedCount}/{permKeys.length}
                             </span>
                           </div>
@@ -545,7 +545,7 @@ export function PermissionsMatrix({ canEdit }: PermissionsMatrixProps) {
                           <div className="text-sm leading-snug">
                             {perm.label}
                           </div>
-                          <div className="text-[10px] font-mono text-muted-foreground/35 leading-none mt-0.5">
+                          <div className="text-[10px] font-mono text-muted-foreground leading-none mt-0.5">
                             {perm.key}
                           </div>
                         </div>
@@ -592,12 +592,12 @@ export function PermissionsMatrix({ canEdit }: PermissionsMatrixProps) {
                 <td
                   colSpan={roles.length + 1}
                   className="py-16 text-center animate-in fade-in duration-200">
-                  <p className="text-sm text-muted-foreground/50">
+                  <p className="text-sm text-muted-foreground">
                     No permissions match &ldquo;{search}&rdquo;
                   </p>
                   <button
                     onClick={() => setSearch('')}
-                    className="mt-2 text-xs text-muted-foreground/40 hover:text-muted-foreground underline-offset-2 hover:underline transition-colors duration-150">
+                    className="mt-2 text-xs text-muted-foreground hover:text-muted-foreground underline-offset-2 hover:underline transition-colors duration-150">
                     Clear search
                   </button>
                 </td>

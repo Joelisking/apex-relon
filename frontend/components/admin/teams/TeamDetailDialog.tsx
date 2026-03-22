@@ -228,7 +228,7 @@ export function TeamDetailDialog({
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40" />
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : team ? (
           <div className="space-y-5">
@@ -258,7 +258,7 @@ export function TeamDetailDialog({
             {/* Manager Section */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground flex items-center gap-1.5 mb-3">
-                <Crown className="h-3 w-3 text-muted-foreground/40" />
+                <Crown className="h-3 w-3 text-muted-foreground" />
                 Team Manager
               </p>
 
@@ -300,7 +300,7 @@ export function TeamDetailDialog({
                           {team.manager.name}
                         </p>
                         <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <Mail className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+                          <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
                           {team.manager.email}
                         </p>
                       </div>
@@ -320,7 +320,7 @@ export function TeamDetailDialog({
                       {team.manager.name}
                     </p>
                     <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                      <Mail className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+                      <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
                       {team.manager.email}
                     </p>
                   </div>
@@ -328,7 +328,7 @@ export function TeamDetailDialog({
                 </div>
               ) : (
                 <div className="rounded-xl border border-border/40 border-dashed py-4 px-3">
-                  <p className="text-xs text-muted-foreground/50 text-center">
+                  <p className="text-xs text-muted-foreground text-center">
                     No manager assigned
                   </p>
                 </div>
@@ -341,7 +341,7 @@ export function TeamDetailDialog({
             {/* Members Section */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground flex items-center gap-1.5 mb-3">
-                <Users className="h-3 w-3 text-muted-foreground/40" />
+                <Users className="h-3 w-3 text-muted-foreground" />
                 Members
               </p>
 
@@ -403,7 +403,7 @@ export function TeamDetailDialog({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0 text-muted-foreground/40 hover:text-red-600 hover:bg-red-50 ml-0.5"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-red-600 hover:bg-red-50 ml-0.5"
                             disabled={removingMemberId === member.id}
                             onClick={() =>
                               handleRemoveMember(member.id)
@@ -421,7 +421,7 @@ export function TeamDetailDialog({
                 </div>
               ) : (
                 <div className="rounded-xl border border-border/40 border-dashed py-6 px-3">
-                  <p className="text-xs text-muted-foreground/50 text-center">
+                  <p className="text-xs text-muted-foreground text-center">
                     No members in this team
                   </p>
                 </div>
@@ -430,7 +430,7 @@ export function TeamDetailDialog({
           </div>
         ) : (
           <div className="py-8 text-center">
-            <p className="text-xs text-muted-foreground/50">
+            <p className="text-xs text-muted-foreground">
               Team not found
             </p>
           </div>

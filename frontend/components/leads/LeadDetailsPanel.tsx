@@ -40,7 +40,7 @@ export function LeadDetailsPanel({ lead, isOverdue }: Props) {
           <div className="flex items-center justify-between px-4 py-3">
             <span className="text-sm text-muted-foreground">Owner</span>
             <span className="text-sm font-medium flex items-center gap-1.5">
-              <User className="h-3.5 w-3.5 text-muted-foreground/50" />
+              <User className="h-3.5 w-3.5 text-muted-foreground" />
               {lead.assignedTo?.name || 'Unassigned'}
             </span>
           </div>

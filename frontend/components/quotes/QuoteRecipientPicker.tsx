@@ -11,7 +11,7 @@ import type { Lead, Client, Project } from '@/lib/types';
 import type { QuoteFormState } from './quote-editor-types';
 
 const LABEL_CLASS =
-  'text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground/50';
+  'text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground';
 
 interface QuoteRecipientPickerProps {
   form: QuoteFormState;
@@ -59,7 +59,7 @@ export default function QuoteRecipientPicker({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground/60">
+      <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
         Link to Lead, Client, or Project
       </p>
       <div className="grid grid-cols-3 gap-3">

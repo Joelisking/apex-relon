@@ -67,7 +67,7 @@ export function AreaChartWidget({ widget, metrics, period }: Props) {
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
       <div className="px-5 pt-4 pb-3 flex items-center gap-1.5 shrink-0 border-b border-border/50">
-        <TrendingUp className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+        <TrendingUp className="h-3 w-3 text-muted-foreground shrink-0" />
         <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
           {title}
         </p>

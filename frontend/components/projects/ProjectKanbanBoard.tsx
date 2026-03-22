@@ -174,7 +174,7 @@ export function ProjectKanbanBoard({
                       {column.label}
                     </h3>
                   </div>
-                  <span className="text-[11px] font-medium text-muted-foreground/60 bg-muted/60 px-2 py-0.5 rounded-full border border-border/40 tabular-nums">
+                  <span className="text-[11px] font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-full border border-border/40 tabular-nums">
                     {colProjects.length}
                   </span>
                 </div>
@@ -193,7 +193,7 @@ export function ProjectKanbanBoard({
                 <DroppableColumn id={column.key}>
                   <div className="p-2 space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto">
                     {colProjects.length === 0 ? (
-                      <p className="text-[11px] text-muted-foreground/50 text-center py-8">
+                      <p className="text-[11px] text-muted-foreground text-center py-8">
                         No projects
                       </p>
                     ) : (

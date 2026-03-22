@@ -119,7 +119,7 @@ function NotificationItem({ notif, onMarkRead, onNavigate }: NotificationItemPro
             {notif.message}
           </p>
         )}
-        <p className="text-[10px] text-muted-foreground/60 mt-1">
+        <p className="text-[10px] text-muted-foreground mt-1">
           {timeAgo(notif.createdAt)}
         </p>
       </div>
@@ -199,14 +199,14 @@ export default function NotificationBell() {
             </div>
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8">
-              <Bell className="h-8 w-8 text-muted-foreground/30 mb-2" />
+              <Bell className="h-8 w-8 text-muted-foreground mb-2" />
               <p className="text-xs text-muted-foreground">No notifications</p>
             </div>
           ) : (
             <div>
               {todayNotifs.length > 0 && (
                 <>
-                  <div className="px-3 py-1.5 text-[10px] uppercase tracking-[0.06em] font-medium text-muted-foreground/60 bg-muted/20">
+                  <div className="px-3 py-1.5 text-[10px] uppercase tracking-[0.06em] font-medium text-muted-foreground bg-muted/20">
                     Today
                   </div>
                   {todayNotifs.map((notif) => (
@@ -221,7 +221,7 @@ export default function NotificationBell() {
               )}
               {earlierNotifs.length > 0 && (
                 <>
-                  <div className="px-3 py-1.5 text-[10px] uppercase tracking-[0.06em] font-medium text-muted-foreground/60 bg-muted/20">
+                  <div className="px-3 py-1.5 text-[10px] uppercase tracking-[0.06em] font-medium text-muted-foreground bg-muted/20">
                     Earlier
                   </div>
                   {earlierNotifs.map((notif) => (
@@ -238,7 +238,7 @@ export default function NotificationBell() {
           )}
         </div>
         <div className="border-t px-3 py-2 flex items-center justify-between">
-          <p className="text-[10px] text-muted-foreground/60">
+          <p className="text-[10px] text-muted-foreground">
             {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
           </p>
           <NotificationPreferencesDialog>

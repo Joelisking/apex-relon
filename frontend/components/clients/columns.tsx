@@ -151,7 +151,7 @@ export function getClientColumns(
         const score = row.getValue('healthScore') as number | null;
         if (score == null) {
           return (
-            <span className="text-xs text-muted-foreground/40">
+            <span className="text-xs text-muted-foreground">
               —
             </span>
           );

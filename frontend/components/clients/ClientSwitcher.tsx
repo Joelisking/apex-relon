@@ -67,7 +67,7 @@ export function ClientSwitcher({
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-1 text-sm font-normal text-foreground hover:text-foreground transition-colors group">
         <span className="max-w-65 truncate">{currentClientName}</span>
-        <ChevronsUpDown className="h-4 w-4 text-muted-foreground/60 shrink-0 group-hover:text-muted-foreground" />
+        <ChevronsUpDown className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-muted-foreground" />
       </button>
 
       {open && (
@@ -79,10 +79,10 @@ export function ClientSwitcher({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find client..."
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               onKeyDown={(e) => e.key === 'Escape' && close()}
             />
-            <kbd className="text-[10px] text-muted-foreground/50 font-mono border border-border/50 rounded px-1">
+            <kbd className="text-[10px] text-muted-foreground font-mono border border-border/50 rounded px-1">
               Esc
             </kbd>
           </div>
@@ -113,7 +113,7 @@ export function ClientSwitcher({
                         {display}
                       </p>
                       {c.industry && (
-                        <p className="text-[10px] text-muted-foreground/70 truncate">
+                        <p className="text-[10px] text-muted-foreground truncate">
                           {c.industry}
                         </p>
                       )}

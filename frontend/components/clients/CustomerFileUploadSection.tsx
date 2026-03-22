@@ -195,7 +195,7 @@ export function CustomerFileUploadSection({
 
       {files.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-          <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+          <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
           <p>No files uploaded yet</p>
           <p className="text-sm">Upload contracts, meeting notes, proposals, or invoices</p>
         </div>

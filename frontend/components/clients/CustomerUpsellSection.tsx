@@ -87,9 +87,9 @@ export function CustomerUpsellSection({
         </div>
       ) : (
         <div className="rounded-xl border border-border/40 border-dashed py-8 text-center">
-          <Sparkles className="h-7 w-7 mx-auto mb-2 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground/50">No growth strategy yet</p>
-          <p className="text-xs text-muted-foreground/40 mt-0.5">
+          <Sparkles className="h-7 w-7 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">No growth strategy yet</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Click &quot;Generate Strategy&quot; to discover opportunities
           </p>
         </div>

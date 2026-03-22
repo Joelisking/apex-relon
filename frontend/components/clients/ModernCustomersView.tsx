@@ -113,7 +113,7 @@ export default function ModernCustomersView({ currentUser }: ModernCustomersView
           <p className="text-muted-foreground flex items-center gap-1.5">
             {clients.length} customer{clients.length !== 1 ? 's' : ''} in your portfolio
             {isFetching && !isLoading && (
-              <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground/60" />
+              <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground" />
             )}
           </p>
         </div>
@@ -129,8 +129,8 @@ export default function ModernCustomersView({ currentUser }: ModernCustomersView
 
       {clients.length === 0 ? (
         <div className="rounded-xl border border-border/60 border-dashed py-16 text-center">
-          <p className="text-sm text-muted-foreground/50">No customers found</p>
-          <p className="text-xs text-muted-foreground/40 mt-1">
+          <p className="text-sm text-muted-foreground">No customers found</p>
+          <p className="text-xs text-muted-foreground mt-1">
             Add your first customer to get started
           </p>
         </div>

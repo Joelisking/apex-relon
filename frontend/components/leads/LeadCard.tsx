@@ -106,7 +106,7 @@ export function LeadCardContent({ lead }: { lead: Lead }) {
             <p className="text-sm font-semibold leading-snug truncate text-foreground">
               {lead.projectName}
             </p>
-            <p className="text-xs text-muted-foreground/80 truncate mt-0.5">
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
               {lead.contactName}
             </p>
           </div>
@@ -128,7 +128,7 @@ export function LeadCardContent({ lead }: { lead: Lead }) {
                 className={`inline-flex items-center gap-1 text-[11px] font-medium rounded-full px-2 py-0.5 border ${
                   isOverdue
                     ? 'text-red-700 bg-red-50 border-red-200'
-                    : 'text-muted-foreground/70 bg-muted/40 border-border/50'
+                    : 'text-muted-foreground bg-muted/40 border-border/50'
                 }`}>
                 {isOverdue && (
                   <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
@@ -150,7 +150,7 @@ export function LeadCardContent({ lead }: { lead: Lead }) {
         )}
 
         {/* Metrics */}
-        <div className="flex items-center text-[11px] text-muted-foreground/70 mb-2.5 flex-wrap gap-y-0.5">
+        <div className="flex items-center text-[11px] text-muted-foreground mb-2.5 flex-wrap gap-y-0.5">
           <span
             className="h-1.5 w-1.5 rounded-full shrink-0 mr-1"
             style={{ backgroundColor: engagement.color }}

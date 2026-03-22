@@ -111,7 +111,7 @@ function ProjectCardContent({
 
         {/* Contact */}
         {(project.lead?.contactName || project.client) && (
-          <p className="text-xs text-muted-foreground/80 truncate mb-2.5">
+          <p className="text-xs text-muted-foreground truncate mb-2.5">
             {project.lead?.contactName ?? project.client?.name}
           </p>
         )}
@@ -119,7 +119,7 @@ function ProjectCardContent({
         {/* Financials */}
         <div className="flex items-center gap-3 mb-2.5 pt-2 border-t border-border/40">
           <div className="space-y-0.5">
-            <p className="text-[9px] uppercase tracking-[0.06em] text-muted-foreground/50 font-medium">
+            <p className="text-[9px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
               Contracted
             </p>
             <p className="text-[13px] font-bold tabular-nums text-foreground">
@@ -130,7 +130,7 @@ function ProjectCardContent({
             stageProbability !== undefined &&
             stageProbability > 0 && (
               <div className="space-y-0.5 ml-auto text-right">
-                <p className="text-[9px] uppercase tracking-[0.06em] text-muted-foreground/50 font-medium">
+                <p className="text-[9px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
                   Pipeline ({stageProbability}%)
                 </p>
                 <p className="text-[12px] font-semibold tabular-nums text-muted-foreground">
@@ -145,7 +145,7 @@ function ProjectCardContent({
         {/* Footer: due date + PM */}
         <div className="flex items-center justify-between pt-2 border-t border-border/40">
           {project.estimatedDueDate ? (
-            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/70">
+            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
               <Calendar className="h-2.5 w-2.5" />
               Due{' '}
               {format(new Date(project.estimatedDueDate), 'MMM d')}

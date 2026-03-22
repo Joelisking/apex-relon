@@ -580,7 +580,7 @@ export default function ModernLeadsView({
           <p className="text-muted-foreground mt-1 flex items-center gap-1.5">
             Track and manage your sales pipeline
             {isFetching && !isLoading && (
-              <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground/60" />
+              <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground" />
             )}
           </p>
         </div>

@@ -133,8 +133,8 @@ export function CustomerProjectsList({
 
       {projects.length === 0 ? (
         <div className="rounded-xl border border-border/40 border-dashed bg-muted/10 py-8 text-center">
-          <Briefcase className="h-6 w-6 mx-auto mb-2 text-muted-foreground/30" />
-          <p className="text-[11px] text-muted-foreground/50">
+          <Briefcase className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-[11px] text-muted-foreground">
             No projects yet
           </p>
         </div>
@@ -159,6 +159,12 @@ export function CustomerProjectsList({
                 }}
                 onClick={() => router.push(`/projects/${project.id}`)}>
                 <div className="px-3.5 py-3">
+                  {/* Job number */}
+                  {project.jobNumber && (
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                      #{project.jobNumber}
+                    </p>
+                  )}
                   {/* Name + actions */}
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <h4 className="text-sm font-semibold leading-snug line-clamp-2 flex-1 min-w-0 text-foreground">
@@ -176,7 +182,7 @@ export function CustomerProjectsList({
                         onClick={() =>
                           handleDeleteProject(project.id)
                         }
-                        className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground/30 hover:text-red-600 hover:bg-red-50 transition-colors ml-0.5">
+                        className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors ml-0.5">
                         <Trash2 className="h-3 w-3" />
                       </button>
                     </div>
@@ -193,7 +199,7 @@ export function CustomerProjectsList({
                   {/* Financials */}
                   <div className="flex items-center gap-3 pt-2 border-t border-border/40 mb-2.5">
                     <div className="space-y-0.5">
-                      <p className="text-[9px] uppercase tracking-[0.06em] text-muted-foreground/50 font-medium">
+                      <p className="text-[9px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
                         Contracted
                       </p>
                       <p className="text-[14px] font-bold tabular-nums text-foreground">
@@ -204,7 +210,7 @@ export function CustomerProjectsList({
 
                   {/* Footer: dates + PM */}
                   <div className="flex items-center justify-between pt-2 border-t border-border/40">
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground/70">
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                       {project.startDate && (
                         <span className="flex items-center gap-1">
                           <Calendar className="h-2.5 w-2.5" />

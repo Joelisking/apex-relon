@@ -204,15 +204,15 @@ function SortableWidget({
           <div
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing flex items-center text-muted-foreground/50 hover:text-muted-foreground transition-colors select-none">
+            className="cursor-grab active:cursor-grabbing flex items-center text-muted-foreground hover:text-muted-foreground transition-colors select-none">
             <GripVertical className="h-3.5 w-3.5" />
           </div>
-          <span className="flex-1 text-center text-[9px] uppercase tracking-[0.12em] text-muted-foreground/50 font-medium pointer-events-none">
+          <span className="flex-1 text-center text-[9px] uppercase tracking-[0.12em] text-muted-foreground font-medium pointer-events-none">
             {widget.type.replace(/([A-Z])/g, ' $1').trim()}
           </span>
           <button
             onClick={() => onConfigure(widget)}
-            className="flex items-center justify-center w-5 h-5 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-all">
+            className="flex items-center justify-center w-5 h-5 rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all">
             <Settings2 className="h-3 w-3" />
           </button>
         </div>
@@ -549,7 +549,7 @@ export default function CustomizableDashboard({ initialPeriod = 'month' }: Props
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             <span className="text-xs font-medium text-primary/80">Editing layout</span>
           </div>
-          <span className="text-xs text-muted-foreground/50">
+          <span className="text-xs text-muted-foreground">
             Drag to reorder · Drag edges to resize · Click ⚙ to configure
           </span>
           {hasUnsavedChanges && (
@@ -561,7 +561,7 @@ export default function CustomizableDashboard({ initialPeriod = 'month' }: Props
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center h-52 text-muted-foreground/30 text-sm gap-2">
+          <div className="flex items-center justify-center h-52 text-muted-foreground text-sm gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading layout…
           </div>
@@ -591,7 +591,7 @@ export default function CustomizableDashboard({ initialPeriod = 'month' }: Props
         {/* Drag handle */}
         <div
           onPointerDown={handleToolbarDragStart}
-          className="flex items-center justify-center w-6 h-6 rounded-full text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing transition-colors select-none"
+          className="flex items-center justify-center w-6 h-6 rounded-full text-muted-foreground hover:text-muted-foreground cursor-grab active:cursor-grabbing transition-colors select-none"
           title="Drag to move">
           <GripHorizontal className="h-3.5 w-3.5" />
         </div>

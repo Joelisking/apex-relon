@@ -73,7 +73,7 @@ export function TaskListWidget({ widget }: Props) {
       {/* Header */}
       <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border/50 shrink-0">
         <div className="flex items-center gap-1.5">
-          <ListTodo className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+          <ListTodo className="h-3 w-3 text-muted-foreground shrink-0" />
           <span className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
             {title}
           </span>

@@ -343,7 +343,7 @@ export function ProjectDetailDialog({
                       ${fmtVal(rawEndOfProjectValue)}
                     </p>
                   ) : (
-                    <p className="text-[18px] font-bold leading-none text-muted-foreground/40">
+                    <p className="text-[18px] font-bold leading-none text-muted-foreground">
                       —
                     </p>
                   )}
@@ -446,7 +446,7 @@ export function ProjectDetailDialog({
                 {project.startDate && (
                   <StatRow label="Start">
                     <span className="flex items-center gap-1">
-                      <Calendar className="h-2.5 w-2.5 text-muted-foreground/50" />
+                      <Calendar className="h-2.5 w-2.5 text-muted-foreground" />
                       {format(
                         new Date(project.startDate),
                         'MMM d, yyyy',
@@ -457,7 +457,7 @@ export function ProjectDetailDialog({
                 {project.estimatedDueDate && (
                   <StatRow label="Est. Due">
                     <span className="flex items-center gap-1">
-                      <Calendar className="h-2.5 w-2.5 text-muted-foreground/50" />
+                      <Calendar className="h-2.5 w-2.5 text-muted-foreground" />
                       {format(
                         new Date(project.estimatedDueDate),
                         'MMM d, yyyy',

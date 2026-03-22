@@ -72,7 +72,7 @@ function ContactCompactCard({
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 w-6 p-0 shrink-0 ml-2 text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10"
+          className="h-6 w-6 p-0 shrink-0 ml-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           onClick={onUnlink}
           disabled={unlinking}>
           {unlinking ? (
@@ -215,7 +215,7 @@ export function LeadContactsSection({
               </div>
             ) : clientContacts.length === 0 ? (
               <div className="py-8 text-center">
-                <User className="h-7 w-7 mx-auto mb-2 text-muted-foreground/30" />
+                <User className="h-7 w-7 mx-auto mb-2 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
                   No contacts on the parent client.
                 </p>

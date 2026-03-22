@@ -63,7 +63,7 @@ export function UncompleteTaskDialog({
 
           {task.completionNote && (
             <div className="rounded-lg bg-muted/40 border border-border/50 px-3 py-2.5 space-y-1">
-              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">
+              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
                 Previous Completion Note
               </p>
               <p className="text-sm text-muted-foreground leading-relaxed">

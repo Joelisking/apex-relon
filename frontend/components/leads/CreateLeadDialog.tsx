@@ -416,7 +416,7 @@ export function CreateLeadDialog({
             className="space-y-6">
             {/* ── Project ─────────────────────────────────────────── */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Project
               </p>
               <div className="grid grid-cols-2 gap-3">
@@ -477,7 +477,7 @@ export function CreateLeadDialog({
 
             {/* ── Contact ─────────────────────────────────────────── */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Contact
               </p>
               <div className="grid grid-cols-2 gap-3">
@@ -617,7 +617,7 @@ export function CreateLeadDialog({
 
             {/* ── Pipeline ────────────────────────────────────────── */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Pipeline
               </p>
               <div className="grid grid-cols-3 gap-3">
@@ -748,7 +748,7 @@ export function CreateLeadDialog({
 
             {/* ── Assignment ──────────────────────────────────────── */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Assignment
               </p>
               <FormField

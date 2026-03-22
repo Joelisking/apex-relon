@@ -190,7 +190,7 @@ export function ServiceTypesView() {
       <div className="space-y-3">
         {categories.length === 0 && (
           <div className="rounded-lg border border-dashed border-border p-10 text-center">
-            <FolderOpen className="mx-auto h-8 w-8 text-muted-foreground/40 mb-3" />
+            <FolderOpen className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
             <p className="text-sm text-muted-foreground">
               No categories yet. Add one below.
             </p>
@@ -297,7 +297,7 @@ export function ServiceTypesView() {
 
                   {types.map((st) => (
                     <div key={st.id} className="flex items-center gap-3 px-10 py-2.5">
-                      <Tag className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                      <Tag className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
 
                       {editingTypeId === st.id ? (
                         <Input
@@ -370,7 +370,7 @@ export function ServiceTypesView() {
                   {/* Inline add type row */}
                   {addingTypeFor === cat.id ? (
                     <div className="flex items-center gap-2 px-10 py-2.5">
-                      <Tag className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                      <Tag className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       <Input
                         value={newTypeName}
                         onChange={(e) => setNewTypeName(e.target.value)}
@@ -431,7 +431,7 @@ export function ServiceTypesView() {
 
       {/* Add new category */}
       <div className="rounded-lg border border-dashed border-border p-4">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60 mb-3">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
           Add Project Type
         </p>
         <div className="flex items-center gap-3">

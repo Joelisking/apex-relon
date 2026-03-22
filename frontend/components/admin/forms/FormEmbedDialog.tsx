@@ -112,7 +112,7 @@ export function FormEmbedDialog({ form, onOpenChange }: FormEmbedDialogProps) {
               page&rsquo;s styles.
             </p>
             <CodeBlock code={jsCode} />
-            <p className="text-xs text-muted-foreground/60">
+            <p className="text-xs text-muted-foreground">
               Note: The embed script endpoint is available at{' '}
               <code className="font-mono bg-muted px-1 rounded">
                 /forms/embed.js

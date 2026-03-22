@@ -15,7 +15,7 @@ import type { Lead, Client, Project, Product, QuoteSettings } from '@/lib/types'
 import type { QuoteFormState, LineItemRow } from './quote-editor-types';
 
 const LABEL_CLASS =
-  'text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground/50';
+  'text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground';
 
 interface QuoteEditorFormProps {
   form: QuoteFormState;

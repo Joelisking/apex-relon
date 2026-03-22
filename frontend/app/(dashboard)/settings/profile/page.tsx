@@ -147,7 +147,7 @@ export default function ProfilePage() {
                 />
               ) : (
                 <p className="text-sm font-medium">
-                  {user.phone || <span className="text-muted-foreground/50">—</span>}
+                  {user.phone || <span className="text-muted-foreground">—</span>}
                 </p>
               )}
             </div>

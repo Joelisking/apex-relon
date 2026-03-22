@@ -28,7 +28,7 @@ const PRIORITY_META: Record<
   string,
   { label: string; color: string }
 > = {
-  LOW: { label: 'Low', color: 'text-muted-foreground/60' },
+  LOW: { label: 'Low', color: 'text-muted-foreground' },
   MEDIUM: { label: 'Medium', color: 'text-amber-600' },
   HIGH: { label: 'High', color: 'text-orange-600' },
   URGENT: { label: 'Urgent', color: 'text-destructive' },
@@ -131,12 +131,12 @@ export function LinkedTasksSection({
           <ClipboardList className="h-3.5 w-3.5" />
           Tasks
           {pending.length > 0 && (
-            <span className="ml-0.5 text-muted-foreground/60">
+            <span className="ml-0.5 text-muted-foreground">
               · {pending.length} open
             </span>
           )}
           {cancelled.length > 0 && (
-            <span className="ml-0.5 text-muted-foreground/60">
+            <span className="ml-0.5 text-muted-foreground">
               · {cancelled.length} cancelled
             </span>
           )}
@@ -198,10 +198,10 @@ export function LinkedTasksSection({
                         ? 'text-emerald-500 hover:text-emerald-600'
                         : 'text-emerald-500'
                       : isCancelled
-                        ? 'text-muted-foreground/20 cursor-not-allowed'
+                        ? 'text-muted-foreground cursor-not-allowed'
                         : canComplete
-                          ? 'text-muted-foreground/30 hover:text-emerald-500'
-                          : 'text-muted-foreground/20 cursor-not-allowed',
+                          ? 'text-muted-foreground hover:text-emerald-500'
+                          : 'text-muted-foreground cursor-not-allowed',
                   )}>
                   {isDone ? (
                     <CheckCircle2 className="h-4 w-4" />

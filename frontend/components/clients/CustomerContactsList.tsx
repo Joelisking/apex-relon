@@ -113,10 +113,10 @@ export function CustomerContactsList({ clientId, canEdit }: CustomerContactsList
         {/* Empty state */}
         {contacts.length === 0 && (
           <div className="rounded-xl border border-dashed border-border/60 py-8 text-center">
-            <User className="h-7 w-7 mx-auto mb-2 text-muted-foreground/30" />
-            <p className="text-sm text-muted-foreground/50">No contacts yet.</p>
+            <User className="h-7 w-7 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">No contacts yet.</p>
             {canEdit && (
-              <p className="text-xs text-muted-foreground/40 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Add the first contact using the button above.
               </p>
             )}

@@ -213,7 +213,7 @@ export function CustomerDetailDialog({
               <div className="p-6 space-y-6">
                 {/* Contacts */}
                 <div>
-                  <h3 className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground/60 mb-3">
+                  <h3 className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground mb-3">
                     Contacts
                   </h3>
                   <CustomerContactsList

@@ -155,7 +155,7 @@ function avatarInitials(name: string): string {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/80 font-semibold mb-3">
+    <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-semibold mb-3">
       {children}
     </p>
   );
@@ -170,7 +170,7 @@ function StatRow({
 }) {
   return (
     <div className="flex items-start justify-between gap-3 py-2 border-b border-border/30 last:border-0">
-      <span className="text-[11px] text-muted-foreground/60 font-medium shrink-0 mt-0.5">
+      <span className="text-[11px] text-muted-foreground font-medium shrink-0 mt-0.5">
         {label}
       </span>
       <div className="text-[12px] font-medium text-right">
@@ -353,7 +353,7 @@ export function LeadDetailsDialog({
               {/* Expected + Contracted side by side */}
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/50 font-medium mb-0.5">
+                  <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium mb-0.5">
                     Expected
                   </p>
                   <p className="text-[18px] font-bold tabular-nums leading-none">
@@ -362,7 +362,7 @@ export function LeadDetailsDialog({
                 </div>
                 {selectedLead.contractedValue != null && (
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/50 font-medium mb-0.5">
+                    <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium mb-0.5">
                       Contracted
                     </p>
                     <p className="text-[18px] font-bold tabular-nums leading-none text-emerald-700">
@@ -426,7 +426,7 @@ export function LeadDetailsDialog({
                 )}
                 <StatRow label="Owner">
                   <span className="text-xs flex items-center gap-1 justify-end">
-                    <User className="h-3 w-3 text-muted-foreground/50" />
+                    <User className="h-3 w-3 text-muted-foreground" />
                     {selectedLead.assignedTo?.name || 'Unassigned'}
                   </span>
                 </StatRow>
@@ -766,7 +766,7 @@ export function LeadDetailsDialog({
                     )}
                     {selectedLead.aiRecommendations && (
                       <div className="space-y-2">
-                        <p className="text-[10px] uppercase tracking-[0.06em] font-semibold text-muted-foreground/60">
+                        <p className="text-[10px] uppercase tracking-[0.06em] font-semibold text-muted-foreground">
                           Recommendations
                         </p>
                         <div className="space-y-1.5">
@@ -990,7 +990,7 @@ function LeadCustomFields({ leadId }: { leadId: string }) {
 
             return (
               <div key={def.id} className="space-y-1.5">
-                <label className="text-[11px] font-medium text-muted-foreground/80">
+                <label className="text-[11px] font-medium text-muted-foreground">
                   {def.label}
                   {def.required && (
                     <span className="text-destructive ml-0.5">*</span>

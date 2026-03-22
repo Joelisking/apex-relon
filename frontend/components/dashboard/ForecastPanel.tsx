@@ -236,7 +236,7 @@ export function ForecastPanel() {
       {/* Header */}
       <div className="px-5 py-4 flex items-center justify-between border-b border-border/40">
         <div className="flex items-center gap-2">
-          <Target className="h-4 w-4 text-muted-foreground/60" />
+          <Target className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-semibold">Revenue Forecast</span>
         </div>
       </div>
@@ -246,20 +246,20 @@ export function ForecastPanel() {
         {/* Weighted Pipeline */}
         <div className="relative bg-card px-5 py-4">
           <div className="absolute left-0 top-3 bottom-3 w-0.5 bg-blue-400/60 rounded-r-full" />
-          <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium mb-1">
+          <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium mb-1">
             Weighted Pipeline
           </p>
           <p className="text-[22px] font-bold tabular-nums leading-none text-foreground">
             {formatCurrency(summary?.weightedPipeline ?? 0)}
           </p>
-          <p className="text-[11px] text-muted-foreground/50 mt-1">
+          <p className="text-[11px] text-muted-foreground mt-1">
             probability-adjusted
           </p>
         </div>
 
         {/* This Month Target — inline edit */}
         <div className="relative bg-card px-5 py-4">
-          <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium mb-1">
+          <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium mb-1">
             This Month Target
           </p>
           {editingThisMonth ? (
@@ -287,7 +287,7 @@ export function ForecastPanel() {
               <button
                 onClick={() => setEditingThisMonth(false)}
                 disabled={savingThisMonth}
-                className="text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                className="text-muted-foreground hover:text-muted-foreground transition-colors"
                 aria-label="Cancel">
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -295,7 +295,7 @@ export function ForecastPanel() {
           ) : (
             <div className="flex items-center gap-2">
               {(summary?.thisMonthTarget ?? 0) === 0 ? (
-                <p className="text-[18px] font-bold tabular-nums leading-none text-muted-foreground/50">
+                <p className="text-[18px] font-bold tabular-nums leading-none text-muted-foreground">
                   Not set
                 </p>
               ) : (
@@ -305,7 +305,7 @@ export function ForecastPanel() {
               )}
               <button
                 onClick={handleThisMonthEditStart}
-                className="text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                className="text-muted-foreground hover:text-muted-foreground transition-colors"
                 aria-label="Edit this month target">
                 <Pencil className="h-3 w-3" />
               </button>
@@ -315,13 +315,13 @@ export function ForecastPanel() {
 
         {/* Won This Month */}
         <div className="relative bg-card px-5 py-4">
-          <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium mb-1">
+          <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium mb-1">
             Won This Month
           </p>
           <p className="text-[22px] font-bold tabular-nums leading-none text-emerald-600">
             {formatCurrency(summary?.wonThisMonth ?? 0)}
           </p>
-          <p className="text-[11px] text-muted-foreground/50 mt-1">
+          <p className="text-[11px] text-muted-foreground mt-1">
             closed deals
           </p>
         </div>
@@ -332,7 +332,7 @@ export function ForecastPanel() {
             'relative bg-card px-5 py-4',
             hasAccuracy && accuracy < 70 && 'bg-amber-50/60',
           )}>
-          <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium mb-1">
+          <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium mb-1">
             Forecast Accuracy
           </p>
           {hasAccuracy ? (
@@ -344,12 +344,12 @@ export function ForecastPanel() {
                 )}>
                 {accuracy.toFixed(0)}%
               </p>
-              <p className="text-[11px] text-muted-foreground/50 mt-1">
+              <p className="text-[11px] text-muted-foreground mt-1">
                 vs last month target
               </p>
             </>
           ) : (
-            <p className="text-[18px] font-bold tabular-nums leading-none text-muted-foreground/50">
+            <p className="text-[18px] font-bold tabular-nums leading-none text-muted-foreground">
               N/A
             </p>
           )}
@@ -397,7 +397,7 @@ export function ForecastPanel() {
       <div className="px-5 pb-5">
         <button
           onClick={() => (showTargetEditor ? setShowTargetEditor(false) : handleOpenTargetEditor())}
-          className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors">
+          className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors">
           {showTargetEditor ? (
             <ChevronUp className="h-3 w-3" />
           ) : (
@@ -409,7 +409,7 @@ export function ForecastPanel() {
         {showTargetEditor && (
           <div className="mt-3 rounded-lg border border-border/60 overflow-hidden">
             <div className="px-4 py-2.5 bg-muted/40 border-b border-border/40">
-              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">
+              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
                 Monthly Targets
               </p>
             </div>
@@ -419,7 +419,7 @@ export function ForecastPanel() {
                   const key = `${m.year}-${m.month}`;
                   return (
                     <div key={key} className="space-y-1">
-                      <label className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">
+                      <label className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
                         {m.label}
                       </label>
                       <Input

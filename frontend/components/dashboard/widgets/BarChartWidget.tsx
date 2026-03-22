@@ -74,7 +74,7 @@ export function BarChartWidget({ widget, metrics }: Props) {
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
       <div className="px-5 pt-4 pb-3 flex items-center gap-1.5 shrink-0 border-b border-border/50">
-        <BarChart2 className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+        <BarChart2 className="h-3 w-3 text-muted-foreground shrink-0" />
         <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
           {title}
         </p>
@@ -82,7 +82,7 @@ export function BarChartWidget({ widget, metrics }: Props) {
 
       {chartData.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
-          <BarChart2 className="h-6 w-6 text-muted-foreground/30" />
+          <BarChart2 className="h-6 w-6 text-muted-foreground" />
           {metric && !['revenueByClient', 'projectsByStatus'].includes(metric) ? (
             <p className="text-[11px] text-muted-foreground text-center px-6 leading-relaxed">
               Set metric to{' '}

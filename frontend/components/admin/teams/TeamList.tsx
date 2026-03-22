@@ -131,15 +131,15 @@ export function TeamList({ managers, allUsers }: TeamListProps) {
                     <div className="absolute left-0 top-3 bottom-3 w-0.5 bg-destructive/50 rounded-r-full" />
                   )}
                   <div className="flex items-center gap-1.5 mb-2">
-                    <Icon className="h-3 w-3 text-muted-foreground/40 shrink-0" />
-                    <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">
+                    <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
                       {s.label}
                     </p>
                   </div>
                   <p className="text-[22px] font-bold tabular-nums leading-none text-foreground mb-1">
                     {s.value}
                   </p>
-                  <p className="text-xs text-muted-foreground/50">
+                  <p className="text-xs text-muted-foreground">
                     {s.sublabel}
                   </p>
                 </div>
@@ -163,11 +163,11 @@ export function TeamList({ managers, allUsers }: TeamListProps) {
         <div>
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : teams.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-xs text-muted-foreground/50">
+              <p className="text-xs text-muted-foreground">
                 No teams found. Create one to get started.
               </p>
             </div>

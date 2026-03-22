@@ -274,7 +274,7 @@ export function TaskDialog({
               setForm({ ...form, title: e.target.value })
             }
             placeholder="Task title..."
-            className="w-full text-[17px] font-semibold bg-transparent outline-none placeholder:text-muted-foreground/40 text-foreground leading-snug"
+            className="w-full text-[17px] font-semibold bg-transparent outline-none placeholder:text-muted-foreground text-foreground leading-snug"
             autoFocus
           />
 
@@ -285,7 +285,7 @@ export function TaskDialog({
               setForm({ ...form, description: e.target.value })
             }
             placeholder="Add a description..."
-            className="resize-none text-sm border-dashed min-h-16 text-muted-foreground placeholder:text-muted-foreground/40"
+            className="resize-none text-sm border-dashed min-h-16 text-muted-foreground placeholder:text-muted-foreground"
             rows={2}
           />
 
@@ -307,7 +307,7 @@ export function TaskDialog({
               <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
                 Task Type
                 {linkedServiceTypeId && (
-                  <span className="ml-1.5 normal-case text-muted-foreground/50 tracking-normal font-normal">
+                  <span className="ml-1.5 normal-case text-muted-foreground tracking-normal font-normal">
                     — filtered by project type
                   </span>
                 )}
@@ -603,7 +603,7 @@ export function TaskDialog({
                           !form.assignedToId && 'bg-muted/30',
                         )}>
                         <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground/25 flex items-center justify-center shrink-0">
-                          <User className="h-2.5 w-2.5 text-muted-foreground/40" />
+                          <User className="h-2.5 w-2.5 text-muted-foreground" />
                         </div>
                         <span className="flex-1 text-muted-foreground">
                           Unassigned
@@ -652,7 +652,7 @@ export function TaskDialog({
 
         {/* Footer */}
         <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-border/60 bg-muted/20">
-          <span className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/40 font-medium">
+          <span className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
             {editingTask ? 'Editing task' : 'New task'}
           </span>
           <div className="flex items-center gap-2">

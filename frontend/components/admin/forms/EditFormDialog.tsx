@@ -358,7 +358,7 @@ export function EditFormDialog({
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">
                     Placeholder{' '}
-                    <span className="text-muted-foreground/50">(optional)</span>
+                    <span className="text-muted-foreground">(optional)</span>
                   </label>
                   <Input
                     className="h-8 text-sm"
@@ -373,7 +373,7 @@ export function EditFormDialog({
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">
                       Options{' '}
-                      <span className="text-muted-foreground/50">
+                      <span className="text-muted-foreground">
                         (comma-separated)
                       </span>
                     </label>

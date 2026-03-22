@@ -60,9 +60,9 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-start gap-2">
-      <Icon className="h-3.5 w-3.5 text-muted-foreground/40 mt-0.5 shrink-0" />
+      <Icon className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
       <div className="min-w-0">
-        <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">{label}</p>
+        <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
         <p className="text-sm text-foreground break-words">{value}</p>
       </div>
     </div>

@@ -51,7 +51,7 @@ export function createTeamColumns({
           <div>
             <span className="text-sm font-medium">{team.name}</span>
             {team.description && (
-              <p className="text-xs text-muted-foreground/60 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {team.description}
               </p>
             )}
@@ -90,7 +90,7 @@ export function createTeamColumns({
         const team = row.original;
         if (!team.manager) {
           return (
-            <span className="text-xs text-muted-foreground/40">
+            <span className="text-xs text-muted-foreground">
               —
             </span>
           );
@@ -118,7 +118,7 @@ export function createTeamColumns({
         const count = team._count?.members || 0;
         return (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Users className="h-3 w-3 text-muted-foreground/40" />
+            <Users className="h-3 w-3 text-muted-foreground" />
             {count}
           </div>
         );
@@ -140,14 +140,14 @@ export function createTeamColumns({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 w-7 p-0 text-muted-foreground/50 hover:text-foreground"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                     onClick={() => onEdit(team)}>
                     <Edit className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 w-7 p-0 text-muted-foreground/50 hover:text-red-600 hover:bg-red-50"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600 hover:bg-red-50"
                     onClick={() => onDelete(team)}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>

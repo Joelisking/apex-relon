@@ -394,7 +394,7 @@ export default function WorkflowsAdmin() {
       <div className="rounded-xl border border-border/60 bg-card shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
         <div className="grid grid-cols-3 gap-px bg-border/60">
           <div className="bg-card px-5 py-4">
-            <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">
+            <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
               Total Rules
             </p>
             <p className="text-[22px] font-bold tabular-nums leading-none text-foreground mt-1">
@@ -402,7 +402,7 @@ export default function WorkflowsAdmin() {
             </p>
           </div>
           <div className="bg-card px-5 py-4">
-            <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">
+            <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
               Active
             </p>
             <p className="text-[22px] font-bold tabular-nums leading-none text-green-600 mt-1">
@@ -410,7 +410,7 @@ export default function WorkflowsAdmin() {
             </p>
           </div>
           <div className="bg-card px-5 py-4">
-            <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">
+            <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
               Total Executions
             </p>
             <p className="text-[22px] font-bold tabular-nums leading-none text-foreground mt-1">
@@ -430,7 +430,7 @@ export default function WorkflowsAdmin() {
         </div>
       ) : rules.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Zap className="h-12 w-12 text-muted-foreground/30 mb-4" />
+          <Zap className="h-12 w-12 text-muted-foreground mb-4" />
           <p className="text-sm text-muted-foreground">
             No workflow rules configured
           </p>
@@ -460,7 +460,7 @@ export default function WorkflowsAdmin() {
                         'h-4 w-4',
                         rule.isActive
                           ? 'text-amber-500'
-                          : 'text-muted-foreground/40',
+                          : 'text-muted-foreground',
                       )}
                     />
                     <h3 className="text-sm font-semibold">
@@ -605,7 +605,7 @@ export default function WorkflowsAdmin() {
             {/* Conditions */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground/60">
+                <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
                   Conditions (optional)
                 </p>
                 <div className="flex items-center gap-2">
@@ -633,7 +633,7 @@ export default function WorkflowsAdmin() {
                 </div>
               </div>
               {conditions.length === 0 && (
-                <p className="text-xs text-muted-foreground/50 italic">
+                <p className="text-xs text-muted-foreground italic">
                   No conditions — rule triggers on every matching
                   event
                 </p>
@@ -690,7 +690,7 @@ export default function WorkflowsAdmin() {
             {/* Actions */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground/60">
+                <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
                   Actions *
                 </p>
                 <Button
@@ -879,13 +879,13 @@ export default function WorkflowsAdmin() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/40">
-                    <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 px-3 py-2">
+                    <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-3 py-2">
                       Date
                     </th>
-                    <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 px-3 py-2">
+                    <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-3 py-2">
                       Entity
                     </th>
-                    <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground/60 px-3 py-2">
+                    <th className="text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-3 py-2">
                       Result
                     </th>
                   </tr>
@@ -1001,7 +1001,7 @@ export default function WorkflowsAdmin() {
                 placeholder="Leave blank to test with empty context"
                 className="mt-1 text-sm"
               />
-              <p className="mt-1 text-[11px] text-muted-foreground/50">
+              <p className="mt-1 text-[11px] text-muted-foreground">
                 Leave blank to test with empty context
               </p>
             </div>
@@ -1036,7 +1036,7 @@ export default function WorkflowsAdmin() {
                 {testResult.conditionsMet &&
                   testResult.actions.length > 0 && (
                     <div>
-                      <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium mb-1.5">
+                      <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium mb-1.5">
                         Actions ({testResult.actionCount})
                       </p>
                       <ul className="space-y-1">

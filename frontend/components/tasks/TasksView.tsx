@@ -192,30 +192,30 @@ export default function TasksView() {
           <div className="grid grid-cols-4 gap-px bg-border/60">
             {teamSummary && (
               <div className="col-span-4 px-5 py-1.5 bg-muted/30 border-b border-border/40">
-                <p className="text-[10px] uppercase tracking-[0.06em] font-medium text-muted-foreground/60">My Tasks</p>
+                <p className="text-[10px] uppercase tracking-[0.06em] font-medium text-muted-foreground">My Tasks</p>
               </div>
             )}
             <div className="relative bg-card px-5 py-4">
               {summary.overdue > 0 && (
                 <div className="absolute left-0 top-3 bottom-3 w-0.5 bg-destructive/50 rounded-r-full" />
               )}
-              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">Overdue</p>
+              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">Overdue</p>
               <p className={cn('text-[22px] font-bold tabular-nums leading-none mt-1', summary.overdue > 0 ? 'text-red-600' : 'text-foreground')}>
                 {summary.overdue}
               </p>
             </div>
             <div className="bg-card px-5 py-4">
-              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">Due Today</p>
+              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">Due Today</p>
               <p className={cn('text-[22px] font-bold tabular-nums leading-none mt-1', summary.dueToday > 0 ? 'text-amber-600' : 'text-foreground')}>
                 {summary.dueToday}
               </p>
             </div>
             <div className="bg-card px-5 py-4">
-              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">Upcoming</p>
+              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">Upcoming</p>
               <p className="text-[22px] font-bold tabular-nums leading-none text-foreground mt-1">{summary.upcoming}</p>
             </div>
             <div className="bg-card px-5 py-4">
-              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">Total Open</p>
+              <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">Total Open</p>
               <p className="text-[22px] font-bold tabular-nums leading-none text-foreground mt-1">{summary.total}</p>
             </div>
           </div>
@@ -224,7 +224,7 @@ export default function TasksView() {
           {teamSummary && (
             <div className="grid grid-cols-4 gap-px bg-border/60 border-t border-border/60">
               <div className="col-span-4 px-5 py-1.5 bg-muted/30 border-b border-border/40">
-                <p className="text-[10px] uppercase tracking-[0.06em] font-medium text-muted-foreground/60">
+                <p className="text-[10px] uppercase tracking-[0.06em] font-medium text-muted-foreground">
                   Team ({teamSummary.members.length} member{teamSummary.members.length !== 1 ? 's' : ''})
                 </p>
               </div>
@@ -232,23 +232,23 @@ export default function TasksView() {
                 {teamSummary.team.overdue > 0 && (
                   <div className="absolute left-0 top-3 bottom-3 w-0.5 bg-destructive/50 rounded-r-full" />
                 )}
-                <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">Overdue</p>
+                <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">Overdue</p>
                 <p className={cn('text-[22px] font-bold tabular-nums leading-none mt-1', teamSummary.team.overdue > 0 ? 'text-red-600' : 'text-foreground')}>
                   {teamSummary.team.overdue}
                 </p>
               </div>
               <div className="bg-card px-5 py-4">
-                <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">Due Today</p>
+                <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">Due Today</p>
                 <p className={cn('text-[22px] font-bold tabular-nums leading-none mt-1', teamSummary.team.dueToday > 0 ? 'text-amber-600' : 'text-foreground')}>
                   {teamSummary.team.dueToday}
                 </p>
               </div>
               <div className="bg-card px-5 py-4">
-                <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">Upcoming</p>
+                <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">Upcoming</p>
                 <p className="text-[22px] font-bold tabular-nums leading-none text-foreground mt-1">{teamSummary.team.upcoming}</p>
               </div>
               <div className="bg-card px-5 py-4">
-                <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium">Total Open</p>
+                <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">Total Open</p>
                 <p className="text-[22px] font-bold tabular-nums leading-none text-foreground mt-1">{teamSummary.team.total}</p>
               </div>
             </div>
@@ -368,7 +368,7 @@ export default function TasksView() {
         </div>
       ) : tasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <CheckCircle2 className="h-12 w-12 text-muted-foreground/30 mb-4" />
+          <CheckCircle2 className="h-12 w-12 text-muted-foreground mb-4" />
           <p className="text-sm text-muted-foreground">
             No tasks found
           </p>

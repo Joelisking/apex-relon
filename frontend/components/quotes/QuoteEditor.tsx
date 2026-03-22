@@ -230,7 +230,7 @@ export default function QuoteEditor({ quoteId }: QuoteEditorProps) {
             <ArrowLeft className="h-4 w-4" />
             Quotes
           </Button>
-          <span className="text-muted-foreground/40">|</span>
+          <span className="text-muted-foreground">|</span>
           <span className="text-sm font-semibold">{quoteTitle}</span>
           {existingQuote && (
             <Badge

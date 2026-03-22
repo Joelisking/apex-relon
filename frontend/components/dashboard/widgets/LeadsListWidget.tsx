@@ -63,7 +63,7 @@ export function LeadsListWidget({ widget }: Props) {
       {/* Header */}
       <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border/50 shrink-0">
         <div className="flex items-center gap-1.5">
-          <Zap className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+          <Zap className="h-3 w-3 text-muted-foreground shrink-0" />
           <span className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
             {title}
           </span>
@@ -90,7 +90,7 @@ export function LeadsListWidget({ widget }: Props) {
         </div>
       ) : leads.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-2.5">
-          <Inbox className="h-6 w-6 text-muted-foreground/40" />
+          <Inbox className="h-6 w-6 text-muted-foreground" />
           <p className="text-[11px] font-medium text-muted-foreground">No leads yet</p>
         </div>
       ) : (

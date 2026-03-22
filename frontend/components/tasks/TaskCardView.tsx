@@ -135,8 +135,8 @@ export function TaskCardView({
                     className={cn(
                       'shrink-0 mt-0.5 transition-colors',
                       canEdit && canComplete && !isCancelled
-                        ? 'text-muted-foreground/30 hover:text-emerald-500'
-                        : 'text-muted-foreground/30 cursor-not-allowed',
+                        ? 'text-muted-foreground hover:text-emerald-500'
+                        : 'text-muted-foreground cursor-not-allowed',
                     )}>
                     <Circle className="h-4 w-4" />
                   </button>
@@ -148,7 +148,7 @@ export function TaskCardView({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 shrink-0 -mr-1 -mt-0.5 text-muted-foreground/50 hover:text-foreground">
+                        className="h-6 w-6 shrink-0 -mr-1 -mt-0.5 text-muted-foreground hover:text-foreground">
                         <MoreHorizontal className="h-3.5 w-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -226,7 +226,7 @@ export function TaskCardView({
                         ? 'text-red-600 font-medium'
                         : today
                           ? 'text-amber-600 font-medium'
-                          : 'text-muted-foreground/60',
+                          : 'text-muted-foreground',
                     )}>
                     {overdue ? (
                       <AlertTriangle className="h-3 w-3" />
@@ -236,13 +236,13 @@ export function TaskCardView({
                     {formatDate(task.dueDate)}
                   </span>
                 ) : (
-                  <span className="text-[11px] text-muted-foreground/40">
+                  <span className="text-[11px] text-muted-foreground">
                     No due date
                   </span>
                 )}
 
                 {task.assignedTo && (
-                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground/60 truncate">
+                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground truncate">
                     <User className="h-3 w-3 shrink-0" />
                     <span className="truncate">
                       {task.assignedTo.name.split(' ')[0]}

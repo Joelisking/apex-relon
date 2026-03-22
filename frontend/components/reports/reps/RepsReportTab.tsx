@@ -334,7 +334,7 @@ export function RepsReportTab({ filters }: RepsReportTabProps) {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                   Top 10 by Contracted Value
                 </p>
-                <p className="text-xs text-muted-foreground/60 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   Based on deals closed in period
                 </p>
               </div>
@@ -343,7 +343,7 @@ export function RepsReportTab({ filters }: RepsReportTabProps) {
                   onClick={handleExportTopRevenue}
                   variant="ghost"
                   size="sm"
-                  className="h-7 w-7 p-0 text-muted-foreground/50 hover:text-foreground">
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground">
                   <Download className="h-3.5 w-3.5" />
                 </Button>
               )}
@@ -398,7 +398,7 @@ export function RepsReportTab({ filters }: RepsReportTabProps) {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                   Sales Cycle Comparison
                 </p>
-                <p className="text-xs text-muted-foreground/60 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   Average days from lead created to close
                 </p>
               </div>
@@ -407,7 +407,7 @@ export function RepsReportTab({ filters }: RepsReportTabProps) {
                   onClick={handleExportSalesCycle}
                   variant="ghost"
                   size="sm"
-                  className="h-7 w-7 p-0 text-muted-foreground/50 hover:text-foreground">
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground">
                   <Download className="h-3.5 w-3.5" />
                 </Button>
               )}
@@ -469,7 +469,7 @@ export function RepsReportTab({ filters }: RepsReportTabProps) {
               <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                 Top Performers
               </p>
-              <p className="text-xs text-muted-foreground/60 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Top 5 by contracted value closed in period
               </p>
             </div>
@@ -478,7 +478,7 @@ export function RepsReportTab({ filters }: RepsReportTabProps) {
                 onClick={handleExportLeaderboard}
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-muted-foreground/50 hover:text-foreground">
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground">
                 <Download className="h-3.5 w-3.5" />
               </Button>
             )}
@@ -512,7 +512,7 @@ export function RepsReportTab({ filters }: RepsReportTabProps) {
                     <p className="text-sm font-semibold text-foreground truncate">
                       {rep.repName}
                     </p>
-                    <p className="text-[11px] text-muted-foreground/70">
+                    <p className="text-[11px] text-muted-foreground">
                       {rep.closedProjects} won
                       {' · '}
                       {rep.conversionRate}% conv.
@@ -526,7 +526,7 @@ export function RepsReportTab({ filters }: RepsReportTabProps) {
                     <p className="text-[16px] font-bold tabular-nums text-foreground">
                       ${fmtVal(rep.totalContractedValue)}
                     </p>
-                    <p className="text-[10px] uppercase tracking-[0.04em] text-muted-foreground/50">
+                    <p className="text-[10px] uppercase tracking-[0.04em] text-muted-foreground">
                       contracted
                     </p>
                   </div>
@@ -546,7 +546,7 @@ export function RepsReportTab({ filters }: RepsReportTabProps) {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                   Time Spent Per Stage
                 </p>
-                <p className="text-xs text-muted-foreground/60 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   Average days in each stage, by rep
                 </p>
               </div>
@@ -555,7 +555,7 @@ export function RepsReportTab({ filters }: RepsReportTabProps) {
                   onClick={handleExportStageTime}
                   variant="ghost"
                   size="sm"
-                  className="h-7 w-7 p-0 text-muted-foreground/50 hover:text-foreground">
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground">
                   <Download className="h-3.5 w-3.5" />
                 </Button>
               )}
@@ -565,7 +565,7 @@ export function RepsReportTab({ filters }: RepsReportTabProps) {
             <div className="space-y-5">
               {stageTime.slice(0, 5).map((rep) => (
                 <div key={rep.repId}>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground/60 mb-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground mb-2">
                     {rep.repName}
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-px bg-border/40 rounded-lg overflow-hidden">
@@ -576,7 +576,7 @@ export function RepsReportTab({ filters }: RepsReportTabProps) {
                         <p className="text-[18px] font-bold tabular-nums leading-none text-foreground mb-1">
                           {stage.avgDays}d
                         </p>
-                        <p className="text-[9px] uppercase tracking-[0.05em] text-muted-foreground/50 truncate">
+                        <p className="text-[9px] uppercase tracking-[0.05em] text-muted-foreground truncate">
                           {stage.stage}
                         </p>
                       </div>
@@ -595,7 +595,7 @@ export function RepsReportTab({ filters }: RepsReportTabProps) {
           <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
             Complete Performance Metrics
           </p>
-          <p className="text-xs text-muted-foreground/60 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             All rep statistics for selected period
           </p>
         </CardHeader>

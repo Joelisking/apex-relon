@@ -196,13 +196,13 @@ export function TimePicker({ value, onChange, minuteStep = 5 }: TimePickerProps)
           <span className="text-2xl font-bold tabular-nums tracking-tight leading-none">
             {h}
           </span>
-          <span className="text-xl font-bold text-muted-foreground/40 leading-none">
+          <span className="text-xl font-bold text-muted-foreground leading-none">
             :
           </span>
           <span className="text-2xl font-bold tabular-nums tracking-tight leading-none">
             {String(snappedM).padStart(2, '0')}
           </span>
-          <span className="ml-1.5 text-xs font-semibold text-muted-foreground/70 self-center">
+          <span className="ml-1.5 text-xs font-semibold text-muted-foreground self-center">
             {p}
           </span>
         </div>
@@ -213,7 +213,7 @@ export function TimePicker({ value, onChange, minuteStep = 5 }: TimePickerProps)
             <span
               key={label}
               className={cn(
-                'py-1 text-center text-[9px] font-semibold uppercase tracking-[0.09em] text-muted-foreground/40',
+                'py-1 text-center text-[9px] font-semibold uppercase tracking-[0.09em] text-muted-foreground',
                 i === 1 && 'border-x border-border/30',
               )}>
               {label}

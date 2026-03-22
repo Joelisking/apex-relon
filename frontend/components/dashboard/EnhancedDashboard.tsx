@@ -157,12 +157,12 @@ function MyTasksWidget() {
       {/* Header */}
       <div className="px-5 py-4 flex items-center justify-between border-b border-border/40">
         <div className="flex items-center gap-2">
-          <ListTodo className="h-4 w-4 text-muted-foreground/60" />
+          <ListTodo className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-semibold">My Tasks</span>
         </div>
         <a
           href="/tasks"
-          className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors">
+          className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors">
           View all
           <ExternalLink className="h-3 w-3" />
         </a>
@@ -174,7 +174,7 @@ function MyTasksWidget() {
           <div
             key={stat.label}
             className="relative bg-card px-4 py-3">
-            <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground/60 font-medium mb-1">
+            <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium mb-1">
               {stat.label}
             </p>
             <p
@@ -226,7 +226,7 @@ function MyTasksWidget() {
                       </span>
                     )}
                     {task.entityType && task.entityId && (
-                      <span className="text-[11px] text-muted-foreground/50">
+                      <span className="text-[11px] text-muted-foreground">
                         {task.entityType.charAt(0) +
                           task.entityType.slice(1).toLowerCase()}
                       </span>
@@ -458,7 +458,7 @@ export default function EnhancedDashboard({
           <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
             Real-time business performance metrics
             {isFetching && !isLoading && (
-              <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground/60" />
+              <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground" />
             )}
           </p>
         </div>
