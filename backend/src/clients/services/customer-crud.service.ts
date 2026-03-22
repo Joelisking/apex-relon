@@ -21,7 +21,7 @@ export class CustomerCrudService {
   private readonly primaryContactInclude = {
     contacts: {
       where: { isPrimary: true },
-      select: { firstName: true, lastName: true, email: true, phone: true },
+      select: { id: true, firstName: true, lastName: true, email: true, phone: true },
       take: 1,
     },
   } as const;

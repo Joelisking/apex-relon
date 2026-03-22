@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { leadsApi, settingsApi } from '@/lib/api/client';
+import { contactsApi } from '@/lib/api/contacts-client';
 import { useAuth } from '@/contexts/auth-context';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import {
@@ -82,6 +83,7 @@ interface ClientOption {
   email?: string | null;
   phone?: string | null;
   contacts?: {
+    id: string;
     firstName: string;
     lastName: string;
     email?: string | null;
@@ -198,6 +200,7 @@ export function CreateLeadDialog({
     [],
   );
   const [pmOpen, setPmOpen] = useState(false);
+  const [autoLinkedContactId, setAutoLinkedContactId] = useState<string | null>(null);
   const datalistId = useId();
 
   // Set stage to first pipeline stage whenever dialog opens
@@ -271,6 +274,9 @@ export function CreateLeadDialog({
         primaryContact?.phone || client.phone || '',
       );
       if (client.county) form.setValue('county', client.county);
+      setAutoLinkedContactId(primaryContact?.id ?? null);
+    } else {
+      setAutoLinkedContactId(null);
     }
 
     const clientLeads = leads.filter(
@@ -363,13 +369,25 @@ export function CreateLeadDialog({
             : undefined,
       });
 
+      // Auto-link the primary contact from the selected client
+      if (autoLinkedContactId) {
+        try {
+          await contactsApi.linkToLead(lead.id, autoLinkedContactId);
+        } catch {
+          // Non-fatal — lead was created successfully, contact link failed silently
+        }
+      }
+
       toast.success('Prospective project created', {
         description: `"${data.projectName}" has been added to the pipeline.`,
       });
 
       onLeadCreated?.(lead);
       form.reset();
+      setAutoLinkedContactId(null);
       setPendingTeamMemberIds([]);
+      setSelectedCategoryIds([]);
+      setSelectedServiceTypeIds([]);
       onOpenChange(false);
     } catch (error: unknown) {
       const errorMessage =
@@ -386,6 +404,7 @@ export function CreateLeadDialog({
 
   const handleClose = () => {
     form.reset();
+    setAutoLinkedContactId(null);
     setPendingTeamMemberIds([]);
     setSelectedCategoryIds([]);
     setSelectedServiceTypeIds([]);
