@@ -240,9 +240,7 @@ export function CreateProjectDialog({
     }
   };
 
-  const pms = users.filter((u) =>
-    ['ADMIN', 'CEO', 'SALES', 'BDM'].includes(u.role),
-  );
+  const pms = users;
 
   const availableUsers = users.filter(
     (u) => !pendingTeamMemberIds.includes(u.id),
