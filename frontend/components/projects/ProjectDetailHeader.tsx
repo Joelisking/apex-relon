@@ -1,9 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { Pencil } from 'lucide-react';
+import { Pencil, ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { Project } from '@/lib/api/projects-client';
+import type { PipelineStage } from '@/lib/api/pipeline-client';
 
 const STATUS_CHIP: Record<string, string> = {
   Planning: 'text-blue-700 bg-blue-50 border-blue-200',
@@ -36,6 +43,10 @@ interface Props {
   profit: number;
   daysInStatus: number;
   canEdit: boolean;
+  canMoveStage: boolean;
+  stages: PipelineStage[];
+  isUpdatingStatus: boolean;
+  onStatusChange: (status: string) => void;
   onEdit: () => void;
 }
 
@@ -52,6 +63,10 @@ export function ProjectDetailHeader({
   profit,
   daysInStatus,
   canEdit,
+  canMoveStage,
+  stages,
+  isUpdatingStatus,
+  onStatusChange,
   onEdit,
 }: Props) {
   const projectInitials = avatarInitials(project.name);
@@ -100,10 +115,34 @@ export function ProjectDetailHeader({
               )}
             </div>
             <div className="flex flex-wrap gap-1.5 mt-2.5">
-              <span
-                className={`inline-flex items-center text-[11px] font-semibold rounded-full px-2.5 py-1 border ${STATUS_CHIP[project.status] ?? 'text-gray-600 bg-gray-100 border-gray-200'}`}>
-                {project.status}
-              </span>
+              {canMoveStage && stages.length > 0 ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      disabled={isUpdatingStatus}
+                      className={`inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2.5 py-1 border hover:opacity-80 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed ${STATUS_CHIP[project.status] ?? 'text-gray-600 bg-gray-100 border-gray-200'}`}>
+                      {isUpdatingStatus ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                      {project.status}
+                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[160px]">
+                    {stages.map((s) => (
+                      <DropdownMenuItem
+                        key={s.id}
+                        onSelect={() => onStatusChange(s.name)}
+                        className={s.name === project.status ? 'font-semibold' : ''}>
+                        {s.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <span
+                  className={`inline-flex items-center text-[11px] font-semibold rounded-full px-2.5 py-1 border ${STATUS_CHIP[project.status] ?? 'text-gray-600 bg-gray-100 border-gray-200'}`}>
+                  {project.status}
+                </span>
+              )}
               <span
                 className={`inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2.5 py-1 border ${riskClasses}`}>
                 <RiskIcon className="h-2.5 w-2.5" /> {riskKey}

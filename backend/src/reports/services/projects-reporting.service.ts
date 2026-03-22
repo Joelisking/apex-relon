@@ -228,18 +228,24 @@ export class ProjectsReportingService {
   ) {
     const where: Record<string, unknown> = {};
 
-    // Date filter anchored to project startDate (more meaningful than record createdAt)
+    // Date filter anchored to createdAt (always set; startDate is often null)
     const dateRange = this.getDateRange(filters);
     if (dateRange) {
-      where.startDate = dateRange;
+      where.createdAt = dateRange;
     }
 
     // Scope: canViewAll = see everything; has teamId = own team; else = self only
     if (!user.canViewAll) {
       if (user.teamId) {
-        where.assignments = { some: { user: { teamId: user.teamId } } };
+        where.OR = [
+          { assignments: { some: { user: { teamId: user.teamId } } } },
+          { projectManager: { teamId: user.teamId } },
+        ];
       } else {
-        where.assignments = { some: { userId: user.id } };
+        where.OR = [
+          { assignments: { some: { userId: user.id } } },
+          { projectManagerId: user.id },
+        ];
       }
     }
 

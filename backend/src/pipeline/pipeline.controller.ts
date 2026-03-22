@@ -19,7 +19,6 @@ export class PipelineController {
   constructor(private readonly pipelineService: PipelineService) {}
 
   @Get('stages')
-  @Permissions('leads:view')
   findAll(@Query('type') type?: string) {
     return this.pipelineService.findAll(type);
   }

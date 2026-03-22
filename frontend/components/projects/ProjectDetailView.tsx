@@ -40,6 +40,7 @@ import {
   type Project,
   type CostLog,
 } from '@/lib/api/projects-client';
+import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/auth-context';
@@ -141,6 +142,8 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
   const [activities, setActivities] = useState<Activity[]>([]);
   const [files, setFiles] = useState<FileUpload[]>([]);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const loadProjectData = async (signal?: AbortSignal) => {
     try {
@@ -169,6 +172,27 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
     loadProjectData(controller.signal);
     return () => controller.abort();
   }, [projectId]);
+
+  useEffect(() => {
+    pipelineApi.getStages('project').then(setProjectStages).catch(console.error);
+  }, []);
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!project || newStatus === project.status) return;
+    setIsUpdatingStatus(true);
+    const prev = project.status;
+    setProject({ ...project, status: newStatus });
+    try {
+      const updated = await projectsApi.update(project.id, { status: newStatus });
+      setProject(updated);
+      toast.success(`Status updated to ${newStatus}`);
+    } catch {
+      setProject({ ...project, status: prev });
+      toast.error('Failed to update status');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
 
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -283,6 +307,10 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
         profit={profit}
         daysInStatus={daysInStatus}
         canEdit={hasPermission('projects:edit')}
+        canMoveStage={hasPermission('projects:move_stage')}
+        stages={projectStages}
+        isUpdatingStatus={isUpdatingStatus}
+        onStatusChange={handleStatusChange}
         onEdit={() => setIsEditOpen(true)}
       />
 

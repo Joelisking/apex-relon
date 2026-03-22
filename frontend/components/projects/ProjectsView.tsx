@@ -59,8 +59,9 @@ export default function ProjectsView({
   const router = useRouter();
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
+  const canMoveStage = hasPermission('projects:move_stage');
   const [localProjects, setLocalProjects] = useState<Project[]>([]);
-  const [view, setView] = useState<'kanban' | 'table'>('kanban');
+  const [view, setView] = useState<'kanban' | 'table'>(canMoveStage ? 'kanban' : 'table');
   const [selectedProject, setSelectedProject] =
     useState<Project | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -357,22 +358,24 @@ export default function ProjectsView({
             </Button>
           )}
 
-          <div className="flex border rounded-lg overflow-hidden">
-            <Button
-              variant={view === 'kanban' ? 'default' : 'ghost'}
-              size="sm"
-              className="rounded-none"
-              onClick={() => setView('kanban')}>
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={view === 'table' ? 'default' : 'ghost'}
-              size="sm"
-              className="rounded-none"
-              onClick={() => setView('table')}>
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
+          {canMoveStage && (
+            <div className="flex border rounded-lg overflow-hidden">
+              <Button
+                variant={view === 'kanban' ? 'default' : 'ghost'}
+                size="sm"
+                className="rounded-none"
+                onClick={() => setView('kanban')}>
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={view === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                className="rounded-none"
+                onClick={() => setView('table')}>
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 

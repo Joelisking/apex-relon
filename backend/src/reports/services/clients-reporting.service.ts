@@ -165,19 +165,25 @@ export class ClientsReportingService {
 
   async getEngagementTrends(
     filters: ReportFiltersDto,
-    _user: ReportUser,
+    user: ReportUser,
   ): Promise<EngagementTrendData[]> {
-    const periodStart = this.getPeriodStart(
-      filters.period || 'month',
-    );
-    const now = new Date();
+    const dateRange = this.getDateRange(filters) ?? {
+      gte: this.getPeriodStart('month'),
+    };
 
-    // Get all activities for clients in the period
+    // Scope activities to clients the user can see
+    const clientWhere = this.buildWhereClause(filters, user);
+    const activityClientFilter: Record<string, unknown> = {
+      clientId: { not: null },
+      createdAt: dateRange,
+    };
+    if (!user.canViewAll) {
+      activityClientFilter.client = clientWhere;
+    }
+
+    // Get activities for clients in the period
     const activities = await this.prisma.activity.findMany({
-      where: {
-        clientId: { not: null },
-        createdAt: { gte: periodStart, lte: now },
-      },
+      where: activityClientFilter,
       include: {
         client: true,
       },
@@ -222,15 +228,18 @@ export class ClientsReportingService {
     filters: ReportFiltersDto,
     user: ReportUser,
   ): Promise<HealthScoreTrendData[]> {
-    // Since we don't have historical health score data, we'll show current health scores grouped by creation period
-    const periodStart = this.getPeriodStart(
-      filters.period || 'month',
-    );
+    // Show current health scores grouped by creation period
+    const baseWhere = this.buildWhereClause(filters, user);
+    // Ensure a date range is always applied (default to last month)
+    if (!baseWhere.createdAt) {
+      baseWhere.createdAt = {
+        gte: this.getPeriodStart(filters.period || 'month'),
+      };
+    }
     const clients = await this.prisma.client.findMany({
       where: {
-        ...this.buildWhereClause(filters, user),
+        ...baseWhere,
         healthScore: { not: null },
-        createdAt: { gte: periodStart },
       },
     });
 
@@ -296,16 +305,35 @@ export class ClientsReportingService {
     });
   }
 
+  private getDateRange(
+    filters: ReportFiltersDto,
+  ): { gte?: Date; lte?: Date } | null {
+    if (filters.startDate || filters.endDate) {
+      return {
+        ...(filters.startDate
+          ? { gte: new Date(filters.startDate) }
+          : {}),
+        ...(filters.endDate
+          ? { lte: new Date(filters.endDate + 'T23:59:59.999Z') }
+          : {}),
+      };
+    }
+    if (filters.period) {
+      return { gte: this.getPeriodStart(filters.period) };
+    }
+    return null;
+  }
+
   private buildWhereClause(
     filters: ReportFiltersDto,
     user: ReportUser,
   ) {
     const where: Record<string, unknown> = {};
 
-    // Period filter
-    if (filters.period) {
-      const periodStart = this.getPeriodStart(filters.period);
-      where.createdAt = { gte: periodStart };
+    // Date filter (period or custom range)
+    const dateRange = this.getDateRange(filters);
+    if (dateRange) {
+      where.createdAt = dateRange;
     }
 
     // Scope: canViewAll = see everything; has teamId = own team; else = self only

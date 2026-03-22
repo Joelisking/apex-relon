@@ -286,6 +286,7 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
         activityCount={activityCount}
         fileCount={fileCount}
         canEdit={hasPermission('leads:edit')}
+        canMoveStage={hasPermission('leads:move_stage')}
         canDelete={hasPermission('leads:delete')}
         stages={leadStages}
         isUpdatingStage={isUpdatingStage}

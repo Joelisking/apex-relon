@@ -35,6 +35,7 @@ interface Props {
   activityCount: number;
   fileCount: number;
   canEdit: boolean;
+  canMoveStage: boolean;
   canDelete: boolean;
   stages: PipelineStage[];
   isUpdatingStage: boolean;
@@ -59,6 +60,7 @@ export function LeadDetailHeader({
   activityCount,
   fileCount,
   canEdit,
+  canMoveStage,
   canDelete,
   stages,
   isUpdatingStage,
@@ -101,7 +103,7 @@ export function LeadDetailHeader({
               <p className="text-[13px] text-muted-foreground mt-0.5">{lead.company}</p>
             )}
             <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
-              {canEdit && stages.length > 0 && !isClosedFinal ? (
+              {canMoveStage && stages.length > 0 && !isClosedFinal ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button

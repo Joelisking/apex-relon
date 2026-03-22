@@ -29,12 +29,6 @@ const BUILT_IN_ROLES = [
 
 const SEEDED_ROLES = [
   {
-    key: 'OWNER',
-    label: 'Owner',
-    color: 'violet',
-    isBuiltIn: false,
-  },
-  {
     key: 'PROJECT_MANAGER',
     label: 'Project Manager',
     color: 'blue',
@@ -44,6 +38,36 @@ const SEEDED_ROLES = [
     key: 'SURVEY_CREW_CHIEF',
     label: 'Survey Crew Chief',
     color: 'emerald',
+    isBuiltIn: false,
+  },
+  {
+    key: 'PARTY_CHIEF',
+    label: 'Party Chief',
+    color: 'emerald',
+    isBuiltIn: false,
+  },
+  {
+    key: 'SURVEY_TECHNICIAN',
+    label: 'Survey Technician',
+    color: 'sky',
+    isBuiltIn: false,
+  },
+  {
+    key: 'OFFICE_ADMIN',
+    label: 'Office Administrator',
+    color: 'amber',
+    isBuiltIn: false,
+  },
+  {
+    key: 'DRAFTING_CAD_TECH',
+    label: 'Drafting / CAD Tech',
+    color: 'indigo',
+    isBuiltIn: false,
+  },
+  {
+    key: 'BILLING_ADMIN',
+    label: 'Billing Administrator',
+    color: 'rose',
     isBuiltIn: false,
   },
 ];

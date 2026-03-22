@@ -88,6 +88,7 @@ export default function ModernLeadsView({
   const router = useRouter();
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
+  const canMoveStage = hasPermission('leads:move_stage');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
@@ -121,7 +122,7 @@ export default function ModernLeadsView({
   );
   const [mounted, setMounted] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>(
-    'kanban',
+    canMoveStage ? 'kanban' : 'table',
   );
 
   useEffect(() => {
@@ -651,24 +652,26 @@ export default function ModernLeadsView({
         <h3 className="text-lg font-semibold">
           {viewMode === 'kanban' ? 'Board View' : 'List View'}
         </h3>
-        <div className="flex items-center border rounded-lg p-1">
-          <Button
-            variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('kanban')}
-            className="gap-2">
-            <LayoutGrid className="h-4 w-4" />
-            Board
-          </Button>
-          <Button
-            variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('table')}
-            className="gap-2">
-            <ListIcon className="h-4 w-4" />
-            List
-          </Button>
-        </div>
+        {canMoveStage && (
+          <div className="flex items-center border rounded-lg p-1">
+            <Button
+              variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('kanban')}
+              className="gap-2">
+              <LayoutGrid className="h-4 w-4" />
+              Board
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className="gap-2">
+              <ListIcon className="h-4 w-4" />
+              List
+            </Button>
+          </div>
+        )}
       </div>
 
       {viewMode === 'table' ? (

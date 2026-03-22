@@ -96,6 +96,14 @@ export function ClientsReportTab({ filters }: ClientsReportTabProps) {
   const engagementTrends = data?.engagementTrends ?? [];
   const healthScoreTrends = data?.healthScoreTrends ?? [];
 
+  if (error && !loading) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        <p className="text-sm">Failed to load customers report data.</p>
+      </div>
+    );
+  }
+
   if (loading || !overview) {
     return (
       <div className="space-y-6">

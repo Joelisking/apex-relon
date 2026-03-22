@@ -78,6 +78,14 @@ export function ProjectsReportTab({
   const profitability = data?.profitability ?? [];
   const riskDistribution = data?.riskDistribution ?? [];
 
+  if (error && !loading) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        <p className="text-sm">Failed to load projects report data.</p>
+      </div>
+    );
+  }
+
   if (loading || !overview) {
     return (
       <div className="space-y-6">
