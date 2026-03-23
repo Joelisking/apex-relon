@@ -53,9 +53,21 @@ export class BottleneckService {
     private readonly aiService: AiService,
   ) {}
 
+  private async getThresholds(): Promise<{ stuckDays: number; criticalStageDays: number }> {
+    const settings = await this.prisma.tenantSettings.findUnique({
+      where: { id: 'singleton' },
+      select: { bottleneckStuckDays: true, bottleneckCriticalStageDays: true },
+    });
+    return {
+      stuckDays: settings?.bottleneckStuckDays ?? 14,
+      criticalStageDays: settings?.bottleneckCriticalStageDays ?? 14,
+    };
+  }
+
   // ─── Stage Dwell Time ─────────────────────────────────────────────────────
 
-  async getStageDwellTime(): Promise<StageDwellResult[]> {
+  async getStageDwellTime(criticalStageDays?: number): Promise<StageDwellResult[]> {
+    const threshold = criticalStageDays ?? (await this.getThresholds()).criticalStageDays;
     const history = await this.prisma.stageHistory.findMany({
       orderBy: { createdAt: 'asc' },
     });
@@ -100,7 +112,7 @@ export class BottleneckService {
         medianDays: Math.round(median * 10) / 10,
         maxDays: Math.round(max * 10) / 10,
         count: dwells.length,
-        isCritical: avg > 14, // flag if avg > 2 weeks
+        isCritical: avg > threshold,
       });
     }
 
@@ -111,9 +123,24 @@ export class BottleneckService {
 
   async getTaskVelocity(days = 30): Promise<TaskVelocityResult[]> {
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const now = new Date();
 
-    const tasks = await this.prisma.task.findMany({
-      where: { createdAt: { gte: since } },
+    // Active tasks currently assigned (open workload)
+    const activeTasks = await this.prisma.task.findMany({
+      where: {
+        assignedToId: { not: null },
+        status: { notIn: ['DONE', 'CANCELLED'] },
+      },
+      include: { assignedTo: { select: { id: true, name: true } } },
+    });
+
+    // Tasks completed in the last N days
+    const completedTasks = await this.prisma.task.findMany({
+      where: {
+        assignedToId: { not: null },
+        status: 'DONE',
+        completedAt: { gte: since },
+      },
       include: { assignedTo: { select: { id: true, name: true } } },
     });
 
@@ -122,32 +149,40 @@ export class BottleneckService {
       { user: { id: string; name: string }; assigned: number; completed: number; overdue: number }
     > = {};
 
-    const now = new Date();
-    for (const task of tasks) {
-      if (!task.assignedToId || !task.assignedTo) continue;
+    const ensure = (task: { assignedToId: string | null; assignedTo: { id: string; name: string } | null }) => {
+      if (!task.assignedToId || !task.assignedTo) return null;
       const uid = task.assignedToId;
-      if (!byUser[uid]) {
-        byUser[uid] = { user: task.assignedTo, assigned: 0, completed: 0, overdue: 0 };
-      }
+      if (!byUser[uid]) byUser[uid] = { user: task.assignedTo, assigned: 0, completed: 0, overdue: 0 };
+      return uid;
+    };
+
+    for (const task of activeTasks) {
+      const uid = ensure(task);
+      if (!uid) continue;
       byUser[uid].assigned++;
-      if (task.status === 'COMPLETED') byUser[uid].completed++;
-      if (
-        task.status !== 'COMPLETED' &&
-        task.dueDate &&
-        new Date(task.dueDate) < now
-      ) {
-        byUser[uid].overdue++;
-      }
+      if (task.dueDate && new Date(task.dueDate) < now) byUser[uid].overdue++;
     }
 
-    return Object.values(byUser).map(({ user, assigned, completed, overdue }) => ({
-      userId: user.id,
-      userName: user.name,
-      assigned,
-      completed,
-      overdue,
-      completionRate: assigned > 0 ? Math.round((completed / assigned) * 100) : 0,
-    }));
+    for (const task of completedTasks) {
+      const uid = ensure(task);
+      if (!uid) continue;
+      byUser[uid].completed++;
+    }
+
+    return Object.values(byUser)
+      .filter(({ assigned, completed }) => assigned > 0 || completed > 0)
+      .map(({ user, assigned, completed, overdue }) => ({
+        userId: user.id,
+        userName: user.name,
+        assigned,
+        completed,
+        overdue,
+        completionRate:
+          assigned + completed > 0
+            ? Math.round((completed / (assigned + completed)) * 100)
+            : 0,
+      }))
+      .sort((a, b) => b.overdue - a.overdue || a.completionRate - b.completionRate);
   }
 
   // ─── Overdue Tasks ────────────────────────────────────────────────────────
@@ -156,7 +191,7 @@ export class BottleneckService {
     const now = new Date();
     const tasks = await this.prisma.task.findMany({
       where: {
-        status: { not: 'COMPLETED' },
+        status: { notIn: ['DONE', 'CANCELLED'] },
         dueDate: { lt: now },
       },
       include: { assignedTo: { select: { id: true, name: true } } },
@@ -190,7 +225,8 @@ export class BottleneckService {
 
   // ─── Stuck Projects ───────────────────────────────────────────────────────
 
-  async getStuckProjects(thresholdDays = 14) {
+  async getStuckProjects(thresholdDays?: number) {
+    const threshold = thresholdDays ?? (await this.getThresholds()).stuckDays;
     const projects = await this.prisma.project.findMany({
       where: { status: { notIn: ['Completed', 'Cancelled'] } },
       include: { client: { select: { name: true } } },
@@ -200,7 +236,7 @@ export class BottleneckService {
       .filter((p) => {
         const daysSinceUpdate =
           (Date.now() - p.updatedAt.getTime()) / (1000 * 60 * 60 * 24);
-        return daysSinceUpdate > thresholdDays;
+        return daysSinceUpdate > threshold;
       })
       .map((p) => ({
         id: p.id,
@@ -217,11 +253,13 @@ export class BottleneckService {
   // ─── Widget Summary ───────────────────────────────────────────────────────
 
   async getWidgetSummary(): Promise<WidgetSummaryResult> {
+    const { stuckDays, criticalStageDays } = await this.getThresholds();
+
     const [stageDwell, taskVelocity, overdueBreakdown, stuckProjects] = await Promise.all([
-      this.getStageDwellTime(),
+      this.getStageDwellTime(criticalStageDays),
       this.getTaskVelocity(30),
       this.getOverdueBreakdown(),
-      this.getStuckProjects(14),
+      this.getStuckProjects(stuckDays),
     ]);
 
     const stuckProjectIds = stuckProjects.map((p) => p.id);
@@ -233,7 +271,7 @@ export class BottleneckService {
         where: {
           entityType: 'project',
           entityId: { in: stuckProjectIds },
-          status: { not: 'COMPLETED' },
+          status: { notIn: ['DONE', 'CANCELLED'] },
           assignedToId: { not: null },
         },
         select: {
@@ -317,11 +355,13 @@ export class BottleneckService {
   // ─── AI Bottleneck Report ─────────────────────────────────────────────────
 
   async generateAiReport(): Promise<{ content: string; generatedAt: Date }> {
+    const { stuckDays, criticalStageDays } = await this.getThresholds();
+
     const [stageDwell, taskVelocity, overdueBreakdown, stuckProjects] = await Promise.all([
-      this.getStageDwellTime(),
+      this.getStageDwellTime(criticalStageDays),
       this.getTaskVelocity(),
       this.getOverdueBreakdown(),
-      this.getStuckProjects(),
+      this.getStuckProjects(stuckDays),
     ]);
 
     const context = {
@@ -335,29 +375,42 @@ export class BottleneckService {
     // Compute blockers for the AI prompt
     const widgetSummary = await this.getWidgetSummary();
 
-    const prompt = `You are a business performance analyst for Apex Consulting & Surveying, Inc., a land surveying firm. The CEO needs a frank, actionable bottleneck report. Be specific — name individuals where they are responsible for delays.
+    const prompt = `You are a business performance analyst for Apex Consulting & Surveying, Inc., a land surveying firm. The CEO needs a frank, actionable bottleneck report.
+
+CRITICAL FORMATTING RULES:
+- Write in flowing prose paragraphs under each heading. Do NOT return JSON, code blocks, or bullet-point-only lists.
+- Use markdown headings (## for sections) and bold text for emphasis.
+- Each section should read like a written analysis, not a data dump.
+
+---
 
 **Stage Dwell Times (avg days per pipeline stage):**
-${stageDwell.map((s) => `- ${s.stage}: ${s.avgDays} days avg (${s.count} leads) ${s.isCritical ? '⚠️ CRITICAL' : ''}`).join('\n')}
+${stageDwell.map((s) => `- ${s.stage}: ${s.avgDays} days avg (${s.count} leads)${s.isCritical ? ' ⚠️ CRITICAL' : ''}`).join('\n')}
 
 **Team Member Blocker Scores (composite: overdue tasks + stuck project ownership + completion rate):**
-${widgetSummary.topBlockers.map((u) => `- ${u.userName}: score ${u.blockerScore} | ${u.overdueCount} overdue tasks | blocking ${u.stuckProjectsBlocking} stuck project(s) | ${u.completionRate}% task completion`).join('\n') || '- No significant blockers identified'}
+${widgetSummary.topBlockers.map((u) => `- ${u.userName}: score ${u.blockerScore} — ${u.overdueCount} overdue tasks, blocking ${u.stuckProjectsBlocking} stuck project(s), ${u.completionRate}% task completion rate`).join('\n') || '- No significant blockers identified'}
 
 **Task Velocity by Team Member (last 30 days):**
 ${taskVelocity.map((u) => `- ${u.userName}: ${u.completionRate}% completion (${u.completed}/${u.assigned} tasks), ${u.overdue} overdue`).join('\n')}
 
-**Projects Stuck > 14 Days Without Update:**
-${stuckProjects.slice(0, 8).map((p) => `- ${p.name} (${p.clientName}): ${p.daysSinceUpdate} days stalled, status: ${p.status}`).join('\n') || '- None'}
+**Projects Stuck > ${stuckDays} Days Without Update:**
+${stuckProjects.slice(0, 8).map((p) => `- ${p.name} (${p.clientName}): ${p.daysSinceUpdate} days stalled, status: ${p.status}`).join('\n') || '- None currently stalled'}
 
-Please provide:
-1. **Who Is Holding Things Up** — call out specific team members by name, what they are blocking, and why this matters to the business
-2. **Critical Pipeline Stages** — which stages are causing the most delay and what to do about them
-3. **Immediate Actions** — 3 specific actions the CEO should take this week, with names and deadlines
-4. **Revenue Risk** — estimate the revenue at risk from current bottlenecks
+---
 
-Be direct and specific. The CEO wants names, numbers, and clear actions — not generalities.
+Write your analysis with the following four sections. Each section must be written in prose (sentences and paragraphs), not JSON or bullet points only:
 
-Format your response in clear markdown with headers.`;
+## Who Is Holding Things Up
+Name the specific individuals responsible for delays. Explain what they are blocking and why it matters to the business. Be direct — this is for the CEO.
+
+## Critical Pipeline Stages
+Describe which pipeline stages are slowest, what is causing the delay, and what operational change would fix it.
+
+## Immediate Actions
+Write 3 specific actions the CEO should take this week. For each, name the person involved, the action required, and a deadline.
+
+## Revenue Risk
+In 2–3 sentences, estimate the revenue at risk if these bottlenecks continue unresolved.`;
 
     const content = await this.aiService.generateFreeform(prompt, undefined, 2048);
 

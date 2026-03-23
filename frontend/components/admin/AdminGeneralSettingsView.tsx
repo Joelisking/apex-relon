@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Monitor, Check, Loader2 } from 'lucide-react';
+import { Monitor, Check, Loader2, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { adminApi } from '@/lib/api/client';
 import { toast } from 'sonner';
@@ -35,6 +35,9 @@ export function AdminGeneralSettingsView() {
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const [localMode, setLocalMode] = useState<ClientDisplayMode | null>(null);
+  const [localStuckDays, setLocalStuckDays] = useState<number | null>(null);
+  const [localCriticalStageDays, setLocalCriticalStageDays] = useState<number | null>(null);
+  const [isSavingThresholds, setIsSavingThresholds] = useState(false);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['tenant-settings'],
@@ -45,8 +48,16 @@ export function AdminGeneralSettingsView() {
   const currentMode: ClientDisplayMode =
     localMode ?? (settings?.clientDisplayMode as ClientDisplayMode) ?? 'COMPANY';
 
-  const isDirty =
-    localMode !== null && localMode !== settings?.clientDisplayMode;
+  const stuckDays = localStuckDays ?? settings?.bottleneckStuckDays ?? 14;
+  const criticalStageDays = localCriticalStageDays ?? settings?.bottleneckCriticalStageDays ?? 14;
+
+  const isDisplayDirty = localMode !== null && localMode !== settings?.clientDisplayMode;
+  const isThresholdsDirty =
+    (localStuckDays !== null && localStuckDays !== settings?.bottleneckStuckDays) ||
+    (localCriticalStageDays !== null && localCriticalStageDays !== settings?.bottleneckCriticalStageDays);
+
+  // Keep old name for the display-mode save handler
+  const isDirty = isDisplayDirty;
 
   const handleSave = async () => {
     if (!isDirty) return;
@@ -61,6 +72,26 @@ export function AdminGeneralSettingsView() {
       toast.error('Failed to save settings');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSaveThresholds = async () => {
+    if (!isThresholdsDirty) return;
+    setIsSavingThresholds(true);
+    try {
+      await adminApi.updateTenantSettings({
+        bottleneckStuckDays: stuckDays,
+        bottleneckCriticalStageDays: criticalStageDays,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['tenant-settings'] });
+      await queryClient.invalidateQueries({ queryKey: ['bottleneck-widget-summary'] });
+      setLocalStuckDays(null);
+      setLocalCriticalStageDays(null);
+      toast.success('Thresholds saved');
+    } catch {
+      toast.error('Failed to save thresholds');
+    } finally {
+      setIsSavingThresholds(false);
     }
   };
 
@@ -147,6 +178,77 @@ export function AdminGeneralSettingsView() {
                 disabled={!isDirty || isSaving}
                 className="gap-1.5">
                 {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Save Changes
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Analytics Thresholds */}
+      <div className="mt-8 rounded-xl border border-border/60 bg-card shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
+        <div className="px-5 py-4 border-b border-border/40 flex items-center gap-2.5">
+          <BarChart2 className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-semibold text-foreground">
+            Bottleneck Analysis Thresholds
+          </span>
+        </div>
+
+        {isLoading ? (
+          <div className="px-5 py-8 flex justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <>
+            <div className="divide-y divide-border/40">
+              <div className="px-5 py-4 flex items-center justify-between gap-8">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">Stuck Project Threshold</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    A project is flagged as "stuck" if it has had no activity for this many days.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={stuckDays}
+                    onChange={(e) => setLocalStuckDays(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-16 rounded-md border border-border bg-background px-2 py-1 text-sm text-center tabular-nums focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <span className="text-sm text-muted-foreground">days</span>
+                </div>
+              </div>
+
+              <div className="px-5 py-4 flex items-center justify-between gap-8">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">Critical Stage Threshold</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    A pipeline stage is flagged as "critical" if leads spend more than this many days in it on average.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={criticalStageDays}
+                    onChange={(e) => setLocalCriticalStageDays(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-16 rounded-md border border-border bg-background px-2 py-1 text-sm text-center tabular-nums focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <span className="text-sm text-muted-foreground">days</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 py-4 flex justify-end">
+              <Button
+                size="sm"
+                onClick={handleSaveThresholds}
+                disabled={!isThresholdsDirty || isSavingThresholds}
+                className="gap-1.5">
+                {isSavingThresholds && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 Save Changes
               </Button>
             </div>

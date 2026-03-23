@@ -16,11 +16,12 @@ function ScoreBadge({ score }: { score: number }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center justify-center min-w-[2rem] px-1.5 py-0.5 rounded text-[10px] font-bold tabular-nums',
+        'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold tabular-nums',
         level === 'high' && 'bg-red-100 text-red-700',
         level === 'medium' && 'bg-amber-100 text-amber-700',
         level === 'low' && 'bg-yellow-100 text-yellow-700',
       )}>
+      <span className="font-normal opacity-70">risk</span>
       {score}
     </span>
   );
@@ -140,7 +141,9 @@ export function BottleneckWidget({ widget }: Props) {
                           {blocker.stuckProjectsBlocking} project{blocker.stuckProjectsBlocking !== 1 ? 's' : ''}
                         </span>
                       )}
-                      <ScoreBadge score={blocker.blockerScore} />
+                      <span title={`Blocker score: ${blocker.blockerScore} (weighted: overdue tasks ×3, stuck projects ×5, low completion rate)`}>
+                        <ScoreBadge score={blocker.blockerScore} />
+                      </span>
                     </div>
                   </div>
                 ))}

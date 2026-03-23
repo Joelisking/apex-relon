@@ -845,7 +845,7 @@ Provide a helpful, concise response focused on CRM tasks, insights, and recommen
     return settings;
   }
 
-  async updateTenantSettings(dto: { clientDisplayMode?: string }) {
+  async updateTenantSettings(dto: { clientDisplayMode?: string; bottleneckStuckDays?: number; bottleneckCriticalStageDays?: number }) {
     return this.prisma.tenantSettings.upsert({
       where: { id: 'singleton' },
       create: { id: 'singleton', ...dto },

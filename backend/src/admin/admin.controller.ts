@@ -107,7 +107,9 @@ export class AdminController {
 
   @Patch('tenant-settings')
   @Permissions('settings:edit')
-  updateTenantSettings(@Body() dto: { clientDisplayMode?: string }) {
+  updateTenantSettings(
+    @Body() dto: { clientDisplayMode?: string; bottleneckStuckDays?: number; bottleneckCriticalStageDays?: number },
+  ) {
     return this.adminService.updateTenantSettings(dto);
   }
 

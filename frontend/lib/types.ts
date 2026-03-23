@@ -549,6 +549,8 @@ export interface APIKeyStatus {
 export interface TenantSettings {
   id: string;
   clientDisplayMode: 'COMPANY' | 'CONTACT';
+  bottleneckStuckDays: number;
+  bottleneckCriticalStageDays: number;
   createdAt?: string;
   updatedAt?: string;
 }

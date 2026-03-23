@@ -12,9 +12,11 @@ import {
   Download,
   UserRound,
 } from 'lucide-react';
-import { type DateRange } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { DatePresetFilter, DATE_PRESET_ALL, type DatePresetFilterValue } from '@/components/ui/date-preset-filter';
+import { FilterBar, passesFilter, type FilterValues, type FilterDef } from '@/components/ui/filter-bar';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 import { ProjectKanbanBoard } from './ProjectKanbanBoard';
 import { ProjectDetailDialog } from './ProjectDetailDialog';
 import { CreateProjectDialog } from './CreateProjectDialog';
@@ -67,7 +69,19 @@ export default function ProjectsView({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [completionPendingProject, setCompletionPendingProject] =
     useState<Project | null>(null);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateFilter, setDateFilter] = useState<DatePresetFilterValue>(DATE_PRESET_ALL);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [facets, setFacets] = useState<FilterValues>({});
+
+  function setFacet(id: string, values: string[]) {
+    setFacets((prev) => ({ ...prev, [id]: values }));
+  }
+
+  function clearAllFilters() {
+    setDateFilter(DATE_PRESET_ALL);
+    setSearchQuery('');
+    setFacets({});
+  }
 
   // Bulk action state
   const [selectedProjects, setSelectedProjects] = useState<Project[]>(
@@ -122,18 +136,89 @@ export default function ProjectsView({
   const projects = localProjects;
 
   const filteredProjects = projects.filter((p) => {
-    if (!dateRange?.from && !dateRange?.to) return true;
-    const ref = p.startDate ?? p.createdAt;
-    if (!ref) return true;
-    const refDate = new Date(ref.slice(0, 10));
-    if (dateRange.from && refDate < dateRange.from) return false;
-    if (dateRange.to) {
-      const to = new Date(dateRange.to);
-      to.setHours(23, 59, 59, 999);
-      if (refDate > to) return false;
+    const { range } = dateFilter;
+    if (range?.from || range?.to) {
+      const ref = p.startDate ?? p.createdAt;
+      if (ref) {
+        const refDate = new Date(ref.slice(0, 10));
+        if (range.from && refDate < range.from) return false;
+        if (range.to) {
+          const to = new Date(range.to);
+          to.setHours(23, 59, 59, 999);
+          if (refDate > to) return false;
+        }
+      }
     }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const searchable = [p.name, p.jobNumber, p.client?.name, p.county]
+        .filter(Boolean).join(' ').toLowerCase();
+      if (!searchable.includes(q)) return false;
+    }
+    if (!passesFilter(p.status, facets.status ?? [])) return false;
+    if (!passesFilter(p.riskStatus || 'On Track', facets.riskStatus ?? [])) return false;
+    if (!passesFilter(p.client?.name, facets.client ?? [])) return false;
+    if (!passesFilter(p.serviceType?.name, facets.serviceType ?? [])) return false;
+    if (!passesFilter(p.county, facets.county ?? [])) return false;
+    if (!passesFilter(p.projectManager?.name || 'Unassigned', facets.projectManager ?? [])) return false;
     return true;
   });
+
+  const isFiltered =
+    dateFilter.preset !== 'all' ||
+    !!searchQuery.trim() ||
+    Object.values(facets).some((v) => v.length > 0);
+
+  const projectFilterDefs: FilterDef[] = [
+    {
+      id: 'status',
+      title: 'Status',
+      options: projectStages.map((s) => ({
+        label: s.name, value: s.name,
+        count: projects.filter((p) => p.status === s.name).length,
+      })),
+    },
+    {
+      id: 'riskStatus',
+      title: 'Risk',
+      options: ['On Track', 'At Risk', 'Blocked'].map((v) => ({
+        label: v, value: v,
+        count: projects.filter((p) => (p.riskStatus || 'On Track') === v).length,
+      })),
+    },
+    {
+      id: 'client',
+      title: 'Client',
+      options: [...new Set(projects.map((p) => p.client?.name).filter(Boolean))].map((v) => ({
+        label: v!, value: v!,
+        count: projects.filter((p) => p.client?.name === v).length,
+      })),
+    },
+    {
+      id: 'serviceType',
+      title: 'Service Type',
+      options: [...new Set(projects.map((p) => p.serviceType?.name).filter(Boolean))].map((v) => ({
+        label: v!, value: v!,
+        count: projects.filter((p) => p.serviceType?.name === v).length,
+      })),
+    },
+    {
+      id: 'county',
+      title: 'County',
+      options: [...new Set(projects.map((p) => p.county).filter(Boolean))].map((v) => ({
+        label: v!, value: v!,
+        count: projects.filter((p) => p.county === v).length,
+      })),
+    },
+    {
+      id: 'projectManager',
+      title: 'Manager',
+      options: [...new Set(projects.map((p) => p.projectManager?.name || 'Unassigned'))].map((v) => ({
+        label: v, value: v,
+        count: projects.filter((p) => (p.projectManager?.name || 'Unassigned') === v).length,
+      })),
+    },
+  ];
 
   const handleProjectClick = (project: Project) => {
     router.push(`/projects/${project.id}`);
@@ -379,20 +464,44 @@ export default function ProjectsView({
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        <DateRangePicker
-          value={dateRange}
-          onChange={setDateRange}
-          placeholder="Filter by date range"
-          numberOfMonths={2}
+      {/* Unified filter rail */}
+      <div className="flex flex-col gap-2 rounded-xl border bg-card/60 px-3 py-2.5 shadow-sm">
+        {/* Row 1: search + date preset */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative shrink-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Search projects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8 pl-8 w-[180px] lg:w-[220px] bg-muted/50 border-0 focus-visible:ring-1 text-sm"
+            />
+          </div>
+          <div className="h-5 w-px bg-border/60 shrink-0" />
+          <span className="text-xs text-muted-foreground shrink-0">Start / Created:</span>
+          <DatePresetFilter value={dateFilter} onChange={setDateFilter} label="All time" />
+          {isFiltered && (
+            <div className="ml-auto flex items-center gap-2 shrink-0">
+              <span className="text-xs text-muted-foreground">
+                {filteredProjects.length} of {projects.length}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearAllFilters}
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
+                Clear all
+              </Button>
+            </div>
+          )}
+        </div>
+        {/* Row 2: faceted filters */}
+        <FilterBar
+          filters={projectFilterDefs}
+          values={facets}
+          onChange={setFacet}
+          onClear={() => setFacets({})}
         />
-        {(dateRange?.from ||
-          dateRange?.to) && (
-          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-            {filteredProjects.length} of {projects.length} projects
-          </span>
-        )}
       </div>
 
       {/* Stats — only shown when user can see all projects, not just assigned ones */}
@@ -492,58 +601,6 @@ export default function ProjectsView({
           <DataTable
             columns={projectColumns}
             data={filteredProjects}
-            globalFilter
-            initialColumnVisibility={{ client: false, serviceType: false, county: false }}
-            filterConfigs={[
-              {
-                columnId: 'status',
-                title: 'Status',
-                options: projectStages.map((s) => ({ label: s.name, value: s.name })),
-              },
-              {
-                columnId: 'riskStatus',
-                title: 'Risk',
-                options: [
-                  ...new Set(
-                    filteredProjects.map((p) => p.riskStatus).filter(Boolean),
-                  ),
-                ].map((v) => ({ label: v as string, value: v as string })),
-              },
-              {
-                columnId: 'client',
-                title: 'Client',
-                options: [
-                  ...new Set(
-                    filteredProjects.map((p) => p.client?.name).filter(Boolean),
-                  ),
-                ].map((v) => ({ label: v as string, value: v as string })),
-              },
-              {
-                columnId: 'serviceType',
-                title: 'Service Type',
-                options: [
-                  ...new Set(
-                    filteredProjects.map((p) => p.serviceType?.name).filter(Boolean),
-                  ),
-                ].map((v) => ({ label: v as string, value: v as string })),
-              },
-              {
-                columnId: 'county',
-                title: 'County',
-                options: [
-                  ...new Set(filteredProjects.map((p) => p.county).filter(Boolean)),
-                ].map((v) => ({ label: v as string, value: v as string })),
-              },
-              {
-                columnId: 'projectManager',
-                title: 'Manager',
-                options: [
-                  ...new Set(
-                    filteredProjects.map((p) => p.projectManager?.name || 'Unassigned'),
-                  ),
-                ].map((v) => ({ label: v, value: v })),
-              },
-            ]}
             onRowClick={(row) => handleProjectClick(row)}
             onSelectionChange={setSelectedProjects}
           />

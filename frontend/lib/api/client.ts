@@ -613,17 +613,17 @@ export const adminApi = {
     }>('/admin/api-keys/status', {}, serverToken),
 
   getTenantSettings: (serverToken?: string) =>
-    apiFetch<{ id: string; clientDisplayMode: string }>(
+    apiFetch<{ id: string; clientDisplayMode: string; bottleneckStuckDays: number; bottleneckCriticalStageDays: number }>(
       '/admin/tenant-settings',
       {},
       serverToken,
     ),
 
   updateTenantSettings: (
-    data: { clientDisplayMode?: string },
+    data: { clientDisplayMode?: string; bottleneckStuckDays?: number; bottleneckCriticalStageDays?: number },
     serverToken?: string,
   ) =>
-    apiFetch<{ id: string; clientDisplayMode: string }>(
+    apiFetch<{ id: string; clientDisplayMode: string; bottleneckStuckDays: number; bottleneckCriticalStageDays: number }>(
       '/admin/tenant-settings',
       {
         method: 'PATCH',

@@ -743,10 +743,12 @@ model CustomFieldValue {
 }
 
 model TenantSettings {
-  id                String   @id @default("singleton")
-  clientDisplayMode String   @default("COMPANY")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                        String   @id @default("singleton")
+  clientDisplayMode         String   @default("COMPANY")
+  bottleneckStuckDays       Int      @default(14)
+  bottleneckCriticalStageDays Int    @default(14)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
   @@map("tenant_settings")
 }
