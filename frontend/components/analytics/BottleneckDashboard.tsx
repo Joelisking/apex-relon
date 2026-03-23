@@ -446,7 +446,7 @@ export function BottleneckDashboard() {
                       <div className="flex items-center gap-2">
                         <AnimatedBar pct={u.completionRate} critical={u.completionRate < 50} />
                         <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">
-                          {u.completed}/{u.assigned}
+                          {u.completed} done · {u.assigned} open
                         </span>
                       </div>
                     </div>
