@@ -156,10 +156,10 @@ export function ProjectOverviewPanel({ project, activities, files, costLogs, ser
                   <span className="text-sm font-medium text-right">{resolvedServiceTypes.join(', ')}</span>
                 </div>
               )}
-              {project.county && (
+              {(project.county?.length ?? 0) > 0 && (
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="text-sm text-muted-foreground">County</span>
-                  <span className="text-sm font-medium">{project.county}</span>
+                  <span className="text-sm font-medium">{(project.county ?? []).join(', ')}</span>
                 </div>
               )}
             </div>

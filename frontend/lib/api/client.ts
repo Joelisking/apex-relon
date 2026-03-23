@@ -37,7 +37,7 @@ export interface CreateLeadDto {
   serviceTypeId?: string;
   categoryIds?: string[];
   serviceTypeIds?: string[];
-  county?: string;
+  county?: string[];
   urgency: string;
   source?: string;
   likelyStartDate?: Date | string;
@@ -59,7 +59,7 @@ export interface UpdateLeadDto {
   serviceTypeId?: string;
   categoryIds?: string[];
   serviceTypeIds?: string[];
-  county?: string;
+  county?: string[];
   urgency?: string;
   source?: string;
   likelyStartDate?: Date | string;

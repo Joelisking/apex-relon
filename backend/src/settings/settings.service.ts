@@ -84,16 +84,14 @@ export class SettingsService implements OnModuleInit {
 
   private async seedClientSegments() {
     const OPTIONS = [
-      { value: 'corporate', label: 'Corporate', sortOrder: 0 },
-      { value: 'sme', label: 'SME', sortOrder: 1 },
-      { value: 'government', label: 'Government', sortOrder: 2 },
-      { value: 'nonprofit', label: 'Non-Profit', sortOrder: 3 },
-      { value: 'individual', label: 'Individual', sortOrder: 4 },
+      { value: 'government_agency', label: 'Government Agency', sortOrder: 0 },
+      { value: 'contractor', label: 'Contractor', sortOrder: 1 },
+      { value: 'ae_firm', label: 'A/E Firm', sortOrder: 2 },
+      { value: 'private_owner', label: 'Private Owner', sortOrder: 3 },
+      { value: 'developer', label: 'Developer', sortOrder: 4 },
+      { value: 'professional_services', label: 'Professional Services', sortOrder: 5 },
+      { value: 'utility_services', label: 'Utility / Services', sortOrder: 6 },
     ];
-    const existingCount = await this.prisma.dropdownOption.count({
-      where: { category: 'client_segment' },
-    });
-    if (existingCount >= OPTIONS.length) return;
     for (const opt of OPTIONS) {
       await this.prisma.dropdownOption.upsert({
         where: { category_value: { category: 'client_segment', value: opt.value } },
@@ -244,10 +242,10 @@ export class SettingsService implements OnModuleInit {
       Engineering: [
         { name: 'Construction Engineering', description: 'CE, project oversight during construction', sortOrder: 0 },
         { name: 'Construction Inspection', description: 'On-site inspection services', sortOrder: 1 },
-        { name: 'SWQCP & Stormwater', description: 'Stormwater quality control plans, monitoring', sortOrder: 2 },
+        { name: 'Stormwater / SWQCP', description: 'Stormwater quality control plans, monitoring', sortOrder: 2 },
         { name: 'Right-of-Way Engineering', description: 'ROW plans, legal descriptions, staking', sortOrder: 3 },
         { name: 'LCRS', description: 'Location control route surveys', sortOrder: 4 },
-        { name: 'Engineering Services', description: 'Site design, engineering analysis, utility design', sortOrder: 5 },
+        { name: 'Engineering / Design', description: 'Site design, engineering analysis, utility design', sortOrder: 5 },
         { name: 'Easement Preparation', description: 'Easement exhibits, legal descriptions', sortOrder: 6 },
       ],
     };

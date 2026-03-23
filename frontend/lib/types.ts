@@ -221,7 +221,7 @@ export interface Lead {
   serviceType?: ServiceType | null;
   categoryIds?: string[];
   serviceTypeIds?: string[];
-  county?: string | null;
+  county?: string[];
   urgency: string;
   source: string;
   likelyStartDate?: string | Date | null;
@@ -362,7 +362,7 @@ export interface Project {
   totalCost?: number;
   serviceTypeId?: string | null;
   serviceType?: { id: string; name: string } | null;
-  county?: string | null;
+  county?: string[];
   projectManagerId?: string;
   projectManager?: {
     id: string;

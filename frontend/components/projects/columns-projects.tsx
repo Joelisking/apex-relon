@@ -158,10 +158,10 @@ export const projectColumns: ColumnDef<Project>[] = [
   },
   {
     id: 'county',
-    accessorFn: (row) => row.county || '',
+    accessorFn: (row) => (Array.isArray(row.county) ? row.county.join(', ') : row.county || ''),
     header: 'County',
     filterFn: (row, id, value) => value.includes(row.getValue(id)),
-    cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.county || '—'}</span>,
+    cell: ({ row }) => <span className="text-xs text-muted-foreground">{Array.isArray(row.original.county) ? row.original.county.join(', ') : row.original.county || '—'}</span>,
   },
   {
     accessorKey: 'estimatedDueDate',

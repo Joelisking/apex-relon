@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { leadsApi, settingsApi } from '@/lib/api/client';
 import { useAuth } from '@/contexts/auth-context';
 import { CreatableSelect } from '@/components/ui/creatable-select';
+import { MultiCreatableSelect } from '@/components/ui/multi-creatable-select';
 import {
   pipelineApi,
   type PipelineStage,
@@ -89,7 +90,7 @@ const editLeadSchema = z.object({
     .optional()
     .or(z.literal('')),
   phone: z.string().optional(),
-  county: z.string().optional().or(z.literal('')),
+  county: z.array(z.string()).optional(),
   expectedValue: z.number().min(0, 'Value must be positive'),
   contractedValue: z
     .number()
@@ -190,7 +191,7 @@ export function EditLeadDialog({
     contactName: l.contactName || '',
     email: l.email || '',
     phone: l.phone || '',
-    county: l.county || '',
+    county: Array.isArray(l.county) ? l.county : l.county ? [l.county] : [],
     expectedValue: l.expectedValue ?? 0,
     contractedValue: l.contractedValue ?? undefined,
     projectName: l.projectName || '',
@@ -295,7 +296,7 @@ export function EditLeadDialog({
         contactName: data.contactName,
         email: data.email || undefined,
         phone: data.phone || undefined,
-        county: data.county || undefined,
+        county: data.county?.length ? data.county : undefined,
         expectedValue: data.expectedValue,
         contractedValue: data.contractedValue ?? undefined,
         projectName: data.projectName,
@@ -478,11 +479,11 @@ export function EditLeadDialog({
                   <FormItem>
                     <FormLabel>County</FormLabel>
                     <FormControl>
-                      <CreatableSelect
+                      <MultiCreatableSelect
                         options={countyOptions}
-                        value={field.value || undefined}
+                        value={field.value ?? []}
                         onChange={field.onChange}
-                        placeholder="Select county"
+                        placeholder="Select counties"
                         onOptionsChange={setCountyOptions}
                         onOptionCreated={(label) =>
                           settingsApi.createDropdownOption({

@@ -35,7 +35,7 @@ model Lead {
   serviceTypeId       String?
   categoryIds         String[]
   serviceTypeIds      String[]
-  county              String?
+  county              String[]
   convertedToClientId String?
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
@@ -248,7 +248,7 @@ model Project {
   serviceTypeId     String?
   categoryIds       String[]
   serviceTypeIds    String[]
-  county            String?
+  county            String[]
   status            String
   contractedValue   Float
   endOfProjectValue Float?

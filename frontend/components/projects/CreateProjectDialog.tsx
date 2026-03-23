@@ -32,6 +32,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Users, X } from 'lucide-react';
+import { MultiCreatableSelect } from '@/components/ui/multi-creatable-select';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import { UserPicker } from '@/components/ui/user-picker';
 import { toast } from 'sonner';
@@ -57,7 +58,7 @@ const formSchema = z.object({
   closedDate: z.string().optional(),
   projectManagerId: z.string().optional(),
   riskStatus: z.string().optional(),
-  county: z.string().optional(),
+  county: z.array(z.string()).optional(),
   description: z.string().optional(),
 });
 
@@ -169,7 +170,7 @@ export function CreateProjectDialog({
           if (initialClientId) {
             form.setValue('clientId', initialClientId);
             const preselected = mappedClients.find((c) => c.id === initialClientId);
-            if (preselected?.county) form.setValue('county', preselected.county);
+            if (preselected?.county) form.setValue('county', [preselected.county]);
           }
         } catch (error) {
           console.error('Failed to load form data', error);
@@ -201,7 +202,7 @@ export function CreateProjectDialog({
   const handleClientChange = (clientId: string) => {
     const client = clients.find((c) => c.id === clientId);
     if (client) {
-      if (client.county) form.setValue('county', client.county);
+      if (client.county) form.setValue('county', [client.county]);
     }
     form.setValue('clientId', clientId);
   };
@@ -571,11 +572,11 @@ export function CreateProjectDialog({
                 <FormItem>
                   <FormLabel>County</FormLabel>
                   <FormControl>
-                    <CreatableSelect
+                    <MultiCreatableSelect
                       options={countyOptions}
-                      value={field.value || undefined}
+                      value={field.value ?? []}
                       onChange={field.onChange}
-                      placeholder="Select county"
+                      placeholder="Select counties"
                       onOptionsChange={setCountyOptions}
                       onOptionCreated={(label) =>
                         settingsApi.createDropdownOption({

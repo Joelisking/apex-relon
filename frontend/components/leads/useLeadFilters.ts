@@ -40,14 +40,14 @@ export function useLeadFilters(leads: Lead[]) {
     if (!inRange(l.likelyStartDate as string | undefined, startFilter.range)) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const searchable = [l.contactName, l.company, l.projectName, l.county, l.source]
+      const searchable = [l.contactName, l.company, l.projectName, ...(l.county ?? []), l.source]
         .filter(Boolean).join(' ').toLowerCase();
       if (!searchable.includes(q)) return false;
     }
     if (!passesFilter(l.stage, facets.stage ?? [])) return false;
     if (!passesFilter(l.urgency, facets.urgency ?? [])) return false;
     if (!passesFilter(l.source, facets.source ?? [])) return false;
-    if (!passesFilter(l.county, facets.county ?? [])) return false;
+    if ((facets.county ?? []).length > 0 && !(l.county ?? []).some((c) => (facets.county ?? []).includes(c))) return false;
     if (!passesFilter(l.serviceType?.name, facets.serviceType ?? [])) return false;
     if (!passesFilter(l.aiRiskLevel, facets.aiRiskLevel ?? [])) return false;
     const owner = (l as unknown as { assignedTo?: { name?: string } }).assignedTo?.name || 'Unassigned';
@@ -89,9 +89,9 @@ export function useLeadFilters(leads: Lead[]) {
     {
       id: 'county',
       title: 'County',
-      options: [...new Set(leads.map((l) => l.county).filter(Boolean))].map((v) => ({
-        label: v!, value: v!,
-        count: leads.filter((l) => l.county === v).length,
+      options: [...new Set(leads.flatMap((l) => l.county ?? []).filter(Boolean))].map((v) => ({
+        label: v, value: v,
+        count: leads.filter((l) => (l.county ?? []).includes(v)).length,
       })),
     },
     {

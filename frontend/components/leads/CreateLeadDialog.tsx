@@ -9,6 +9,7 @@ import { leadsApi, settingsApi } from '@/lib/api/client';
 import { contactsApi } from '@/lib/api/contacts-client';
 import { useAuth } from '@/contexts/auth-context';
 import { CreatableSelect } from '@/components/ui/creatable-select';
+import { MultiCreatableSelect } from '@/components/ui/multi-creatable-select';
 import {
   pipelineApi,
   type PipelineStage,
@@ -109,7 +110,7 @@ const createLeadSchema = z.object({
     .optional()
     .or(z.literal('')),
   phone: z.string().optional(),
-  county: z.string().optional().or(z.literal('')),
+  county: z.array(z.string()).optional(),
   expectedValue: z.number().min(0, 'Value must be positive'),
   contractedValue: z
     .number()
@@ -219,7 +220,7 @@ export function CreateLeadDialog({
       contactName: '',
       email: '',
       phone: '',
-      county: '',
+      county: [],
       expectedValue: 0,
       contractedValue: undefined,
       projectName: '',
@@ -259,7 +260,7 @@ export function CreateLeadDialog({
         'phone',
         primaryContact?.phone || client.phone || '',
       );
-      if (client.county) form.setValue('county', client.county);
+      if (client.county) form.setValue('county', [client.county]);
       setAutoLinkedContactId(primaryContact?.id ?? null);
     } else {
       setAutoLinkedContactId(null);
@@ -327,7 +328,7 @@ export function CreateLeadDialog({
         company: selectedClient?.name || '',
         email: data.email || undefined,
         phone: data.phone || undefined,
-        county: data.county || undefined,
+        county: data.county?.length ? data.county : undefined,
         expectedValue: data.expectedValue,
         contractedValue: data.contractedValue ?? undefined,
         projectName: data.projectName,
@@ -551,11 +552,11 @@ export function CreateLeadDialog({
                     <FormItem>
                       <FormLabel>County</FormLabel>
                       <FormControl>
-                        <CreatableSelect
+                        <MultiCreatableSelect
                           options={countyOptions}
-                          value={field.value || undefined}
+                          value={field.value ?? []}
                           onChange={field.onChange}
-                          placeholder="Select county"
+                          placeholder="Select counties"
                           onOptionsChange={setCountyOptions}
                           onOptionCreated={(label) =>
                             settingsApi.createDropdownOption({

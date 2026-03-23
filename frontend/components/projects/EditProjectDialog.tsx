@@ -32,6 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Users, X } from 'lucide-react';
+import { MultiCreatableSelect } from '@/components/ui/multi-creatable-select';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import { UserPicker } from '@/components/ui/user-picker';
 import { toast } from 'sonner';
@@ -55,7 +56,7 @@ const formSchema = z.object({
   closedDate: z.string().optional(),
   projectManagerId: z.string().optional(),
   riskStatus: z.string().optional(),
-  county: z.string().optional(),
+  county: z.array(z.string()).optional(),
   description: z.string().optional(),
 });
 
@@ -134,7 +135,7 @@ export function EditProjectDialog({
       closedDate: toDateInput(project.closedDate),
       projectManagerId: project.assignments?.find((a) => a.role.toLowerCase().includes('manager'))?.userId ?? '',
       riskStatus: project.riskStatus ?? '',
-      county: project.county ?? '',
+      county: project.county ?? [],
       description: project.description ?? '',
     },
   });
@@ -152,7 +153,7 @@ export function EditProjectDialog({
       closedDate: toDateInput(project.closedDate),
       projectManagerId: project.assignments?.find((a) => a.role.toLowerCase().includes('manager'))?.userId ?? '',
       riskStatus: project.riskStatus ?? '',
-      county: project.county ?? '',
+      county: project.county ?? [],
       description: project.description ?? '',
     });
     setAssignments(project.assignments ?? []);
@@ -547,11 +548,11 @@ export function EditProjectDialog({
                 <FormItem>
                   <FormLabel>County</FormLabel>
                   <FormControl>
-                    <CreatableSelect
+                    <MultiCreatableSelect
                       options={countyOptions}
-                      value={field.value || undefined}
+                      value={field.value ?? []}
                       onChange={field.onChange}
-                      placeholder="Select county"
+                      placeholder="Select counties"
                       onOptionsChange={setCountyOptions}
                       onOptionCreated={(label) =>
                         settingsApi.createDropdownOption({

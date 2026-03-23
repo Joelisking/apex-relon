@@ -159,7 +159,7 @@ export default function ProjectsView({
     if (!passesFilter(p.riskStatus || 'On Track', facets.riskStatus ?? [])) return false;
     if (!passesFilter(p.client?.name, facets.client ?? [])) return false;
     if (!passesFilter(p.serviceType?.name, facets.serviceType ?? [])) return false;
-    if (!passesFilter(p.county, facets.county ?? [])) return false;
+    if ((facets.county ?? []).length > 0 && !(p.county ?? []).some((c) => (facets.county ?? []).includes(c))) return false;
     if (!passesFilter(p.projectManager?.name || 'Unassigned', facets.projectManager ?? [])) return false;
     return true;
   });
@@ -205,9 +205,9 @@ export default function ProjectsView({
     {
       id: 'county',
       title: 'County',
-      options: [...new Set(projects.map((p) => p.county).filter(Boolean))].map((v) => ({
-        label: v!, value: v!,
-        count: projects.filter((p) => p.county === v).length,
+      options: [...new Set(projects.flatMap((p) => p.county ?? []).filter(Boolean))].map((v) => ({
+        label: v, value: v,
+        count: projects.filter((p) => (p.county ?? []).includes(v)).length,
       })),
     },
     {
