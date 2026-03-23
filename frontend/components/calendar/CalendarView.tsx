@@ -6,14 +6,12 @@ import { Info } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { tasksApi } from '@/lib/api/tasks-client';
 import { projectsApi } from '@/lib/api/projects-client';
-import { usersApi } from '@/lib/api/users-client';
 import { useAuth } from '@/contexts/auth-context';
 import { TaskDialog } from '@/components/tasks/TaskDialog';
 import { ProjectDetailDialog } from '@/components/projects/ProjectDetailDialog';
 import { MonthTab } from './MonthTab';
 import { WeekTab } from './WeekTab';
 import { AgendaTab } from './AgendaTab';
-import { CrewTab } from './CrewTab';
 import {
   taskToEvent,
   projectToEvents,
@@ -24,15 +22,7 @@ import type { Task } from '@/lib/types';
 import type { Project } from '@/lib/api/projects-client';
 import { cn } from '@/lib/utils';
 
-type CalView = 'month' | 'week' | 'agenda' | 'crew';
-
-function getWeekStartDate(): Date {
-  const d = new Date();
-  const day = d.getDay();
-  d.setDate(d.getDate() - day);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
+type CalView = 'month' | 'week' | 'agenda';
 
 export function CalendarView() {
   const queryClient = useQueryClient();
@@ -40,13 +30,12 @@ export function CalendarView() {
 
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [activeView, setActiveView] = useState<CalView>('month');
-  const [crewWeekStart, setCrewWeekStart] = useState<Date>(getWeekStartDate);
   const [showTasks, setShowTasks] = useState(true);
   const [showProjects, setShowProjects] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-  const rbcView = activeView === 'crew' ? 'month' : activeView;
+  const rbcView = activeView;
   const { start: rangeStart, end: rangeEnd } = useMemo(
     () => getVisibleRange(currentDate, rbcView),
     [currentDate, rbcView],
@@ -58,21 +47,12 @@ export function CalendarView() {
   const { data: tasks = [] } = useQuery({
     queryKey: ['calendar-tasks', dueAfter, dueBefore],
     queryFn: () => tasksApi.getAll({ dueAfter, dueBefore }),
-    enabled: activeView !== 'crew',
   });
 
   const { data: projects = [] } = useQuery({
     queryKey: ['calendar-projects'],
     queryFn: () => projectsApi.getAll(),
   });
-
-  const { data: usersData } = useQuery({
-    queryKey: ['calendar-users'],
-    queryFn: () => usersApi.getUsersDirectory(),
-    enabled: activeView === 'crew',
-  });
-
-  const users = usersData?.users ?? [];
 
   const events = useMemo<CalendarEvent[]>(() => {
     const evts: CalendarEvent[] = [];
@@ -112,7 +92,7 @@ export function CalendarView() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-display tracking-tight">Calendar</h1>
           <p className="text-muted-foreground hidden sm:block">
-            Task due dates, project timelines, and crew scheduling
+            Task due dates and project timelines
           </p>
         </div>
       </div>
@@ -124,7 +104,6 @@ export function CalendarView() {
             <TabsTrigger value="month" className="text-xs px-3">Month</TabsTrigger>
             <TabsTrigger value="week" className="text-xs px-3">Week</TabsTrigger>
             <TabsTrigger value="agenda" className="text-xs px-3">Agenda</TabsTrigger>
-            <TabsTrigger value="crew" className="text-xs px-3">Crew</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -153,28 +132,16 @@ export function CalendarView() {
           </button>
         </div>
 
-        {activeView !== 'crew' && (
-          <div className="ml-auto hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Info className="h-3.5 w-3.5" />
-            Tasks without a due date are not shown
-          </div>
-        )}
+        <div className="ml-auto hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Info className="h-3.5 w-3.5" />
+          Tasks without a due date are not shown
+        </div>
       </div>
 
       {/* Active tab */}
       {activeView === 'month' && <MonthTab {...sharedTabProps} />}
       {activeView === 'week' && <WeekTab {...sharedTabProps} />}
       {activeView === 'agenda' && <AgendaTab {...sharedTabProps} />}
-      {activeView === 'crew' && (
-        <CrewTab
-          users={users}
-          projects={projects as Project[]}
-          weekStart={crewWeekStart}
-          onWeekChange={setCrewWeekStart}
-          onProjectClick={(p) => setSelectedProject(p)}
-        />
-      )}
-
       {/* Dialogs */}
       <TaskDialog
         open={selectedTask !== null}

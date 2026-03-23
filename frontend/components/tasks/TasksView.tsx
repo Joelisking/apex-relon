@@ -256,9 +256,9 @@ export default function TasksView() {
       )}
 
       {/* Filters + view toggle */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full h-8 text-xs">
+          <SelectTrigger className="w-36 h-8 text-xs">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -270,10 +270,8 @@ export default function TasksView() {
             <SelectItem value="CANCELLED">Cancelled</SelectItem>
           </SelectContent>
         </Select>
-        <Select
-          value={priorityFilter}
-          onValueChange={setPriorityFilter}>
-          <SelectTrigger className="w-full h-8 text-xs">
+        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <SelectTrigger className="w-36 h-8 text-xs">
             <SelectValue placeholder="Priority" />
           </SelectTrigger>
           <SelectContent>
@@ -286,7 +284,7 @@ export default function TasksView() {
         </Select>
         {canViewAll && (
           <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-            <SelectTrigger className="w-full h-8 text-xs">
+            <SelectTrigger className="w-36 h-8 text-xs">
               <SelectValue placeholder="Assignee" />
             </SelectTrigger>
             <SelectContent>

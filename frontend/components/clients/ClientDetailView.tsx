@@ -265,7 +265,7 @@ export function ClientDetailView({
           ))}
         </TabsList>
 
-        <div className="flex-1 overflow-auto min-h-0 pt-6 pb-4 md:pb-8">
+        <div className="flex-1 overflow-auto min-h-0 pt-6 pb-4 md:pb-8 px-2 md:px-4">
 
         <TabsContent value="overview" className="mt-0 space-y-6">
           {client.metrics && (

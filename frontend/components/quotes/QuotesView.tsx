@@ -101,8 +101,6 @@ export default function QuotesView() {
   const canEdit = hasPermission('quotes:edit');
   const canDelete = hasPermission('quotes:delete');
 
-  if (loading) return <QuotesLoadingSkeleton />;
-
   // Stats always reflect the full quote portfolio, not just the current filter.
   const draftCount = allQuotes.filter((q) => q.status === 'DRAFT').length;
   const sentCount = allQuotes.filter((q) => q.status === 'SENT').length;
@@ -112,7 +110,6 @@ export default function QuotesView() {
   const totalValue = allQuotes.reduce((sum, q) => sum + q.total, 0);
 
   // Client-side search across quote number, recipient, company, project name
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const filteredBySearch = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return quotes;
@@ -132,6 +129,8 @@ export default function QuotesView() {
       return num.includes(q) || recipient.includes(q) || contact.includes(q);
     });
   }, [quotes, searchQuery]);
+
+  if (loading) return <QuotesLoadingSkeleton />;
 
   const totalPages = Math.max(1, Math.ceil(filteredBySearch.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);

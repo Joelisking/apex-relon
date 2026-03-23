@@ -123,7 +123,9 @@ export class BottleneckService {
 
   async getTaskVelocity(days = 30): Promise<TaskVelocityResult[]> {
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-    const now = new Date();
+    // Use start of today (midnight UTC) so tasks due *today* are never counted as overdue
+    const startOfToday = new Date();
+    startOfToday.setUTCHours(0, 0, 0, 0);
 
     // Active tasks currently assigned (open workload)
     const activeTasks = await this.prisma.task.findMany({
@@ -160,7 +162,7 @@ export class BottleneckService {
       const uid = ensure(task);
       if (!uid) continue;
       byUser[uid].assigned++;
-      if (task.dueDate && new Date(task.dueDate) < now) byUser[uid].overdue++;
+      if (task.dueDate && new Date(task.dueDate) < startOfToday) byUser[uid].overdue++;
     }
 
     for (const task of completedTasks) {
@@ -188,11 +190,12 @@ export class BottleneckService {
   // ─── Overdue Tasks ────────────────────────────────────────────────────────
 
   async getOverdueBreakdown(): Promise<OverdueResult[]> {
-    const now = new Date();
+    const startOfToday = new Date();
+    startOfToday.setUTCHours(0, 0, 0, 0);
     const tasks = await this.prisma.task.findMany({
       where: {
         status: { notIn: ['DONE', 'CANCELLED'] },
-        dueDate: { lt: now },
+        dueDate: { lt: startOfToday },
       },
       include: { assignedTo: { select: { id: true, name: true } } },
     });

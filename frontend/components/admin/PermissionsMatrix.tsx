@@ -205,10 +205,12 @@ export function PermissionsMatrix({ canEdit }: PermissionsMatrixProps) {
       `#module-${moduleName.replace(/\s+/g, '-')}`,
     ) as HTMLElement | null;
     if (!el) return;
+    const thead = container.querySelector('thead') as HTMLElement | null;
+    const headerHeight = thead ? thead.getBoundingClientRect().height : 48;
     const containerRect = container.getBoundingClientRect();
     const elRect = el.getBoundingClientRect();
     container.scrollTo({
-      top: container.scrollTop + elRect.top - containerRect.top - 48,
+      top: container.scrollTop + elRect.top - containerRect.top - headerHeight,
       behavior: 'smooth',
     });
   };
