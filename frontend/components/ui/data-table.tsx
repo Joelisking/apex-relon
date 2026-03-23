@@ -38,6 +38,7 @@ interface DataTableProps<TData, TValue> {
   exportFilename?: string;
   onSelectionChange?: (selectedRows: TData[]) => void;
   filterConfigs?: FilterConfig[];
+  initialColumnVisibility?: VisibilityState;
 }
 
 export function DataTable<TData, TValue>({
@@ -50,10 +51,11 @@ export function DataTable<TData, TValue>({
   exportFilename,
   onSelectionChange,
   filterConfigs,
+  initialColumnVisibility,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
+    React.useState<VisibilityState>(initialColumnVisibility ?? {});
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = React.useState<SortingState>([]);

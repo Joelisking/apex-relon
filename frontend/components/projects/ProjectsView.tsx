@@ -493,6 +493,7 @@ export default function ProjectsView({
             columns={projectColumns}
             data={filteredProjects}
             globalFilter
+            initialColumnVisibility={{ client: false, serviceType: false, county: false }}
             filterConfigs={[
               {
                 columnId: 'status',
@@ -504,10 +505,33 @@ export default function ProjectsView({
                 title: 'Risk',
                 options: [
                   ...new Set(
-                    filteredProjects
-                      .map((p) => p.riskStatus)
-                      .filter(Boolean),
+                    filteredProjects.map((p) => p.riskStatus).filter(Boolean),
                   ),
+                ].map((v) => ({ label: v as string, value: v as string })),
+              },
+              {
+                columnId: 'client',
+                title: 'Client',
+                options: [
+                  ...new Set(
+                    filteredProjects.map((p) => p.client?.name).filter(Boolean),
+                  ),
+                ].map((v) => ({ label: v as string, value: v as string })),
+              },
+              {
+                columnId: 'serviceType',
+                title: 'Service Type',
+                options: [
+                  ...new Set(
+                    filteredProjects.map((p) => p.serviceType?.name).filter(Boolean),
+                  ),
+                ].map((v) => ({ label: v as string, value: v as string })),
+              },
+              {
+                columnId: 'county',
+                title: 'County',
+                options: [
+                  ...new Set(filteredProjects.map((p) => p.county).filter(Boolean)),
                 ].map((v) => ({ label: v as string, value: v as string })),
               },
               {
@@ -515,9 +539,7 @@ export default function ProjectsView({
                 title: 'Manager',
                 options: [
                   ...new Set(
-                    filteredProjects.map(
-                      (p) => p.projectManager?.name || 'Unassigned',
-                    ),
+                    filteredProjects.map((p) => p.projectManager?.name || 'Unassigned'),
                   ),
                 ].map((v) => ({ label: v, value: v })),
               },

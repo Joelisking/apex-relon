@@ -11,7 +11,8 @@ export interface WidgetConfig {
     | 'FunnelChart'
     | 'TaskList'
     | 'LeadsList'
-    | 'AIPanel';
+    | 'AIPanel'
+    | 'BottleneckWidget';
   position: { x: number; y: number };
   size: { w: number; h: number };
   config: {
@@ -68,16 +69,23 @@ const CEO_LAYOUT: WidgetConfig[] = [
     config: { title: 'AI Executive Summary' },
   },
   {
+    id: 'ceo-bottleneck',
+    type: 'BottleneckWidget',
+    position: { x: 0, y: 3 },
+    size: { w: 12, h: 3 },
+    config: { title: 'Bottleneck Analysis' },
+  },
+  {
     id: 'ceo-funnel',
     type: 'FunnelChart',
-    position: { x: 0, y: 3 },
+    position: { x: 0, y: 6 },
     size: { w: 6, h: 2 },
     config: { title: 'Pipeline Funnel' },
   },
   {
     id: 'ceo-top-clients',
     type: 'BarChart',
-    position: { x: 6, y: 3 },
+    position: { x: 6, y: 6 },
     size: { w: 6, h: 2 },
     config: {
       title: 'Top Clients by Revenue',
@@ -87,7 +95,7 @@ const CEO_LAYOUT: WidgetConfig[] = [
   {
     id: 'ceo-tasks',
     type: 'TaskList',
-    position: { x: 0, y: 5 },
+    position: { x: 0, y: 8 },
     size: { w: 12, h: 2 },
     config: { title: 'My Tasks' },
   },
@@ -223,16 +231,23 @@ const ADMIN_LAYOUT: WidgetConfig[] = [
     config: { title: 'Revenue Trend', metric: 'monthlyRevenue' },
   },
   {
+    id: 'admin-bottleneck',
+    type: 'BottleneckWidget',
+    position: { x: 0, y: 3 },
+    size: { w: 12, h: 3 },
+    config: { title: 'Bottleneck Analysis' },
+  },
+  {
     id: 'admin-funnel',
     type: 'FunnelChart',
-    position: { x: 0, y: 3 },
+    position: { x: 0, y: 6 },
     size: { w: 6, h: 2 },
     config: { title: 'Pipeline Funnel' },
   },
   {
     id: 'admin-tasks',
     type: 'TaskList',
-    position: { x: 6, y: 3 },
+    position: { x: 6, y: 6 },
     size: { w: 6, h: 2 },
     config: { title: 'My Tasks' },
   },

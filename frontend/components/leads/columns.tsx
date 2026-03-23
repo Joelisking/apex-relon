@@ -121,6 +121,41 @@ export const columns: ColumnDef<Lead>[] = [
     },
   },
   {
+    id: 'source',
+    accessorFn: (row) => row.source || '',
+    header: 'Source',
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.source || '—'}</span>,
+  },
+  {
+    id: 'urgency',
+    accessorFn: (row) => row.urgency || '',
+    header: 'Urgency',
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.urgency || '—'}</span>,
+  },
+  {
+    id: 'county',
+    accessorFn: (row) => row.county || '',
+    header: 'County',
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.county || '—'}</span>,
+  },
+  {
+    id: 'serviceType',
+    accessorFn: (row) => row.serviceType?.name || '',
+    header: 'Service Type',
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.serviceType?.name || '—'}</span>,
+  },
+  {
+    id: 'aiRiskLevel',
+    accessorFn: (row) => row.aiRiskLevel || '',
+    header: 'AI Risk',
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.aiRiskLevel || '—'}</span>,
+  },
+  {
     id: 'actions',
     cell: ({ row }) => {
       const lead = row.original;

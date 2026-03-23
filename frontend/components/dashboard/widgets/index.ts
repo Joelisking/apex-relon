@@ -5,3 +5,4 @@ export { FunnelChartWidget } from './FunnelChartWidget';
 export { TaskListWidget } from './TaskListWidget';
 export { LeadsListWidget } from './LeadsListWidget';
 export { AIPanelWidget } from './AIPanelWidget';
+export { BottleneckWidget } from './BottleneckWidget';

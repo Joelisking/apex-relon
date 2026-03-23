@@ -5,7 +5,8 @@ export type WidgetType =
   | 'FunnelChart'
   | 'TaskList'
   | 'LeadsList'
-  | 'AIPanel';
+  | 'AIPanel'
+  | 'BottleneckWidget';
 
 export interface WidgetConfig {
   id: string;
@@ -31,7 +32,8 @@ export const WIDGET_DEFINITIONS: Record<WidgetType, { label: string; requiredPer
   FunnelChart:{ label: 'Funnel Chart',  requiredPermissions: ['leads:view'] },
   TaskList:   { label: 'Task List',     requiredPermissions: ['tasks:view'] },
   LeadsList:  { label: 'Leads List',    requiredPermissions: ['leads:view'] },
-  AIPanel:    { label: 'AI Panel',      requiredPermissions: ['reports:view', 'leads:view', 'clients:view'] },
+  AIPanel:         { label: 'AI Panel',            requiredPermissions: ['reports:view', 'leads:view', 'clients:view'] },
+  BottleneckWidget: { label: 'Bottleneck Analysis', requiredPermissions: ['bottleneck:view'] },
 };
 
 // Derived — no need to maintain separately

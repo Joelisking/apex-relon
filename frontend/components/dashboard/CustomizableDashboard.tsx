@@ -43,6 +43,7 @@ import {
   TaskListWidget,
   LeadsListWidget,
   AIPanelWidget,
+  BottleneckWidget,
 } from './widgets';
 import { WidgetConfigPanel } from './WidgetConfigPanel';
 import { AddWidgetDialog } from './AddWidgetDialog';
@@ -214,6 +215,8 @@ function SortableWidget({
         return <LeadsListWidget widget={widget} />;
       case 'AIPanel':
         return <AIPanelWidget widget={widget} period={period} />;
+      case 'BottleneckWidget':
+        return <BottleneckWidget widget={widget} />;
       default:
         return null;
     }

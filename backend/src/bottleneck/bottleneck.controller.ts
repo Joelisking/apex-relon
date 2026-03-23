@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
-import { BottleneckService, StageDwellResult, TaskVelocityResult, OverdueResult } from './bottleneck.service';
+import { BottleneckService, StageDwellResult, TaskVelocityResult, OverdueResult, WidgetSummaryResult } from './bottleneck.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Permissions } from '../permissions/permissions.decorator';
 
@@ -32,6 +32,12 @@ export class BottleneckController {
     return this.bottleneckService.getStuckProjects(
       threshold ? parseInt(threshold, 10) : 14,
     );
+  }
+
+  @Get('widget-summary')
+  @Permissions('bottleneck:view')
+  getWidgetSummary(): Promise<WidgetSummaryResult> {
+    return this.bottleneckService.getWidgetSummary();
   }
 
   @Post('ai-report')

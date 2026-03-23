@@ -28,6 +28,7 @@ import {
   Users,
   BrainCircuit,
   Layers,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface WidgetMeta {
@@ -95,6 +96,14 @@ const WIDGET_META: Record<WidgetType, WidgetMeta> = {
     selectedBg: 'bg-purple-50/70',
     selectedBorder: 'border-purple-300/80',
     hoverBorder: 'hover:border-purple-200',
+  },
+  BottleneckWidget: {
+    icon: <AlertTriangle className="h-4.5 w-4.5" />,
+    description: 'Team blockers, stuck projects, and slow pipeline stages',
+    iconColor: 'text-red-500',
+    selectedBg: 'bg-red-50/70',
+    selectedBorder: 'border-red-300/80',
+    hoverBorder: 'hover:border-red-200',
   },
 };
 

@@ -41,6 +41,8 @@ import {
   Clock,
   TrendingUp,
   CalendarDays,
+  Layers,
+  Package,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import {
@@ -141,12 +143,19 @@ export function SidebarTrigger({
 }
 
 // --- Nav data ---
-const mainNavItems: Array<{
+type NavItemDef = {
   title: string;
   href: string;
   icon: React.ElementType;
   permission?: string;
-}> = [
+};
+
+type AdminNavGroup = {
+  label: string;
+  items: NavItemDef[];
+};
+
+const mainNavItems: NavItemDef[] = [
   {
     title: 'Dashboard',
     href: '/dashboard',
@@ -159,7 +168,7 @@ const mainNavItems: Array<{
     permission: 'clients:view',
   },
   {
-    title: 'Prospective Projects',
+    title: 'Leads',
     href: '/leads',
     icon: Target,
     permission: 'leads:view',
@@ -208,119 +217,49 @@ const mainNavItems: Array<{
   },
 ];
 
-const adminSubItems: Array<{
-  title: string;
-  href: string;
-  icon: React.ElementType;
-  permission?: string;
-}> = [
+const adminNavGroups: AdminNavGroup[] = [
   {
-    title: 'Users',
-    href: '/admin/users',
-    icon: UserCog,
-    permission: 'users:view',
+    label: 'People & Access',
+    items: [
+      { title: 'Users', href: '/admin/users', icon: UserCog, permission: 'users:view' },
+      { title: 'Teams', href: '/admin/teams', icon: UsersRound, permission: 'teams:view' },
+      { title: 'Roles', href: '/admin/roles', icon: ShieldCheck, permission: 'permissions:view' },
+      { title: 'Permissions', href: '/admin/permissions', icon: Shield, permission: 'permissions:view' },
+    ],
   },
   {
-    title: 'QuickBooks',
-    href: '/admin/quickbooks',
-    icon: BookOpen,
-    permission: 'settings:manage',
+    label: 'Configuration',
+    items: [
+      { title: 'Pipeline', href: '/admin/pipeline', icon: GitBranch, permission: 'pipeline:manage' },
+      { title: 'Custom Fields', href: '/admin/custom-fields', icon: Settings2, permission: 'settings:manage' },
+      { title: 'Form Options', href: '/admin/dropdown-options', icon: ListFilter, permission: 'settings:manage' },
+      { title: 'Service Types', href: '/admin/service-types', icon: Layers, permission: 'settings:manage' },
+      { title: 'Service Items', href: '/admin/service-items', icon: Package, permission: 'settings:manage' },
+      { title: 'Task Types', href: '/admin/task-types', icon: CheckSquare, permission: 'settings:manage' },
+      { title: 'Lead Forms', href: '/admin/lead-forms', icon: FormInput, permission: 'settings:manage' },
+    ],
   },
   {
-    title: 'Teams',
-    href: '/admin/teams',
-    icon: UsersRound,
-    permission: 'teams:view',
+    label: 'Settings',
+    items: [
+      { title: 'General', href: '/admin/general-settings', icon: SlidersHorizontal, permission: 'settings:manage' },
+      { title: 'Quotes', href: '/admin/quote-settings', icon: FileSignature, permission: 'settings:manage' },
+      { title: 'AI', href: '/admin/ai-settings', icon: Bot, permission: 'ai_settings:view' },
+    ],
   },
   {
-    title: 'Roles',
-    href: '/admin/roles',
-    icon: ShieldCheck,
-    permission: 'permissions:view',
+    label: 'Integrations',
+    items: [
+      { title: 'QuickBooks', href: '/admin/quickbooks', icon: BookOpen, permission: 'settings:manage' },
+      { title: 'Automation', href: '/admin/workflows', icon: Zap, permission: 'workflows:view' },
+    ],
   },
   {
-    title: 'Permissions',
-    href: '/admin/permissions',
-    icon: Shield,
-    permission: 'permissions:view',
-  },
-  {
-    title: 'Pipeline',
-    href: '/admin/pipeline',
-    icon: GitBranch,
-    permission: 'pipeline:manage',
-  },
-  {
-    title: 'Dropdown Options',
-    href: '/admin/dropdown-options',
-    icon: ListFilter,
-    permission: 'settings:manage',
-  },
-  {
-    title: 'Service Categories & Types',
-    href: '/admin/service-types',
-    icon: ListFilter,
-    permission: 'settings:manage',
-  },
-  {
-    title: 'Task Types',
-    href: '/admin/task-types',
-    icon: CheckSquare,
-    permission: 'settings:manage',
-  },
-  {
-    title: 'Service Items',
-    href: '/admin/service-items',
-    icon: BookOpen,
-    permission: 'settings:manage',
-  },
-  {
-    title: 'AI Settings',
-    href: '/admin/ai-settings',
-    icon: Bot,
-    permission: 'ai_settings:view',
-  },
-  {
-    title: 'General Settings',
-    href: '/admin/general-settings',
-    icon: SlidersHorizontal,
-    permission: 'settings:manage',
-  },
-  {
-    title: 'Quote Settings',
-    href: '/admin/quote-settings',
-    icon: FileSignature,
-    permission: 'settings:manage',
-  },
-  {
-    title: 'Audit Logs',
-    href: '/admin/audit-logs',
-    icon: FileText,
-    permission: 'audit_logs:view',
-  },
-  {
-    title: 'Custom Fields',
-    href: '/admin/custom-fields',
-    icon: Settings2,
-    permission: 'settings:manage',
-  },
-  {
-    title: 'Automation',
-    href: '/admin/workflows',
-    icon: Zap,
-    permission: 'workflows:view',
-  },
-  {
-    title: 'Lead Forms',
-    href: '/admin/lead-forms',
-    icon: FormInput,
-    permission: 'settings:manage',
-  },
-  {
-    title: 'System',
-    href: '/admin/system',
-    icon: Monitor,
-    permission: 'settings:manage',
+    label: 'System',
+    items: [
+      { title: 'Audit Logs', href: '/admin/audit-logs', icon: FileText, permission: 'audit_logs:view' },
+      { title: 'System', href: '/admin/system', icon: Monitor, permission: 'settings:manage' },
+    ],
   },
 ];
 
@@ -331,7 +270,7 @@ function NavItem({
   collapsed,
   onClick,
 }: {
-  item: { title: string; href: string; icon: React.ElementType };
+  item: NavItemDef;
   isActive: boolean;
   collapsed: boolean;
   onClick?: () => void;
@@ -435,7 +374,7 @@ function SidebarNav({
           <div className="space-y-1">
             {!collapsed && (
               <p className="px-3 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Main
+                Workspace
               </p>
             )}
             {mainNavItems
@@ -460,21 +399,21 @@ function SidebarNav({
               {collapsed ? (
                 <>
                   <div className="mx-2 my-2 border-t border-border" />
-                  {adminSubItems
-                    .filter(
+                  {adminNavGroups.flatMap((group) =>
+                    group.items.filter(
                       (item) =>
                         !item.permission ||
                         hasPermission(item.permission),
-                    )
-                    .map((item) => (
-                      <NavItem
-                        key={item.href}
-                        item={item}
-                        isActive={pathname === item.href}
-                        collapsed={collapsed}
-                        onClick={onNavigate}
-                      />
-                    ))}
+                    ),
+                  ).map((item) => (
+                    <NavItem
+                      key={item.href}
+                      item={item}
+                      isActive={pathname === item.href}
+                      collapsed={collapsed}
+                      onClick={onNavigate}
+                    />
+                  ))}
                 </>
               ) : (
                 <Collapsible defaultOpen={isAdminRoute}>
@@ -482,22 +421,33 @@ function SidebarNav({
                     Admin
                     <ChevronRight className="ml-auto h-3.5 w-3.5 transition-transform duration-200 [[data-state=open]>&]:rotate-90" />
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-1">
-                    {adminSubItems
-                      .filter(
+                  <CollapsibleContent className="space-y-3 pt-1">
+                    {adminNavGroups.map((group) => {
+                      const visibleItems = group.items.filter(
                         (item) =>
                           !item.permission ||
                           hasPermission(item.permission),
-                      )
-                      .map((item) => (
-                        <NavItem
-                          key={item.href}
-                          item={item}
-                          isActive={pathname === item.href}
-                          collapsed={false}
-                          onClick={onNavigate}
-                        />
-                      ))}
+                      );
+                      if (visibleItems.length === 0) return null;
+                      return (
+                        <div key={group.label}>
+                          <p className="px-3 pb-1 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
+                            {group.label}
+                          </p>
+                          <div className="space-y-1">
+                            {visibleItems.map((item) => (
+                              <NavItem
+                                key={item.href}
+                                item={item}
+                                isActive={pathname === item.href}
+                                collapsed={false}
+                                onClick={onNavigate}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </CollapsibleContent>
                 </Collapsible>
               )}

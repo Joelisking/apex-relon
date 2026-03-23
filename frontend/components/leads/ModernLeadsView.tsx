@@ -727,12 +727,50 @@ export default function ModernLeadsView({
             globalFilter={true}
             onRowClick={(lead) => router.push(`/leads/${lead.id}`)}
             onSelectionChange={setSelectedLeads}
+            initialColumnVisibility={{ source: false, urgency: false, county: false, serviceType: false, aiRiskLevel: false }}
             filterConfigs={[
               {
                 columnId: 'stage',
                 title: 'Stage',
                 options: [
                   ...new Set(filteredLeads.map((l) => l.stage).filter(Boolean)),
+                ].map((v) => ({ label: v!, value: v! })),
+              },
+              {
+                columnId: 'urgency',
+                title: 'Urgency',
+                options: [
+                  ...new Set(filteredLeads.map((l) => l.urgency).filter(Boolean)),
+                ].map((v) => ({ label: v!, value: v! })),
+              },
+              {
+                columnId: 'source',
+                title: 'Source',
+                options: [
+                  ...new Set(filteredLeads.map((l) => l.source).filter(Boolean)),
+                ].map((v) => ({ label: v!, value: v! })),
+              },
+              {
+                columnId: 'county',
+                title: 'County',
+                options: [
+                  ...new Set(filteredLeads.map((l) => l.county).filter(Boolean)),
+                ].map((v) => ({ label: v!, value: v! })),
+              },
+              {
+                columnId: 'serviceType',
+                title: 'Service Type',
+                options: [
+                  ...new Set(
+                    filteredLeads.map((l) => l.serviceType?.name).filter(Boolean),
+                  ),
+                ].map((v) => ({ label: v!, value: v! })),
+              },
+              {
+                columnId: 'aiRiskLevel',
+                title: 'AI Risk',
+                options: [
+                  ...new Set(filteredLeads.map((l) => l.aiRiskLevel).filter(Boolean)),
                 ].map((v) => ({ label: v!, value: v! })),
               },
               {

@@ -28,6 +28,22 @@ export interface OverdueResult {
   oldestTaskDays: number;
 }
 
+export interface BlockerEntry {
+  userId: string;
+  userName: string;
+  blockerScore: number;
+  overdueCount: number;
+  stuckProjectsBlocking: number;
+  completionRate: number;
+}
+
+export interface WidgetSummaryResult {
+  topBlockers: BlockerEntry[];
+  criticalStages: Array<{ stage: string; avgDays: number; count: number }>;
+  stuckProjectCount: number;
+  overdueTaskCount: number;
+}
+
 @Injectable()
 export class BottleneckService {
   private readonly logger = new Logger(BottleneckService.name);
@@ -198,6 +214,106 @@ export class BottleneckService {
       .sort((a, b) => b.daysSinceUpdate - a.daysSinceUpdate);
   }
 
+  // ─── Widget Summary ───────────────────────────────────────────────────────
+
+  async getWidgetSummary(): Promise<WidgetSummaryResult> {
+    const [stageDwell, taskVelocity, overdueBreakdown, stuckProjects] = await Promise.all([
+      this.getStageDwellTime(),
+      this.getTaskVelocity(30),
+      this.getOverdueBreakdown(),
+      this.getStuckProjects(14),
+    ]);
+
+    const stuckProjectIds = stuckProjects.map((p) => p.id);
+
+    // Identify which users have open tasks on stuck projects
+    const blockingByUser: Record<string, { userName: string; projectIds: Set<string> }> = {};
+    if (stuckProjectIds.length > 0) {
+      const blockingTasks = await this.prisma.task.findMany({
+        where: {
+          entityType: 'project',
+          entityId: { in: stuckProjectIds },
+          status: { not: 'COMPLETED' },
+          assignedToId: { not: null },
+        },
+        select: {
+          assignedToId: true,
+          entityId: true,
+          assignedTo: { select: { id: true, name: true } },
+        },
+      });
+
+      for (const t of blockingTasks) {
+        if (!t.assignedToId || !t.assignedTo || !t.entityId) continue;
+        if (!blockingByUser[t.assignedToId]) {
+          blockingByUser[t.assignedToId] = { userName: t.assignedTo.name, projectIds: new Set() };
+        }
+        blockingByUser[t.assignedToId].projectIds.add(t.entityId);
+      }
+    }
+
+    // Build composite user profiles from all data sources
+    const userMap: Record<string, {
+      userName: string;
+      overdueCount: number;
+      stuckProjectsBlocking: number;
+      completionRate: number;
+    }> = {};
+
+    const ensure = (id: string, name: string) => {
+      if (!userMap[id]) {
+        userMap[id] = { userName: name, overdueCount: 0, stuckProjectsBlocking: 0, completionRate: 100 };
+      }
+      userMap[id].userName = name;
+    };
+
+    for (const o of overdueBreakdown) {
+      ensure(o.userId, o.userName);
+      userMap[o.userId].overdueCount = o.overdueCount;
+    }
+    for (const v of taskVelocity) {
+      ensure(v.userId, v.userName);
+      userMap[v.userId].completionRate = v.completionRate;
+    }
+    for (const [uid, { userName, projectIds }] of Object.entries(blockingByUser)) {
+      ensure(uid, userName);
+      userMap[uid].stuckProjectsBlocking = projectIds.size;
+    }
+
+    // Composite blocker score: overdue tasks (×3) + stuck projects blocking (×5) + low completion penalty
+    const topBlockers: BlockerEntry[] = Object.entries(userMap)
+      .map(([userId, data]) => {
+        const blockerScore =
+          data.overdueCount * 3 +
+          data.stuckProjectsBlocking * 5 +
+          Math.max(0, 60 - data.completionRate) * 0.5;
+        return {
+          userId,
+          userName: data.userName,
+          blockerScore: Math.round(blockerScore * 10) / 10,
+          overdueCount: data.overdueCount,
+          stuckProjectsBlocking: data.stuckProjectsBlocking,
+          completionRate: data.completionRate,
+        };
+      })
+      .filter((u) => u.blockerScore > 0)
+      .sort((a, b) => b.blockerScore - a.blockerScore)
+      .slice(0, 5);
+
+    const criticalStages = stageDwell
+      .filter((s) => s.isCritical)
+      .map(({ stage, avgDays, count }) => ({ stage, avgDays, count }));
+
+    const overdueTaskCount = overdueBreakdown.reduce((sum, u) => sum + u.overdueCount, 0);
+
+    return {
+      topBlockers,
+      criticalStages,
+      stuckProjectCount: stuckProjects.length,
+      overdueTaskCount,
+    };
+  }
+
   // ─── AI Bottleneck Report ─────────────────────────────────────────────────
 
   async generateAiReport(): Promise<{ content: string; generatedAt: Date }> {
@@ -216,25 +332,30 @@ export class BottleneckService {
       generatedAt: new Date().toISOString(),
     };
 
-    const prompt = `You are a business performance analyst for Apex Consulting & Surveying, Inc., a land surveying firm. Analyze the following operational data and produce a concise, actionable bottleneck report.
+    // Compute blockers for the AI prompt
+    const widgetSummary = await this.getWidgetSummary();
+
+    const prompt = `You are a business performance analyst for Apex Consulting & Surveying, Inc., a land surveying firm. The CEO needs a frank, actionable bottleneck report. Be specific — name individuals where they are responsible for delays.
 
 **Stage Dwell Times (avg days per pipeline stage):**
-${stageDwell.map((s) => `- ${s.stage}: ${s.avgDays} days avg (${s.count} projects) ${s.isCritical ? '⚠️ CRITICAL' : ''}`).join('\n')}
+${stageDwell.map((s) => `- ${s.stage}: ${s.avgDays} days avg (${s.count} leads) ${s.isCritical ? '⚠️ CRITICAL' : ''}`).join('\n')}
+
+**Team Member Blocker Scores (composite: overdue tasks + stuck project ownership + completion rate):**
+${widgetSummary.topBlockers.map((u) => `- ${u.userName}: score ${u.blockerScore} | ${u.overdueCount} overdue tasks | blocking ${u.stuckProjectsBlocking} stuck project(s) | ${u.completionRate}% task completion`).join('\n') || '- No significant blockers identified'}
 
 **Task Velocity by Team Member (last 30 days):**
-${taskVelocity.map((u) => `- ${u.userName}: ${u.completionRate}% completion, ${u.overdue} overdue`).join('\n')}
+${taskVelocity.map((u) => `- ${u.userName}: ${u.completionRate}% completion (${u.completed}/${u.assigned} tasks), ${u.overdue} overdue`).join('\n')}
 
-**Overdue Task Breakdown:**
-${overdueBreakdown.slice(0, 5).map((u) => `- ${u.userName}: ${u.overdueCount} overdue (avg ${u.avgDaysOverdue} days late)`).join('\n')}
-
-**Projects Stuck > 14 Days:**
-${stuckProjects.slice(0, 5).map((p) => `- ${p.name} (${p.clientName}): ${p.daysSinceUpdate} days without update, status: ${p.status}`).join('\n')}
+**Projects Stuck > 14 Days Without Update:**
+${stuckProjects.slice(0, 8).map((p) => `- ${p.name} (${p.clientName}): ${p.daysSinceUpdate} days stalled, status: ${p.status}`).join('\n') || '- None'}
 
 Please provide:
-1. **Top 3 Bottlenecks** — identify the most critical operational bottlenecks with root cause analysis
-2. **Recommended Actions** — specific, actionable recommendations for each bottleneck
-3. **Revenue Impact** — estimated impact if bottlenecks are resolved
-4. **Quick Wins** — 2-3 things that can be fixed this week
+1. **Who Is Holding Things Up** — call out specific team members by name, what they are blocking, and why this matters to the business
+2. **Critical Pipeline Stages** — which stages are causing the most delay and what to do about them
+3. **Immediate Actions** — 3 specific actions the CEO should take this week, with names and deadlines
+4. **Revenue Risk** — estimate the revenue at risk from current bottlenecks
+
+Be direct and specific. The CEO wants names, numbers, and clear actions — not generalities.
 
 Format your response in clear markdown with headers.`;
 

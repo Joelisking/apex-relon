@@ -2,11 +2,10 @@
 
 import * as React from 'react';
 import { Column } from '@tanstack/react-table';
-import { Check, PlusCircle } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -21,7 +20,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Separator } from '@/components/ui/separator';
 
 interface DataTableFacetedFilterProps<TData, TValue> {
   column?: Column<TData, TValue>;
@@ -40,53 +38,52 @@ export function DataTableFacetedFilter<TData, TValue>({
 }: DataTableFacetedFilterProps<TData, TValue>) {
   const facets = column?.getFacetedUniqueValues();
   const selectedValues = new Set(column?.getFilterValue() as string[]);
+  const isActive = selectedValues.size > 0;
 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 border-dashed">
-          <PlusCircle className="mr-2 h-4 w-4" />
+        <button
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-full px-3 h-7 text-xs font-medium transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            isActive
+              ? 'bg-primary/10 text-primary border border-primary/25 hover:bg-primary/15'
+              : 'bg-muted/70 text-muted-foreground border border-transparent hover:bg-muted hover:text-foreground',
+          )}>
           {title}
-          {selectedValues?.size > 0 && (
+          {isActive ? (
             <>
-              <Separator orientation="vertical" className="mx-2 h-4" />
               <Badge
                 variant="secondary"
-                className="rounded-sm px-1 font-normal lg:hidden">
-                {selectedValues.size}
-              </Badge>
-              <div className="hidden space-x-1 lg:flex">
+                className="ml-0.5 h-4 min-w-4 rounded-full px-1 text-[10px] font-semibold bg-primary/15 text-primary border-0">
                 {selectedValues.size > 2 ? (
-                  <Badge
-                    variant="secondary"
-                    className="rounded-sm px-1 font-normal">
-                    {selectedValues.size} selected
-                  </Badge>
+                  `${selectedValues.size}`
                 ) : (
                   options
-                    .filter((option) => selectedValues.has(option.value))
-                    .map((option) => (
-                      <Badge
-                        variant="secondary"
-                        key={option.value}
-                        className="rounded-sm px-1 font-normal">
-                        {option.label}
-                      </Badge>
-                    ))
+                    .filter((o) => selectedValues.has(o.value))
+                    .map((o) => o.label)
+                    .join(', ')
+                    .slice(0, 18) + (selectedValues.size > 1 ? '' : '')
                 )}
-              </div>
+              </Badge>
             </>
+          ) : (
+            <ChevronDown className="h-3 w-3 opacity-50" />
           )}
-        </Button>
+        </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0" align="start">
+      <PopoverContent className="w-[210px] p-0 shadow-lg" align="start">
         <Command>
-          <CommandInput placeholder={title} />
+          <CommandInput
+            placeholder={`Search ${title?.toLowerCase()}...`}
+            className="h-9 text-sm"
+          />
           <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {
                 const isSelected = selectedValues.has(option.value);
+                const count = facets?.get(option.value);
                 return (
                   <CommandItem
                     key={option.value}
@@ -100,23 +97,24 @@ export function DataTableFacetedFilter<TData, TValue>({
                       column?.setFilterValue(
                         filterValues.length ? filterValues : undefined,
                       );
-                    }}>
+                    }}
+                    className="flex items-center gap-2 text-sm">
                     <div
                       className={cn(
-                        'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
+                        'flex h-4 w-4 items-center justify-center rounded-sm border transition-colors',
                         isSelected
-                          ? 'bg-primary text-primary-foreground'
-                          : 'opacity-50 [&_svg]:invisible',
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-muted-foreground/30 bg-transparent',
                       )}>
-                      <Check className="h-4 w-4" />
+                      <Check className={cn('h-3 w-3', isSelected ? 'opacity-100' : 'opacity-0')} />
                     </div>
                     {option.icon && (
-                      <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <option.icon className="h-4 w-4 text-muted-foreground" />
                     )}
-                    <span>{option.label}</span>
-                    {facets?.get(option.value) && (
-                      <span className="ml-auto flex h-4 w-4 items-center justify-center font-mono text-xs">
-                        {facets.get(option.value)}
+                    <span className="flex-1">{option.label}</span>
+                    {count !== undefined && (
+                      <span className="text-[11px] tabular-nums text-muted-foreground font-mono">
+                        {count}
                       </span>
                     )}
                   </CommandItem>
@@ -129,8 +127,8 @@ export function DataTableFacetedFilter<TData, TValue>({
                 <CommandGroup>
                   <CommandItem
                     onSelect={() => column?.setFilterValue(undefined)}
-                    className="justify-center text-center">
-                    Clear filters
+                    className="justify-center text-center text-xs text-muted-foreground">
+                    Clear filter
                   </CommandItem>
                 </CommandGroup>
               </>

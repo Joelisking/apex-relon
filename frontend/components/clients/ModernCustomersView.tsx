@@ -166,6 +166,11 @@ export default function ModernCustomersView({ currentUser }: ModernCustomersView
                 options: [...new Set(clients.map((c) => c.industry).filter(Boolean))].map((v) => ({ label: v!, value: v! })),
               },
               {
+                columnId: 'county',
+                title: 'County',
+                options: [...new Set(clients.map((c) => c.county).filter(Boolean))].map((v) => ({ label: v!, value: v! })),
+              },
+              {
                 columnId: 'manager',
                 title: 'Manager',
                 options: [...new Set(clients.map((c) => c.accountManager?.name || 'Unassigned'))].map((v) => ({ label: v, value: v })),

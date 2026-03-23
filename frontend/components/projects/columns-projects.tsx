@@ -143,6 +143,27 @@ export const projectColumns: ColumnDef<Project>[] = [
     filterFn: (row, id, value) => value.includes(row.getValue(id)),
   },
   {
+    id: 'client',
+    accessorFn: (row) => row.client?.name || '',
+    header: 'Client',
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.client?.name || '—'}</span>,
+  },
+  {
+    id: 'serviceType',
+    accessorFn: (row) => row.serviceType?.name || '',
+    header: 'Service Type',
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.serviceType?.name || '—'}</span>,
+  },
+  {
+    id: 'county',
+    accessorFn: (row) => row.county || '',
+    header: 'County',
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.county || '—'}</span>,
+  },
+  {
     accessorKey: 'estimatedDueDate',
     header: 'Due Date',
     cell: ({ row }) =>

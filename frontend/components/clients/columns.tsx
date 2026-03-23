@@ -186,6 +186,18 @@ export function getClientColumns(
       },
     },
     {
+      accessorKey: 'county',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="County" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-xs text-muted-foreground">
+          {row.getValue('county') || '—'}
+        </span>
+      ),
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
       id: 'manager',
       accessorFn: (row) => row.accountManager?.name || 'Unassigned',
       header: ({ column }) => (
