@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import { TimeEntryDialog } from './TimeEntryDialog';
 import { TimerWidget } from './TimerWidget';
 import { API_URL, getTokenFromClientCookies } from '@/lib/api/client';
+import { useAuth } from '@/contexts/auth-context';
 
 async function ttFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getTokenFromClientCookies() ?? '';
@@ -98,6 +99,9 @@ function formatDate(iso: string) {
 }
 
 export function TimeTrackingView() {
+  const { user, hasPermission } = useAuth();
+  const canManageAll = hasPermission('time_tracking:manage_all');
+
   const [tab, setTab] = useState('my-time');
   const [entryDialogOpen, setEntryDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
@@ -117,18 +121,20 @@ export function TimeTrackingView() {
     ? `&startDate=${startDate}&endDate=${endDate}`
     : '';
 
-  // Backend auto-scopes to the authenticated user's entries when no userId is passed
-  // (or when the user lacks time_tracking:manage_all)
+  // When the user has manage_all, explicitly pass their userId so the backend
+  // doesn't return all users' entries for the "My Time" tab.
+  const myUserQuery = canManageAll && user?.id ? `&userId=${user.id}` : '';
+
   const { data: myEntries = [], isLoading: myLoading } = useQuery<TimeEntry[]>({
-    queryKey: ['time-entries', 'my', startDate, endDate],
+    queryKey: ['time-entries', 'my', user?.id, startDate, endDate],
     queryFn: () =>
-      ttFetch<TimeEntry[]>(`/entries?limit=200${dateQuery}`),
+      ttFetch<TimeEntry[]>(`/entries?limit=200${dateQuery}${myUserQuery}`),
   });
 
   const { data: allEntries = [], isLoading: allLoading } = useQuery<TimeEntry[]>({
     queryKey: ['time-entries', 'all', startDate, endDate],
     queryFn: () => ttFetch<TimeEntry[]>(`/entries?limit=200${dateQuery}`),
-    enabled: tab === 'team-time',
+    enabled: tab === 'team-time' && canManageAll,
   });
 
   const { data: timesheet, isLoading: timesheetLoading } = useQuery<TimesheetData>({
@@ -332,10 +338,12 @@ export function TimeTrackingView() {
             <Clock className="h-4 w-4 sm:mr-1.5" />
             <span className="hidden sm:inline">My Time</span>
           </TabsTrigger>
-          <TabsTrigger value="team-time">
-            <Users className="h-4 w-4 sm:mr-1.5" />
-            <span className="hidden sm:inline">Team Time</span>
-          </TabsTrigger>
+          {canManageAll && (
+            <TabsTrigger value="team-time">
+              <Users className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Team Time</span>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="timesheet">
             <CalendarDays className="h-4 w-4 sm:mr-1.5" />
             <span className="hidden sm:inline">Timesheet</span>
@@ -377,7 +385,7 @@ export function TimeTrackingView() {
           </Card>
         </TabsContent>
 
-        {/* Team Time */}
+        {/* Team Time — only visible to users with time_tracking:manage_all */}
         <TabsContent value="team-time">
           <Card>
             <CardHeader className="pb-3">
