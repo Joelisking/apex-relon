@@ -136,15 +136,36 @@ export class TasksService {
     // Notify assignee if different from creator
     if (task.assignedToId && task.assignedToId !== userId) {
       try {
+        // Resolve parent entity name for notification context
+        let parentName: string | undefined;
+        if (task.entityType === 'LEAD' && task.entityId) {
+          const lead = await this.prisma.lead.findUnique({
+            where: { id: task.entityId },
+            select: { company: true, contactName: true },
+          });
+          if (lead) parentName = lead.company || lead.contactName;
+        } else if (task.entityType === 'PROJECT' && task.entityId) {
+          const project = await this.prisma.project.findUnique({
+            where: { id: task.entityId },
+            select: { name: true },
+          });
+          if (project) parentName = project.name;
+        }
+        const actorName = task.createdBy.name;
+        const parentContext = parentName
+          ? ` on ${task.entityType === 'LEAD' ? 'Lead' : 'Project'}: ${parentName}`
+          : '';
+
         const pref = await this.notificationsService.getPreferences(task.assignedToId);
         if (pref.taskAssigned) {
           await this.notificationsService.create({
             userId: task.assignedToId,
             type: NotificationType.TASK_ASSIGNED,
             title: 'New task assigned',
-            message: `You've been assigned "${task.title}"`,
+            message: `${actorName} assigned you "${task.title}"${parentContext}`,
             entityType: task.entityType ?? undefined,
             entityId: task.entityId ?? undefined,
+            metadata: { actorId: task.createdById, actorName, parentName },
           });
         }
         // Send assignment email if assignee has an email address
@@ -159,9 +180,9 @@ export class TasksService {
               dueTime: task.dueTime ?? null,
               priority: task.priority,
               entityType: task.entityType ?? null,
-              entityName: null,
+              entityName: parentName ?? null,
             },
-            task.createdBy.name,
+            actorName,
           );
         }
       } catch (err) {
@@ -256,15 +277,36 @@ export class TasksService {
       dto.assignedToId !== userId;
     if (assigneeChanged && task.assignedTo?.email) {
       try {
+        // Resolve parent entity name for notification context
+        let parentName: string | undefined;
+        if (task.entityType === 'LEAD' && task.entityId) {
+          const lead = await this.prisma.lead.findUnique({
+            where: { id: task.entityId },
+            select: { company: true, contactName: true },
+          });
+          if (lead) parentName = lead.company || lead.contactName;
+        } else if (task.entityType === 'PROJECT' && task.entityId) {
+          const project = await this.prisma.project.findUnique({
+            where: { id: task.entityId },
+            select: { name: true },
+          });
+          if (project) parentName = project.name;
+        }
+        const actorName = task.createdBy.name;
+        const parentContext = parentName
+          ? ` on ${task.entityType === 'LEAD' ? 'Lead' : 'Project'}: ${parentName}`
+          : '';
+
         const pref = await this.notificationsService.getPreferences(task.assignedToId!);
         if (pref.taskAssigned) {
           await this.notificationsService.create({
             userId: task.assignedToId!,
             type: NotificationType.TASK_ASSIGNED,
             title: 'New task assigned',
-            message: `You've been assigned "${task.title}"`,
+            message: `${actorName} assigned you "${task.title}"${parentContext}`,
             entityType: task.entityType ?? undefined,
             entityId: task.entityId ?? undefined,
+            metadata: { actorId: task.createdById, actorName, parentName },
           });
         }
         await this.emailService.sendTaskAssignedEmail(
@@ -277,9 +319,9 @@ export class TasksService {
             dueTime: task.dueTime ?? null,
             priority: task.priority,
             entityType: task.entityType ?? null,
-            entityName: null,
+            entityName: parentName ?? null,
           },
-          task.createdBy.name,
+          actorName,
         );
       } catch (err) {
         this.logger.warn(`Failed to send task-reassigned notification/email: ${err}`);

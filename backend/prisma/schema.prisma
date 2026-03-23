@@ -507,6 +507,7 @@ model Notification {
   message    String    @db.Text
   entityType String?
   entityId   String?
+  metadata   Json?
   read       Boolean   @default(false)
   readAt     DateTime?
   createdAt  DateTime  @default(now())

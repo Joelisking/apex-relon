@@ -129,8 +129,9 @@ export function TaskTableView({
               return (
                 <TableRow
                   key={task.id}
-                  className={cn(isDone && 'opacity-60')}>
-                  <TableCell className="px-3 py-2.5">
+                  className={cn(isDone && 'opacity-60', 'cursor-pointer')}
+                  onClick={() => onEdit(task)}>
+                  <TableCell className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                     {isDone ? (
                       canComplete ? (
                         <button
@@ -233,7 +234,7 @@ export function TaskTableView({
                       {task.status.replace('_', ' ')}
                     </Badge>
                   </TableCell>
-                  <TableCell className="px-3 py-2.5">
+                  <TableCell className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                     {(canEdit || canDelete) && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

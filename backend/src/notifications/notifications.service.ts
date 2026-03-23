@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { Subject } from 'rxjs';
 
@@ -9,6 +10,7 @@ export interface CreateNotificationDto {
   message: string;
   entityType?: string;
   entityId?: string;
+  metadata?: Record<string, unknown>;
 }
 
 @Injectable()
@@ -41,6 +43,7 @@ export class NotificationsService {
         message: dto.message,
         entityType: dto.entityType,
         entityId: dto.entityId,
+        metadata: dto.metadata as Prisma.InputJsonValue ?? undefined,
       },
     });
 

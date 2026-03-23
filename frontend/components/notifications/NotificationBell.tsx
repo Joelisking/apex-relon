@@ -56,20 +56,19 @@ const typeIcons: Record<string, string> = {
   MENTION: '💬',
 };
 
-function getEntityUrl(
-  entityType?: string | null,
-  entityId?: string | null,
-): string | null {
+function getEntityUrl(notification: Notification): string | null {
+  const { type, entityType, entityId } = notification;
   if (!entityType || !entityId) return null;
+  const isTaskNotif = type.startsWith('TASK_');
   switch (entityType) {
     case 'LEAD':
-      return '/leads';
+      return isTaskNotif ? `/leads/${entityId}?tab=tasks` : `/leads/${entityId}`;
     case 'CLIENT':
-      return '/clients';
+      return `/clients/${entityId}`;
     case 'PROJECT':
-      return '/projects';
+      return isTaskNotif ? `/projects/${entityId}?tab=tasks` : `/projects/${entityId}`;
     case 'TASK':
-      return '/tasks';
+      return `/tasks`;
     default:
       return null;
   }
@@ -82,7 +81,7 @@ interface NotificationItemProps {
 }
 
 function NotificationItem({ notif, onMarkRead, onNavigate }: NotificationItemProps) {
-  const url = getEntityUrl(notif.entityType, notif.entityId);
+  const url = getEntityUrl(notif);
 
   const handleRowClick = () => {
     if (!notif.read) onMarkRead(notif.id);

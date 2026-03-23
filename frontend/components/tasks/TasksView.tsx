@@ -109,12 +109,6 @@ export default function TasksView() {
   };
 
   const openEdit = (task: Task) => {
-    if (!canEditAll) {
-      const isOwner = task.assignedToId
-        ? task.assignedToId === user?.id
-        : task.createdById === user?.id;
-      if (!isOwner) return;
-    }
     setEditingTask(task);
     if (canAssign && assignableUsers.length === 0) {
       usersApi

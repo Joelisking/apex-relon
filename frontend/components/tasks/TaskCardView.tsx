@@ -104,11 +104,12 @@ export function TaskCardView({
             <div
               key={task.id}
               className={cn(
-                'relative flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)]',
+                'relative flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] cursor-pointer',
                 isDone
                   ? 'opacity-60 border-border/40'
                   : 'border-border/60',
-              )}>
+              )}
+              onClick={() => onEdit(task)}>
               {/* Priority accent strip */}
               <div
                 className={cn(
@@ -118,7 +119,7 @@ export function TaskCardView({
               />
 
               {/* Top row: complete toggle + actions */}
-              <div className="flex items-start justify-between gap-2 pl-2">
+              <div className="flex items-start justify-between gap-2 pl-2" onClick={(e) => e.stopPropagation()}>
                 {isDone ? (
                   canComplete ? (
                     <button

@@ -657,6 +657,11 @@ export interface Notification {
   message: string;
   entityType?: string | null;
   entityId?: string | null;
+  metadata?: {
+    actorId?: string;
+    actorName?: string;
+    parentName?: string;
+  } | null;
   read: boolean;
   readAt?: string | null;
   createdAt: string;

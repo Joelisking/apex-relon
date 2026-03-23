@@ -224,7 +224,7 @@ export class LeadsService {
     if (data.stage && userId) {
       const currentLead = await this.prisma.lead.findUnique({
         where: { id },
-        select: { stage: true, assignedToId: true },
+        select: { stage: true, assignedToId: true, company: true, contactName: true },
       });
       previousStage = currentLead?.stage ?? null;
 
@@ -267,13 +267,19 @@ export class LeadsService {
               currentLead.assignedToId,
             );
             if (pref.leadStageChanged) {
+              const actor = userId
+                ? await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } })
+                : null;
+              const actorName = actor?.name ?? 'Someone';
+              const leadName = currentLead.company || currentLead.contactName;
               await this.notificationsService.create({
                 userId: currentLead.assignedToId,
                 type: NotificationType.LEAD_STAGE_CHANGED,
                 title: 'Lead stage changed',
-                message: `Lead moved to ${data.stage as string}`,
+                message: `${actorName} moved "${leadName}" to ${data.stage as string}`,
                 entityType: 'LEAD',
                 entityId: id,
+                metadata: { actorId: userId ?? undefined, actorName },
               });
             }
           } catch {
