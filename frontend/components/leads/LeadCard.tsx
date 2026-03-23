@@ -107,7 +107,7 @@ export function LeadCardContent({ lead }: { lead: Lead }) {
               {lead.projectName}
             </p>
             <p className="text-xs text-muted-foreground truncate mt-0.5">
-              {lead.contactName}
+              {lead.company}
             </p>
           </div>
           <div className="shrink-0 text-right">

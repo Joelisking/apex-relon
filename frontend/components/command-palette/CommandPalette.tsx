@@ -109,8 +109,8 @@ export function CommandPalette() {
 
   const leads: SearchableItem[] = rawLeads.map((l: AnyRecord) => ({
     id: l.id ?? '',
-    label: l.contactName || l.name || l.company || 'Unnamed Lead',
-    subtitle: l.company || l.stage,
+    label: l.projectName || l.contactName || l.company || 'Unnamed Lead',
+    subtitle: l.company,
     type: 'lead',
     badge: l.stage,
   }));
