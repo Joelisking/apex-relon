@@ -143,9 +143,11 @@ export function TimeTrackingView() {
     enabled: tab === 'team-time' && canManageAll,
   });
 
+  const timesheetUserQuery = !canManageAll && user?.id ? `&userId=${user.id}` : '';
+
   const { data: timesheet, isLoading: timesheetLoading } = useQuery<TimesheetData>({
-    queryKey: ['timesheet', weekStart],
-    queryFn: () => ttFetch<TimesheetData>(`/timesheet?startDate=${weekStart}`),
+    queryKey: ['timesheet', weekStart, canManageAll ? 'all' : user?.id],
+    queryFn: () => ttFetch<TimesheetData>(`/timesheet?startDate=${weekStart}${timesheetUserQuery}`),
     enabled: tab === 'timesheet',
   });
 

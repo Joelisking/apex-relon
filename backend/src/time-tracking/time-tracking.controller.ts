@@ -132,10 +132,13 @@ export class TimeTrackingController {
 
   @Get('timesheet')
   @Permissions('time_tracking:view')
-  getTimesheet(
+  async getTimesheet(
+    @CurrentUser() user: AuthenticatedUser,
     @Query('startDate') startDate: string,
     @Query('userId') userId?: string,
   ) {
-    return this.timeTrackingService.getWeeklyTimesheet(startDate, userId);
+    const canManageAll = await this.permissionsService.hasPermission(user.role, 'time_tracking:manage_all');
+    const effectiveUserId = canManageAll ? userId : user.id;
+    return this.timeTrackingService.getWeeklyTimesheet(startDate, effectiveUserId);
   }
 }
