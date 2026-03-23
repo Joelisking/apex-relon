@@ -20,7 +20,7 @@ export class TimeTrackingService {
         userId: dto.userId,
         projectId: dto.projectId,
         taskId: dto.taskId,
-        date: new Date(dto.date),
+        date: new Date(`${dto.date.split('T')[0]}T12:00:00.000Z`),
         hours: dto.hours,
         description: dto.description,
         billable: dto.billable ?? true,
@@ -52,8 +52,8 @@ export class TimeTrackingService {
     if (filters.projectId) where.projectId = filters.projectId;
     if (filters.startDate || filters.endDate) {
       where.date = {};
-      if (filters.startDate) where.date.gte = new Date(filters.startDate);
-      if (filters.endDate) where.date.lte = new Date(filters.endDate);
+      if (filters.startDate) where.date.gte = new Date(`${filters.startDate}T00:00:00.000Z`);
+      if (filters.endDate) where.date.lte = new Date(`${filters.endDate}T23:59:59.999Z`);
     }
 
     return this.prisma.timeEntry.findMany({
@@ -78,7 +78,7 @@ export class TimeTrackingService {
     return this.prisma.timeEntry.update({
       where: { id },
       data: {
-        ...(data.date && { date: new Date(data.date) }),
+        ...(data.date && { date: new Date(`${data.date.split('T')[0]}T12:00:00.000Z`) }),
         ...(data.hours !== undefined && { hours: data.hours }),
         ...(data.description !== undefined && { description: data.description }),
         ...(data.billable !== undefined && { billable: data.billable }),
@@ -175,8 +175,8 @@ export class TimeTrackingService {
     const where: any = { userId };
     if (startDate || endDate) {
       where.date = {};
-      if (startDate) where.date.gte = new Date(startDate);
-      if (endDate) where.date.lte = new Date(endDate);
+      if (startDate) where.date.gte = new Date(`${startDate}T00:00:00.000Z`);
+      if (endDate) where.date.lte = new Date(`${endDate}T23:59:59.999Z`);
     }
 
     const entries = await this.prisma.timeEntry.findMany({ where });
@@ -196,8 +196,8 @@ export class TimeTrackingService {
   }
 
   async getWeeklyTimesheet(startDate: string, userId?: string) {
-    const start = new Date(startDate);
-    const end = new Date(start);
+    const start = new Date(`${startDate}T00:00:00.000Z`);
+    const end = new Date(`${startDate}T23:59:59.999Z`);
     end.setDate(end.getDate() + 6);
 
     const where: any = { date: { gte: start, lte: end } };

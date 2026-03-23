@@ -77,11 +77,17 @@ interface TimesheetData {
   rows: TimesheetRow[];
 }
 
+function localDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function getWeekStart(date: Date): string {
   const d = new Date(date);
-  const day = d.getDay(); // 0 = Sunday
-  d.setDate(d.getDate() - day); // back to Sunday
-  return d.toISOString().split('T')[0];
+  d.setDate(d.getDate() - d.getDay()); // back to local Sunday
+  return localDateString(d);
 }
 
 function formatHours(h: number) {
@@ -176,7 +182,7 @@ export function TimeTrackingView() {
   const renderEntryRow = (entry: TimeEntry, showUser = false) => (
     <TableRow key={entry.id}>
       <TableCell className="text-sm whitespace-nowrap">
-        {new Date(entry.date).toLocaleDateString()}
+        {new Date(entry.date.split('T')[0] + 'T12:00:00').toLocaleDateString()}
       </TableCell>
       {showUser && (
         <TableCell className="font-medium text-sm">{entry.user?.name ?? '—'}</TableCell>

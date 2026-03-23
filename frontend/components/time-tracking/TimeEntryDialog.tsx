@@ -77,7 +77,10 @@ export function TimeEntryDialog({
 }: TimeEntryDialogProps) {
   const queryClient = useQueryClient();
 
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('09:00');
   const [projectId, setProjectId] = useState('');
@@ -135,7 +138,8 @@ export function TimeEntryDialog({
       setServiceItemId(entry.serviceItemId ?? '');
       setServiceItemSubtaskId(entry.serviceItemSubtaskId ?? '');
     } else {
-      setDate(new Date().toISOString().split('T')[0]);
+      const today = new Date();
+      setDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
       setStartTime('08:00');
       const ih = initialHours || 1;
       const endTotalMin = 8 * 60 + Math.round(ih * 60);
