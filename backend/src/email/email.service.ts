@@ -60,21 +60,24 @@ function taskInfoCard(task: TaskEmailData): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared design tokens (email-safe: no CSS variables)
+// Design tokens (email-safe: no CSS variables)
 // ─────────────────────────────────────────────────────────────────────────────
 const T = {
-  bg: '#f5f3ef',          // warm parchment background
+  bg: '#f0f2f5',           // cool light gray outer
   card: '#ffffff',
-  charcoal: '#141210',    // near-black header
-  ink: '#2a2520',         // body text
-  muted: '#6b6560',       // secondary text
-  gold: '#b8873a',        // warm gold accent
-  goldLight: '#f5ead8',   // gold tint
-  border: '#e5dfd6',      // warm border
-  danger: '#c0392b',
-  dangerLight: '#fdf1f0',
-  sans: `'Helvetica Neue', Helvetica, Arial, sans-serif`,
-  serif: `Georgia, 'Times New Roman', serif`,
+  slate: '#1c2b3a',         // deep slate header
+  rust: '#c04e27',          // terracotta rust — primary accent & CTA
+  rustTint: '#fef0ea',      // light rust tint for alerts
+  danger: '#a82020',        // red for critical alerts
+  dangerTint: '#fdf0f0',    // light red tint
+  ink: '#1c2130',           // primary body text
+  muted: '#5e6878',         // secondary / label text
+  muted2: '#8892a0',        // footer / tertiary text
+  border: '#d0d6e0',        // standard borders
+  borderLight: '#e8ebf0',   // light inner dividers
+  footerBg: '#f7f8fa',      // footer + label column background
+  sans: `'IBM Plex Sans', Arial, sans-serif`,
+  serif: `'IBM Plex Serif', Georgia, serif`,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -83,12 +86,10 @@ const T = {
 function shell(opts: {
   preheader: string;
   headerLabel: string;
-  headerIcon: string;
-  accentColor?: string;
+  headerIcon: string;     // accepted for API compatibility — not rendered
+  accentColor?: string;   // accepted for API compatibility — not rendered
   body: string;
 }): string {
-  const accent = opts.accentColor ?? T.gold;
-
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -100,7 +101,7 @@ function shell(opts: {
   <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
   <![endif]-->
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
     body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
     table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
     img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
@@ -108,17 +109,15 @@ function shell(opts: {
     a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
     @media screen and (max-width: 600px) {
       .email-container { width: 100% !important; }
-      .fluid { max-width: 100% !important; height: auto !important; }
-      .stack-column, .stack-column-center { display: block !important; width: 100% !important; max-width: 100% !important; }
-      .pad-20 { padding: 20px !important; }
+      .pad-20 { padding: 28px 20px !important; }
     }
   </style>
 </head>
 <body style="margin:0;padding:0;background-color:${T.bg};font-family:${T.sans};">
 
-  <!-- Preheader (hidden preview text) -->
+  <!-- Preheader -->
   <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:${T.bg};">
-    ${opts.preheader}&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;
+    ${opts.preheader}&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;&nbsp;&#8203;
   </div>
 
   <!-- Outer wrapper -->
@@ -131,33 +130,25 @@ function shell(opts: {
 
           <!-- ── HEADER ─────────────────────────────────────────── -->
           <tr>
-            <td style="background-color:${T.charcoal};border-radius:12px 12px 0 0;padding:0;">
+            <td style="background-color:${T.slate};padding:0;">
+              <!-- Rust accent stripe -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                <!-- Top accent bar -->
                 <tr>
-                  <td style="height:3px;background:linear-gradient(90deg,${accent} 0%,${accent}99 60%,transparent 100%);border-radius:12px 12px 0 0;"></td>
+                  <td style="height:3px;background-color:${T.rust};font-size:0;line-height:0;">&nbsp;</td>
                 </tr>
+              </table>
+              <!-- Header content -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
-                  <td style="padding:32px 40px 28px;">
+                  <td style="padding:24px 36px 22px;">
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                       <tr>
-                        <!-- Monogram -->
-                        <td width="44" valign="middle">
-                          <div style="width:44px;height:44px;border-radius:10px;background-color:${accent};display:inline-block;text-align:center;line-height:44px;font-family:${T.serif};font-size:18px;font-weight:bold;color:#fff;letter-spacing:-0.5px;">
-                            KH
-                          </div>
-                        </td>
-                        <td width="12"></td>
-                        <!-- Brand -->
                         <td valign="middle">
-                          <p style="margin:0;font-family:${T.serif};font-size:17px;color:#ffffff;letter-spacing:0.3px;line-height:1.2;">Relon</p>
-                          <p style="margin:2px 0 0;font-family:${T.sans};font-size:11px;color:${accent};letter-spacing:1.5px;text-transform:uppercase;font-weight:600;">CRM Platform</p>
+                          <p style="margin:0;font-family:${T.serif};font-size:15px;color:#ffffff;letter-spacing:0.2px;line-height:1.2;font-weight:500;">Apex Consulting &amp; Surveying</p>
+                          <p style="margin:4px 0 0;font-family:${T.sans};font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:2.5px;text-transform:uppercase;">Fort Wayne, Indiana</p>
                         </td>
-                        <!-- Icon label -->
                         <td align="right" valign="middle">
-                          <span style="display:inline-block;padding:5px 12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:20px;font-family:${T.sans};font-size:11px;color:rgba(255,255,255,0.55);letter-spacing:0.8px;text-transform:uppercase;">
-                            ${opts.headerIcon}&nbsp; ${opts.headerLabel}
-                          </span>
+                          <p style="margin:0;font-family:${T.sans};font-size:10px;color:${T.rust};letter-spacing:2px;text-transform:uppercase;font-weight:600;">${opts.headerLabel}</p>
                         </td>
                       </tr>
                     </table>
@@ -170,7 +161,7 @@ function shell(opts: {
           <!-- ── BODY ──────────────────────────────────────────── -->
           <tr>
             <td style="background-color:${T.card};border-left:1px solid ${T.border};border-right:1px solid ${T.border};">
-              <div class="pad-20" style="padding:44px 48px;">
+              <div class="pad-20" style="padding:40px 36px 36px;">
                 ${opts.body}
               </div>
             </td>
@@ -178,24 +169,17 @@ function shell(opts: {
 
           <!-- ── FOOTER ────────────────────────────────────────── -->
           <tr>
-            <td style="background-color:#faf9f7;border:1px solid ${T.border};border-top:none;border-radius:0 0 12px 12px;padding:24px 48px;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                <tr>
-                  <td>
-                    <p style="margin:0;font-family:${T.sans};font-size:12px;color:${T.muted};line-height:1.6;">
-                      This is an automated message from <strong style="color:${T.ink};">Relon CRM</strong>. Please do not reply directly to this email.
-                    </p>
-                    <p style="margin:8px 0 0;font-family:${T.sans};font-size:12px;color:${T.muted};">
-                      &copy; ${new Date().getFullYear()} Relon. All rights reserved.
-                    </p>
-                  </td>
-                </tr>
-              </table>
+            <td style="background-color:${T.footerBg};border:1px solid ${T.border};border-top:none;padding:18px 36px 20px;">
+              <p style="margin:0;font-family:${T.sans};font-size:11px;color:${T.muted2};line-height:1.65;">
+                Automated message from <strong style="color:${T.muted};">Apex Consulting &amp; Surveying CRM</strong>. Please do not reply to this email.
+              </p>
+              <p style="margin:7px 0 0;font-family:${T.sans};font-size:11px;color:${T.muted2};">
+                &copy; ${new Date().getFullYear()} Apex Consulting &amp; Surveying, Inc. &middot; Fort Wayne, Indiana
+              </p>
             </td>
           </tr>
 
         </table>
-        <!-- /Email container -->
 
       </td>
     </tr>
@@ -209,26 +193,26 @@ function shell(opts: {
 // Reusable block builders
 // ─────────────────────────────────────────────────────────────────────────────
 function greeting(name: string): string {
-  return `<p style="margin:0 0 20px;font-family:${T.serif};font-size:26px;color:${T.charcoal};line-height:1.3;letter-spacing:-0.3px;">Hello, ${name}.</p>`;
+  return `<p style="margin:0 0 22px;font-family:${T.serif};font-size:26px;color:${T.ink};line-height:1.3;font-weight:400;letter-spacing:-0.2px;">Hello, ${name}.</p>`;
 }
 
 function paragraph(text: string): string {
-  return `<p style="margin:0 0 18px;font-family:${T.sans};font-size:15px;color:${T.ink};line-height:1.75;">${text}</p>`;
+  return `<p style="margin:0 0 18px;font-family:${T.sans};font-size:15px;color:${T.ink};line-height:1.72;">${text}</p>`;
 }
 
 function divider(): string {
-  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:28px 0;"><tr><td style="border-top:1px solid ${T.border};"></td></tr></table>`;
+  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:28px 0;"><tr><td style="border-top:1px solid ${T.borderLight};"></td></tr></table>`;
 }
 
 function ctaButton(label: string, url: string, color?: string): string {
-  const bg = color ?? T.charcoal;
+  const bg = color ?? T.rust;
   return `
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:28px 0;">
       <tr>
-        <td style="border-radius:8px;background-color:${bg};">
+        <td style="background-color:${bg};">
           <a href="${url}" target="_blank"
-            style="display:inline-block;padding:14px 32px;font-family:${T.sans};font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;letter-spacing:0.3px;">
-            ${label} &rarr;
+            style="display:inline-block;padding:13px 32px;font-family:${T.sans};font-size:11px;font-weight:600;color:#ffffff;text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;">
+            ${label}
           </a>
         </td>
       </tr>
@@ -236,61 +220,56 @@ function ctaButton(label: string, url: string, color?: string): string {
 }
 
 function infoCard(rows: { label: string; value: string }[]): string {
-  const rowsHtml = rows.map(r => `
+  const rowsHtml = rows.map((r, i) => {
+    const isLast = i === rows.length - 1;
+    const cellBorder = isLast ? 'none' : `1px solid ${T.borderLight}`;
+    return `
     <tr>
-      <td style="padding:12px 20px;border-bottom:1px solid ${T.border};">
-        <p style="margin:0;font-family:${T.sans};font-size:11px;color:${T.muted};text-transform:uppercase;letter-spacing:1px;font-weight:600;">${r.label}</p>
-        <p style="margin:4px 0 0;font-family:${T.sans};font-size:15px;color:${T.ink};font-weight:500;">${r.value}</p>
+      <td width="130" style="padding:11px 14px;background-color:${T.footerBg};border-bottom:${cellBorder};border-right:1px solid ${T.border};vertical-align:top;">
+        <p style="margin:0;font-family:${T.sans};font-size:10px;color:${T.muted};text-transform:uppercase;letter-spacing:1.5px;font-weight:600;line-height:1.4;">${r.label}</p>
       </td>
-    </tr>`).join('');
+      <td style="padding:11px 16px;border-bottom:${cellBorder};vertical-align:top;">
+        <p style="margin:0;font-family:${T.sans};font-size:14px;color:${T.ink};font-weight:500;line-height:1.4;">${r.value}</p>
+      </td>
+    </tr>`;
+  }).join('');
 
   return `
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
-      style="margin:24px 0;border:1px solid ${T.border};border-radius:10px;overflow:hidden;">
+      style="margin:24px 0;border:1px solid ${T.border};">
       ${rowsHtml}
     </table>`;
 }
 
 function alertBox(message: string, type: 'warning' | 'danger' = 'warning'): string {
-  const bg   = type === 'danger' ? T.dangerLight : T.goldLight;
-  const bar  = type === 'danger' ? T.danger      : T.gold;
-  const icon = type === 'danger' ? '⚠' : 'ℹ';
+  const bg    = type === 'danger' ? T.dangerTint : T.rustTint;
+  const bar   = type === 'danger' ? T.danger     : T.rust;
+  const label = type === 'danger' ? 'Action Required' : 'Note';
   return `
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
-      style="margin:24px 0;border-radius:8px;overflow:hidden;background-color:${bg};">
+      style="margin:24px 0;background-color:${bg};">
       <tr>
-        <td width="4" style="background-color:${bar};border-radius:8px 0 0 8px;"></td>
-        <td style="padding:16px 20px;">
-          <p style="margin:0;font-family:${T.sans};font-size:14px;color:${T.ink};line-height:1.6;">
-            <strong>${icon} ${message}</strong>
-          </p>
+        <td width="3" style="background-color:${bar};font-size:0;line-height:0;">&nbsp;</td>
+        <td style="padding:14px 18px;">
+          <p style="margin:0 0 4px;font-family:${T.sans};font-size:10px;font-weight:600;color:${bar};text-transform:uppercase;letter-spacing:1.5px;">${label}</p>
+          <p style="margin:0;font-family:${T.sans};font-size:13.5px;color:${T.ink};line-height:1.65;">${message}</p>
         </td>
       </tr>
     </table>`;
 }
 
 function linkFallback(url: string): string {
-  return `<p style="margin:20px 0 0;font-family:${T.sans};font-size:13px;color:${T.muted};line-height:1.6;">
-    Or copy this link into your browser:<br/>
-    <span style="color:${T.gold};word-break:break-all;">${url}</span>
+  return `<p style="margin:20px 0 0;font-family:${T.sans};font-size:12px;color:${T.muted};line-height:1.6;">
+    If the button does not work, copy this link into your browser:<br/>
+    <span style="color:${T.rust};word-break:break-all;">${url}</span>
   </p>`;
 }
 
 function signature(): string {
   return `
     ${divider()}
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-      <tr>
-        <td width="36" valign="middle">
-          <div style="width:36px;height:36px;border-radius:8px;background-color:${T.charcoal};text-align:center;line-height:36px;font-family:${T.serif};font-size:13px;color:#fff;">RL</div>
-        </td>
-        <td width="12"></td>
-        <td valign="middle">
-          <p style="margin:0;font-family:${T.sans};font-size:14px;color:${T.ink};font-weight:600;line-height:1.3;">The Relon Team</p>
-          <p style="margin:2px 0 0;font-family:${T.sans};font-size:12px;color:${T.muted};">relon.com</p>
-        </td>
-      </tr>
-    </table>`;
+    <p style="margin:0;font-family:${T.serif};font-size:14px;color:${T.ink};font-weight:500;">Apex Consulting &amp; Surveying, Inc.</p>
+    <p style="margin:4px 0 0;font-family:${T.sans};font-size:11px;color:${T.muted2};">Fort Wayne, Indiana</p>`;
 }
 
 @Injectable()
@@ -317,7 +296,7 @@ export class EmailService {
 
     const body = `
       ${greeting(userName)}
-      ${paragraph('We received a request to reset the password on your Relon CRM account. Use the button below to set a new password.')}
+      ${paragraph('We received a request to reset the password on your account. Use the button below to set a new password.')}
       ${ctaButton('Reset My Password', resetUrl)}
       ${alertBox('This link expires in <strong>1 hour</strong>. If you did not request a password reset, you can safely ignore this email — your account remains secure.')}
       ${linkFallback(resetUrl)}
@@ -325,15 +304,15 @@ export class EmailService {
     `;
 
     const html = shell({
-      preheader: 'Reset your Relon CRM password — link expires in 1 hour.',
+      preheader: 'Reset your Apex CRM password — link expires in 1 hour.',
       headerLabel: 'Password Reset',
-      headerIcon: '🔐',
+      headerIcon: '',
       body,
     });
 
-    const text = `Hi ${userName},\n\nWe received a request to reset your password.\n\nReset link: ${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, ignore this email.\n\nThe Relon Team`;
+    const text = `Hi ${userName},\n\nWe received a request to reset your password.\n\nReset link: ${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, ignore this email.\n\nApex Consulting & Surveying, Inc.`;
 
-    await this.send({ to: email, subject: 'Reset Your Password — Relon CRM', html, text, label: 'Password Reset' });
+    await this.send({ to: email, subject: 'Reset Your Password — Apex CRM', html, text, label: 'Password Reset' });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -352,24 +331,23 @@ export class EmailService {
 
     const body = `
       ${greeting(userName)}
-      ${paragraph('Your Relon CRM account is ready. You now have access to the full platform — leads, projects, clients, and reporting — all in one place.')}
+      ${paragraph('Your Apex CRM account is ready. You now have access to the full platform — leads, projects, clients, and reporting — all in one place.')}
       ${credentialsBlock}
-      ${ctaButton('Access the Dashboard', loginUrl, T.gold)}
+      ${ctaButton('Access the Dashboard', loginUrl)}
       ${paragraph('If you have any questions or need help getting started, reach out to your administrator.')}
       ${signature()}
     `;
 
     const html = shell({
-      preheader: `Welcome to Relon CRM, ${userName}. Your account is ready.`,
-      headerLabel: 'Welcome',
-      headerIcon: '✦',
-      accentColor: T.gold,
+      preheader: `Welcome to Apex CRM, ${userName}. Your account is ready.`,
+      headerLabel: 'Account Created',
+      headerIcon: '',
       body,
     });
 
-    const text = `Hi ${userName},\n\nWelcome to Relon CRM. Your account has been created.\n\n${tempPassword ? `Email: ${email}\nTemporary Password: ${tempPassword}\n\nPlease change your password after first login.\n\n` : ''}Login: ${loginUrl}\n\nThe Relon Team`;
+    const text = `Hi ${userName},\n\nWelcome to Apex CRM. Your account has been created.\n\n${tempPassword ? `Email: ${email}\nTemporary Password: ${tempPassword}\n\nPlease change your password after first login.\n\n` : ''}Login: ${loginUrl}\n\nApex Consulting & Surveying, Inc.`;
 
-    await this.send({ to: email, subject: 'Welcome to Relon CRM', html, text, label: 'Welcome' });
+    await this.send({ to: email, subject: 'Welcome to Apex CRM', html, text, label: 'Welcome' });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -380,7 +358,7 @@ export class EmailService {
 
     const body = `
       ${greeting(userName)}
-      ${paragraph('This is a confirmation that the password for your Relon CRM account was successfully updated.')}
+      ${paragraph('This is a confirmation that the password on your account was successfully updated.')}
       ${infoCard([
         { label: 'Account', value: email },
         { label: 'Changed', value: new Date().toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' }) },
@@ -390,16 +368,15 @@ export class EmailService {
     `;
 
     const html = shell({
-      preheader: 'Your Relon CRM password was changed. If this wasn\'t you, act now.',
+      preheader: 'Your Apex CRM password was changed. If this wasn\'t you, act now.',
       headerLabel: 'Security Notice',
-      headerIcon: '🛡',
-      accentColor: '#6b7280',
+      headerIcon: '',
       body,
     });
 
-    const text = `Hi ${userName},\n\nYour Relon CRM password was successfully changed.\n\nIf you didn't do this, please contact your administrator immediately.\n\nThe Relon Team`;
+    const text = `Hi ${userName},\n\nYour Apex CRM password was successfully changed.\n\nIf you didn't do this, please contact your administrator immediately.\n\nApex Consulting & Surveying, Inc.`;
 
-    await this.send({ to: email, subject: 'Password Changed — Relon CRM', html, text, label: 'Password Changed' });
+    await this.send({ to: email, subject: 'Password Changed — Apex CRM', html, text, label: 'Password Changed' });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -474,7 +451,7 @@ export class EmailService {
     const html = shell({
       preheader: `${overdue.length > 0 ? `${overdue.length} overdue · ` : ''}${dueToday.length > 0 ? `${dueToday.length} due today` : 'Task digest'} — ${dateLabel}`,
       headerLabel: 'Daily Digest',
-      headerIcon: '📋',
+      headerIcon: '',
       body,
     });
 
@@ -490,7 +467,7 @@ export class EmailService {
       textLines.push('');
     }
     textLines.push(`View your tasks: ${tasksUrl}`);
-    textLines.push('', 'The Relon Team');
+    textLines.push('', 'Apex Consulting & Surveying, Inc.');
 
     await this.send({
       to,
@@ -526,7 +503,7 @@ export class EmailService {
     const html = shell({
       preheader: `New task: "${task.title}" — assigned by ${assignedByName}`,
       headerLabel: 'Task Assigned',
-      headerIcon: '✓',
+      headerIcon: '',
       body,
     });
 
@@ -539,7 +516,7 @@ export class EmailService {
       '',
       `View your tasks: ${tasksUrl}`,
       '',
-      'The Relon Team',
+      'Apex Consulting & Surveying, Inc.',
     ].filter(Boolean).join('\n');
 
     await this.send({
@@ -595,8 +572,8 @@ export class EmailService {
     const html = shell({
       preheader: `Task ${urgencyLabel}: "${task.title}" — ${dueAt}`,
       headerLabel: 'Task Reminder',
-      headerIcon: '⏰',
-      accentColor: daysUntilDue === 0 ? T.danger : T.gold,
+      headerIcon: '',
+      accentColor: daysUntilDue === 0 ? T.danger : T.rust,
       body,
     });
 
@@ -609,7 +586,7 @@ export class EmailService {
       '',
       `View your tasks: ${tasksUrl}`,
       '',
-      'The Relon Team',
+      'Apex Consulting & Surveying, Inc.',
     ].join('\n');
 
     await this.send({
@@ -628,7 +605,7 @@ export class EmailService {
     await this.send({
       to,
       subject,
-      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto"><p>${body.replace(/\n/g, '<br>')}</p><hr style="margin-top:32px"><p style="color:#999;font-size:12px">Sent by Relon CRM Workflow Automation</p></div>`,
+      html: `<div style="font-family:'IBM Plex Sans',Arial,sans-serif;max-width:600px;margin:0 auto;color:#1c2130"><p style="font-size:15px;line-height:1.7;">${body.replace(/\n/g, '<br>')}</p><hr style="margin-top:32px;border:none;border-top:1px solid #e8ebf0"><p style="color:#8892a0;font-size:11px">Sent by Apex Consulting &amp; Surveying CRM Workflow Automation</p></div>`,
       text: body,
       label: 'workflow-email',
       critical: false,
