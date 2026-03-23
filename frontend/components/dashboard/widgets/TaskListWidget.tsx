@@ -11,7 +11,7 @@ import {
 import type { WidgetConfig } from "@/lib/types/dashboard-layout";
 import type { Task, TaskSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { format, isPast } from "date-fns";
+import { format } from "date-fns";
 
 interface Props {
   widget: WidgetConfig;
@@ -129,7 +129,7 @@ export function TaskListWidget({ widget }: Props) {
         <div className="flex-1 overflow-auto divide-y divide-border/40">
           {displayTasks.map((task: Task) => {
             const isOverdue = task.dueDate
-              ? isPast(new Date(task.dueDate))
+              ? new Date(task.dueDate.split('T')[0] + 'T00:00:00') < new Date(new Date().toDateString())
               : false;
             const borderColor =
               PRIORITY_BORDER[task.priority] ?? PRIORITY_BORDER.LOW;
@@ -159,7 +159,7 @@ export function TaskListWidget({ widget }: Props) {
                         isOverdue ? "text-red-600" : "text-amber-600",
                       )}>
                       <Clock className="h-2.5 w-2.5" />
-                      {format(new Date(task.dueDate), "MMM d")}
+                      {format(new Date(task.dueDate.split('T')[0] + 'T00:00:00'), "MMM d")}
                     </p>
                   )}
                 </div>

@@ -12,9 +12,15 @@ export const statusColors: Record<string, string> = {
   CANCELLED: 'bg-gray-100 text-gray-500',
 };
 
+// Parse only the date portion as local midnight to prevent UTC-midnight
+// timezone shift (e.g. "2026-03-22T00:00:00Z" displaying as "21 Mar" in EDT).
+function parseDateLocal(d: string): Date {
+  return new Date(d.split('T')[0] + 'T00:00:00');
+}
+
 export function formatDate(d: string | null | undefined) {
   if (!d) return '';
-  return new Date(d).toLocaleDateString('en-GB', {
+  return parseDateLocal(d).toLocaleDateString('en-GB', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -27,11 +33,10 @@ export function isOverdue(
 ) {
   if (!dueDate || status === 'DONE' || status === 'CANCELLED')
     return false;
-  return new Date(dueDate) < new Date(new Date().toDateString());
+  return parseDateLocal(dueDate) < new Date(new Date().toDateString());
 }
 
 export function isDueToday(dueDate: string | null | undefined) {
   if (!dueDate) return false;
-  const today = new Date().toDateString();
-  return new Date(dueDate).toDateString() === today;
+  return parseDateLocal(dueDate).toDateString() === new Date().toDateString();
 }

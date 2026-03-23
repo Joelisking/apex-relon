@@ -113,7 +113,7 @@ export class TasksService {
       data: {
         title: dto.title,
         description: dto.description,
-        dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+        dueDate: dto.dueDate ? new Date(dto.dueDate + 'T12:00:00.000Z') : undefined,
         dueTime: dto.dueTime,
         priority: dto.priority || 'MEDIUM',
         entityType: dto.entityType,
@@ -245,7 +245,7 @@ export class TasksService {
     }
 
     const data: Record<string, unknown> = { ...dto };
-    if (dto.dueDate) data.dueDate = new Date(dto.dueDate);
+    if (dto.dueDate) data.dueDate = new Date(dto.dueDate + 'T12:00:00.000Z');
     if (dto.reminderAt) data.reminderAt = new Date(dto.reminderAt);
     if (dto.taskTypeId !== undefined) data.taskTypeId = dto.taskTypeId;
 
@@ -384,13 +384,8 @@ export class TasksService {
 
   async getMyTasksSummary(userId: string) {
     const now = new Date();
-    const startOfToday = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-    );
-    const endOfToday = new Date(startOfToday);
-    endOfToday.setDate(endOfToday.getDate() + 1);
+    const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const endOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
 
     return this.computeSummaryForUser(userId, startOfToday, endOfToday);
   }
@@ -422,8 +417,8 @@ export class TasksService {
 
   async getTeamSummary(userId: string, viewAll: boolean) {
     const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endOfToday = new Date(startOfToday.getTime() + 86400000);
+    const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const endOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
 
     const members = viewAll
       ? await this.prisma.user.findMany({
