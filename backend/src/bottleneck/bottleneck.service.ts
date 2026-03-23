@@ -210,7 +210,7 @@ export class BottleneckService {
       const uid = task.assignedToId;
       if (!byUser[uid]) byUser[uid] = { user: task.assignedTo, days: [], count: 0 };
       const daysOverdue =
-        (now.getTime() - new Date(task.dueDate!).getTime()) / (1000 * 60 * 60 * 24);
+        (startOfToday.getTime() - new Date(task.dueDate!).getTime()) / (1000 * 60 * 60 * 24);
       byUser[uid].days.push(daysOverdue);
       byUser[uid].count++;
     }
