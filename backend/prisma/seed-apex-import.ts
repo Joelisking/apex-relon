@@ -191,7 +191,8 @@ async function main() {
 
     // Handle "CANCELLED" in project name
     let projectName = p.name;
-    let projectStatus = p.status;
+    // Map "Active" → first surveying pipeline stage; keep Cancelled as-is
+    let projectStatus = p.status === 'Active' ? 'Mobilization' : p.status;
     let extraDescription: string | undefined;
 
     if (projectName.includes('CANCELLED')) {
