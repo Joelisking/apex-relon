@@ -19,8 +19,17 @@ export class PipelineController {
   constructor(private readonly pipelineService: PipelineService) {}
 
   @Get('stages')
-  findAll(@Query('type') type?: string) {
-    return this.pipelineService.findAll(type);
+  findAll(
+    @Query('type') type?: string,
+    @Query('serviceType') serviceType?: string,
+  ) {
+    return this.pipelineService.findAll(type, serviceType);
+  }
+
+  @Get('stages/by-service-type')
+  @Permissions('pipeline:manage')
+  findByServiceType(@Query('serviceType') serviceType: string) {
+    return this.pipelineService.findByServiceType(serviceType);
   }
 
   @Post('stages')

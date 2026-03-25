@@ -467,6 +467,7 @@ model PipelineStage {
   id           String   @id @default(uuid())
   name         String
   pipelineType String   @default("prospective_project")
+  serviceType  String   @default("__all__")
   color        String   @default("bg-gray-500")
   lightColor   String   @default("bg-gray-50")
   border       String   @default("border-gray-200")
@@ -476,8 +477,9 @@ model PipelineStage {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  @@unique([name, pipelineType])
+  @@unique([name, pipelineType, serviceType])
   @@index([pipelineType])
+  @@index([pipelineType, serviceType])
   @@map("pipeline_stages")
 }
 

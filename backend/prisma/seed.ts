@@ -17,26 +17,29 @@ async function main() {
   });
 
   const stages = [
-    { name: 'Inquiry', pipelineType: 'prospective_project', color: 'bg-gray-500', lightColor: 'bg-gray-50', border: 'border-gray-200', probability: 10, sortOrder: 0, isSystem: false },
-    { name: 'Proposal Sent', pipelineType: 'prospective_project', color: 'bg-blue-400', lightColor: 'bg-blue-50', border: 'border-blue-200', probability: 30, sortOrder: 1, isSystem: false },
-    { name: 'Site Visit Scheduled', pipelineType: 'prospective_project', color: 'bg-cyan-500', lightColor: 'bg-cyan-50', border: 'border-cyan-200', probability: 45, sortOrder: 2, isSystem: false },
-    { name: 'Contract Signed', pipelineType: 'prospective_project', color: 'bg-purple-500', lightColor: 'bg-purple-50', border: 'border-purple-200', probability: 75, sortOrder: 3, isSystem: false },
-    { name: 'Closed Won', pipelineType: 'prospective_project', color: 'bg-green-500', lightColor: 'bg-green-50', border: 'border-green-200', probability: 100, sortOrder: 4, isSystem: true },
-    { name: 'Closed Lost', pipelineType: 'prospective_project', color: 'bg-red-500', lightColor: 'bg-red-50', border: 'border-red-200', probability: 0, sortOrder: 5, isSystem: true },
-    { name: 'Mobilization', pipelineType: 'project', color: 'bg-blue-500', lightColor: 'bg-blue-50', border: 'border-blue-200', probability: 0, sortOrder: 0, isSystem: false },
-    { name: 'Field Work', pipelineType: 'project', color: 'bg-orange-500', lightColor: 'bg-orange-50', border: 'border-orange-200', probability: 25, sortOrder: 1, isSystem: false },
-    { name: 'Office Processing', pipelineType: 'project', color: 'bg-yellow-500', lightColor: 'bg-yellow-50', border: 'border-yellow-200', probability: 50, sortOrder: 2, isSystem: false },
-    { name: 'QC Review', pipelineType: 'project', color: 'bg-indigo-500', lightColor: 'bg-indigo-50', border: 'border-indigo-200', probability: 70, sortOrder: 3, isSystem: false },
-    { name: 'Deliverable Prep', pipelineType: 'project', color: 'bg-violet-500', lightColor: 'bg-violet-50', border: 'border-violet-200', probability: 85, sortOrder: 4, isSystem: false },
-    { name: 'Client Review', pipelineType: 'project', color: 'bg-teal-500', lightColor: 'bg-teal-50', border: 'border-teal-200', probability: 95, sortOrder: 5, isSystem: false },
-    { name: 'Completed', pipelineType: 'project', color: 'bg-green-500', lightColor: 'bg-green-50', border: 'border-green-200', probability: 100, sortOrder: 6, isSystem: true },
-    { name: 'On Hold', pipelineType: 'project', color: 'bg-amber-500', lightColor: 'bg-amber-50', border: 'border-amber-200', probability: 0, sortOrder: 7, isSystem: false },
-    { name: 'Cancelled', pipelineType: 'project', color: 'bg-red-500', lightColor: 'bg-red-50', border: 'border-red-200', probability: 0, sortOrder: 8, isSystem: false },
+    { name: 'Inquiry', pipelineType: 'prospective_project', serviceType: '__all__', color: 'bg-gray-500', lightColor: 'bg-gray-50', border: 'border-gray-200', probability: 10, sortOrder: 0, isSystem: false },
+    { name: 'Proposal Sent', pipelineType: 'prospective_project', serviceType: '__all__', color: 'bg-blue-400', lightColor: 'bg-blue-50', border: 'border-blue-200', probability: 30, sortOrder: 1, isSystem: false },
+    { name: 'Site Visit Scheduled', pipelineType: 'prospective_project', serviceType: '__all__', color: 'bg-cyan-500', lightColor: 'bg-cyan-50', border: 'border-cyan-200', probability: 45, sortOrder: 2, isSystem: false },
+    { name: 'Contract Signed', pipelineType: 'prospective_project', serviceType: '__all__', color: 'bg-purple-500', lightColor: 'bg-purple-50', border: 'border-purple-200', probability: 75, sortOrder: 3, isSystem: false },
+    { name: 'Closed Won', pipelineType: 'prospective_project', serviceType: '__all__', color: 'bg-green-500', lightColor: 'bg-green-50', border: 'border-green-200', probability: 100, sortOrder: 4, isSystem: true },
+    { name: 'Closed Lost', pipelineType: 'prospective_project', serviceType: '__all__', color: 'bg-red-500', lightColor: 'bg-red-50', border: 'border-red-200', probability: 0, sortOrder: 5, isSystem: true },
+    { name: 'Mobilization', pipelineType: 'project', serviceType: '__all__', color: 'bg-blue-500', lightColor: 'bg-blue-50', border: 'border-blue-200', probability: 0, sortOrder: 0, isSystem: false },
+    { name: 'Field Work', pipelineType: 'project', serviceType: '__all__', color: 'bg-orange-500', lightColor: 'bg-orange-50', border: 'border-orange-200', probability: 25, sortOrder: 1, isSystem: false },
+    { name: 'Office Processing', pipelineType: 'project', serviceType: '__all__', color: 'bg-yellow-500', lightColor: 'bg-yellow-50', border: 'border-yellow-200', probability: 50, sortOrder: 2, isSystem: false },
+    { name: 'QC Review', pipelineType: 'project', serviceType: '__all__', color: 'bg-indigo-500', lightColor: 'bg-indigo-50', border: 'border-indigo-200', probability: 70, sortOrder: 3, isSystem: false },
+    { name: 'Deliverable Prep', pipelineType: 'project', serviceType: '__all__', color: 'bg-violet-500', lightColor: 'bg-violet-50', border: 'border-violet-200', probability: 85, sortOrder: 4, isSystem: false },
+    { name: 'Client Review', pipelineType: 'project', serviceType: '__all__', color: 'bg-teal-500', lightColor: 'bg-teal-50', border: 'border-teal-200', probability: 95, sortOrder: 5, isSystem: false },
+    { name: 'Needs Invoiced', pipelineType: 'project', serviceType: '__all__', color: 'bg-cyan-500', lightColor: 'bg-cyan-50', border: 'border-cyan-200', probability: 97, sortOrder: 6, isSystem: true },
+    { name: 'Invoiced', pipelineType: 'project', serviceType: '__all__', color: 'bg-blue-400', lightColor: 'bg-blue-50', border: 'border-blue-200', probability: 98, sortOrder: 7, isSystem: true },
+    { name: 'Paid', pipelineType: 'project', serviceType: '__all__', color: 'bg-emerald-500', lightColor: 'bg-emerald-50', border: 'border-emerald-200', probability: 99, sortOrder: 8, isSystem: true },
+    { name: 'Completed', pipelineType: 'project', serviceType: '__all__', color: 'bg-green-500', lightColor: 'bg-green-50', border: 'border-green-200', probability: 100, sortOrder: 9, isSystem: true },
+    { name: 'On Hold', pipelineType: 'project', serviceType: '__all__', color: 'bg-amber-500', lightColor: 'bg-amber-50', border: 'border-amber-200', probability: 0, sortOrder: 10, isSystem: false },
+    { name: 'Cancelled', pipelineType: 'project', serviceType: '__all__', color: 'bg-red-500', lightColor: 'bg-red-50', border: 'border-red-200', probability: 0, sortOrder: 11, isSystem: false },
   ];
   for (const stage of stages) {
     await prisma.pipelineStage.upsert({
-      where: { name_pipelineType: { name: stage.name, pipelineType: stage.pipelineType } },
-      update: { color: stage.color, lightColor: stage.lightColor, border: stage.border, probability: stage.probability, sortOrder: stage.sortOrder },
+      where: { name_pipelineType_serviceType: { name: stage.name, pipelineType: stage.pipelineType, serviceType: stage.serviceType } },
+      update: { color: stage.color, lightColor: stage.lightColor, border: stage.border, probability: stage.probability, sortOrder: stage.sortOrder, isSystem: stage.isSystem },
       create: stage,
     });
   }

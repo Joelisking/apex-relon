@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -24,7 +24,9 @@ import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -161,8 +163,26 @@ export function EditProjectDialog({
     setSelectedServiceTypeIds(project.serviceTypeIds ?? []);
   }, [project.id]);
 
+  // Derive a single service type name for stage filtering (only when exactly one is selected)
+  const primaryServiceTypeName = useMemo(() => {
+    if (selectedServiceTypeIds.length !== 1) return undefined;
+    const id = selectedServiceTypeIds[0];
+    for (const cat of serviceCategories) {
+      const st = (cat.serviceTypes ?? []).find((s) => s.id === id);
+      if (st) return st.name;
+    }
+    return undefined;
+  }, [selectedServiceTypeIds, serviceCategories]);
+
+  // Re-fetch stages when service type selection changes
   useEffect(() => {
-    pipelineApi.getStages('project').then(setProjectStages).catch(console.error);
+    pipelineApi
+      .getStages('project', primaryServiceTypeName)
+      .then(setProjectStages)
+      .catch(console.error);
+  }, [primaryServiceTypeName]);
+
+  useEffect(() => {
     settingsApi
       .getDropdownOptions('project_risk_status')
       .then(setRiskOptions)
@@ -370,11 +390,28 @@ export function EditProjectDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {projectStages.map((s) => (
-                          <SelectItem key={s.id} value={s.name}>
-                            {s.name}
-                          </SelectItem>
-                        ))}
+                        {primaryServiceTypeName ? (
+                          <>
+                            <SelectGroup>
+                              <SelectLabel>General</SelectLabel>
+                              {projectStages.filter((s) => s.serviceType === '__all__').map((s) => (
+                                <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                              ))}
+                            </SelectGroup>
+                            {projectStages.some((s) => s.serviceType !== '__all__') && (
+                              <SelectGroup>
+                                <SelectLabel>{primaryServiceTypeName}</SelectLabel>
+                                {projectStages.filter((s) => s.serviceType !== '__all__').map((s) => (
+                                  <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                                ))}
+                              </SelectGroup>
+                            )}
+                          </>
+                        ) : (
+                          projectStages.map((s) => (
+                            <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />

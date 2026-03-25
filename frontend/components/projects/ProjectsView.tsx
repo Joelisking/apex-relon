@@ -111,9 +111,15 @@ export default function ProjectsView({
     staleTime: 60 * 1000,
   });
 
+  // When exactly one service type is filtered in kanban view, merge type-specific stages
+  const kanbanServiceType =
+    view === 'kanban' && (facets.serviceType ?? []).length === 1
+      ? facets.serviceType![0]
+      : undefined;
+
   const { data: projectStages = [], isLoading: stagesLoading } = useQuery<PipelineStage[]>({
-    queryKey: ['pipeline-stages', 'project'],
-    queryFn: () => pipelineApi.getStages('project'),
+    queryKey: ['pipeline-stages', 'project', kanbanServiceType],
+    queryFn: () => pipelineApi.getStages('project', kanbanServiceType),
     staleTime: 10 * 60 * 1000,
   });
 

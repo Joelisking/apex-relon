@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -25,7 +25,9 @@ import { DatePicker } from '@/components/ui/date-picker';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -144,17 +146,27 @@ export function CreateProjectDialog({
     },
   });
 
-  // Fetch clients, users, and stages on mount
+  // Derive a single service type name for stage filtering (only when exactly one is selected)
+  const primaryServiceTypeName = useMemo(() => {
+    if (selectedServiceTypeIds.length !== 1) return undefined;
+    const id = selectedServiceTypeIds[0];
+    for (const cat of serviceCategories) {
+      const st = (cat.serviceTypes ?? []).find((s) => s.id === id);
+      if (st) return st.name;
+    }
+    return undefined;
+  }, [selectedServiceTypeIds, serviceCategories]);
+
+  // Fetch clients, users, and initial data on mount
   useEffect(() => {
     if (open) {
       const fetchData = async () => {
         try {
-          const [clientsData, leadsData, usersRes, stages] =
+          const [clientsData, leadsData, usersRes] =
             await Promise.all([
               clientsApi.getAll(),
               leadsApi.getAll(),
               usersApi.getUsersDirectory(),
-              pipelineApi.getStages('project'),
             ]);
           const mappedClients = clientsData.map((c) => ({
             ...c,
@@ -163,8 +175,6 @@ export function CreateProjectDialog({
           setClients(mappedClients);
           setLeads(Array.isArray(leadsData) ? leadsData : []);
           setUsers(usersRes.users || []);
-          setProjectStages(stages);
-          setIsLoadingStages(false);
 
           // If a client is pre-selected, auto-fill county from that client
           if (initialClientId) {
@@ -189,14 +199,23 @@ export function CreateProjectDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Auto-select first stage once stages are loaded
+  // Re-fetch stages whenever the dialog opens or the primary service type changes
   useEffect(() => {
-    if (projectStages.length > 0 && !form.getValues('status')) {
-      form.setValue('status', projectStages[0].name, {
-        shouldDirty: true,
-      });
-    }
-  }, [projectStages]);
+    if (!open) return;
+    setIsLoadingStages(true);
+    pipelineApi
+      .getStages('project', primaryServiceTypeName)
+      .then((stages) => {
+        setProjectStages(stages);
+        const cur = form.getValues('status');
+        if (!stages.find((s) => s.name === cur)) {
+          form.setValue('status', stages[0]?.name ?? '', { shouldDirty: true });
+        }
+      })
+      .catch(console.error)
+      .finally(() => setIsLoadingStages(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, primaryServiceTypeName]);
 
   // Auto-generate name and populate county when client changes
   const handleClientChange = (clientId: string) => {
@@ -396,13 +415,28 @@ export function CreateProjectDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {projectStages.map((stage) => (
-                          <SelectItem
-                            key={stage.id}
-                            value={stage.name}>
-                            {stage.name}
-                          </SelectItem>
-                        ))}
+                        {primaryServiceTypeName ? (
+                          <>
+                            <SelectGroup>
+                              <SelectLabel>General</SelectLabel>
+                              {projectStages.filter((s) => s.serviceType === '__all__').map((stage) => (
+                                <SelectItem key={stage.id} value={stage.name}>{stage.name}</SelectItem>
+                              ))}
+                            </SelectGroup>
+                            {projectStages.some((s) => s.serviceType !== '__all__') && (
+                              <SelectGroup>
+                                <SelectLabel>{primaryServiceTypeName}</SelectLabel>
+                                {projectStages.filter((s) => s.serviceType !== '__all__').map((stage) => (
+                                  <SelectItem key={stage.id} value={stage.name}>{stage.name}</SelectItem>
+                                ))}
+                              </SelectGroup>
+                            )}
+                          </>
+                        ) : (
+                          projectStages.map((stage) => (
+                            <SelectItem key={stage.id} value={stage.name}>{stage.name}</SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />

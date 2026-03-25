@@ -8,20 +8,38 @@ import { ReorderStagesDto } from './dto/reorder-stages.dto';
 export class PipelineService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(type?: string) {
+  async findAll(type?: string, serviceType?: string) {
+    if (type === 'project' && serviceType) {
+      // Return general stages merged with type-specific stages, ordered by sortOrder
+      return this.prisma.pipelineStage.findMany({
+        where: {
+          pipelineType: 'project',
+          serviceType: { in: ['__all__', serviceType] },
+        },
+        orderBy: { sortOrder: 'asc' },
+      });
+    }
+
     return this.prisma.pipelineStage.findMany({
-      where: type ? { pipelineType: type } : undefined,
+      where: type ? { pipelineType: type, serviceType: '__all__' } : undefined,
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
+  async findByServiceType(serviceType: string) {
+    return this.prisma.pipelineStage.findMany({
+      where: { pipelineType: 'project', serviceType },
       orderBy: { sortOrder: 'asc' },
     });
   }
 
   async create(dto: CreateStageDto) {
     const pipelineType = dto.pipelineType || 'prospective_project';
+    const serviceType = dto.serviceType || '__all__';
 
-    // Auto-assign sortOrder within the same type
     if (dto.sortOrder === undefined) {
       const maxOrder = await this.prisma.pipelineStage.aggregate({
-        where: { pipelineType },
+        where: { pipelineType, serviceType },
         _max: { sortOrder: true },
       });
       dto.sortOrder = (maxOrder._max.sortOrder ?? -1) + 1;
@@ -31,6 +49,7 @@ export class PipelineService {
       data: {
         name: dto.name,
         pipelineType,
+        serviceType,
         color: dto.color,
         lightColor: dto.lightColor,
         border: dto.border,
@@ -44,10 +63,6 @@ export class PipelineService {
     const stage = await this.prisma.pipelineStage.findUnique({ where: { id } });
     if (!stage) {
       throw new BadRequestException('Stage not found');
-    }
-
-    if (stage.isSystem) {
-      throw new BadRequestException('System stages cannot be modified');
     }
 
     return this.prisma.pipelineStage.update({

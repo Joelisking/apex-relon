@@ -22,15 +22,20 @@ import type { PipelineStage } from '@/lib/api/pipeline-client';
 const BG_TO_HEX: Record<string, string> = {
   'bg-gray-400': '#9ca3af',
   'bg-gray-500': '#6b7280',
+  'bg-blue-400': '#60a5fa',
   'bg-blue-500': '#3b82f6',
   'bg-purple-500': '#a855f7',
   'bg-orange-500': '#f97316',
   'bg-green-500': '#22c55e',
+  'bg-emerald-500': '#10b981',
   'bg-red-500': '#ef4444',
   'bg-yellow-500': '#eab308',
   'bg-teal-500': '#14b8a6',
+  'bg-cyan-500': '#06b6d4',
   'bg-pink-500': '#ec4899',
   'bg-indigo-500': '#6366f1',
+  'bg-violet-500': '#8b5cf6',
+  'bg-amber-500': '#f59e0b',
 };
 
 // Fallback hex for known status labels when no color class is available
@@ -110,10 +115,19 @@ export function ProjectKanbanBoard({
     probability: s.probability,
   }));
 
-  const grouped = columns.map((col) => ({
-    ...col,
-    projects: projects.filter((p) => p.status === col.key),
-  }));
+  const knownStatuses = new Set(columns.map((c) => c.key));
+  const orphanProjects = projects.filter((p) => !knownStatuses.has(p.status));
+
+  const grouped = [
+    ...columns.map((col) => ({
+      ...col,
+      projects: projects.filter((p) => p.status === col.key),
+      isOther: false,
+    })),
+    ...(orphanProjects.length > 0
+      ? [{ key: '__other__', label: 'Other', color: 'bg-gray-400', probability: 0, projects: orphanProjects, isOther: true }]
+      : []),
+  ];
 
   const activeProject = activeId
     ? projects.find((p) => p.id === activeId)
@@ -130,6 +144,7 @@ export function ProjectKanbanBoard({
 
     const projectId = active.id as string;
     const newStatus = over.id as string;
+    if (newStatus === '__other__') return; // Can't drop onto the catch-all column
     const project = projects.find((p) => p.id === projectId);
     if (!project || project.status === newStatus) return;
 

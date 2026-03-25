@@ -10,6 +10,10 @@ export class CreateStageDto {
 
   @IsString()
   @IsOptional()
+  serviceType?: string; // '__all__' for general stages, or a ServiceType.name for type-specific
+
+  @IsString()
+  @IsOptional()
   color?: string;
 
   @IsString()

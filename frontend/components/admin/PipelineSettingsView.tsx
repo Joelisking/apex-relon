@@ -46,6 +46,7 @@ import {
   type PipelineStage,
 } from '@/lib/api/pipeline-client';
 import { toast } from 'sonner';
+import { PipelineByTypeView } from './PipelineByTypeView';
 
 const COLOR_PRESETS = [
   { color: 'bg-gray-500', lightColor: 'bg-gray-50', border: 'border-gray-200', label: 'Gray' },
@@ -435,7 +436,8 @@ export function PipelineSettingsView() {
       <Tabs defaultValue="prospective_project">
         <TabsList>
           <TabsTrigger value="prospective_project">Prospective Projects</TabsTrigger>
-          <TabsTrigger value="project">Projects</TabsTrigger>
+          <TabsTrigger value="project">Projects (General)</TabsTrigger>
+          <TabsTrigger value="project_by_type">Projects (By Type)</TabsTrigger>
         </TabsList>
 
         <TabsContent value="prospective_project" className="mt-6">
@@ -444,6 +446,10 @@ export function PipelineSettingsView() {
 
         <TabsContent value="project" className="mt-6">
           <PipelineTable pipelineType="project" />
+        </TabsContent>
+
+        <TabsContent value="project_by_type" className="mt-6">
+          <PipelineByTypeView />
         </TabsContent>
       </Tabs>
     </div>
