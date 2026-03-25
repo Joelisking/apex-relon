@@ -58,6 +58,7 @@ const formSchema = z.object({
   closedDate: z.string().optional(),
   projectManagerId: z.string().optional(),
   riskStatus: z.string().optional(),
+  statusNote: z.string().optional(),
   county: z.array(z.string()).optional(),
   description: z.string().optional(),
 });
@@ -137,6 +138,7 @@ export function EditProjectDialog({
       closedDate: toDateInput(project.closedDate),
       projectManagerId: project.assignments?.find((a) => a.role.toLowerCase().includes('manager'))?.userId ?? '',
       riskStatus: project.riskStatus ?? '',
+      statusNote: project.statusNote ?? '',
       county: project.county ?? [],
       description: project.description ?? '',
     },
@@ -155,6 +157,7 @@ export function EditProjectDialog({
       closedDate: toDateInput(project.closedDate),
       projectManagerId: project.assignments?.find((a) => a.role.toLowerCase().includes('manager'))?.userId ?? '',
       riskStatus: project.riskStatus ?? '',
+      statusNote: project.statusNote ?? '',
       county: project.county ?? [],
       description: project.description ?? '',
     });
@@ -577,6 +580,27 @@ export function EditProjectDialog({
               />
 
             </div>
+
+            {/* Status Note */}
+            <FormField
+              control={form.control}
+              name="statusNote"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status Note</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Why is this project on hold, cancelled, or otherwise needs context?"
+                      rows={2}
+                      className="resize-none"
+                      {...field}
+                      value={field.value ?? ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

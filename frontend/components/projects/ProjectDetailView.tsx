@@ -318,6 +318,21 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
         onEdit={() => setIsEditOpen(true)}
       />
 
+      {/* ── Status Note Banner ── */}
+      {project.statusNote && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 mb-3 text-amber-900">
+          <svg className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-600 mb-0.5">
+              {project.status} — Note
+            </p>
+            <p className="text-sm leading-snug">{project.statusNote}</p>
+          </div>
+        </div>
+      )}
+
       {/* ── Tabs ── */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col flex-1 min-h-0">
         <TabsList className="w-full justify-start rounded-none border-b border-border bg-background p-0 h-auto gap-0 shrink-0">

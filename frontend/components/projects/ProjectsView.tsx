@@ -243,6 +243,7 @@ export default function ProjectsView({
   const handleProjectStatusChange = async (
     projectId: string,
     newStatus: string,
+    note?: string,
   ) => {
     // Intercept 'Completed' to prompt for completion details
     if (newStatus === 'Completed') {
@@ -257,13 +258,14 @@ export default function ProjectsView({
     const previousProjects = [...localProjects];
     setLocalProjects((prev) =>
       prev.map((p) =>
-        p.id === projectId ? { ...p, status: newStatus } : p,
+        p.id === projectId ? { ...p, status: newStatus, statusNote: note ?? null } : p,
       ),
     );
 
     try {
       const updated = await projectsApi.update(projectId, {
         status: newStatus,
+        ...(note !== undefined ? { statusNote: note } : {}),
       });
       // Replace with full server response so statusHistory etc. are fresh
       setLocalProjects((prev) =>

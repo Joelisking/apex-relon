@@ -13,6 +13,7 @@ import {
   useDroppable,
 } from '@dnd-kit/core';
 import { ProjectCard, DraggableProjectCard } from './ProjectCard';
+import { StageNoteDialog } from './StageNoteDialog';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Project } from '@/lib/api/projects-client';
@@ -52,10 +53,12 @@ function columnHex(color: string | undefined, label: string): string {
   return STATUS_HEX[label] ?? '#6b7280';
 }
 
+const NOTE_PROMPT_STAGES = new Set(['On Hold', 'Cancelled']);
+
 interface ProjectKanbanBoardProps {
   projects: Project[];
   onProjectClick: (project: Project) => void;
-  onStatusChange: (projectId: string, newStatus: string) => void;
+  onStatusChange: (projectId: string, newStatus: string, note?: string) => void;
   stages: PipelineStage[];
   stagesLoading?: boolean;
 }
@@ -80,6 +83,7 @@ export function ProjectKanbanBoard({
   stagesLoading,
 }: ProjectKanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [pendingDrop, setPendingDrop] = useState<{ projectId: string; newStatus: string } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -144,9 +148,14 @@ export function ProjectKanbanBoard({
 
     const projectId = active.id as string;
     const newStatus = over.id as string;
-    if (newStatus === '__other__') return; // Can't drop onto the catch-all column
+    if (newStatus === '__other__') return;
     const project = projects.find((p) => p.id === projectId);
     if (!project || project.status === newStatus) return;
+
+    if (NOTE_PROMPT_STAGES.has(newStatus)) {
+      setPendingDrop({ projectId, newStatus });
+      return;
+    }
 
     onStatusChange(projectId, newStatus);
   };
@@ -244,6 +253,19 @@ export function ProjectKanbanBoard({
           </div>
         ) : null}
       </DragOverlay>
+
+      <StageNoteDialog
+        open={!!pendingDrop}
+        targetStatus={pendingDrop?.newStatus ?? ''}
+        projectName={projects.find((p) => p.id === pendingDrop?.projectId)?.name ?? ''}
+        onConfirm={(note) => {
+          if (pendingDrop) {
+            onStatusChange(pendingDrop.projectId, pendingDrop.newStatus, note);
+            setPendingDrop(null);
+          }
+        }}
+        onCancel={() => setPendingDrop(null)}
+      />
     </DndContext>
   );
 }

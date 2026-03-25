@@ -111,8 +111,15 @@ function ProjectCardContent({
 
         {/* Contact */}
         {(project.lead?.contactName || project.client) && (
-          <p className="text-xs text-muted-foreground truncate mb-2.5">
+          <p className="text-xs text-muted-foreground truncate mb-1">
             {project.lead?.contactName ?? project.client?.name}
+          </p>
+        )}
+
+        {/* Status note */}
+        {project.statusNote && (
+          <p className="text-[11px] text-muted-foreground italic line-clamp-2 mb-2.5 leading-snug">
+            {project.statusNote}
           </p>
         )}
 

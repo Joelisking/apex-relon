@@ -10,4 +10,8 @@ export class UpdateProjectDto extends PartialType(CreateProjectDto) {
   @IsString()
   @IsOptional()
   industry?: string;
+
+  @IsString()
+  @IsOptional()
+  statusNote?: string;
 }

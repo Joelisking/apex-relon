@@ -27,6 +27,7 @@ export interface Project {
   };
   contractedValue: number;
   status: string;
+  statusNote?: string | null;
   endOfProjectValue?: number;
   startDate?: string;
   completedDate?: string;
@@ -49,6 +50,7 @@ export interface Project {
     id: string;
     fromStatus: string | null;
     toStatus: string;
+    note?: string | null;
     createdAt: string;
     user: { name: string };
   }>;

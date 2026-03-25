@@ -241,6 +241,15 @@ export class ProjectsService {
     // Extract non-Prisma fields before passing to Prisma
     const { segment, industry, teamMemberIds, ...projectUpdateData } = updateProjectDto;
 
+    // Clear statusNote when status changes and no new note is provided
+    if (
+      updateProjectDto.status &&
+      updateProjectDto.status !== existingProject.status &&
+      updateProjectDto.statusNote === undefined
+    ) {
+      (projectUpdateData as Record<string, unknown>).statusNote = null;
+    }
+
     // Auto-set completedDate when transitioning to Completed
     if (
       updateProjectDto.status === 'Completed' &&
@@ -271,6 +280,7 @@ export class ProjectsService {
             fromStatus: existingProject.status,
             toStatus: updateProjectDto.status,
             changedBy: userId,
+            note: updateProjectDto.statusNote || null,
           },
         });
       }

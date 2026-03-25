@@ -258,6 +258,7 @@ model Project {
   estimatedDueDate  DateTime?
   closedDate        DateTime?
   riskStatus        String?                @default("On Track")
+  statusNote        String?
   estimatedRevenue  Float?
   totalCost         Float                  @default(0)
   projectManagerId  String?
@@ -307,6 +308,7 @@ model ProjectStatusHistory {
   projectId  String
   fromStatus String?
   toStatus   String
+  note       String?
   changedBy  String
   createdAt  DateTime @default(now())
   user       User     @relation("ProjectStatusChanges", fields: [changedBy], references: [id])
