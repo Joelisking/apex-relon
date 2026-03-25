@@ -122,6 +122,7 @@ export interface CreateProjectDto {
   categoryIds?: string[];
   serviceTypeIds?: string[];
   county?: string[];
+  statusNote?: string | null;
 }
 
 // Client-side only - synchronous cookie reading
