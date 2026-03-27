@@ -301,26 +301,19 @@ export function EditProjectDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Customer *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a customer" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {clients.map((client) => (
-                          <SelectItem
-                            key={client.id}
-                            value={client.id}>
-                            {client.individualName
-                              ? `${client.individualName} (${client.name})`
-                              : client.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <UserPicker
+                        users={clients.map((c) => ({
+                          id: c.id,
+                          name: c.individualName
+                            ? `${c.individualName} (${c.name})`
+                            : c.name,
+                        }))}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Search customers..."
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -333,27 +326,19 @@ export function EditProjectDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Linked Prospective Project</FormLabel>
-                    <Select
-                      onValueChange={(val) =>
-                        field.onChange(
-                          val === 'none' ? undefined : val,
-                        )
-                      }
-                      value={field.value ?? 'none'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="None (optional)" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {leads.map((lead) => (
-                          <SelectItem key={lead.id} value={lead.id}>
-                            {lead.contactName} — {lead.company}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <UserPicker
+                        users={leads.map((l) => ({
+                          id: l.id,
+                          name: `${l.contactName} — ${l.company}`,
+                        }))}
+                        value={field.value ?? ''}
+                        onChange={(val) => field.onChange(val || undefined)}
+                        placeholder="Search prospects... (optional)"
+                        allowUnassigned
+                        unassignedLabel="None"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -429,23 +414,16 @@ export function EditProjectDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Project Manager</FormLabel>
-                    <Select
-                      onValueChange={(val) => field.onChange(val === 'none' ? '' : val)}
-                      value={field.value || 'none'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select PM" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {users.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <UserPicker
+                        users={users}
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
+                        placeholder="Select PM"
+                        allowUnassigned
+                        unassignedLabel="None"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -682,27 +660,12 @@ export function EditProjectDialog({
                 )}
 
                 {availableUsers.length > 0 && (
-                  <Select
+                  <UserPicker
+                    users={availableUsers}
                     value=""
-                    onValueChange={(val) => {
-                      if (val) addTeamMember(val);
-                    }}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Add a team member..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableUsers.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.name}
-                          {u.role && (
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              {u.role}
-                            </span>
-                          )}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(val) => { if (val) addTeamMember(val); }}
+                    placeholder="Add a team member..."
+                  />
                 )}
               </div>
             )}

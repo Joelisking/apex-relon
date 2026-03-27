@@ -72,6 +72,22 @@ export default function ProjectsView({
   const [dateFilter, setDateFilter] = useState<DatePresetFilterValue>(DATE_PRESET_ALL);
   const [searchQuery, setSearchQuery] = useState('');
   const [facets, setFacets] = useState<FilterValues>({});
+  const [selectedKanbanType, setSelectedKanbanType] = useState<string | null>(null);
+
+  // Restore persisted kanban type on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('projects:kanbanType');
+    if (stored) setSelectedKanbanType(stored);
+  }, []);
+
+  function selectKanbanType(type: string | null) {
+    setSelectedKanbanType(type);
+    if (type) {
+      localStorage.setItem('projects:kanbanType', type);
+    } else {
+      localStorage.removeItem('projects:kanbanType');
+    }
+  }
 
   function setFacet(id: string, values: string[]) {
     setFacets((prev) => ({ ...prev, [id]: values }));
@@ -81,6 +97,7 @@ export default function ProjectsView({
     setDateFilter(DATE_PRESET_ALL);
     setSearchQuery('');
     setFacets({});
+    selectKanbanType(null);
   }
 
   // Bulk action state
@@ -111,11 +128,8 @@ export default function ProjectsView({
     staleTime: 60 * 1000,
   });
 
-  // When exactly one service type is filtered in kanban view, merge type-specific stages
-  const kanbanServiceType =
-    view === 'kanban' && (facets.serviceType ?? []).length === 1
-      ? facets.serviceType![0]
-      : undefined;
+  // The active service type tab drives stage fetching in kanban view
+  const kanbanServiceType = view === 'kanban' ? selectedKanbanType ?? undefined : undefined;
 
   const { data: projectStages = [], isLoading: stagesLoading } = useQuery<PipelineStage[]>({
     queryKey: ['pipeline-stages', 'project', kanbanServiceType],
@@ -164,11 +178,22 @@ export default function ProjectsView({
     if (!passesFilter(p.status, facets.status ?? [])) return false;
     if (!passesFilter(p.riskStatus || 'On Track', facets.riskStatus ?? [])) return false;
     if (!passesFilter(p.client?.name, facets.client ?? [])) return false;
-    if (!passesFilter(p.serviceType?.name, facets.serviceType ?? [])) return false;
+    // In kanban view the tab strip owns service type filtering; in table view use the facet
+    if (view === 'table' && !passesFilter(p.serviceType?.name, facets.serviceType ?? [])) return false;
     if ((facets.county ?? []).length > 0 && !(p.county ?? []).some((c) => (facets.county ?? []).includes(c))) return false;
     if (!passesFilter(p.projectManager?.name || 'Unassigned', facets.projectManager ?? [])) return false;
     return true;
   });
+
+  // In kanban view, further narrow by the selected service type tab
+  const kanbanProjects = view === 'kanban' && selectedKanbanType
+    ? filteredProjects.filter((p) => p.serviceType?.name === selectedKanbanType)
+    : filteredProjects;
+
+  // Unique service types across all projects (for tab strip)
+  const kanbanServiceTypes = [...new Set(
+    projects.map((p) => p.serviceType?.name).filter(Boolean)
+  )] as string[];
 
   const isFiltered =
     dateFilter.preset !== 'all' ||
@@ -464,7 +489,7 @@ export default function ProjectsView({
                 variant={view === 'table' ? 'default' : 'ghost'}
                 size="sm"
                 className="rounded-none"
-                onClick={() => setView('table')}>
+                onClick={() => { setView('table'); selectKanbanType(null); }}>
                 <List className="h-4 w-4" />
               </Button>
             </div>
@@ -512,6 +537,43 @@ export default function ProjectsView({
         />
       </div>
 
+      {/* Service type tab strip — kanban only */}
+      {view === 'kanban' && !isLoading && kanbanServiceTypes.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mb-1">
+          <button
+            onClick={() => selectKanbanType(null)}
+            className={[
+              'text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap transition-colors border shrink-0',
+              selectedKanbanType === null
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-muted/60 text-muted-foreground border-border/60 hover:bg-muted hover:text-foreground',
+            ].join(' ')}>
+            All Types
+            <span className="ml-1.5 opacity-70 tabular-nums">
+              {filteredProjects.length}
+            </span>
+          </button>
+          {kanbanServiceTypes.map((st) => {
+            const count = filteredProjects.filter((p) => p.serviceType?.name === st).length;
+            const active = selectedKanbanType === st;
+            return (
+              <button
+                key={st}
+                onClick={() => selectKanbanType(st)}
+                className={[
+                  'text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap transition-colors border shrink-0',
+                  active
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-muted/60 text-muted-foreground border-border/60 hover:bg-muted hover:text-foreground',
+                ].join(' ')}>
+                {st}
+                <span className="ml-1.5 opacity-70 tabular-nums">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Stats — only shown when user can see all projects, not just assigned ones */}
       {!isLoading && canMoveStage && hasPermission('projects:view_all') && <ProjectStats projects={filteredProjects} />}
 
@@ -550,7 +612,7 @@ export default function ProjectsView({
         </div>
       ) : view === 'kanban' ? (
         <ProjectKanbanBoard
-          projects={filteredProjects}
+          projects={kanbanProjects}
           onProjectClick={handleProjectClick}
           onStatusChange={handleProjectStatusChange}
           stages={projectStages}
