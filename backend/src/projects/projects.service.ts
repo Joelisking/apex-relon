@@ -44,6 +44,9 @@ export class ProjectsService {
       orderBy: { createdAt: 'asc' as const },
       include: { user: { select: { name: true } } },
     },
+    costSegments: {
+      orderBy: { sortOrder: 'asc' as const },
+    },
   };
 
   /**
@@ -71,7 +74,7 @@ export class ProjectsService {
    * Create a new project
    */
   async create(createProjectDto: CreateProjectDto, userId?: string) {
-    const { clientId, leadId, status, teamMemberIds, ...projectData } =
+    const { clientId, leadId, status, teamMemberIds, costSegments, ...projectData } =
       createProjectDto;
 
     // Verify client exists
@@ -100,7 +103,7 @@ export class ProjectsService {
 
     const jobNumber = await generateJobNumber(this.prisma);
 
-    // Create project
+    // Create project (with optional cost segments via nested write)
     const project = await this.prisma.project.create({
       data: {
         ...projectData,
@@ -108,6 +111,17 @@ export class ProjectsService {
         leadId: leadId || null,
         status,
         jobNumber,
+        ...(costSegments?.length && {
+          costSegments: {
+            createMany: {
+              data: costSegments.map((s, i) => ({
+                name: s.name,
+                amount: s.amount,
+                sortOrder: s.sortOrder ?? i,
+              })),
+            },
+          },
+        }),
       },
       include: this.projectInclude,
     });
@@ -239,7 +253,7 @@ export class ProjectsService {
     }
 
     // Extract non-Prisma fields before passing to Prisma
-    const { segment, industry, teamMemberIds, ...projectUpdateData } = updateProjectDto;
+    const { segment, industry, teamMemberIds, costSegments, ...projectUpdateData } = updateProjectDto;
 
     // Clear statusNote when status changes and no new note is provided
     if (
@@ -264,6 +278,21 @@ export class ProjectsService {
       data: projectUpdateData,
       include: this.projectInclude,
     });
+
+    // Replace cost segments if provided (undefined = leave untouched, [] = clear all)
+    if (costSegments !== undefined) {
+      await this.prisma.projectCostSegment.deleteMany({ where: { projectId: id } });
+      if (costSegments.length > 0) {
+        await this.prisma.projectCostSegment.createMany({
+          data: costSegments.map((s, i) => ({
+            projectId: id,
+            name: s.name,
+            amount: s.amount,
+            sortOrder: s.sortOrder ?? i,
+          })),
+        });
+      }
+    }
 
     // Update client project counts if status changed
     if (
@@ -325,6 +354,14 @@ export class ProjectsService {
         project.id,
         project as unknown as Record<string, unknown>,
       );
+    }
+
+    // Refetch so cost segment changes are reflected in the response
+    if (costSegments !== undefined) {
+      return this.prisma.project.findUniqueOrThrow({
+        where: { id },
+        include: this.projectInclude,
+      });
     }
 
     return project;

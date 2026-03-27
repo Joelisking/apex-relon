@@ -1,6 +1,15 @@
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
+export interface ProjectCostSegment {
+  id: string;
+  projectId: string;
+  name: string;
+  amount: number;
+  sortOrder: number;
+  createdAt: string;
+}
+
 export interface ProjectAssignment {
   id: string;
   projectId: string;
@@ -45,6 +54,7 @@ export interface Project {
   projectManagerId?: string;
   projectManager?: { id: string; name: string; email: string };
   assignments?: ProjectAssignment[];
+  costSegments?: ProjectCostSegment[];
   costLogs?: CostLog[];
   statusHistory?: Array<{
     id: string;
@@ -123,6 +133,7 @@ export interface CreateProjectDto {
   serviceTypeIds?: string[];
   county?: string[];
   statusNote?: string | null;
+  costSegments?: { name: string; amount: number; sortOrder?: number }[];
 }
 
 // Client-side only - synchronous cookie reading

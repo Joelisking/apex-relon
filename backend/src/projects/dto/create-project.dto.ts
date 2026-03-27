@@ -5,8 +5,10 @@ import {
   IsNumber,
   IsArray,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { CreateCostSegmentDto } from './create-cost-segment.dto';
 
 export class CreateProjectDto {
   @IsString()
@@ -88,4 +90,10 @@ export class CreateProjectDto {
   @IsString({ each: true })
   @IsOptional()
   county?: string[];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateCostSegmentDto)
+  @IsOptional()
+  costSegments?: CreateCostSegmentDto[];
 }

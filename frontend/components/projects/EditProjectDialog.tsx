@@ -34,6 +34,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Users, X } from 'lucide-react';
+import { ProjectCostSegments, type CostSegmentInput } from './ProjectCostSegments';
 import { MultiCreatableSelect } from '@/components/ui/multi-creatable-select';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import { UserPicker } from '@/components/ui/user-picker';
@@ -105,6 +106,9 @@ export function EditProjectDialog({
   const [selectedServiceTypeIds, setSelectedServiceTypeIds] = useState<string[]>(
     project.serviceTypeIds ?? [],
   );
+  const [costSegments, setCostSegments] = useState<CostSegmentInput[]>(
+    project.costSegments?.map((s) => ({ name: s.name, amount: s.amount, sortOrder: s.sortOrder })) ?? [],
+  );
 
   const { data: serviceCategories = [] } = useQuery<ServiceCategory[]>({
     queryKey: ['service-categories'],
@@ -164,6 +168,9 @@ export function EditProjectDialog({
     setAssignments(project.assignments ?? []);
     setSelectedCategoryIds(project.categoryIds ?? []);
     setSelectedServiceTypeIds(project.serviceTypeIds ?? []);
+    setCostSegments(
+      project.costSegments?.map((s) => ({ name: s.name, amount: s.amount, sortOrder: s.sortOrder })) ?? [],
+    );
   }, [project.id]);
 
   // Derive a single service type name for stage filtering (only when exactly one is selected)
@@ -221,6 +228,12 @@ export function EditProjectDialog({
     fetchData();
   }, [open]);
 
+  const watchedContractedValue = form.watch('contractedValue');
+
+  function handleUseSegmentTotal(total: number) {
+    form.setValue('contractedValue', total, { shouldValidate: true });
+  }
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setLoading(true);
@@ -244,6 +257,7 @@ export function EditProjectDialog({
           : undefined,
         categoryIds: selectedCategoryIds,
         serviceTypeIds: selectedServiceTypeIds,
+        costSegments,
       });
       toast.success('Project updated successfully');
       onProjectUpdated(updated);
@@ -558,6 +572,13 @@ export function EditProjectDialog({
               />
 
             </div>
+
+            <ProjectCostSegments
+              value={costSegments}
+              onChange={setCostSegments}
+              contractedValue={Number(watchedContractedValue) || 0}
+              onUseSegmentTotal={handleUseSegmentTotal}
+            />
 
             {/* Status Note */}
             <FormField

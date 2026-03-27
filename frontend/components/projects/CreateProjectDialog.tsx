@@ -34,6 +34,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Users, X } from 'lucide-react';
+import { ProjectCostSegments, type CostSegmentInput } from './ProjectCostSegments';
 import { MultiCreatableSelect } from '@/components/ui/multi-creatable-select';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import { UserPicker } from '@/components/ui/user-picker';
@@ -109,6 +110,7 @@ export function CreateProjectDialog({
   >([]);
   const [selectedServiceTypeIds, setSelectedServiceTypeIds] =
     useState<string[]>([]);
+  const [costSegments, setCostSegments] = useState<CostSegmentInput[]>([]);
 
   const { data: serviceCategories = [] } = useQuery<
     ServiceCategory[]
@@ -226,6 +228,12 @@ export function CreateProjectDialog({
     form.setValue('clientId', clientId);
   };
 
+  const watchedContractedValue = form.watch('contractedValue');
+
+  function handleUseSegmentTotal(total: number) {
+    form.setValue('contractedValue', total, { shouldValidate: true });
+  }
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setLoading(true);
@@ -254,6 +262,7 @@ export function CreateProjectDialog({
           selectedServiceTypeIds.length > 0
             ? selectedServiceTypeIds
             : undefined,
+        costSegments: costSegments.length > 0 ? costSegments : undefined,
       });
       toast.success('Project created successfully');
       onProjectCreated();
@@ -262,6 +271,7 @@ export function CreateProjectDialog({
       setPendingTeamMemberIds([]);
       setSelectedCategoryIds([]);
       setSelectedServiceTypeIds([]);
+      setCostSegments([]);
     } catch (error) {
       toast.error('Failed to create project');
       console.error(error);
@@ -581,6 +591,13 @@ export function CreateProjectDialog({
                 )}
               />
             </div>
+
+            <ProjectCostSegments
+              value={costSegments}
+              onChange={setCostSegments}
+              contractedValue={Number(watchedContractedValue) || 0}
+              onUseSegmentTotal={handleUseSegmentTotal}
+            />
 
             <FormField
               control={form.control}
