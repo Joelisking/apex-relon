@@ -664,7 +664,7 @@ model QuoteSettings {
   logoUrl               String?
   quoteNumberPrefix     String   @default("Q-")
   defaultTaxRate        Float    @default(0)
-  defaultValidityDays   Int      @default(30)
+  defaultValidityDays   Int      @default(180)
   defaultCurrency       String   @default("USD")
   defaultNotes          String   @default("")
   defaultTerms          String   @default("")

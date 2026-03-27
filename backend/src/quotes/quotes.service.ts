@@ -101,14 +101,22 @@ export class QuotesService {
       discount,
     );
 
+    let validUntil: Date | undefined;
+    if (dto.validUntil) {
+      validUntil = new Date(dto.validUntil);
+    } else {
+      const settings = await this.prisma.quoteSettings.findFirst();
+      const days = settings?.defaultValidityDays ?? 180;
+      validUntil = new Date();
+      validUntil.setDate(validUntil.getDate() + days);
+    }
+
     return this.prisma.quote.create({
       data: {
         leadId: dto.leadId,
         clientId: dto.clientId,
         projectId: dto.projectId,
-        validUntil: dto.validUntil
-          ? new Date(dto.validUntil)
-          : undefined,
+        validUntil,
         notes: dto.notes,
         termsAndConditions: dto.termsAndConditions,
         taxRate,

@@ -87,7 +87,7 @@ export default function AdminQuoteSettingsView() {
     logoUrl: '',
     quoteNumberPrefix: 'Q-',
     defaultTaxRate: 0,
-    defaultValidityDays: 30,
+    defaultValidityDays: 180,
     defaultCurrency: 'USD',
     defaultNotes: '',
     defaultTerms: '',

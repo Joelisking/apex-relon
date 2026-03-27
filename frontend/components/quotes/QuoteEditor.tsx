@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { format, addDays } from 'date-fns';
 import { ArrowLeft, Loader2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,12 +65,14 @@ export default function QuoteEditor({ quoteId }: QuoteEditorProps) {
 
   const initFromSettings = useCallback(
     (s: QuoteSettings) => {
+      const days = s.defaultValidityDays || 180;
       setForm((prev) => ({
         ...prev,
         taxRate: s.defaultTaxRate,
         currency: s.defaultCurrency || 'USD',
         notes: s.defaultNotes || '',
         termsAndConditions: s.defaultTerms || '',
+        validUntil: format(addDays(new Date(), days), 'yyyy-MM-dd'),
       }));
     },
     [],
