@@ -34,6 +34,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Users, X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { ProjectCostSegments, type CostSegmentInput } from './ProjectCostSegments';
 import { MultiCreatableSelect } from '@/components/ui/multi-creatable-select';
 import { CreatableSelect } from '@/components/ui/creatable-select';
@@ -109,6 +111,9 @@ export function EditProjectDialog({
   const [costSegments, setCostSegments] = useState<CostSegmentInput[]>(
     project.costSegments?.map((s) => ({ name: s.name, amount: s.amount, sortOrder: s.sortOrder })) ?? [],
   );
+  const [activeOptionalStages, setActiveOptionalStages] = useState<string[]>(
+    project.activeOptionalStages ?? [],
+  );
 
   const { data: serviceCategories = [] } = useQuery<ServiceCategory[]>({
     queryKey: ['service-categories'],
@@ -171,6 +176,7 @@ export function EditProjectDialog({
     setCostSegments(
       project.costSegments?.map((s) => ({ name: s.name, amount: s.amount, sortOrder: s.sortOrder })) ?? [],
     );
+    setActiveOptionalStages(project.activeOptionalStages ?? []);
   }, [project.id]);
 
   // Derive a single service type name for stage filtering (only when exactly one is selected)
@@ -258,6 +264,7 @@ export function EditProjectDialog({
         categoryIds: selectedCategoryIds,
         serviceTypeIds: selectedServiceTypeIds,
         costSegments,
+        activeOptionalStages,
       });
       toast.success('Project updated successfully');
       onProjectUpdated(updated);
@@ -420,6 +427,32 @@ export function EditProjectDialog({
                   </FormItem>
                 )}
               />
+
+              {/* Optional stages */}
+              {projectStages.some((s) => s.isOptional) && (
+                <div className="col-span-2 space-y-2 rounded-lg border border-border/60 bg-muted/30 p-3">
+                  <p className="text-sm font-medium">Optional stages</p>
+                  <p className="text-xs text-muted-foreground">Check the stages that will occur for this project</p>
+                  <div className="flex flex-wrap gap-x-6 gap-y-2 pt-0.5">
+                    {projectStages.filter((s) => s.isOptional).map((stage) => (
+                      <div key={stage.name} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`opt-edit-${stage.name}`}
+                          checked={activeOptionalStages.includes(stage.name)}
+                          onCheckedChange={(checked) =>
+                            setActiveOptionalStages((prev) =>
+                              checked ? [...prev, stage.name] : prev.filter((s) => s !== stage.name)
+                            )
+                          }
+                        />
+                        <Label htmlFor={`opt-edit-${stage.name}`} className="font-normal text-sm cursor-pointer">
+                          {stage.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Project Manager */}
               <FormField

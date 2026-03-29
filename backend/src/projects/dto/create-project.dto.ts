@@ -96,4 +96,9 @@ export class CreateProjectDto {
   @Type(() => CreateCostSegmentDto)
   @IsOptional()
   costSegments?: CreateCostSegmentDto[];
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  activeOptionalStages?: string[];
 }

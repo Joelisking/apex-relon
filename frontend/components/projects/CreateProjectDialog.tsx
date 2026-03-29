@@ -34,6 +34,8 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Users, X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { ProjectCostSegments, type CostSegmentInput } from './ProjectCostSegments';
 import { MultiCreatableSelect } from '@/components/ui/multi-creatable-select';
 import { CreatableSelect } from '@/components/ui/creatable-select';
@@ -111,6 +113,7 @@ export function CreateProjectDialog({
   const [selectedServiceTypeIds, setSelectedServiceTypeIds] =
     useState<string[]>([]);
   const [costSegments, setCostSegments] = useState<CostSegmentInput[]>([]);
+  const [activeOptionalStages, setActiveOptionalStages] = useState<string[]>([]);
 
   const { data: serviceCategories = [] } = useQuery<
     ServiceCategory[]
@@ -263,6 +266,7 @@ export function CreateProjectDialog({
             ? selectedServiceTypeIds
             : undefined,
         costSegments: costSegments.length > 0 ? costSegments : undefined,
+        activeOptionalStages,
       });
       toast.success('Project created successfully');
       onProjectCreated();
@@ -272,6 +276,7 @@ export function CreateProjectDialog({
       setSelectedCategoryIds([]);
       setSelectedServiceTypeIds([]);
       setCostSegments([]);
+      setActiveOptionalStages([]);
     } catch (error) {
       toast.error('Failed to create project');
       console.error(error);
@@ -436,6 +441,32 @@ export function CreateProjectDialog({
                   </FormItem>
                 )}
               />
+
+              {/* Optional stages */}
+              {projectStages.some((s) => s.isOptional) && (
+                <div className="col-span-2 space-y-2 rounded-lg border border-border/60 bg-muted/30 p-3">
+                  <p className="text-sm font-medium">Optional stages</p>
+                  <p className="text-xs text-muted-foreground">Check the stages that will occur for this project</p>
+                  <div className="flex flex-wrap gap-x-6 gap-y-2 pt-0.5">
+                    {projectStages.filter((s) => s.isOptional).map((stage) => (
+                      <div key={stage.name} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`opt-create-${stage.name}`}
+                          checked={activeOptionalStages.includes(stage.name)}
+                          onCheckedChange={(checked) =>
+                            setActiveOptionalStages((prev) =>
+                              checked ? [...prev, stage.name] : prev.filter((s) => s !== stage.name)
+                            )
+                          }
+                        />
+                        <Label htmlFor={`opt-create-${stage.name}`} className="font-normal text-sm cursor-pointer">
+                          {stage.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Contracted Value */}
               <FormField

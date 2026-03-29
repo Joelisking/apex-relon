@@ -11,6 +11,7 @@ export interface PipelineStage {
   probability: number;
   sortOrder: number;
   isSystem: boolean;
+  isOptional: boolean;
   createdAt: string;
   updatedAt: string;
 }

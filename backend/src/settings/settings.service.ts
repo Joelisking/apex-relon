@@ -238,15 +238,15 @@ export class SettingsService implements OnModuleInit {
         { name: 'As-Built Survey', description: 'Post-construction as-built documentation', sortOrder: 6 },
         { name: 'Subdivision Plat', description: 'Subdivision design and recorded plats', sortOrder: 7 },
         { name: 'Drone Survey', description: 'Aerial survey and mapping', sortOrder: 8 },
+        { name: 'Right-of-Way Engineering', description: 'ROW plans, legal descriptions, staking', sortOrder: 9 },
+        { name: 'LCRS', description: 'Location control route surveys', sortOrder: 10 },
+        { name: 'Easement Preparation', description: 'Easement exhibits, legal descriptions', sortOrder: 11 },
       ],
       Engineering: [
         { name: 'Construction Engineering', description: 'CE, project oversight during construction', sortOrder: 0 },
         { name: 'Construction Inspection', description: 'On-site inspection services', sortOrder: 1 },
         { name: 'Stormwater / SWQCP', description: 'Stormwater quality control plans, monitoring', sortOrder: 2 },
-        { name: 'Right-of-Way Engineering', description: 'ROW plans, legal descriptions, staking', sortOrder: 3 },
-        { name: 'LCRS', description: 'Location control route surveys', sortOrder: 4 },
-        { name: 'Engineering / Design', description: 'Site design, engineering analysis, utility design', sortOrder: 5 },
-        { name: 'Easement Preparation', description: 'Easement exhibits, legal descriptions', sortOrder: 6 },
+        { name: 'Engineering / Design', description: 'Site design, engineering analysis, utility design', sortOrder: 3 },
       ],
     };
 

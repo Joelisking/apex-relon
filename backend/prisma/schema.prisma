@@ -257,9 +257,10 @@ model Project {
   description       String?
   estimatedDueDate  DateTime?
   closedDate        DateTime?
-  riskStatus        String?                @default("On Track")
-  statusNote        String?
-  estimatedRevenue  Float?
+  riskStatus           String?                @default("On Track")
+  statusNote           String?
+  activeOptionalStages String[]               @default([])
+  estimatedRevenue     Float?
   totalCost         Float                  @default(0)
   projectManagerId  String?
   createdAt         DateTime               @default(now())
@@ -491,6 +492,7 @@ model PipelineStage {
   probability  Int      @default(0)
   sortOrder    Int
   isSystem     Boolean  @default(false)
+  isOptional   Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

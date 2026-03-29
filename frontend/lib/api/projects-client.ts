@@ -51,6 +51,7 @@ export interface Project {
   categoryIds?: string[];
   serviceTypeIds?: string[];
   county?: string[];
+  activeOptionalStages?: string[];
   projectManagerId?: string;
   projectManager?: { id: string; name: string; email: string };
   assignments?: ProjectAssignment[];
@@ -132,6 +133,7 @@ export interface CreateProjectDto {
   categoryIds?: string[];
   serviceTypeIds?: string[];
   county?: string[];
+  activeOptionalStages?: string[];
   statusNote?: string | null;
   costSegments?: { name: string; amount: number; sortOrder?: number }[];
 }
