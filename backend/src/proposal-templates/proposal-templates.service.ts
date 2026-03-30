@@ -72,6 +72,27 @@ export class ProposalTemplatesService {
     return this.prisma.proposalTemplate.delete({ where: { id } });
   }
 
+  async deleteGeneratedFile(fileId: string) {
+    const file = await this.prisma.file.findUnique({ where: { id: fileId } });
+    if (!file) throw new NotFoundException('File not found');
+    await this.storageService.deleteFile(file.gcpPath);
+    return this.prisma.file.delete({ where: { id: fileId } });
+  }
+
+  async renameGeneratedFile(fileId: string, name: string) {
+    const file = await this.prisma.file.findUnique({ where: { id: fileId } });
+    if (!file) throw new NotFoundException('File not found');
+    const newName = name.trim().endsWith('.docx') ? name.trim() : `${name.trim()}.docx`;
+    return this.prisma.file.update({
+      where: { id: fileId },
+      data: { originalName: newName },
+      include: {
+        client: { select: { id: true, name: true } },
+        uploadedBy: { select: { id: true, name: true } },
+      },
+    });
+  }
+
   async downloadGeneratedFile(fileId: string) {
     const file = await this.prisma.file.findUnique({ where: { id: fileId } });
     if (!file) throw new NotFoundException('File not found');
@@ -233,7 +254,10 @@ export class ProposalTemplatesService {
     const filledBuffer = fillDocx(templateBuffer, data);
 
     // 6. Upload filled .docx to GCS
-    const originalName = `${template.name.replace(/[^a-z0-9]/gi, '-')}-proposal-${Date.now()}.docx`;
+    const slug = template.name
+      .replace(/[^a-z0-9]+/gi, '-')
+      .replace(/^-+|-+$/g, '');
+    const originalName = `${slug}-${Date.now()}.docx`;
     const uploadPath = clientId
       ? `clients/${clientId}/proposals`
       : 'proposals/manual';

@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Param,
   Body,
@@ -37,6 +38,22 @@ export class ProposalTemplatesController {
   @Permissions('quotes:view')
   listGenerated() {
     return this.service.listGenerated();
+  }
+
+  @Delete('generated/:fileId')
+  @Permissions('quotes:create')
+  deleteGenerated(@Param('fileId') fileId: string) {
+    return this.service.deleteGeneratedFile(fileId);
+  }
+
+  @Patch('generated/:fileId')
+  @Permissions('quotes:create')
+  renameGenerated(
+    @Param('fileId') fileId: string,
+    @Body('name') name: string,
+  ) {
+    if (!name?.trim()) throw new BadRequestException('Name is required');
+    return this.service.renameGeneratedFile(fileId, name);
   }
 
   @Get('generated/:fileId/download')

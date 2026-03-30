@@ -109,6 +109,17 @@ export const proposalTemplatesApi = {
     return apiFetch<GeneratedProposal[]>('/proposal-templates/generated');
   },
 
+  deleteGenerated(fileId: string): Promise<void> {
+    return apiFetch(`/proposal-templates/generated/${fileId}`, { method: 'DELETE' });
+  },
+
+  renameGenerated(fileId: string, name: string): Promise<GeneratedProposal> {
+    return apiFetch<GeneratedProposal>(`/proposal-templates/generated/${fileId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name }),
+    });
+  },
+
   async downloadGenerated(fileId: string): Promise<Blob> {
     const token = getTokenFromClientCookies();
     const headers: Record<string, string> = {};

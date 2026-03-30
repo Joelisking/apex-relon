@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, FileText, Loader2, Plus } from 'lucide-react';
+import { Download, FileText, Loader2, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { proposalTemplatesApi, GeneratedProposal } from '@/lib/api/proposal-templates-client';
 import GenerateProposalDialog from '@/components/quotes/GenerateProposalDialog';
@@ -24,6 +25,10 @@ function formatDate(iso: string): string {
   });
 }
 
+function stripDocx(name: string): string {
+  return name.replace(/\.docx$/i, '');
+}
+
 export default function ProposalsView() {
   const queryClient = useQueryClient();
   const [sourceOpen, setSourceOpen] = useState(false);
@@ -31,19 +36,17 @@ export default function ProposalsView() {
   const [selectedQuote, setSelectedQuote] = useState<Quote | undefined>();
   const [selectedProject, setSelectedProject] = useState<Project | undefined>();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   const { data: proposals = [], isLoading } = useQuery({
     queryKey: ['proposals-generated'],
     queryFn: () => proposalTemplatesApi.getGenerated(),
   });
 
-  const handleSourceContinue = ({
-    quote,
-    project,
-  }: {
-    quote?: Quote;
-    project?: Project;
-  }) => {
+  const handleSourceContinue = ({ quote, project }: { quote?: Quote; project?: Project }) => {
     setSelectedQuote(quote);
     setSelectedProject(project);
     setGenerateOpen(true);
@@ -70,6 +73,44 @@ export default function ProposalsView() {
       toast.error('Download failed');
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  const handleDelete = async (proposal: GeneratedProposal) => {
+    setDeletingId(proposal.id);
+    try {
+      await proposalTemplatesApi.deleteGenerated(proposal.id);
+      queryClient.invalidateQueries({ queryKey: ['proposals-generated'] });
+      toast.success('Proposal deleted');
+    } catch {
+      toast.error('Failed to delete proposal');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const startEditing = (proposal: GeneratedProposal) => {
+    setEditingId(proposal.id);
+    setEditingName(stripDocx(proposal.originalName));
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditingName('');
+  };
+
+  const saveRename = async (proposal: GeneratedProposal) => {
+    const trimmed = editingName.trim();
+    if (!trimmed) return;
+    setSavingId(proposal.id);
+    try {
+      await proposalTemplatesApi.renameGenerated(proposal.id, trimmed);
+      queryClient.invalidateQueries({ queryKey: ['proposals-generated'] });
+      cancelEditing();
+    } catch {
+      toast.error('Failed to rename proposal');
+    } finally {
+      setSavingId(null);
     }
   };
 
@@ -108,40 +149,107 @@ export default function ProposalsView() {
                 </p>
               </div>
             ) : (
-              proposals.map((proposal, i) => (
-                <div
-                  key={proposal.id}
-                  className={`flex items-center gap-3 px-5 py-4 ${
-                    i > 0 ? 'border-t border-border/40' : ''
-                  }`}>
-                  <div className="h-8 w-8 rounded-md bg-muted/60 flex items-center justify-center shrink-0">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-foreground truncate">
-                      {proposal.originalName}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {proposal.client?.name ? `${proposal.client.name} · ` : ''}
-                      {formatDate(proposal.createdAt)}
-                      {' · '}
-                      {formatBytes(proposal.fileSize)}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
-                    disabled={downloadingId === proposal.id}
-                    onClick={() => handleDownload(proposal)}>
-                    {downloadingId === proposal.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Download className="h-3.5 w-3.5" />
+              proposals.map((proposal, i) => {
+                const isEditing = editingId === proposal.id;
+                return (
+                  <div
+                    key={proposal.id}
+                    className={`flex items-center gap-3 px-5 py-3.5 ${
+                      i > 0 ? 'border-t border-border/40' : ''
+                    }`}>
+                    <div className="h-8 w-8 rounded-md bg-muted/60 flex items-center justify-center shrink-0">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      {isEditing ? (
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveRename(proposal);
+                              if (e.key === 'Escape') cancelEditing();
+                            }}
+                            className="h-7 text-sm py-0 w-full max-w-sm"
+                            autoFocus
+                          />
+                          <span className="text-[11px] text-muted-foreground shrink-0">.docx</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-green-600 hover:text-green-700 shrink-0"
+                            disabled={savingId === proposal.id}
+                            onClick={() => saveRename(proposal)}>
+                            {savingId === proposal.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Check className="h-3 w-3" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
+                            onClick={cancelEditing}>
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className="text-[13px] font-medium text-foreground truncate">
+                          {stripDocx(proposal.originalName)}
+                        </p>
+                      )}
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {proposal.client?.name ? `${proposal.client.name} · ` : ''}
+                        {formatDate(proposal.createdAt)}
+                        {' · '}
+                        {formatBytes(proposal.fileSize)}
+                      </p>
+                    </div>
+
+                    {/* Actions */}
+                    {!isEditing && (
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          title="Download"
+                          disabled={downloadingId === proposal.id}
+                          onClick={() => handleDownload(proposal)}>
+                          {downloadingId === proposal.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Download className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          title="Rename"
+                          onClick={() => startEditing(proposal)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          title="Delete"
+                          disabled={deletingId === proposal.id}
+                          onClick={() => handleDelete(proposal)}>
+                          {deletingId === proposal.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </div>
                     )}
-                  </Button>
-                </div>
-              ))
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
