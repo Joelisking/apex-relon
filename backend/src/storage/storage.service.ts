@@ -62,6 +62,29 @@ export class StorageService {
     });
   }
 
+  async uploadBuffer(
+    buffer: Buffer,
+    folder: string,
+    originalName: string,
+    contentType: string,
+  ): Promise<{ fileName: string; gcpPath: string }> {
+    const bucket = this.storage.bucket(this.bucketName);
+    const fileName = `${uuidv4()}-${originalName}`;
+    const gcpPath = `${folder}/${fileName}`;
+    const blob = bucket.file(gcpPath);
+
+    const blobStream = blob.createWriteStream({
+      resumable: false,
+      metadata: { contentType },
+    });
+
+    return new Promise((resolve, reject) => {
+      blobStream.on('error', reject);
+      blobStream.on('finish', () => resolve({ fileName, gcpPath }));
+      blobStream.end(buffer);
+    });
+  }
+
   async deleteFile(gcpPath: string): Promise<void> {
     const bucket = this.storage.bucket(this.bucketName);
     const file = bucket.file(gcpPath);

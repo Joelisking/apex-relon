@@ -39,6 +39,7 @@ import { ServiceItemsModule } from './service-items/service-items.module';
 import { QuickBooksModule } from './quickbooks/quickbooks.module';
 import { TimeTrackingModule } from './time-tracking/time-tracking.module';
 import { BottleneckModule } from './bottleneck/bottleneck.module';
+import { ProposalTemplatesModule } from './proposal-templates/proposal-templates.module';
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { BottleneckModule } from './bottleneck/bottleneck.module';
     QuickBooksModule,
     TimeTrackingModule,
     BottleneckModule,
+    ProposalTemplatesModule,
   ],
   providers: [
     {

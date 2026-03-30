@@ -198,6 +198,12 @@ const mainNavItems: NavItemDef[] = [
     permission: 'quotes:view',
   },
   {
+    title: 'Proposals',
+    href: '/proposals',
+    icon: FileText,
+    permission: 'quotes:view',
+  },
+  {
     title: 'Reports',
     href: '/reports',
     icon: BarChart3,

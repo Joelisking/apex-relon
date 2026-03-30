@@ -8,6 +8,7 @@ import {
   FileSignature,
   Palette,
   Link2,
+  FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,14 +25,16 @@ import {
 import { quoteSettingsApi } from '@/lib/api/quotes-client';
 import { toast } from 'sonner';
 import type { QuoteSettings } from '@/lib/types';
+import ProposalTemplatesSection from './ProposalTemplatesSection';
 
-type Section = 'branding' | 'defaults' | 'display' | 'integrations';
+type Section = 'branding' | 'defaults' | 'display' | 'integrations' | 'templates';
 
 const NAV: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'branding', label: 'Company Branding', icon: Building2 },
   { id: 'defaults', label: 'Quote Defaults', icon: FileSignature },
   { id: 'display', label: 'Display Options', icon: Palette },
   { id: 'integrations', label: 'Integrations', icon: Link2 },
+  { id: 'templates', label: 'Proposal Templates', icon: FileText },
 ];
 
 const LABEL_CLASS =
@@ -163,7 +166,7 @@ export default function AdminQuoteSettingsView() {
             Configure company branding and defaults for all quotes
           </p>
         </div>
-        <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5">
+        {activeSection !== 'templates' && <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5">
           {saving ? (
             <>
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -175,7 +178,7 @@ export default function AdminQuoteSettingsView() {
               Save Settings
             </>
           )}
-        </Button>
+        </Button>}
       </div>
 
       <div className="flex gap-6 items-start">
@@ -437,6 +440,9 @@ export default function AdminQuoteSettingsView() {
               </div>
             </section>
           )}
+          {/* ── Proposal Templates ───────────────────────────────────── */}
+          {activeSection === 'templates' && <ProposalTemplatesSection />}
+
           {/* ── Integrations ──────────────────────────────────────────── */}
           {activeSection === 'integrations' && (
             <section>

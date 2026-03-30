@@ -44,6 +44,7 @@
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "pdfmake": "^0.3.5",
+    "pizzip": "^3.2.0",
     "reflect-metadata": "^0.2.1",
     "resend": "^6.9.2",
     "rxjs": "^7.8.1"

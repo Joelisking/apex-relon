@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Loader2, BookOpen } from 'lucide-react';
+import { Download, Loader2, BookOpen, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +17,7 @@ import { quotesApi } from '@/lib/api/quotes-client';
 import { API_URL } from '@/lib/api/client';
 import { toast } from 'sonner';
 import type { Quote } from '@/lib/types';
+import GenerateProposalDialog from './GenerateProposalDialog';
 
 interface QuoteViewDialogProps {
   quote: Quote | null;
@@ -27,6 +28,7 @@ interface QuoteViewDialogProps {
 export default function QuoteViewDialog({ quote, open, onOpenChange }: QuoteViewDialogProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSendingToQb, setIsSendingToQb] = useState(false);
+  const [generateOpen, setGenerateOpen] = useState(false);
 
   const handleSendToQuickBooks = async () => {
     if (!quote) return;
@@ -83,6 +85,7 @@ export default function QuoteViewDialog({ quote, open, onOpenChange }: QuoteView
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
         {quote && (
@@ -211,6 +214,14 @@ export default function QuoteViewDialog({ quote, open, onOpenChange }: QuoteView
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setGenerateOpen(true)}
+              className="gap-1.5">
+              <FileText className="h-4 w-4" />
+              Generate Proposal
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleSendToQuickBooks}
               disabled={isSendingToQb || !!quote.qbInvoiceId}
               className="gap-1.5">
@@ -238,5 +249,14 @@ export default function QuoteViewDialog({ quote, open, onOpenChange }: QuoteView
         )}
       </DialogContent>
     </Dialog>
+
+    {quote && (
+      <GenerateProposalDialog
+        quote={quote}
+        open={generateOpen}
+        onOpenChange={setGenerateOpen}
+      />
+    )}
+  </>
   );
 }
