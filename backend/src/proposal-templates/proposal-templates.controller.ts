@@ -90,6 +90,12 @@ export class ProposalTemplatesController {
     return this.service.uploadTemplate(file, dto);
   }
 
+  @Get(':id/content')
+  @Permissions('quotes:view')
+  getTemplateContent(@Param('id') id: string) {
+    return this.service.getTemplateContent(id);
+  }
+
   @Delete(':id')
   @Permissions('settings:manage')
   deleteTemplate(@Param('id') id: string) {

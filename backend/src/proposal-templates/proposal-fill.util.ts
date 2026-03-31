@@ -334,3 +334,96 @@ export function formatCurrency(amount: number): string {
     minimumFractionDigits: 2,
   }).format(amount);
 }
+
+// ─── Template content extraction (for live preview) ──────────────────────────
+
+/**
+ * DOCPROPERTY field name → the bracket/pattern placeholder that replaces it in preview mode.
+ * Must align with the replacePlainBrackets substitution list.
+ */
+const DOCPROPERTY_BRACKETS: Record<string, string> = {
+  'First Name': '[First Name]',
+  'Last Name': '[Last Name]',
+  'Company Name': '[Company Name]',
+  'Address': '[Address]',
+  'City': '[City]',
+  'State': '[State]',
+  'ZIP Code': '[ZIP Code]',
+  'Mr./Mrs./Ms.': '[Mr./Mrs./Ms.]',
+  'Mr.,Mrs.': '[Mr.,Mrs.]',
+  'Project Name': '[Project Name]',
+  'Project Address': '[Project Address]',
+  'Fee': '$##,###.##',
+  'Timeline': '# weeks',
+};
+
+/**
+ * Replace DOCPROPERTY field results with bracket notation and PRINTDATE with
+ * "MMMM DD, YYYY" so the extracted paragraph text contains recognizable placeholders.
+ */
+function normalizeDocpropertyFields(xml: string): string {
+  return xml.replace(
+    /(<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:fldChar[^>]*w:fldCharType="begin"[^>]*\/>[\s\S]*?<\/w:r>[\s\S]*?<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:fldChar[^>]*w:fldCharType="separate"[^>]*\/>[\s\S]*?<\/w:r>)([\s\S]*?)(<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:fldChar[^>]*w:fldCharType="end"[^>]*\/>[\s\S]*?<\/w:r>)/g,
+    (match, beforeResult, _resultContent, endPart) => {
+      const instrMatch = beforeResult.match(/<w:instrText[^>]*>([\s\S]*?)<\/w:instrText>/);
+      if (!instrMatch) return match;
+      const instrText = instrMatch[1].trim();
+
+      const docpropMatch = instrText.match(/DOCPROPERTY\s+"?([^"\\]+?)"?\s*\\/);
+      if (docpropMatch) {
+        const propName = docpropMatch[1].trim();
+        const bracket = DOCPROPERTY_BRACKETS[propName];
+        if (!bracket) return match;
+        return (
+          beforeResult +
+          `<w:r><w:t xml:space="preserve">${escapeXml(bracket)}</w:t></w:r>` +
+          endPart
+        );
+      }
+      if (instrText.includes('PRINTDATE')) {
+        return (
+          beforeResult +
+          `<w:r><w:t>MMMM DD, YYYY</w:t></w:r>` +
+          endPart
+        );
+      }
+      return match;
+    },
+  );
+}
+
+/**
+ * Extract paragraphs from a .docx template as plain text strings.
+ * Applies run-merging and normalizes field placeholders so the caller
+ * can substitute values client-side for live preview.
+ */
+export function extractParagraphs(templateBuffer: Buffer): string[] {
+  const zip = new PizZip(templateBuffer);
+  const xmlFile = zip.files['word/document.xml'];
+  if (!xmlFile) return [];
+
+  let xml = xmlFile.asText();
+  xml = mergeAdjacentHighlightedRuns(xml);
+  xml = normalizeDocpropertyFields(xml);
+
+  const paragraphs: string[] = [];
+  const paraRe = /<w:p\b[^>]*>[\s\S]*?<\/w:p>/g;
+  let m: RegExpExecArray | null;
+  while ((m = paraRe.exec(xml)) !== null) {
+    const paraXml = m[0];
+    let text = '';
+    const textRe = /<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g;
+    let tm: RegExpExecArray | null;
+    while ((tm = textRe.exec(paraXml)) !== null) {
+      text += tm[1];
+    }
+    text = text
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'");
+    paragraphs.push(text);
+  }
+  return paragraphs;
+}

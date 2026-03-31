@@ -1,15 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, FileText, Loader2, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { proposalTemplatesApi, GeneratedProposal } from '@/lib/api/proposal-templates-client';
-import GenerateProposalDialog from '@/components/quotes/GenerateProposalDialog';
-import ProposalSourceDialog from './ProposalSourceDialog';
-import type { Quote, Project } from '@/lib/types';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -30,11 +28,8 @@ function stripDocx(name: string): string {
 }
 
 export default function ProposalsView() {
+  const router = useRouter();
   const queryClient = useQueryClient();
-  const [sourceOpen, setSourceOpen] = useState(false);
-  const [generateOpen, setGenerateOpen] = useState(false);
-  const [selectedQuote, setSelectedQuote] = useState<Quote | undefined>();
-  const [selectedProject, setSelectedProject] = useState<Project | undefined>();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -45,19 +40,6 @@ export default function ProposalsView() {
     queryKey: ['proposals-generated'],
     queryFn: () => proposalTemplatesApi.getGenerated(),
   });
-
-  const handleSourceContinue = ({ quote, project }: { quote?: Quote; project?: Project }) => {
-    setSelectedQuote(quote);
-    setSelectedProject(project);
-    setGenerateOpen(true);
-  };
-
-  const handleGenerateOpenChange = (open: boolean) => {
-    setGenerateOpen(open);
-    if (!open) {
-      queryClient.invalidateQueries({ queryKey: ['proposals-generated'] });
-    }
-  };
 
   const handleDownload = async (proposal: GeneratedProposal) => {
     setDownloadingId(proposal.id);
@@ -115,8 +97,7 @@ export default function ProposalsView() {
   };
 
   return (
-    <>
-      <div className="flex-1 overflow-auto">
+    <div className="flex-1 overflow-auto">
         <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -126,7 +107,7 @@ export default function ProposalsView() {
                 Generate and manage proposals from quote data
               </p>
             </div>
-            <Button size="sm" className="gap-1.5" onClick={() => setSourceOpen(true)}>
+            <Button size="sm" className="gap-1.5" onClick={() => router.push('/proposals/new')}>
               <Plus className="h-3.5 w-3.5" />
               Generate Proposal
             </Button>
@@ -253,20 +234,6 @@ export default function ProposalsView() {
             )}
           </div>
         </div>
-      </div>
-
-      <ProposalSourceDialog
-        open={sourceOpen}
-        onOpenChange={setSourceOpen}
-        onContinue={handleSourceContinue}
-      />
-
-      <GenerateProposalDialog
-        open={generateOpen}
-        onOpenChange={handleGenerateOpenChange}
-        quote={selectedQuote}
-        project={selectedProject}
-      />
-    </>
+    </div>
   );
 }

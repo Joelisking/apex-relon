@@ -3,6 +3,7 @@ import { PrismaService } from '../database/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import {
   fillDocx,
+  extractParagraphs,
   formatProposalDate,
   monthName,
   formatCurrency,
@@ -91,6 +92,16 @@ export class ProposalTemplatesService {
         uploadedBy: { select: { id: true, name: true } },
       },
     });
+  }
+
+  async getTemplateContent(templateId: string): Promise<{ paragraphs: string[] }> {
+    const template = await this.prisma.proposalTemplate.findUnique({
+      where: { id: templateId },
+    });
+    if (!template) throw new NotFoundException('Template not found');
+    const stream = this.storageService.getFileStream(template.gcpPath);
+    const buffer = await streamToBuffer(stream);
+    return { paragraphs: extractParagraphs(buffer) };
   }
 
   async downloadGeneratedFile(fileId: string) {

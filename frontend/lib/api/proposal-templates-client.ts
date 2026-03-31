@@ -98,6 +98,10 @@ export const proposalTemplatesApi = {
     return apiFetch(`/proposal-templates/${id}`, { method: 'DELETE' });
   },
 
+  getContent(templateId: string): Promise<{ paragraphs: string[] }> {
+    return apiFetch<{ paragraphs: string[] }>(`/proposal-templates/${templateId}/content`);
+  },
+
   generate(templateId: string, dto: GenerateProposalInput): Promise<GenerateProposalResult> {
     return apiFetch<GenerateProposalResult>(`/proposal-templates/${templateId}/generate`, {
       method: 'POST',
