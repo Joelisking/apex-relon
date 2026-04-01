@@ -11,13 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { usersApi, type UserDirectoryItem } from '@/lib/api/users-client';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -70,19 +64,18 @@ export function ProxyUserPickerDialog({
             {isLoading ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : (
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a team member…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teamMembers.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name}
-                      <span className="ml-2 text-xs text-muted-foreground">{u.role}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={selectedUserId}
+                onValueChange={setSelectedUserId}
+                placeholder="Choose a team member…"
+                searchPlaceholder="Search by name or role…"
+                emptyMessage="No team members found."
+                options={teamMembers.map((u) => ({
+                  value: u.id,
+                  label: u.name,
+                  keywords: u.role,
+                }))}
+              />
             )}
           </div>
         </div>

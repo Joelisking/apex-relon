@@ -15,13 +15,6 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { TimePicker } from '@/components/tasks/TimePicker';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { API_URL, getTokenFromClientCookies, serviceItemsApi } from '@/lib/api/client';
 import { workCodesApi, groupWorkCodes, type WorkCode } from '@/lib/api/work-codes-client';
@@ -202,7 +195,7 @@ export function TimeEntryDialog({
 
   // Reset subtask when service item changes
   const handleServiceItemChange = (val: string) => {
-    setServiceItemId(val === '__none__' ? '' : val);
+    setServiceItemId(val);
     setServiceItemSubtaskId('');
   };
 
@@ -368,38 +361,23 @@ export function TimeEntryDialog({
               <Label>
                 Work Code <span className="text-destructive">*</span>
               </Label>
-              <Select
-                value={workCodeId || '__none__'}
-                onValueChange={(v) => setWorkCodeId(v === '__none__' ? '' : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select work code…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Select work code…</SelectItem>
-                  {workCodeGroups.map(({ mainTask, subtasks }) => (
-                    <div key={mainTask.id}>
-                      {subtasks.length > 0 ? (
-                        <>
-                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                            {mainTask.code} – {mainTask.name}
-                          </div>
-                          {subtasks.map((st) => (
-                            <SelectItem key={st.id} value={st.id} className="pl-6">
-                              {st.code} – {st.name}
-                            </SelectItem>
-                          ))}
-                        </>
-                      ) : (
-                        <SelectItem key={mainTask.id} value={mainTask.id}>
-                          {mainTask.code} – {mainTask.name}
-                        </SelectItem>
-                      )}
-                    </div>
-                  ))}
-                </SelectContent>
-              </Select>
-              {isEngineeringProject && !workCodeId && (
+              <SearchableSelect
+                value={workCodeId}
+                onValueChange={setWorkCodeId}
+                placeholder="Select work code…"
+                searchPlaceholder="Search by code or name…"
+                emptyMessage="No work codes found."
+                options={workCodeGroups.flatMap(({ mainTask, subtasks }) =>
+                  subtasks.length > 0
+                    ? subtasks.map((st) => ({
+                        value: st.id,
+                        label: `${st.code} – ${st.name}`,
+                        keywords: String(mainTask.code),
+                      }))
+                    : [{ value: mainTask.id, label: `${mainTask.code} – ${mainTask.name}` }],
+                )}
+              />
+              {!workCodeId && (
                 <p className="text-xs text-muted-foreground">Work code is required for engineering projects</p>
               )}
             </div>
@@ -408,41 +386,34 @@ export function TimeEntryDialog({
           {/* Service Item */}
           <div className="space-y-1.5">
             <Label>Service Item</Label>
-            <Select value={serviceItemId || '__none__'} onValueChange={handleServiceItemChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select service item (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
-                {serviceItems.map((si) => (
-                  <SelectItem key={si.id} value={si.id}>
-                    {si.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={serviceItemId}
+              onValueChange={handleServiceItemChange}
+              placeholder="Select service item (optional)"
+              searchPlaceholder="Search service items…"
+              emptyMessage="No service items found."
+              options={[
+                { value: '', label: 'None' },
+                ...serviceItems.map((si) => ({ value: si.id, label: si.name })),
+              ]}
+            />
           </div>
 
           {/* Subtask — only shown when a service item is selected and has subtasks */}
           {serviceItemId && subtasks.length > 0 && (
             <div className="space-y-1.5">
               <Label>Subtask</Label>
-              <Select
-                value={serviceItemSubtaskId || '__none__'}
-                onValueChange={(v) => setServiceItemSubtaskId(v === '__none__' ? '' : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select subtask (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">None</SelectItem>
-                  {subtasks.map((st) => (
-                    <SelectItem key={st.id} value={st.id}>
-                      {st.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={serviceItemSubtaskId}
+                onValueChange={setServiceItemSubtaskId}
+                placeholder="Select subtask (optional)"
+                searchPlaceholder="Search subtasks…"
+                emptyMessage="No subtasks found."
+                options={[
+                  { value: '', label: 'None' },
+                  ...subtasks.map((st) => ({ value: st.id, label: st.name })),
+                ]}
+              />
             </div>
           )}
 
