@@ -134,9 +134,11 @@ export function TimeTrackingView() {
     ? `&startDate=${startDate}&endDate=${endDate}`
     : '';
 
-  // When the user has manage_all, explicitly pass their userId so the backend
+  const canViewAll = canManageAll || canEnterForOthers;
+
+  // When the user can view all entries, explicitly pass their userId so the backend
   // doesn't return all users' entries for the "My Time" tab.
-  const myUserQuery = canManageAll && user?.id ? `&userId=${user.id}` : '';
+  const myUserQuery = canViewAll && user?.id ? `&userId=${user.id}` : '';
 
   const { data: myEntries = [], isLoading: myLoading } = useQuery<TimeEntry[]>({
     queryKey: ['time-entries', 'my', user?.id, startDate, endDate],
@@ -147,13 +149,13 @@ export function TimeTrackingView() {
   const { data: allEntries = [], isLoading: allLoading } = useQuery<TimeEntry[]>({
     queryKey: ['time-entries', 'all', startDate, endDate],
     queryFn: () => ttFetch<TimeEntry[]>(`/entries?limit=200${dateQuery}`),
-    enabled: tab === 'team-time' && canManageAll,
+    enabled: tab === 'team-time' && canViewAll,
   });
 
-  const timesheetUserQuery = !canManageAll && user?.id ? `&userId=${user.id}` : '';
+  const timesheetUserQuery = !canViewAll && user?.id ? `&userId=${user.id}` : '';
 
   const { data: timesheet, isLoading: timesheetLoading } = useQuery<TimesheetData>({
-    queryKey: ['timesheet', weekStart, canManageAll ? 'all' : user?.id],
+    queryKey: ['timesheet', weekStart, canViewAll ? 'all' : user?.id],
     queryFn: () => ttFetch<TimesheetData>(`/timesheet?startDate=${weekStart}${timesheetUserQuery}`),
     enabled: tab === 'timesheet',
   });
@@ -371,7 +373,7 @@ export function TimeTrackingView() {
             <Clock className="h-4 w-4 sm:mr-1.5" />
             <span className="hidden sm:inline">My Time</span>
           </TabsTrigger>
-          {canManageAll && (
+          {canViewAll && (
             <TabsTrigger value="team-time">
               <Users className="h-4 w-4 sm:mr-1.5" />
               <span className="hidden sm:inline">Team Time</span>

@@ -55,9 +55,9 @@ export class TimeTrackingController {
     @Query('endDate') endDate?: string,
     @Query('limit') limit?: string,
   ) {
-    // P0-5: Restrict userId param — only time_tracking:manage_all can query other users
     const canManageAll = await this.permissionsService.hasPermission(user.role, 'time_tracking:manage_all');
-    const effectiveUserId = canManageAll ? userId : user.id;
+    const canEnterForOthers = await this.permissionsService.hasPermission(user.role, 'time_tracking:enter_for_others');
+    const effectiveUserId = (canManageAll || canEnterForOthers) ? userId : user.id;
 
     return this.timeTrackingService.getEntries({
       userId: effectiveUserId,
@@ -157,7 +157,8 @@ export class TimeTrackingController {
     @Query('userId') userId?: string,
   ) {
     const canManageAll = await this.permissionsService.hasPermission(user.role, 'time_tracking:manage_all');
-    const effectiveUserId = canManageAll ? userId : user.id;
+    const canEnterForOthers = await this.permissionsService.hasPermission(user.role, 'time_tracking:enter_for_others');
+    const effectiveUserId = (canManageAll || canEnterForOthers) ? userId : user.id;
     return this.timeTrackingService.getWeeklyTimesheet(startDate, effectiveUserId);
   }
 }
