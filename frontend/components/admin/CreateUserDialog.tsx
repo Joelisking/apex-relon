@@ -113,17 +113,21 @@ export function CreateUserDialog({
     if (currentUserRole === 'BDM') {
       return availableRoles.filter((r) => r.key === 'SALES');
     }
+    if (currentUserRole === 'CEO') {
+      // CEO can create any role except CEO
+      return availableRoles.filter((r) => r.key !== 'CEO');
+    }
     if (currentUserRole === 'ADMIN') {
       // ADMIN cannot create CEO or ADMIN users
       return availableRoles.filter(
         (r) => r.key !== 'CEO' && r.key !== 'ADMIN',
       );
     }
-    if (currentUserRole === 'CEO') {
-      // CEO can create any role except CEO
-      return availableRoles.filter((r) => r.key !== 'CEO');
-    }
-    return [];
+    // All other roles with users:create permission (e.g. PROJECT_MANAGER)
+    // can assign any non-privileged role
+    return availableRoles.filter(
+      (r) => r.key !== 'CEO' && r.key !== 'ADMIN',
+    );
   };
 
   const allowedRoles = getAllowedRoles();
@@ -349,6 +353,10 @@ export function CreateUserDialog({
                       'You can create users with any role except CEO and Admin'}
                     {currentUserRole === 'BDM' &&
                       'You can create Sales users only'}
+                    {currentUserRole !== 'CEO' &&
+                      currentUserRole !== 'ADMIN' &&
+                      currentUserRole !== 'BDM' &&
+                      'You can assign any non-admin role'}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
