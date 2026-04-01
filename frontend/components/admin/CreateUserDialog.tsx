@@ -359,7 +359,6 @@ export function CreateUserDialog({
               )}
 
             {selectedRole === 'SALES' &&
-              currentUserRole !== 'BDM' &&
               managers.length > 0 && (
                 <FormField
                   control={form.control}

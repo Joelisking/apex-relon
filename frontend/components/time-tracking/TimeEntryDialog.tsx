@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { DatePicker } from '@/components/ui/date-picker';
 import { TimePicker } from '@/components/tasks/TimePicker';
 import { Label } from '@/components/ui/label';
@@ -92,8 +93,10 @@ export function TimeEntryDialog({
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
+  const [inputMode, setInputMode] = useState<'times' | 'hours'>('times');
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('09:00');
+  const [directHours, setDirectHours] = useState('');
   const [projectId, setProjectId] = useState('');
   const [description, setDescription] = useState('');
   const [billable, setBillable] = useState<boolean | null>(null);
@@ -111,6 +114,8 @@ export function TimeEntryDialog({
     if (diff <= 0) return 0;
     return Math.round((diff / 3600) * 10000) / 10000;
   })();
+
+  const effectiveHours = inputMode === 'times' ? computedHours : (parseFloat(directHours) || 0);
 
   // Fetch projects (with service type category for engineering detection)
   const { data: projects = [] } = useQuery<ProjectOption[]>({
@@ -148,13 +153,12 @@ export function TimeEntryDialog({
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (entry) {
+      // Editing an existing entry — use direct hours mode since we don't store start/end times
+      setInputMode('hours');
       setDate(entry.date.split('T')[0]);
-      const h = entry.hours || 1;
+      setDirectHours(String(entry.hours));
       setStartTime('08:00');
-      const endTotalMin = 8 * 60 + Math.round(h * 60);
-      const eh = Math.floor(endTotalMin / 60);
-      const em = endTotalMin % 60;
-      setEndTime(`${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`);
+      setEndTime('09:00');
       setProjectId(entry.projectId ?? '');
       setDescription(entry.description ?? '');
       setBillable(entry.billable);
@@ -162,6 +166,7 @@ export function TimeEntryDialog({
       setServiceItemId(entry.serviceItemId ?? '');
       setServiceItemSubtaskId(entry.serviceItemSubtaskId ?? '');
     } else {
+      setInputMode('times');
       const today = new Date();
       setDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
       setStartTime('08:00');
@@ -170,6 +175,7 @@ export function TimeEntryDialog({
       const eh = Math.floor(endTotalMin / 60);
       const em = endTotalMin % 60;
       setEndTime(`${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`);
+      setDirectHours('');
       setProjectId(initialProjectId ?? '');
       setDescription('');
       setBillable(null);
@@ -196,13 +202,13 @@ export function TimeEntryDialog({
     setServiceItemSubtaskId('');
   };
 
-  const canSave = computedHours > 0 && billable !== null && (!isEngineeringProject || !!workCodeId);
+  const canSave = effectiveHours >= 0.25 && effectiveHours <= 24 && billable !== null && (!isEngineeringProject || !!workCodeId);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       const payload: Record<string, unknown> = {
         date,
-        hours: computedHours,
+        hours: effectiveHours,
         projectId: projectId || undefined,
         description: description || undefined,
         billable: billable!,
@@ -253,34 +259,84 @@ export function TimeEntryDialog({
             <DatePicker value={date} onChange={setDate} clearable={false} />
           </div>
 
-          {/* Start / End Time */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="mb-1.5 block">Start Time</Label>
-              <TimePicker value={startTime} onChange={setStartTime} minuteStep={1} />
-            </div>
-            <div>
-              <Label className="mb-1.5 block">End Time</Label>
-              <TimePicker value={endTime} onChange={setEndTime} minuteStep={1} />
-            </div>
+          {/* Time input mode toggle */}
+          <div className="flex gap-1 rounded-md border p-1 w-fit">
+            <button
+              type="button"
+              onClick={() => setInputMode('times')}
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                inputMode === 'times'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Start / End Time
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode('hours')}
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                inputMode === 'hours'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Total Hours
+            </button>
           </div>
 
-          {/* Duration display */}
-          <div className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2">
-            <span className="text-xs text-muted-foreground">Duration:</span>
-            {computedHours > 0 ? (
-              <span className="text-sm font-medium tabular-nums">
-                {(() => {
-                  const totalMin = Math.round(computedHours * 60);
-                  const hh = Math.floor(totalMin / 60);
-                  const mm = totalMin % 60;
-                  return `${hh}h ${mm}m (${computedHours.toFixed(2)} hrs)`;
-                })()}
-              </span>
-            ) : (
-              <span className="text-sm text-destructive">End time must be after start time</span>
-            )}
-          </div>
+          {inputMode === 'times' ? (
+            <>
+              {/* Start / End Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="mb-1.5 block">Start Time</Label>
+                  <TimePicker value={startTime} onChange={setStartTime} minuteStep={1} />
+                </div>
+                <div>
+                  <Label className="mb-1.5 block">End Time</Label>
+                  <TimePicker value={endTime} onChange={setEndTime} minuteStep={1} />
+                </div>
+              </div>
+
+              {/* Duration display */}
+              <div className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2">
+                <span className="text-xs text-muted-foreground">Duration:</span>
+                {computedHours > 0 ? (
+                  <span className="text-sm font-medium tabular-nums">
+                    {(() => {
+                      const totalMin = Math.round(computedHours * 60);
+                      const hh = Math.floor(totalMin / 60);
+                      const mm = totalMin % 60;
+                      return `${hh}h ${mm}m (${computedHours.toFixed(2)} hrs)`;
+                    })()}
+                  </span>
+                ) : (
+                  <span className="text-sm text-destructive">End time must be after start time</span>
+                )}
+              </div>
+            </>
+          ) : (
+            /* Direct hours input */
+            <div className="space-y-1.5">
+              <Label>
+                Hours <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                type="number"
+                min={0.25}
+                max={24}
+                step={0.25}
+                value={directHours}
+                onChange={(e) => setDirectHours(e.target.value)}
+                placeholder="e.g. 2.5"
+                className="w-36"
+              />
+              {directHours && (parseFloat(directHours) < 0.25 || parseFloat(directHours) > 24) && (
+                <p className="text-xs text-destructive">Must be between 0.25 and 24 hours</p>
+              )}
+            </div>
+          )}
 
           {/* Project */}
           <div className="space-y-1.5">

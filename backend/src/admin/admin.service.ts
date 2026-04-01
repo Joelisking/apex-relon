@@ -38,17 +38,29 @@ export class AdminService {
    * CEO/SUPER_ADMIN bypass applies unconditionally.
    */
   private async canManageUser(
-    currentUserRole: string,
-    targetUserRole: string,
+    currentUserRoleKey: string,
+    targetUserRoleKey: string,
   ): Promise<boolean> {
-    if (currentUserRole === 'CEO' || currentUserRole === 'SUPER_ADMIN') return true;
-    if (targetUserRole === 'CEO' || targetUserRole === 'SUPER_ADMIN') return false;
+    // SUPER_ADMIN is a protected system account — never manageable, always bypasses
+    if (targetUserRoleKey === 'SUPER_ADMIN') return false;
+    if (currentUserRoleKey === 'SUPER_ADMIN') return true;
 
-    const currentHasUsersEdit = await this.permissionsService.hasPermission(currentUserRole, 'users:edit');
+    const [currentRole, targetRole] = await Promise.all([
+      this.prisma.role.findUnique({ where: { key: currentUserRoleKey } }),
+      this.prisma.role.findUnique({ where: { key: targetUserRoleKey } }),
+    ]);
+
+    // Cannot manage top-tier roles (those that can assign built-in roles)
+    if (targetRole?.canAssignBuiltIn) return false;
+
+    // Top-tier roles can manage everyone
+    if (currentRole?.canAssignBuiltIn) return true;
+
+    const currentHasUsersEdit = await this.permissionsService.hasPermission(currentUserRoleKey, 'users:edit');
     if (!currentHasUsersEdit) return false;
 
-    // Can manage users who don't themselves have users:edit (i.e., non-admin roles)
-    const targetHasUsersEdit = await this.permissionsService.hasPermission(targetUserRole, 'users:edit');
+    // Can manage users who don't themselves have users:edit (non-privileged roles)
+    const targetHasUsersEdit = await this.permissionsService.hasPermission(targetUserRoleKey, 'users:edit');
     return !targetHasUsersEdit;
   }
 
@@ -442,11 +454,17 @@ export class AdminService {
       );
     }
 
-    if (targetUser.role === 'CEO' || targetUser.role === 'SUPER_ADMIN') {
+    if (targetUser.role === 'SUPER_ADMIN') {
       throw new ForbiddenException('This user cannot be deleted');
     }
 
-    // Only users with users:delete permission can delete; only CEO can delete users with users:edit
+    const targetRoleRecord = await this.prisma.role.findUnique({
+      where: { key: targetUser.role },
+    });
+    if (targetRoleRecord?.canAssignBuiltIn) {
+      throw new ForbiddenException('This user cannot be deleted');
+    }
+
     if (!(await this.canManageUser(currentUser.role, targetUser.role))) {
       throw new ForbiddenException('You do not have permission to delete this user');
     }
