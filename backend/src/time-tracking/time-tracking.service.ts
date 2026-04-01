@@ -20,6 +20,7 @@ export class TimeTrackingService {
         userId: dto.userId,
         projectId: dto.projectId,
         taskId: dto.taskId,
+        workCodeId: dto.workCodeId,
         date: new Date(`${dto.date.split('T')[0]}T12:00:00.000Z`),
         hours: dto.hours,
         description: dto.description,
@@ -30,7 +31,11 @@ export class TimeTrackingService {
         serviceItemId: dto.serviceItemId,
         serviceItemSubtaskId: dto.serviceItemSubtaskId,
       },
-      include: { user: { select: { id: true, name: true } }, project: { select: { id: true, name: true } } },
+      include: {
+        user: { select: { id: true, name: true } },
+        project: { select: { id: true, name: true } },
+        workCode: { select: { id: true, code: true, name: true, parentCode: true, isMainTask: true } },
+      },
     });
   }
 
@@ -63,6 +68,7 @@ export class TimeTrackingService {
       include: {
         user: { select: { id: true, name: true } },
         project: { select: { id: true, name: true } },
+        workCode: { select: { id: true, code: true, name: true, parentCode: true, isMainTask: true } },
         serviceItem: { select: { id: true, name: true } },
         serviceItemSubtask: { select: { id: true, name: true } },
       },
@@ -84,6 +90,7 @@ export class TimeTrackingService {
         ...(data.billable !== undefined && { billable: data.billable }),
         ...(data.hourlyRate !== undefined && { hourlyRate: data.hourlyRate }),
         ...(data.projectId !== undefined && { projectId: data.projectId }),
+        ...(data.workCodeId !== undefined && { workCodeId: data.workCodeId }),
         ...(data.serviceItemId !== undefined && { serviceItemId: data.serviceItemId }),
         ...(data.serviceItemSubtaskId !== undefined && { serviceItemSubtaskId: data.serviceItemSubtaskId }),
         totalCost: hours * hourlyRate,

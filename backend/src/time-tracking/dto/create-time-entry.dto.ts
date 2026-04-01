@@ -48,6 +48,10 @@ export class CreateTimeEntryDto {
 
   @IsUUID()
   @IsOptional()
+  workCodeId?: string;
+
+  @IsUUID()
+  @IsOptional()
   serviceItemId?: string;
 
   @IsUUID()

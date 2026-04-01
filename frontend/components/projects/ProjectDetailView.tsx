@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { CostLogsSection } from './CostLogsSection';
+import { ProjectTimeTrackingSection } from './ProjectTimeTrackingSection';
 import { LinkedTasksSection } from '../tasks/LinkedTasksSection';
 import { LinkedQuotesSection } from '../quotes/LinkedQuotesSection';
 import { ProjectActivityTimeline } from './ProjectActivityTimeline';
@@ -289,12 +290,15 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
     ? `${project.jobNumber} - ${project.name}`
     : project.name;
 
+  const isEngineeringProject = project.serviceType?.category?.name === 'Engineering';
+
   const TABS = [
     { value: 'overview', label: 'Overview' },
     { value: 'budget', label: 'Budget' },
     { value: 'tasks', label: 'Tasks' },
     { value: 'quotes', label: 'Quotes' },
     { value: 'crew', label: 'Crew' },
+    ...(isEngineeringProject ? [{ value: 'time', label: 'Time Tracking' }] : []),
     { value: 'documents', label: `Documents${files.length > 0 ? ` (${files.length})` : ''}` },
   ];
 
@@ -472,6 +476,15 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
                 />
               </div>
             </TabsContent>
+
+            {isEngineeringProject && (
+              <TabsContent value="time" className="mt-0">
+                <ProjectTimeTrackingSection
+                  projectId={project.id}
+                  canLogTime={hasPermission('time_tracking:create')}
+                />
+              </TabsContent>
+            )}
 
             <TabsContent value="documents" className="mt-0">
               <ProjectFileUploadSection

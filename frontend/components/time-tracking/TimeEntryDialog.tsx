@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { API_URL, getTokenFromClientCookies, serviceItemsApi } from '@/lib/api/client';
+import { workCodesApi, groupWorkCodes, type WorkCode } from '@/lib/api/work-codes-client';
 import type { ServiceItem } from '@/lib/types';
 
 function getToken() {
@@ -45,7 +46,7 @@ async function ttFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
-interface TimeEntry {
+export interface TimeEntry {
   id: string;
   userId: string;
   projectId?: string;
@@ -54,8 +55,15 @@ interface TimeEntry {
   description?: string;
   billable: boolean;
   hourlyRate?: number;
+  workCodeId?: string;
   serviceItemId?: string;
   serviceItemSubtaskId?: string;
+}
+
+interface ProjectOption {
+  id: string;
+  name: string;
+  serviceType?: { category?: { name: string } | null } | null;
 }
 
 interface TimeEntryDialogProps {
@@ -86,6 +94,7 @@ export function TimeEntryDialog({
   const [projectId, setProjectId] = useState('');
   const [description, setDescription] = useState('');
   const [billable, setBillable] = useState<boolean | null>(null);
+  const [workCodeId, setWorkCodeId] = useState('');
   const [serviceItemId, setServiceItemId] = useState('');
   const [serviceItemSubtaskId, setServiceItemSubtaskId] = useState('');
 
@@ -100,8 +109,8 @@ export function TimeEntryDialog({
     return Math.round((diff / 3600) * 10000) / 10000;
   })();
 
-  // Fetch projects
-  const { data: projects = [] } = useQuery<{ id: string; name: string }[]>({
+  // Fetch projects (with service type category for engineering detection)
+  const { data: projects = [] } = useQuery<ProjectOption[]>({
     queryKey: ['projects-simple'],
     queryFn: async () => {
       const res = await fetch(`${API_URL}/projects?limit=100`, {
@@ -111,6 +120,17 @@ export function TimeEntryDialog({
       return Array.isArray(data) ? data : (data.projects ?? data.data ?? []);
     },
   });
+
+  const selectedProject = projects.find((p) => p.id === projectId);
+  const isEngineeringProject = selectedProject?.serviceType?.category?.name === 'Engineering';
+
+  // Fetch work codes — only when an engineering project is selected
+  const { data: workCodes = [] } = useQuery<WorkCode[]>({
+    queryKey: ['work-codes'],
+    queryFn: () => workCodesApi.getAll(),
+    enabled: isEngineeringProject,
+  });
+  const workCodeGroups = groupWorkCodes(workCodes);
 
   // Fetch service items (with subtasks embedded)
   const { data: serviceItems = [] } = useQuery<ServiceItem[]>({
@@ -135,6 +155,7 @@ export function TimeEntryDialog({
       setProjectId(entry.projectId ?? '');
       setDescription(entry.description ?? '');
       setBillable(entry.billable);
+      setWorkCodeId(entry.workCodeId ?? '');
       setServiceItemId(entry.serviceItemId ?? '');
       setServiceItemSubtaskId(entry.serviceItemSubtaskId ?? '');
     } else {
@@ -149,11 +170,22 @@ export function TimeEntryDialog({
       setProjectId(initialProjectId ?? '');
       setDescription('');
       setBillable(null);
+      setWorkCodeId('');
       setServiceItemId('');
       setServiceItemSubtaskId('');
     }
   }, [entry, open, initialHours, initialProjectId]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Reset work code when project changes away from engineering
+  const handleProjectChange = (val: string) => {
+    const newProjectId = val === '__none__' ? '' : val;
+    setProjectId(newProjectId);
+    const newProject = projects.find((p) => p.id === newProjectId);
+    if (newProject?.serviceType?.category?.name !== 'Engineering') {
+      setWorkCodeId('');
+    }
+  };
 
   // Reset subtask when service item changes
   const handleServiceItemChange = (val: string) => {
@@ -161,7 +193,7 @@ export function TimeEntryDialog({
     setServiceItemSubtaskId('');
   };
 
-  const canSave = computedHours > 0 && billable !== null;
+  const canSave = computedHours > 0 && billable !== null && (!isEngineeringProject || !!workCodeId);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -171,6 +203,7 @@ export function TimeEntryDialog({
         projectId: projectId || undefined,
         description: description || undefined,
         billable: billable!,
+        workCodeId: workCodeId || undefined,
         serviceItemId: serviceItemId || undefined,
         serviceItemSubtaskId: serviceItemSubtaskId || undefined,
       };
@@ -242,7 +275,7 @@ export function TimeEntryDialog({
           {/* Project */}
           <div className="space-y-1.5">
             <Label>Project</Label>
-            <Select value={projectId} onValueChange={(v) => setProjectId(v === '__none__' ? '' : v)}>
+            <Select value={projectId} onValueChange={handleProjectChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select project (optional)" />
               </SelectTrigger>
@@ -256,6 +289,49 @@ export function TimeEntryDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Work Code — required for engineering projects */}
+          {isEngineeringProject && (
+            <div className="space-y-1.5">
+              <Label>
+                Work Code <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={workCodeId || '__none__'}
+                onValueChange={(v) => setWorkCodeId(v === '__none__' ? '' : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select work code…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Select work code…</SelectItem>
+                  {workCodeGroups.map(({ mainTask, subtasks }) => (
+                    <div key={mainTask.id}>
+                      {subtasks.length > 0 ? (
+                        <>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                            {mainTask.code} – {mainTask.name}
+                          </div>
+                          {subtasks.map((st) => (
+                            <SelectItem key={st.id} value={st.id} className="pl-6">
+                              {st.code} – {st.name}
+                            </SelectItem>
+                          ))}
+                        </>
+                      ) : (
+                        <SelectItem key={mainTask.id} value={mainTask.id}>
+                          {mainTask.code} – {mainTask.name}
+                        </SelectItem>
+                      )}
+                    </div>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isEngineeringProject && !workCodeId && (
+                <p className="text-xs text-muted-foreground">Work code is required for engineering projects</p>
+              )}
+            </div>
+          )}
 
           {/* Service Item */}
           <div className="space-y-1.5">

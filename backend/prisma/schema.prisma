@@ -910,6 +910,27 @@ model QuickBooksSync {
   @@map("quickbooks_syncs")
 }
 
+// ─── Work Codes ───────────────────────────────────────────────────────────────
+
+model WorkCode {
+  id         String      @id @default(uuid())
+  code       Int         @unique
+  name       String
+  division   Int         // 5000 | 6000 | 7000
+  parentCode Int?        // rollup code — null for main tasks
+  isMainTask Boolean     @default(false)
+  isActive   Boolean     @default(true)
+  sortOrder  Int         @default(0)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  timeEntries TimeEntry[]
+
+  @@index([division])
+  @@index([parentCode])
+  @@map("work_codes")
+}
+
 // ─── Time Tracking ────────────────────────────────────────────────────────────
 
 model TimeEntry {
@@ -917,6 +938,7 @@ model TimeEntry {
   userId               String
   projectId            String?
   taskId               String?
+  workCodeId           String?
   serviceItemId        String?
   serviceItemSubtaskId String?
   date                 DateTime
@@ -931,11 +953,13 @@ model TimeEntry {
 
   user               User                @relation("UserTimeEntries", fields: [userId], references: [id], onDelete: Cascade)
   project            Project?            @relation("ProjectTimeEntries", fields: [projectId], references: [id], onDelete: SetNull)
+  workCode           WorkCode?           @relation(fields: [workCodeId], references: [id], onDelete: SetNull)
   serviceItem        ServiceItem?        @relation(fields: [serviceItemId], references: [id], onDelete: SetNull)
   serviceItemSubtask ServiceItemSubtask? @relation(fields: [serviceItemSubtaskId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([projectId])
+  @@index([workCodeId])
   @@index([date])
   @@map("time_entries")
 }

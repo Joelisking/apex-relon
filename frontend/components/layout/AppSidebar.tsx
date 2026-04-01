@@ -43,6 +43,7 @@ import {
   CalendarDays,
   Layers,
   Package,
+  Hash,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import {
@@ -242,6 +243,7 @@ const adminNavGroups: AdminNavGroup[] = [
       { title: 'Service Types', href: '/admin/service-types', icon: Layers, permission: 'settings:manage' },
       { title: 'Service Items', href: '/admin/service-items', icon: Package, permission: 'settings:manage' },
       { title: 'Task Types', href: '/admin/task-types', icon: CheckSquare, permission: 'settings:manage' },
+      { title: 'Work Codes', href: '/admin/work-codes', icon: Hash, permission: 'settings:manage' },
       { title: 'Lead Forms', href: '/admin/lead-forms', icon: FormInput, permission: 'settings:manage' },
     ],
   },
