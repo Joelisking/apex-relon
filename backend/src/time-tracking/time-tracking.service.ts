@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { CreateUserRateDto } from './dto/create-user-rate.dto';
@@ -10,7 +10,18 @@ export class TimeTrackingService {
 
   // ─── Time Entries ─────────────────────────────────────────────────────────
 
-  async createEntry(dto: CreateTimeEntryDto & { userId: string }) {
+  async createEntry(dto: CreateTimeEntryDto & { userId: string; submittedById?: string }) {
+    // When a proxy entry is being created, verify the target user actually exists
+    if (dto.submittedById) {
+      const targetExists = await this.prisma.user.findUnique({
+        where: { id: dto.userId },
+        select: { id: true },
+      });
+      if (!targetExists) {
+        throw new BadRequestException(`User ${dto.userId} not found`);
+      }
+    }
+
     const rate = await this.getActiveRate(dto.userId);
     const hourlyRate = dto.hourlyRate ?? rate?.rate ?? 0;
     const totalCost = dto.hours * hourlyRate;
@@ -18,6 +29,7 @@ export class TimeTrackingService {
     return this.prisma.timeEntry.create({
       data: {
         userId: dto.userId,
+        submittedById: dto.submittedById ?? null,
         projectId: dto.projectId,
         taskId: dto.taskId,
         workCodeId: dto.workCodeId,
@@ -33,6 +45,7 @@ export class TimeTrackingService {
       },
       include: {
         user: { select: { id: true, name: true } },
+        submittedBy: { select: { id: true, name: true } },
         project: { select: { id: true, name: true } },
         workCode: { select: { id: true, code: true, name: true, parentCode: true, isMainTask: true } },
       },

@@ -90,6 +90,7 @@ export const ALL_PERMISSIONS: PermissionDefinition[] = [
   { key: 'time_tracking:create', label: 'Create Time Entries', module: 'Time Tracking' },
   { key: 'time_tracking:edit', label: 'Edit Time Entries', module: 'Time Tracking' },
   { key: 'time_tracking:manage_all', label: 'Manage All Users\' Time Entries', module: 'Time Tracking' },
+  { key: 'time_tracking:enter_for_others', label: 'Enter Time on Behalf of Another User', module: 'Time Tracking' },
 
   // Bottleneck Analytics
   { key: 'bottleneck:view', label: 'View Bottleneck Analytics', module: 'Bottleneck Analytics' },
@@ -286,6 +287,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'time_tracking:create',
     'time_tracking:edit',
     'time_tracking:manage_all',
+    'time_tracking:enter_for_others',
     'bottleneck:view',
     'teams:view',
     'teams:create',
@@ -356,6 +358,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'time_tracking:create',
     'time_tracking:edit',
     'time_tracking:manage_all',
+    'time_tracking:enter_for_others',
     'bottleneck:view',
     'tasks:view',
     'tasks:view_all',

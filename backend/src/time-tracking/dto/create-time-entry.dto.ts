@@ -10,9 +10,10 @@ import {
 } from 'class-validator';
 
 export class CreateTimeEntryDto {
+  // When the caller has time_tracking:enter_for_others, this sets the entry's owner
   @IsUUID()
   @IsOptional()
-  userId?: string;
+  targetUserId?: string;
 
   @IsUUID()
   @IsOptional()

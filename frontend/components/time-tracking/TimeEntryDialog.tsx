@@ -71,6 +71,8 @@ interface TimeEntryDialogProps {
   entry?: TimeEntry | null;
   initialHours?: number;
   initialProjectId?: string;
+  /** When set, the entry is submitted on behalf of this user (proxy entry) */
+  targetUser?: { id: string; name: string } | null;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
 }
@@ -80,6 +82,7 @@ export function TimeEntryDialog({
   entry,
   initialHours,
   initialProjectId,
+  targetUser,
   onOpenChange,
   onSaved,
 }: TimeEntryDialogProps) {
@@ -214,6 +217,7 @@ export function TimeEntryDialog({
           body: JSON.stringify(payload),
         });
       } else {
+        if (targetUser) payload.targetUserId = targetUser.id;
         return ttFetch('/entries', {
           method: 'POST',
           body: JSON.stringify(payload),
@@ -234,6 +238,12 @@ export function TimeEntryDialog({
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>{entry ? 'Edit Time Entry' : 'Log Time'}</DialogTitle>
+          {targetUser && !entry && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Logging on behalf of{' '}
+              <span className="font-medium text-foreground">{targetUser.name}</span>
+            </p>
+          )}
         </DialogHeader>
 
         <div className="space-y-4">

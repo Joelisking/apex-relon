@@ -33,9 +33,16 @@ export class TimeTrackingController {
 
   @Post('entries')
   @Permissions('time_tracking:create')
-  createEntry(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateTimeEntryDto) {
-    // Always use the authenticated user's ID — ignore any client-supplied userId
-    return this.timeTrackingService.createEntry({ ...dto, userId: user.id });
+  async createEntry(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateTimeEntryDto) {
+    const canEnterForOthers = await this.permissionsService.hasPermission(
+      user.role,
+      'time_tracking:enter_for_others',
+    );
+
+    const targetUserId = canEnterForOthers && dto.targetUserId ? dto.targetUserId : user.id;
+    const submittedById = targetUserId !== user.id ? user.id : undefined;
+
+    return this.timeTrackingService.createEntry({ ...dto, userId: targetUserId, submittedById });
   }
 
   @Get('entries')
@@ -68,13 +75,19 @@ export class TimeTrackingController {
     @Param('id') id: string,
     @Body() dto: Partial<CreateTimeEntryDto>,
   ) {
-    // Strictly own-only — nobody can edit another person's time entries
     const entry = await this.timeTrackingService.getEntryById(id);
-    if (entry.userId !== user.id) {
+
+    const canEnterForOthers = await this.permissionsService.hasPermission(
+      user.role,
+      'time_tracking:enter_for_others',
+    );
+
+    if (entry.userId !== user.id && !canEnterForOthers) {
       throw new ForbiddenException('You can only edit your own time entries');
     }
-    // Strip userId from updates — cannot reassign entries
-    const { userId: _, ...safeDto } = dto;
+
+    // Strip targetUserId from updates — ownership cannot be changed
+    const { targetUserId: _, ...safeDto } = dto;
     return this.timeTrackingService.updateEntry(id, safeDto);
   }
 
@@ -82,11 +95,17 @@ export class TimeTrackingController {
   @HttpCode(204)
   @Permissions('time_tracking:edit')
   async deleteEntry(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    // Strictly own-only — nobody can delete another person's time entries
     const entry = await this.timeTrackingService.getEntryById(id);
-    if (entry.userId !== user.id) {
+
+    const canEnterForOthers = await this.permissionsService.hasPermission(
+      user.role,
+      'time_tracking:enter_for_others',
+    );
+
+    if (entry.userId !== user.id && !canEnterForOthers) {
       throw new ForbiddenException('You can only delete your own time entries');
     }
+
     return this.timeTrackingService.deleteEntry(id);
   }
 

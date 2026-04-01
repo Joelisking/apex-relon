@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Clock, Users, Trash2, Pencil, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Clock, Users, Trash2, Pencil, CalendarDays, ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Label } from '@/components/ui/label';
@@ -25,6 +25,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { TimeEntryDialog } from './TimeEntryDialog';
 import { TimerWidget } from './TimerWidget';
+import { ProxyUserPickerDialog } from './ProxyUserPickerDialog';
+import type { UserDirectoryItem } from '@/lib/api/users-client';
 import { API_URL, getTokenFromClientCookies } from '@/lib/api/client';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -107,10 +109,13 @@ function formatDate(iso: string) {
 export function TimeTrackingView() {
   const { user, hasPermission } = useAuth();
   const canManageAll = hasPermission('time_tracking:manage_all');
+  const canEnterForOthers = hasPermission('time_tracking:enter_for_others');
 
   const [tab, setTab] = useState('my-time');
   const [entryDialogOpen, setEntryDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
+  const [proxyPickerOpen, setProxyPickerOpen] = useState(false);
+  const [proxyUser, setProxyUser] = useState<UserDirectoryItem | null>(null);
   const queryClient = useQueryClient();
 
   // Date range filter — default to current month
@@ -181,62 +186,66 @@ export function TimeTrackingView() {
     setWeekStart(d.toISOString().split('T')[0]);
   };
 
-  const renderEntryRow = (entry: TimeEntry, showUser = false) => (
-    <TableRow key={entry.id}>
-      <TableCell className="text-sm whitespace-nowrap">
-        {new Date(entry.date.split('T')[0] + 'T12:00:00').toLocaleDateString()}
-      </TableCell>
-      {showUser && (
-        <TableCell className="font-medium text-sm">{entry.user?.name ?? '—'}</TableCell>
-      )}
-      <TableCell className="text-sm">
-        {entry.project?.name ?? <span className="text-muted-foreground">—</span>}
-      </TableCell>
-      <TableCell className="text-sm max-w-[160px] truncate">
-        {entry.serviceItem ? (
-          <span className="text-xs">
-            <span className="font-medium">{entry.serviceItem.name}</span>
-            {entry.serviceItemSubtask && (
-              <span className="text-muted-foreground"> · {entry.serviceItemSubtask.name}</span>
-            )}
-          </span>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </TableCell>
-      <TableCell className="max-w-[160px] truncate text-sm text-muted-foreground">
-        {entry.description ?? '—'}
-      </TableCell>
-      <TableCell className="font-mono text-sm">{formatHours(entry.hours)}</TableCell>
-      <TableCell>
-        {entry.billable ? (
-          <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">Billable</Badge>
-        ) : (
-          <Badge variant="secondary" className="text-xs">Non-billable</Badge>
-        )}
-      </TableCell>
-      {!showUser && (
-        <TableCell>
-          <div className="flex gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7"
-              onClick={() => { setEditingEntry(entry); setEntryDialogOpen(true); }}>
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7 text-destructive hover:text-destructive"
-              onClick={() => deleteMutation.mutate(entry.id)}>
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+  const renderEntryRow = (entry: TimeEntry, showUser = false) => {
+    // My Time tab: always show actions (own entries). Team Time tab: only if enter_for_others.
+    const canEditThis = showUser ? canEnterForOthers : entry.userId === user?.id;
+    return (
+      <TableRow key={entry.id}>
+        <TableCell className="text-sm whitespace-nowrap">
+          {new Date(entry.date.split('T')[0] + 'T12:00:00').toLocaleDateString()}
         </TableCell>
-      )}
-    </TableRow>
-  );
+        {showUser && (
+          <TableCell className="font-medium text-sm">{entry.user?.name ?? '—'}</TableCell>
+        )}
+        <TableCell className="text-sm">
+          {entry.project?.name ?? <span className="text-muted-foreground">—</span>}
+        </TableCell>
+        <TableCell className="text-sm max-w-[160px] truncate">
+          {entry.serviceItem ? (
+            <span className="text-xs">
+              <span className="font-medium">{entry.serviceItem.name}</span>
+              {entry.serviceItemSubtask && (
+                <span className="text-muted-foreground"> · {entry.serviceItemSubtask.name}</span>
+              )}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </TableCell>
+        <TableCell className="max-w-[160px] truncate text-sm text-muted-foreground">
+          {entry.description ?? '—'}
+        </TableCell>
+        <TableCell className="font-mono text-sm">{formatHours(entry.hours)}</TableCell>
+        <TableCell>
+          {entry.billable ? (
+            <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">Billable</Badge>
+          ) : (
+            <Badge variant="secondary" className="text-xs">Non-billable</Badge>
+          )}
+        </TableCell>
+        {canEditThis && (
+          <TableCell>
+            <div className="flex gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={() => { setEditingEntry(entry); setProxyUser(null); setEntryDialogOpen(true); }}>
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 text-destructive hover:text-destructive"
+                onClick={() => deleteMutation.mutate(entry.id)}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </TableCell>
+        )}
+      </TableRow>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -250,9 +259,18 @@ export function TimeTrackingView() {
         </div>
         <div className="flex gap-2 shrink-0">
           <TimerWidget onSaved={() => queryClient.invalidateQueries({ queryKey: ['time-entries'] })} />
+          {canEnterForOthers && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setProxyPickerOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-1" />
+              Log for Team Member
+            </Button>
+          )}
           <Button
             size="sm"
-            onClick={() => { setEditingEntry(null); setEntryDialogOpen(true); }}>
+            onClick={() => { setEditingEntry(null); setProxyUser(null); setEntryDialogOpen(true); }}>
             <Plus className="h-4 w-4 mr-1" />
             Log Time
           </Button>
@@ -387,6 +405,7 @@ export function TimeTrackingView() {
                     </TableHeader>
                     <TableBody>{myEntries.map((e) => renderEntryRow(e, false))}</TableBody>
                   </Table>
+
                 </div>
               )}
             </CardContent>
@@ -416,6 +435,7 @@ export function TimeTrackingView() {
                         <TableHead>Description</TableHead>
                         <TableHead>Hours</TableHead>
                         <TableHead>Billable</TableHead>
+                        {canEnterForOthers && <TableHead></TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>{allEntries.map((e) => renderEntryRow(e, true))}</TableBody>
@@ -521,12 +541,26 @@ export function TimeTrackingView() {
         </TabsContent>
       </Tabs>
 
+      <ProxyUserPickerDialog
+        open={proxyPickerOpen}
+        onOpenChange={setProxyPickerOpen}
+        onUserSelected={(u) => {
+          setProxyUser(u);
+          setEditingEntry(null);
+          setEntryDialogOpen(true);
+        }}
+      />
+
       <TimeEntryDialog
         open={entryDialogOpen}
         entry={editingEntry}
+        targetUser={proxyUser}
         onOpenChange={(open) => {
           setEntryDialogOpen(open);
-          if (!open) setEditingEntry(null);
+          if (!open) {
+            setEditingEntry(null);
+            setProxyUser(null);
+          }
         }}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ['time-entries'] })}
       />
