@@ -32,12 +32,15 @@ export interface UserResponse {
   email: string;
   name: string;
   role: string;
+  roleColor?: string | null;
   status: string;
   teamName?: string; // Deprecated
   teamId?: string;
   managerId?: string;
   createdAt: string;
   updatedAt: string;
+  canEdit: boolean;
+  canDelete: boolean;
   team?: {
     id: string;
     name: string;

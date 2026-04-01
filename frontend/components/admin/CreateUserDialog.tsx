@@ -7,8 +7,6 @@ import {
 } from '@/lib/validations/user';
 import { usersApi, type UserResponse } from '@/lib/api/users-client';
 import { rolesApi, type RoleResponse } from '@/lib/api/roles-client';
-import { getTeams } from '@/lib/api/teams-client';
-import { Team } from '@/lib/types';
 import {
   Dialog,
   DialogContent,
@@ -47,14 +45,12 @@ interface CreateUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUserCreated: () => void;
-  managers?: UserResponse[];
 }
 
 export function CreateUserDialog({
   open,
   onOpenChange,
   onUserCreated,
-  managers = [],
 }: CreateUserDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tempPassword, setTempPassword] = useState<string | null>(
@@ -64,10 +60,7 @@ export function CreateUserDialog({
     null,
   );
   const [copied, setCopied] = useState(false);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [availableRoles, setAvailableRoles] = useState<
-    RoleResponse[]
-  >([]);
+  const [availableRoles, setAvailableRoles] = useState<RoleResponse[]>([]);
 
   const form = useForm<CreateUserFormData>({
     resolver: zodResolver(createUserSchema),
@@ -75,50 +68,19 @@ export function CreateUserDialog({
       email: '',
       name: '',
       role: undefined,
-      teamId: '',
-      managerId: '',
     },
   });
 
   useEffect(() => {
     if (open) {
-      loadTeams();
-      loadRoles();
+      rolesApi.getAssignable().then(setAvailableRoles).catch(console.error);
     }
   }, [open]);
-
-  const loadTeams = async () => {
-    try {
-      const data = await getTeams();
-      setTeams(data);
-    } catch (error) {
-      console.error('Failed to load teams', error);
-      toast.error('Failed to load teams');
-    }
-  };
-
-  const loadRoles = async () => {
-    try {
-      const data = await rolesApi.getAssignable();
-      setAvailableRoles(data);
-    } catch (error) {
-      console.error('Failed to load roles', error);
-    }
-  };
-  const selectedRole = form.watch('role');
 
   const onSubmit = async (data: CreateUserFormData) => {
     setIsSubmitting(true);
     try {
-      // Map form data to API request, ensuring teamId is sent
-      // The validation ensures teamId is present for BDM/SALES
-      const requestData = {
-        ...data,
-        teamId: data.teamId,
-        // We can omit teamName as the backend handles teamId priority
-      };
-
-      const response = await usersApi.createUser(requestData);
+      const response = await usersApi.createUser(data);
       setCreatedUser(response.user);
       setTempPassword(response.tempPassword);
 
@@ -324,75 +286,6 @@ export function CreateUserDialog({
                 </FormItem>
               )}
             />
-
-            {selectedRole &&
-              ['BDM', 'SALES'].includes(selectedRole) && (
-                <FormField
-                  control={form.control}
-                  name="teamId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Team</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a team" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {teams.map((team) => (
-                            <SelectItem key={team.id} value={team.id}>
-                              {team.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        The team this user belongs to
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-            {selectedRole === 'SALES' &&
-              managers.length > 0 && (
-                <FormField
-                  control={form.control}
-                  name="managerId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Manager</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a manager" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {managers.map((manager) => (
-                            <SelectItem
-                              key={manager.id}
-                              value={manager.id}>
-                              {manager.name} (
-                              {manager.teamName || 'No Team'})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        The manager this sales user will report to
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
 
             <div className="flex justify-end gap-2 pt-4">
               <Button

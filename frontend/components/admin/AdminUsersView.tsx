@@ -57,6 +57,8 @@ export default function AdminUsersView({
     useState<UserResponse | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const inactiveUsers = users.filter((u) => u.status !== 'Active');
+
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
     setIsDeleting(true);
@@ -79,38 +81,12 @@ export default function AdminUsersView({
     }
   };
 
-  const canDeleteUser = (user: UserResponse) => {
-    if (!['CEO', 'ADMIN'].includes(currentUser.role)) return false;
-    if (user.id === currentUser.id) return false;
-    if (user.role === 'CEO') return false;
-    if (user.role === 'ADMIN' && currentUser.role !== 'CEO')
-      return false;
-    return true;
-  };
-
-  const canEditUser = (user: UserResponse) => {
-    if (user.id === currentUser.id) return false;
-    if (currentUser.role === 'CEO') return true;
-    if (currentUser.role === 'ADMIN') {
-      return ['BDM', 'SALES', 'DESIGNER', 'QS'].includes(user.role);
-    }
-    if (currentUser.role === 'BDM') {
-      return (
-        user.role === 'SALES' && user.managerId === currentUser.id
-      );
-    }
-    return false;
-  };
-
-  const managers = users.filter((u) => u.role === 'BDM');
   const activeUsers = users.filter((u) => u.status === 'Active');
 
   const columns = useMemo(
     () =>
       createUserColumns({
         currentUserId: currentUser.id,
-        canEditUser,
-        canDeleteUser,
         onEdit: (user) => {
           setUserToUpdate(user);
           setUpdateDialogOpen(true);
@@ -120,7 +96,7 @@ export default function AdminUsersView({
           setDeleteDialogOpen(true);
         },
       }),
-    [currentUser.id, currentUser.role],
+    [currentUser.id],
   );
 
   return (
@@ -153,9 +129,9 @@ export default function AdminUsersView({
               icon: CheckCircle2,
             },
             {
-              label: 'Managers',
-              sublabel: 'BDM role',
-              value: managers.length,
+              label: 'Inactive Users',
+              sublabel: 'Deactivated accounts',
+              value: inactiveUsers.length,
               icon: ShieldCheck,
             },
           ].map((s) => {
@@ -227,7 +203,6 @@ export default function AdminUsersView({
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onUserCreated={() => queryClient.invalidateQueries({ queryKey: ['admin-users'] })}
-        managers={managers}
       />
 
       <UpdateUserDialog
@@ -235,7 +210,6 @@ export default function AdminUsersView({
         onOpenChange={setUpdateDialogOpen}
         onUserUpdated={() => queryClient.invalidateQueries({ queryKey: ['admin-users'] })}
         user={userToUpdate}
-        managers={managers}
       />
 
       <AlertDialog

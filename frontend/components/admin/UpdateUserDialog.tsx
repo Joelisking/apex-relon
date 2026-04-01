@@ -11,8 +11,6 @@ import {
   type UpdateUserRequest,
 } from '@/lib/api/users-client';
 import { rolesApi, type RoleResponse } from '@/lib/api/roles-client';
-import { getTeams } from '@/lib/api/teams-client';
-import { Team } from '@/lib/types';
 import {
   Dialog,
   DialogContent,
@@ -45,7 +43,6 @@ interface UpdateUserDialogProps {
   onOpenChange: (open: boolean) => void;
   onUserUpdated: () => void;
   user: UserResponse | null;
-  managers?: UserResponse[];
 }
 
 export function UpdateUserDialog({
@@ -53,10 +50,8 @@ export function UpdateUserDialog({
   onOpenChange,
   onUserUpdated,
   user,
-  managers = [],
 }: UpdateUserDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [teams, setTeams] = useState<Team[]>([]);
   const [availableRoles, setAvailableRoles] = useState<RoleResponse[]>([]);
 
   const form = useForm<UpdateUserFormData>({
@@ -65,15 +60,12 @@ export function UpdateUserDialog({
       email: '',
       name: '',
       role: undefined,
-      teamId: '',
-      managerId: '',
     },
   });
 
   useEffect(() => {
     if (open) {
-      loadTeams();
-      loadRoles();
+      rolesApi.getAssignable().then(setAvailableRoles).catch(console.error);
     }
   }, [open]);
 
@@ -83,31 +75,9 @@ export function UpdateUserDialog({
         email: user.email,
         name: user.name,
         role: user.role,
-        teamId: user.teamId || user.team?.id || '',
-        managerId: user.managerId || '',
       });
     }
   }, [user, open, form]);
-
-  const loadTeams = async () => {
-    try {
-      const data = await getTeams();
-      setTeams(data);
-    } catch {
-      toast.error('Failed to load teams');
-    }
-  };
-
-  const loadRoles = async () => {
-    try {
-      const data = await rolesApi.getAssignable();
-      setAvailableRoles(data);
-    } catch (error) {
-      console.error('Failed to load roles', error);
-    }
-  };
-
-  const selectedRole = form.watch('role');
 
   const onSubmit = async (data: UpdateUserFormData) => {
     if (!user) return;
@@ -119,8 +89,6 @@ export function UpdateUserDialog({
         name: data.name,
         email: data.email,
         role: data.role,
-        teamId: data.teamId || undefined,
-        managerId: data.managerId || undefined,
       };
 
       await usersApi.updateUser(user.id, requestData);
@@ -221,69 +189,6 @@ export function UpdateUserDialog({
                 </FormItem>
               )}
             />
-
-            {selectedRole &&
-              ['BDM', 'SALES'].includes(selectedRole) && (
-                <FormField
-                  control={form.control}
-                  name="teamId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Team</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value || ''}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a team" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {teams.map((team) => (
-                            <SelectItem key={team.id} value={team.id}>
-                              {team.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-            {selectedRole === 'SALES' &&
-              managers.length > 0 && (
-                <FormField
-                  control={form.control}
-                  name="managerId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Manager</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value || ''}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a manager" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {managers.map((manager) => (
-                            <SelectItem
-                              key={manager.id}
-                              value={manager.id}>
-                              {manager.name} (
-                              {manager.teamName || 'No Team'})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
 
             <div className="flex justify-end gap-2 pt-4">
               <Button

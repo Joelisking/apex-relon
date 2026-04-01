@@ -194,7 +194,6 @@ export class AdminService {
 
     const canViewAll = await this.permissionsService.hasPermission(currentUserRole, 'users:view');
     if (!canViewAll) {
-      // Users without users:view only see themselves
       where.id = currentUserId;
     }
 
@@ -210,39 +209,66 @@ export class AdminService {
         managerId: true,
         createdAt: true,
         updatedAt: true,
-        manager: {
-          select: { name: true, email: true },
-        },
-        teamMembers: {
-          select: { id: true, name: true, email: true },
-        },
-        team: {
-          select: { id: true, name: true },
-        },
+        manager: { select: { name: true, email: true } },
+        teamMembers: { select: { id: true, name: true, email: true } },
+        team: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    // Transform result to include team name from relation if available, fallback to legacy teamName
-    // This ensures frontend compatibility
-    let usersWithTeam = users.map((user) => ({
-      ...user,
-      teamName: user.team?.name || user.teamName,
-    }));
+    // Batch-fetch role records for all distinct roles (including caller's)
+    const distinctRoleKeys = [
+      ...new Set(users.map((u) => u.role).concat([currentUserRole])),
+    ];
+    const roleRecords = await this.prisma.role.findMany({
+      where: { key: { in: distinctRoleKeys } },
+    });
+    const roleMap = new Map(roleRecords.map((r) => [r.key, r]));
 
-    // If a permission filter is specified, only return users whose role has that permission
+    // Batch-fetch which roles have users:edit (for canManage computation)
+    const rolesWithUsersEdit = await this.prisma.rolePermission.findMany({
+      where: { permission: 'users:edit' },
+      select: { role: true },
+    });
+    const usersEditRoleSet = new Set(rolesWithUsersEdit.map((r) => r.role));
+
+    const currentHasUsersEdit = await this.permissionsService.hasPermission(currentUserRole, 'users:edit');
+    const currentHasUsersDelete = await this.permissionsService.hasPermission(currentUserRole, 'users:delete');
+    const currentRoleRecord = roleMap.get(currentUserRole);
+
+    const canManageBatch = (targetRoleKey: string): boolean => {
+      if (targetRoleKey === 'SUPER_ADMIN') return false;
+      if (currentUserRole === 'SUPER_ADMIN') return true;
+      const targetRole = roleMap.get(targetRoleKey);
+      if (targetRole?.canAssignBuiltIn) return false;
+      if (currentRoleRecord?.canAssignBuiltIn) return true;
+      if (!currentHasUsersEdit) return false;
+      return !usersEditRoleSet.has(targetRoleKey);
+    };
+
+    let usersWithMeta = users.map((user) => {
+      const isOwnAccount = user.id === currentUserId;
+      const canManage = !isOwnAccount && canManageBatch(user.role);
+      const roleRecord = roleMap.get(user.role);
+      return {
+        ...user,
+        teamName: user.team?.name || user.teamName,
+        roleColor: roleRecord?.color ?? null,
+        canEdit: canManage && currentHasUsersEdit,
+        canDelete: canManage && currentHasUsersDelete,
+      };
+    });
+
     if (hasPermissionFilter) {
       const rolePerms = await this.prisma.rolePermission.findMany({
         where: { permission: hasPermissionFilter },
         select: { role: true },
       });
       const eligibleRoles = new Set(rolePerms.map((rp) => rp.role));
-      usersWithTeam = usersWithTeam.filter((u) =>
-        eligibleRoles.has(u.role),
-      );
+      usersWithMeta = usersWithMeta.filter((u) => eligibleRoles.has(u.role));
     }
 
-    return { users: usersWithTeam };
+    return { users: usersWithMeta };
   }
 
   /**

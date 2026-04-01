@@ -6,32 +6,25 @@ import { Edit, Trash2 } from 'lucide-react';
 import { DataTableColumnHeader } from '@/components/ui/data-table-column-header';
 import type { UserResponse } from '@/lib/api/users-client';
 
-const ROLE_DOT: Record<string, string> = {
-  CEO: 'bg-violet-400',
-  ADMIN: 'bg-blue-400',
-  BDM: 'bg-orange-400',
-  SALES: 'bg-emerald-400',
-  DESIGNER: 'bg-rose-400',
-  QS: 'bg-cyan-400',
+const COLOR_CLASSES: Record<string, { bg: string; text: string; dot: string }> = {
+  violet:  { bg: 'bg-violet-100/70',  text: 'text-violet-900',  dot: 'bg-violet-400'  },
+  blue:    { bg: 'bg-blue-100/70',    text: 'text-blue-900',    dot: 'bg-blue-400'    },
+  emerald: { bg: 'bg-emerald-100/70', text: 'text-emerald-900', dot: 'bg-emerald-400' },
+  sky:     { bg: 'bg-sky-100/70',     text: 'text-sky-900',     dot: 'bg-sky-400'     },
+  amber:   { bg: 'bg-amber-100/70',   text: 'text-amber-900',   dot: 'bg-amber-400'   },
+  indigo:  { bg: 'bg-indigo-100/70',  text: 'text-indigo-900',  dot: 'bg-indigo-400'  },
+  rose:    { bg: 'bg-rose-100/70',    text: 'text-rose-900',    dot: 'bg-rose-400'    },
+  orange:  { bg: 'bg-orange-100/70',  text: 'text-orange-900',  dot: 'bg-orange-400'  },
+  cyan:    { bg: 'bg-cyan-100/70',    text: 'text-cyan-900',    dot: 'bg-cyan-400'    },
 };
+const DEFAULT_COLOR = { bg: 'bg-muted', text: 'text-muted-foreground', dot: 'bg-muted-foreground/30' };
 
-const ROLE_COLORS: Record<string, string> = {
-  CEO: 'bg-violet-100/70 text-violet-900',
-  ADMIN: 'bg-blue-100/70   text-blue-900',
-  BDM: 'bg-orange-100/70  text-orange-900',
-  SALES: 'bg-emerald-100/70 text-emerald-900',
-  DESIGNER: 'bg-rose-100/70   text-rose-900',
-  QS: 'bg-cyan-100/70   text-cyan-900',
-};
-
-function RolePill({ role }: { role: string }) {
-  const colors =
-    ROLE_COLORS[role] ?? 'bg-muted text-muted-foreground';
-  const dot = ROLE_DOT[role] ?? 'bg-muted-foreground/30';
+function RolePill({ role, color }: { role: string; color?: string | null }) {
+  const c = (color ? COLOR_CLASSES[color] : null) ?? DEFAULT_COLOR;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${colors}`}>
-      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${c.bg} ${c.text}`}>
+      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${c.dot}`} />
       {role}
     </span>
   );
@@ -49,16 +42,12 @@ function avatarInitials(name: string) {
 
 interface UserColumnsOptions {
   currentUserId: string;
-  canEditUser: (user: UserResponse) => boolean;
-  canDeleteUser: (user: UserResponse) => boolean;
   onEdit: (user: UserResponse) => void;
   onDelete: (user: UserResponse) => void;
 }
 
 export function createUserColumns({
   currentUserId,
-  canEditUser,
-  canDeleteUser,
   onEdit,
   onDelete,
 }: UserColumnsOptions): ColumnDef<UserResponse>[] {
@@ -106,7 +95,7 @@ export function createUserColumns({
         <DataTableColumnHeader column={column} title="Role" />
       ),
       cell: ({ row }) => (
-        <RolePill role={row.getValue('role') as string} />
+        <RolePill role={row.getValue('role') as string} color={row.original.roleColor} />
       ),
     },
     {
@@ -161,8 +150,8 @@ export function createUserColumns({
       header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
         const user = row.original;
-        const showEdit = canEditUser(user);
-        const showDelete = canDeleteUser(user);
+        const showEdit = user.canEdit;
+        const showDelete = user.canDelete;
 
         if (!showEdit && !showDelete) {
           return (
