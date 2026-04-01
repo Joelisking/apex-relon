@@ -52,6 +52,8 @@ interface TimeEntry {
   id: string;
   userId: string;
   user: { id: string; name: string };
+  submittedById?: string | null;
+  submittedBy?: { id: string; name: string } | null;
   projectId?: string;
   project?: { id: string; name: string };
   serviceItemId?: string;
@@ -212,8 +214,13 @@ export function TimeTrackingView() {
             <span className="text-muted-foreground">—</span>
           )}
         </TableCell>
-        <TableCell className="max-w-[160px] truncate text-sm text-muted-foreground">
-          {entry.description ?? '—'}
+        <TableCell className="max-w-[160px] text-sm">
+          <div className="truncate text-muted-foreground">{entry.description ?? '—'}</div>
+          {entry.submittedBy && (
+            <div className="text-xs text-muted-foreground mt-0.5">
+              Logged by {entry.submittedBy.name}
+            </div>
+          )}
         </TableCell>
         <TableCell className="font-mono text-sm">{formatHours(entry.hours)}</TableCell>
         <TableCell>

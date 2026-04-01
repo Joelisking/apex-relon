@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner';
 import { API_URL, getTokenFromClientCookies, serviceItemsApi } from '@/lib/api/client';
 import { workCodesApi, groupWorkCodes, type WorkCode } from '@/lib/api/work-codes-client';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import type { ServiceItem } from '@/lib/types';
 
 function getToken() {
@@ -50,6 +51,8 @@ async function ttFetch<T>(path: string, options?: RequestInit): Promise<T> {
 export interface TimeEntry {
   id: string;
   userId: string;
+  submittedById?: string | null;
+  submittedBy?: { id: string; name: string } | null;
   projectId?: string;
   date: string;
   hours: number;
@@ -64,6 +67,7 @@ export interface TimeEntry {
 interface ProjectOption {
   id: string;
   name: string;
+  jobNumber?: string | null;
   serviceType?: { category?: { name: string } | null } | null;
 }
 
@@ -341,19 +345,21 @@ export function TimeEntryDialog({
           {/* Project */}
           <div className="space-y-1.5">
             <Label>Project</Label>
-            <Select value={projectId} onValueChange={handleProjectChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select project (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
-                {projects.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={projectId}
+              onValueChange={handleProjectChange}
+              placeholder="Select project (optional)"
+              searchPlaceholder="Search by job number or name…"
+              emptyMessage="No projects found."
+              options={[
+                { value: '__none__', label: 'None' },
+                ...projects.map((p) => ({
+                  value: p.id,
+                  label: p.jobNumber ? `${p.jobNumber} · ${p.name}` : p.name,
+                  keywords: p.jobNumber ?? undefined,
+                })),
+              ]}
+            />
           </div>
 
           {/* Work Code — required for engineering projects */}

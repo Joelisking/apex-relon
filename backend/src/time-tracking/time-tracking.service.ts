@@ -80,6 +80,7 @@ export class TimeTrackingService {
       take: filters.limit ?? 100,
       include: {
         user: { select: { id: true, name: true } },
+        submittedBy: { select: { id: true, name: true } },
         project: { select: { id: true, name: true } },
         workCode: { select: { id: true, code: true, name: true, parentCode: true, isMainTask: true } },
         serviceItem: { select: { id: true, name: true } },
