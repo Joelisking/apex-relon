@@ -47,7 +47,6 @@ interface CreateUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUserCreated: () => void;
-  currentUserRole: string;
   managers?: UserResponse[];
 }
 
@@ -55,7 +54,6 @@ export function CreateUserDialog({
   open,
   onOpenChange,
   onUserCreated,
-  currentUserRole,
   managers = [],
 }: CreateUserDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,36 +99,12 @@ export function CreateUserDialog({
 
   const loadRoles = async () => {
     try {
-      const data = await rolesApi.getAll();
+      const data = await rolesApi.getAssignable();
       setAvailableRoles(data);
     } catch (error) {
       console.error('Failed to load roles', error);
     }
   };
-
-  // Filter roles based on the current user's privilege level
-  const getAllowedRoles = (): RoleResponse[] => {
-    if (currentUserRole === 'BDM') {
-      return availableRoles.filter((r) => r.key === 'SALES');
-    }
-    if (currentUserRole === 'CEO') {
-      // CEO can create any role except CEO
-      return availableRoles.filter((r) => r.key !== 'CEO');
-    }
-    if (currentUserRole === 'ADMIN') {
-      // ADMIN cannot create CEO or ADMIN users
-      return availableRoles.filter(
-        (r) => r.key !== 'CEO' && r.key !== 'ADMIN',
-      );
-    }
-    // All other roles with users:create permission (e.g. PROJECT_MANAGER)
-    // can assign any non-privileged role
-    return availableRoles.filter(
-      (r) => r.key !== 'CEO' && r.key !== 'ADMIN',
-    );
-  };
-
-  const allowedRoles = getAllowedRoles();
   const selectedRole = form.watch('role');
 
   const onSubmit = async (data: CreateUserFormData) => {
@@ -339,25 +313,13 @@ export function CreateUserDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {allowedRoles.map((role) => (
+                      {availableRoles.map((role) => (
                         <SelectItem key={role.key} value={role.key}>
                           {role.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormDescription>
-                    {currentUserRole === 'CEO' &&
-                      'You can create users with any role except CEO'}
-                    {currentUserRole === 'ADMIN' &&
-                      'You can create users with any role except CEO and Admin'}
-                    {currentUserRole === 'BDM' &&
-                      'You can create Sales users only'}
-                    {currentUserRole !== 'CEO' &&
-                      currentUserRole !== 'ADMIN' &&
-                      currentUserRole !== 'BDM' &&
-                      'You can assign any non-admin role'}
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

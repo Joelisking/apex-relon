@@ -6,6 +6,7 @@ export interface RoleResponse {
   label: string;
   description?: string | null;
   isBuiltIn: boolean;
+  canAssignBuiltIn: boolean;
   color?: string | null;
   userCount: number;
   createdAt: string;
@@ -28,6 +29,10 @@ export interface UpdateRoleRequest {
 export const rolesApi = {
   getAll(): Promise<RoleResponse[]> {
     return apiFetch('/admin/roles');
+  },
+
+  getAssignable(): Promise<RoleResponse[]> {
+    return apiFetch('/admin/roles/assignable');
   },
 
   create(data: CreateRoleRequest): Promise<RoleResponse> {

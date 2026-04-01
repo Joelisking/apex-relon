@@ -45,7 +45,6 @@ interface UpdateUserDialogProps {
   onOpenChange: (open: boolean) => void;
   onUserUpdated: () => void;
   user: UserResponse | null;
-  currentUserRole: string;
   managers?: UserResponse[];
 }
 
@@ -54,7 +53,6 @@ export function UpdateUserDialog({
   onOpenChange,
   onUserUpdated,
   user,
-  currentUserRole,
   managers = [],
 }: UpdateUserDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,27 +100,13 @@ export function UpdateUserDialog({
 
   const loadRoles = async () => {
     try {
-      const data = await rolesApi.getAll();
+      const data = await rolesApi.getAssignable();
       setAvailableRoles(data);
     } catch (error) {
       console.error('Failed to load roles', error);
     }
   };
 
-  const getAllowedRoles = (): RoleResponse[] => {
-    if (currentUserRole === 'BDM') {
-      return availableRoles.filter((r) => r.key === 'SALES');
-    }
-    if (currentUserRole === 'ADMIN') {
-      return availableRoles.filter((r) => r.key !== 'CEO' && r.key !== 'ADMIN');
-    }
-    if (currentUserRole === 'CEO') {
-      return availableRoles.filter((r) => r.key !== 'CEO');
-    }
-    return [];
-  };
-
-  const allowedRoles = getAllowedRoles();
   const selectedRole = form.watch('role');
 
   const onSubmit = async (data: UpdateUserFormData) => {
@@ -226,7 +210,7 @@ export function UpdateUserDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {allowedRoles.map((role) => (
+                      {availableRoles.map((role) => (
                         <SelectItem key={role.key} value={role.key}>
                           {role.label}
                         </SelectItem>
@@ -269,7 +253,6 @@ export function UpdateUserDialog({
               )}
 
             {selectedRole === 'SALES' &&
-              currentUserRole !== 'BDM' &&
               managers.length > 0 && (
                 <FormField
                   control={form.control}

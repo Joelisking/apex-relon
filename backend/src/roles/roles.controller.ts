@@ -11,15 +11,23 @@ import { RolesService } from './roles.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { Permissions } from '../permissions/permissions.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
 @Controller('admin/roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Get()
-  @Permissions('users:view') // Anyone managing users needs to see available roles
+  @Permissions('users:view')
   getAll() {
     return this.rolesService.getAll();
+  }
+
+  @Get('assignable')
+  @Permissions('users:create')
+  getAssignable(@CurrentUser() user: AuthenticatedUser) {
+    return this.rolesService.getAssignable(user.role);
   }
 
   @Post()

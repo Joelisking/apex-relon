@@ -227,7 +227,6 @@ export default function AdminUsersView({
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onUserCreated={() => queryClient.invalidateQueries({ queryKey: ['admin-users'] })}
-        currentUserRole={currentUser.role}
         managers={managers}
       />
 
@@ -236,7 +235,6 @@ export default function AdminUsersView({
         onOpenChange={setUpdateDialogOpen}
         onUserUpdated={() => queryClient.invalidateQueries({ queryKey: ['admin-users'] })}
         user={userToUpdate}
-        currentUserRole={currentUser.role}
         managers={managers}
       />
 

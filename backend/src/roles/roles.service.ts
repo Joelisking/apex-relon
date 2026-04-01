@@ -18,12 +18,14 @@ const BUILT_IN_ROLES = [
     label: 'Chief Executive Officer',
     color: 'violet',
     isBuiltIn: true,
+    canAssignBuiltIn: true,
   },
   {
     key: 'ADMIN',
     label: 'Administrator',
     color: 'blue',
     isBuiltIn: true,
+    canAssignBuiltIn: false,
   },
 ];
 
@@ -139,6 +141,20 @@ export class RolesService implements OnModuleInit {
     );
 
     return roles.map((r) => ({ ...r, userCount: countMap[r.key] ?? 0 }));
+  }
+
+  async getAssignable(currentUserRoleKey: string) {
+    const currentRole = await this.prisma.role.findUnique({
+      where: { key: currentUserRoleKey },
+    });
+
+    return this.prisma.role.findMany({
+      where: {
+        NOT: { key: currentUserRoleKey },
+        ...(currentRole?.canAssignBuiltIn ? {} : { isBuiltIn: false }),
+      },
+      orderBy: [{ isBuiltIn: 'desc' }, { createdAt: 'asc' }],
+    });
   }
 
   async findByKey(key: string) {
