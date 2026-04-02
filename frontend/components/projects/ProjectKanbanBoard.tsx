@@ -94,7 +94,7 @@ export function ProjectKanbanBoard({
   if (stagesLoading) {
     return (
       <ScrollArea className="w-full">
-        <div className="flex gap-3 pb-4 min-w-[900px]">
+        <div className="flex gap-3 pb-4 min-w-fit">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex-1 min-w-64 rounded-xl border bg-muted/20 p-3 space-y-3">
               <Skeleton className="h-5 w-28 rounded" />
@@ -167,7 +167,7 @@ export function ProjectKanbanBoard({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}>
       <ScrollArea className="w-full">
-        <div className="flex gap-3 pb-4 min-w-[900px]">
+        <div className="flex gap-3 pb-4 min-w-fit">
           {grouped.map((column) => {
             const hexColor = columnHex(
               column.color,
@@ -215,7 +215,7 @@ export function ProjectKanbanBoard({
 
                 {/* Droppable zone */}
                 <DroppableColumn id={column.key}>
-                  <div className="p-2 space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto">
+                  <div className="p-2 space-y-2 max-h-[calc(100dvh-280px)] overflow-y-auto">
                     {colProjects.length === 0 ? (
                       <p className="text-[11px] text-muted-foreground text-center py-8">
                         No projects

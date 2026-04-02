@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Sora } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/auth-context';
@@ -17,6 +17,12 @@ const sora = Sora({
   variable: '--font-dm-serif',
 });
 
+export const viewport: Viewport = {
+  viewportFit: 'cover',
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   title: 'Apex CRM',
   description:
@@ -30,7 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${sora.variable}`}>
-      <body className="font-sans antialiased overflow-hidden h-screen">
+      <body className="font-sans antialiased overflow-hidden h-dvh">
         <QueryProvider>
           <CurrencyProvider>
             <AuthProvider>{children}</AuthProvider>

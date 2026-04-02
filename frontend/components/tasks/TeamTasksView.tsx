@@ -79,7 +79,7 @@ function MemberRow({
         </div>
 
         {/* Mini stats */}
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           {member.overdue > 0 && (
             <div className="text-right">
               <p className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium leading-none mb-0.5">Overdue</p>

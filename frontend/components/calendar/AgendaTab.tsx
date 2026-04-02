@@ -19,7 +19,7 @@ export function AgendaTab({ events, currentDate, onNavigate, onEventClick }: Age
   );
 
   return (
-    <div className="rbc-calendar-wrapper h-[calc(100vh-220px)] min-h-[500px]">
+    <div className="rbc-calendar-wrapper h-[calc(100dvh-220px)] min-h-[500px]">
       <Calendar<CalendarEvent, object>
         localizer={localizer}
         events={events}

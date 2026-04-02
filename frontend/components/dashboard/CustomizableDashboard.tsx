@@ -340,7 +340,7 @@ function CustomWidgetGrid({
           <SortableContext
             items={otherWidgets.map((w) => w.id)}
             strategy={rectSortingStrategy}>
-            <div data-widget-grid className="grid grid-cols-12 gap-3 sm:gap-4 auto-rows-[160px] sm:auto-rows-[180px]">
+            <div data-widget-grid className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 auto-rows-auto sm:auto-rows-[180px]">
               {otherWidgets.map((widget, i) => (
                 <SortableWidget
                   key={widget.id}

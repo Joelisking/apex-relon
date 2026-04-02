@@ -37,7 +37,10 @@ export default function DashboardLayout({
           <AppSidebar />
         </div>
         <div className="flex flex-1 flex-col min-w-0">
-          <header className="print:hidden flex h-12 shrink-0 items-center gap-2 border-b px-4">
+          <header
+            className="print:hidden flex shrink-0 items-center gap-2 border-b px-4"
+            style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(3rem + env(safe-area-inset-top))' }}
+          >
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 !h-4" />
             <img

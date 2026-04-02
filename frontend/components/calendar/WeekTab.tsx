@@ -19,7 +19,7 @@ export function WeekTab({ events, currentDate, onNavigate, onEventClick }: WeekT
   );
 
   return (
-    <div className="rbc-calendar-wrapper h-[calc(100vh-220px)] min-h-[500px]">
+    <div className="rbc-calendar-wrapper h-[calc(100dvh-220px)] min-h-[500px]">
       <Calendar<CalendarEvent, object>
         localizer={localizer}
         events={events}

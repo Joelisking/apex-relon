@@ -256,7 +256,7 @@ export default function TasksView() {
       )}
 
       {/* Filters + view toggle */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-36 h-8 text-xs">
             <SelectValue placeholder="Status" />

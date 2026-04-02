@@ -105,11 +105,11 @@ export default function ModernCustomersView({ currentUser }: ModernCustomersView
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-4 sm:gap-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-display tracking-tight">Customer Portfolio</h1>
+          <h1 className="text-2xl sm:text-3xl font-display tracking-tight">Customer Portfolio</h1>
           <p className="text-muted-foreground flex items-center gap-1.5">
             {clients.length} customer{clients.length !== 1 ? 's' : ''} in your portfolio
             {isFetching && !isLoading && (

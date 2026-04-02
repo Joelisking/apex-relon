@@ -207,6 +207,22 @@ body::before {
   }
 }
 
+/* ── Mobile: dashboard widget grid ───────────────────────────────────────── */
+/* Override JS-injected gridColumn/gridRow inline styles on small screens so  */
+/* widgets stack full-width with natural (auto) height instead of being       */
+/* clipped inside a fixed 160px row.                                          */
+@media (max-width: 639px) {
+  [data-widget-grid] {
+    grid-template-columns: 1fr !important;
+    grid-auto-rows: auto !important;
+  }
+  [data-widget-grid] > * {
+    grid-column: 1 / -1 !important;
+    grid-row: unset !important;
+    min-height: 240px;
+  }
+}
+
 /* ── react-big-calendar overrides ─────────────────────────────────────────── */
 .rbc-calendar-wrapper .rbc-calendar {
   font-family: inherit;

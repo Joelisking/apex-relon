@@ -83,7 +83,7 @@ export function KanbanBoard({
   if (stagesLoading) {
     return (
       <ScrollArea className="w-full">
-        <div className="flex gap-3 pb-4 min-w-[1200px]">
+        <div className="flex gap-3 pb-4">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex-shrink-0 w-72 rounded-xl border bg-muted/20 p-3 space-y-3">
               <Skeleton className="h-5 w-32 rounded" />
@@ -127,7 +127,7 @@ export function KanbanBoard({
     return (
       <div
         key={stage.name}
-        className="flex-1 min-w-96 rounded-xl border border-border/50 bg-muted/20 overflow-hidden flex flex-col"
+        className="flex-1 min-w-72 rounded-xl border border-border/50 bg-muted/20 overflow-hidden flex flex-col"
         style={{ borderTopColor: hexColor, borderTopWidth: '2px' }}>
         {/* Column header */}
         <div className="flex items-center justify-between px-3.5 py-3 border-b border-border/40 bg-card">
@@ -186,7 +186,7 @@ export function KanbanBoard({
   if (!mounted) {
     return (
       <ScrollArea className="w-full">
-        <div className="flex gap-3 pb-4 min-w-[1200px]">
+        <div className="flex gap-3 pb-4 min-w-fit">
           {pipelineStages.map((stage) => {
             const stageLeads = leads.filter(
               (lead) => lead.stage === stage.name,
@@ -194,7 +194,7 @@ export function KanbanBoard({
             return renderColumn(
               stage,
               stageLeads,
-              <div className="p-2 space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto">
+              <div className="p-2 space-y-2 max-h-[calc(100dvh-320px)] overflow-y-auto">
                 {stageLeads.length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-8">
                     No prospective projects
@@ -220,7 +220,7 @@ export function KanbanBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}>
       <ScrollArea className="w-full">
-        <div className="flex gap-3 pb-4 min-w-[1200px]">
+        <div className="flex gap-3 pb-4 min-w-fit">
           {pipelineStages.map((stage) => {
             const stageLeads = leads.filter(
               (lead) => lead.stage === stage.name,
@@ -229,7 +229,7 @@ export function KanbanBoard({
               stage,
               stageLeads,
               <DroppableColumn id={stage.name}>
-                <div className="p-2 space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto">
+                <div className="p-2 space-y-2 max-h-[calc(100dvh-320px)] overflow-y-auto">
                   {stageLeads.length === 0 ? (
                     <p className="text-xs text-muted-foreground text-center py-8">
                       No prospective projects

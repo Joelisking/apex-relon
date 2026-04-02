@@ -120,9 +120,10 @@ export function TimeTrackingView() {
   const [proxyUser, setProxyUser] = useState<UserDirectoryItem | null>(null);
   const queryClient = useQueryClient();
 
-  // Date range filter — default to current month
+  // Date range filter — default to start of previous month through today
+  // so entries from last month are always visible (e.g. when checking at the start of a new month)
   const today = new Date();
-  const defaultStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const defaultStart = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString().split('T')[0];
   const defaultEnd = today.toISOString().split('T')[0];
   const [startDate, setStartDate] = useState(defaultStart);
   const [endDate, setEndDate] = useState(defaultEnd);

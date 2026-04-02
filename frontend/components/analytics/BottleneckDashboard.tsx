@@ -315,7 +315,7 @@ export function BottleneckDashboard() {
         )}
 
         {/* ── KPI Strip ──────────────────────────────────────────────────────── */}
-        <div className="fade-up grid grid-cols-4 gap-px bg-border/40 rounded-2xl overflow-hidden border border-border/40"
+        <div className="fade-up grid grid-cols-2 sm:grid-cols-4 gap-px bg-border/40 rounded-2xl overflow-hidden border border-border/40"
           style={{ animationDelay: '80ms' }}>
           {[
             {
@@ -359,7 +359,7 @@ export function BottleneckDashboard() {
         </div>
 
         {/* ── Stage Dwell + Task Velocity ─────────────────────────────────────── */}
-        <div className="fade-up grid grid-cols-2 gap-6" style={{ animationDelay: '120ms' }}>
+        <div className="fade-up grid grid-cols-1 lg:grid-cols-2 gap-6" style={{ animationDelay: '120ms' }}>
 
           {/* Stage Dwell */}
           <div className="rounded-2xl border border-border/40 bg-card overflow-hidden">
@@ -468,7 +468,7 @@ export function BottleneckDashboard() {
                 {totalOverdue} total overdue
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-px bg-amber-200/40">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-amber-200/40">
               {overdue.map((u) => (
                 <div key={u.userId} className="bg-card/80 px-6 py-4 flex items-center gap-3">
                   <PersonInitials name={u.userName} rate={0} />

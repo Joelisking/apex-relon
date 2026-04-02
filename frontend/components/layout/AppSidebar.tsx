@@ -606,7 +606,7 @@ export function AppSidebar() {
 
       {/* Mobile sidebar (sheet) */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="w-72 p-0">
+        <SheetContent side="left" className="w-72 p-0" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <SheetHeader className="sr-only">
             <SheetTitle>Navigation</SheetTitle>
             <SheetDescription>Main navigation menu</SheetDescription>
