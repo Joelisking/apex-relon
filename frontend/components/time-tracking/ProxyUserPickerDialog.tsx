@@ -81,10 +81,10 @@ export function ProxyUserPickerDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button variant="outline" className="h-11 sm:h-9" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleContinue} disabled={!selectedUserId}>
+          <Button className="h-11 sm:h-9" onClick={handleContinue} disabled={!selectedUserId}>
             Continue
           </Button>
         </DialogFooter>

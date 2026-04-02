@@ -460,10 +460,10 @@ export function TimeEntryDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" className="h-11 sm:h-9" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !canSave}>
+          <Button className="h-11 sm:h-9" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !canSave}>
             {saveMutation.isPending ? 'Saving…' : entry ? 'Update' : 'Log Time'}
           </Button>
         </DialogFooter>
