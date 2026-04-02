@@ -42,8 +42,8 @@ export function getTaskColor(task: Task): string {
 export function taskToEvent(task: Task): CalendarEvent | null {
   if (!task.dueDate) return null;
 
-  const start = new Date(task.dueDate + 'T00:00:00');
-  const end = new Date(task.dueDate + 'T23:59:59');
+  const start = new Date(task.dueDate.slice(0, 10) + 'T00:00:00');
+  const end = new Date(task.dueDate.slice(0, 10) + 'T23:59:59');
 
   return {
     id: `task-${task.id}`,
@@ -62,12 +62,17 @@ export function taskToEvent(task: Task): CalendarEvent | null {
 
 // ── Project → CalendarEvent[] ───────────────────────────────────────────────
 
+function toLocalDate(iso: string): Date {
+  return new Date(iso.slice(0, 10) + 'T00:00:00');
+}
+
 export function projectToEvents(project: Project): CalendarEvent[] {
   const events: CalendarEvent[] = [];
 
   if (project.startDate && project.estimatedDueDate) {
-    const start = new Date(project.startDate + 'T00:00:00');
-    const end = new Date(project.estimatedDueDate + 'T23:59:59');
+    const start = toLocalDate(project.startDate);
+    const end = toLocalDate(project.estimatedDueDate);
+    end.setHours(23, 59, 59, 999);
     events.push({
       id: `project-span-${project.id}`,
       title: project.name,
@@ -80,7 +85,7 @@ export function projectToEvents(project: Project): CalendarEvent[] {
       resource: project,
     });
   } else if (!project.startDate && project.estimatedDueDate) {
-    const d = new Date(project.estimatedDueDate + 'T00:00:00');
+    const d = toLocalDate(project.estimatedDueDate);
     events.push({
       id: `project-due-${project.id}`,
       title: `Due: ${project.name}`,
@@ -95,7 +100,7 @@ export function projectToEvents(project: Project): CalendarEvent[] {
   }
 
   if (project.completedDate) {
-    const d = new Date(project.completedDate + 'T00:00:00');
+    const d = toLocalDate(project.completedDate);
     events.push({
       id: `project-milestone-${project.id}`,
       title: `✓ ${project.name}`,
