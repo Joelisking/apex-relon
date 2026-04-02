@@ -75,7 +75,6 @@ interface FileUpload {
 interface ProjectDetailViewProps {
   projectId: string;
   currentUserId: string;
-  initialTab: string;
 }
 
 const RISK_HEX: Record<string, string> = {
@@ -133,11 +132,11 @@ function StatRow({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-export function ProjectDetailView({ projectId, currentUserId, initialTab }: ProjectDetailViewProps) {
+export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { hasPermission } = useAuth();
-  const activeTab = searchParams.get('tab') || initialTab;
+  const activeTab = searchParams.get('tab') || 'overview';
 
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
@@ -231,9 +230,6 @@ export function ProjectDetailView({ projectId, currentUserId, initialTab }: Proj
 
   const refreshProject = async () => {
     try {
-      const updated = await projectsApi.getById(projectId);
-      setProject(updated);
-      setCostLogs(updated.costLogs || []);
       await loadProjectData();
     } catch {
       // ignore

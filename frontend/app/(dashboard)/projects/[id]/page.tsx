@@ -4,10 +4,9 @@ import { ProjectDetailView } from '@/components/projects/ProjectDetailView';
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
 }
 
-export default async function ProjectDetailPage({ params, searchParams }: Props) {
+export default async function ProjectDetailPage({ params }: Props) {
   const cookieStore = await cookies();
   const token = cookieStore.get('token')?.value;
 
@@ -30,13 +29,11 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
   }
 
   const { id } = await params;
-  const { tab } = await searchParams;
 
   return (
     <ProjectDetailView
       projectId={id}
       currentUserId={currentUser.id}
-      initialTab={tab || 'overview'}
     />
   );
 }
