@@ -3,7 +3,6 @@ import type { Project } from '@/lib/api/projects-client';
 
 export type CalendarEventKind =
   | 'task'
-  | 'project-span'
   | 'project-milestone'
   | 'project-due';
 
@@ -69,22 +68,7 @@ function toLocalDate(iso: string): Date {
 export function projectToEvents(project: Project): CalendarEvent[] {
   const events: CalendarEvent[] = [];
 
-  if (project.startDate && project.estimatedDueDate) {
-    const start = toLocalDate(project.startDate);
-    const end = toLocalDate(project.estimatedDueDate);
-    end.setHours(23, 59, 59, 999);
-    events.push({
-      id: `project-span-${project.id}`,
-      title: project.name,
-      start,
-      end,
-      allDay: true,
-      kind: 'project-span',
-      sourceId: project.id,
-      color: '#bfdbfe', // blue-200
-      resource: project,
-    });
-  } else if (!project.startDate && project.estimatedDueDate) {
+  if (project.estimatedDueDate) {
     const d = toLocalDate(project.estimatedDueDate);
     events.push({
       id: `project-due-${project.id}`,
