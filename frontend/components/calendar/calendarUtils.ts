@@ -4,7 +4,8 @@ import type { Project } from '@/lib/api/projects-client';
 export type CalendarEventKind =
   | 'task'
   | 'project-span'
-  | 'project-milestone';
+  | 'project-milestone'
+  | 'project-due';
 
 export interface CalendarEvent {
   id: string;
@@ -76,6 +77,19 @@ export function projectToEvents(project: Project): CalendarEvent[] {
       kind: 'project-span',
       sourceId: project.id,
       color: '#bfdbfe', // blue-200
+      resource: project,
+    });
+  } else if (!project.startDate && project.estimatedDueDate) {
+    const d = new Date(project.estimatedDueDate + 'T00:00:00');
+    events.push({
+      id: `project-due-${project.id}`,
+      title: `Due: ${project.name}`,
+      start: d,
+      end: d,
+      allDay: true,
+      kind: 'project-due',
+      sourceId: project.id,
+      color: '#fed7aa', // orange-200
       resource: project,
     });
   }

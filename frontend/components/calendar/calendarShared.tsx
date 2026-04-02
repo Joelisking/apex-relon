@@ -35,7 +35,9 @@ export function EventPill({ event }: { event: CalendarEvent }) {
               ? 'text-blue-900'
               : event.kind === 'project-milestone'
                 ? 'text-purple-900'
-                : 'text-slate-800';
+                : event.kind === 'project-due'
+                  ? 'text-orange-900'
+                  : 'text-slate-800';
 
   return (
     <span

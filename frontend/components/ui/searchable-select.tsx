@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Command,
   CommandEmpty,
@@ -121,6 +121,9 @@ export function SearchableSelect({
             side="bottom"
             className="h-[60dvh] flex flex-col gap-0 p-0 rounded-t-2xl"
           >
+            <SheetHeader className="sr-only">
+              <SheetTitle>{placeholder}</SheetTitle>
+            </SheetHeader>
             <div className="shrink-0 mx-auto mt-3 h-1 w-10 rounded-full bg-border" />
             <div className="flex-1 overflow-hidden mt-2">
               {commandContent}

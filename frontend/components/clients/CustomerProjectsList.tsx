@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { projectsApi, type Project } from '@/lib/api/projects-client';
 import { CreateProjectDialog } from '@/components/projects/CreateProjectDialog';
-import { ProjectDetailDialog } from '@/components/projects/ProjectDetailDialog';
 import { format } from 'date-fns';
 
 interface CustomerProjectsListProps {

@@ -18,7 +18,6 @@ import { FilterBar, passesFilter, type FilterValues, type FilterDef } from '@/co
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { ProjectKanbanBoard } from './ProjectKanbanBoard';
-import { ProjectDetailDialog } from './ProjectDetailDialog';
 import { CreateProjectDialog } from './CreateProjectDialog';
 import { projectColumns } from './columns-projects';
 import { DataTable } from '@/components/ui/data-table';
@@ -64,8 +63,6 @@ export default function ProjectsView({
   const canMoveStage = hasPermission('projects:move_stage');
   const [localProjects, setLocalProjects] = useState<Project[]>([]);
   const [view, setView] = useState<'kanban' | 'table'>(canMoveStage ? 'kanban' : 'table');
-  const [selectedProject, setSelectedProject] =
-    useState<Project | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [completionPendingProject, setCompletionPendingProject] =
     useState<Project | null>(null);
@@ -253,16 +250,6 @@ export default function ProjectsView({
 
   const handleProjectClick = (project: Project) => {
     router.push(`/projects/${project.id}`);
-  };
-
-  const handleProjectUpdated = () => {
-    queryClient.invalidateQueries({ queryKey: ['projects'] });
-    if (selectedProject) {
-      projectsApi
-        .getById(selectedProject.id)
-        .then(setSelectedProject)
-        .catch(() => {});
-    }
   };
 
   const handleProjectStatusChange = async (

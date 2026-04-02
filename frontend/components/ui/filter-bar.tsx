@@ -10,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Command,
   CommandEmpty,
@@ -150,9 +150,9 @@ function FilterPill({ filter, selected, onChange }: FilterPillProps) {
             className="h-[60dvh] flex flex-col gap-0 p-0 rounded-t-2xl"
           >
             <div className="shrink-0 mx-auto mt-3 h-1 w-10 rounded-full bg-border" />
-            <div className="shrink-0 px-4 py-3 border-b border-border/50">
-              <p className="text-sm font-semibold">{filter.title}</p>
-            </div>
+            <SheetHeader className="shrink-0 px-4 py-3 border-b border-border/50 text-left">
+              <SheetTitle className="text-sm">{filter.title}</SheetTitle>
+            </SheetHeader>
             <div className="flex-1 overflow-hidden">
               {commandContent}
             </div>

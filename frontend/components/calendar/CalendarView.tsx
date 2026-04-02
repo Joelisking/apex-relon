@@ -2,13 +2,12 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { Info } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { tasksApi } from '@/lib/api/tasks-client';
 import { projectsApi } from '@/lib/api/projects-client';
-import { useAuth } from '@/contexts/auth-context';
 import { TaskDialog } from '@/components/tasks/TaskDialog';
-import { ProjectDetailDialog } from '@/components/projects/ProjectDetailDialog';
 import { MonthTab } from './MonthTab';
 import { WeekTab } from './WeekTab';
 import { AgendaTab } from './AgendaTab';
@@ -26,14 +25,13 @@ type CalView = 'month' | 'week' | 'agenda';
 
 export function CalendarView() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const router = useRouter();
 
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [activeView, setActiveView] = useState<CalView>('month');
   const [showTasks, setShowTasks] = useState(true);
   const [showProjects, setShowProjects] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const rbcView = activeView;
   const { start: rangeStart, end: rangeEnd } = useMemo(
@@ -74,7 +72,7 @@ export function CalendarView() {
     if (event.kind === 'task') {
       setSelectedTask(event.resource as Task);
     } else {
-      setSelectedProject(event.resource as Project);
+      router.push(`/projects/${event.sourceId}`);
     }
   }
 
@@ -92,7 +90,7 @@ export function CalendarView() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-display tracking-tight">Calendar</h1>
           <p className="text-muted-foreground hidden sm:block">
-            Task due dates and project timelines
+            Task due dates, project due dates, and timelines
           </p>
         </div>
       </div>
@@ -142,7 +140,7 @@ export function CalendarView() {
       {activeView === 'month' && <MonthTab {...sharedTabProps} />}
       {activeView === 'week' && <WeekTab {...sharedTabProps} />}
       {activeView === 'agenda' && <AgendaTab {...sharedTabProps} />}
-      {/* Dialogs */}
+
       <TaskDialog
         open={selectedTask !== null}
         onOpenChange={(open) => { if (!open) setSelectedTask(null); }}
@@ -152,19 +150,6 @@ export function CalendarView() {
           queryClient.invalidateQueries({ queryKey: ['calendar-tasks'] });
         }}
       />
-
-      {selectedProject && (
-        <ProjectDetailDialog
-          project={selectedProject}
-          open={selectedProject !== null}
-          onOpenChange={(open) => { if (!open) setSelectedProject(null); }}
-          onUpdated={() => {
-            queryClient.invalidateQueries({ queryKey: ['calendar-projects'] });
-          }}
-          currentUserId={user?.id ?? ''}
-          currentUserRole={user?.role ?? ''}
-        />
-      )}
     </div>
   );
 }
