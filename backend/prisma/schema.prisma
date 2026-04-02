@@ -414,8 +414,22 @@ model User {
   teamMembers             User[]                  @relation("ManagerTeam")
   team                    Team?                   @relation("TeamMembers", fields: [teamId], references: [id])
   dashboardLayout         DashboardLayout?        @relation("UserDashboardLayout")
+  userPreferences         UserPreference[]        @relation("UserPreferences")
 
   @@map("users")
+}
+
+model UserPreference {
+  id        String   @id @default(uuid())
+  userId    String
+  key       String
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation("UserPreferences", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@map("user_preferences")
 }
 
 model DashboardLayout {

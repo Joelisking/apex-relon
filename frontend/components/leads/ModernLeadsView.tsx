@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -54,7 +54,17 @@ export default function ModernLeadsView({ currentUser }: ModernLeadsViewProps) {
   const [pendingWonRevert, setPendingWonRevert] = useState<Lead[] | null>(null);
   const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'kanban' | 'table'>(canMoveStage ? 'kanban' : 'table');
+  const [viewMode, setViewMode] = useState<'kanban' | 'table'>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('leads:viewMode');
+      if (stored === 'kanban' || stored === 'table') return stored;
+    }
+    return canMoveStage ? 'kanban' : 'table';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('leads:viewMode', viewMode);
+  }, [viewMode]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const activeLead = activeDragId ? leads.find((l) => l.id === activeDragId) || null : null;

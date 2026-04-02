@@ -11,6 +11,8 @@ import {
   Loader2,
   Download,
   UserRound,
+  Bookmark,
+  BookmarkCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DatePresetFilter, DATE_PRESET_ALL, type DatePresetFilterValue } from '@/components/ui/date-preset-filter';
@@ -32,6 +34,7 @@ import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api/client';
+import { userPreferencesApi } from '@/lib/api/user-preferences-client';
 import {
   Select,
   SelectContent,
@@ -50,6 +53,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+interface ProjectsDefaultFilter {
+  dateFilter?: DatePresetFilterValue;
+  facets?: FilterValues;
+  kanbanCategory?: string | null;
+  kanbanType?: string | null;
+  view?: 'kanban' | 'table';
+}
+
 interface ProjectsViewProps {
   currentUser: { id: string; role: string; name: string };
 }
@@ -62,7 +73,13 @@ export default function ProjectsView({
   const { hasPermission } = useAuth();
   const canMoveStage = hasPermission('projects:move_stage');
   const [localProjects, setLocalProjects] = useState<Project[]>([]);
-  const [view, setView] = useState<'kanban' | 'table'>(canMoveStage ? 'kanban' : 'table');
+  const [view, setView] = useState<'kanban' | 'table'>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('projects:viewMode');
+      if (stored === 'kanban' || stored === 'table') return stored;
+    }
+    return canMoveStage ? 'kanban' : 'table';
+  });
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [completionPendingProject, setCompletionPendingProject] =
     useState<Project | null>(null);
@@ -71,14 +88,41 @@ export default function ProjectsView({
   const [facets, setFacets] = useState<FilterValues>({});
   const [selectedKanbanCategory, setSelectedKanbanCategory] = useState<string | null>(null);
   const [selectedKanbanType, setSelectedKanbanType] = useState<string | null>(null);
+  const [hasDefaultFilter, setHasDefaultFilter] = useState(false);
+  const [isSavingDefault, setIsSavingDefault] = useState(false);
 
-  // Restore persisted kanban category + type on mount
+  // Load saved default filter from DB on mount, then fall back to localStorage
   useEffect(() => {
-    const storedCat = localStorage.getItem('projects:kanbanCategory');
-    const storedType = localStorage.getItem('projects:kanbanType');
-    if (storedCat) setSelectedKanbanCategory(storedCat);
-    if (storedType) setSelectedKanbanType(storedType);
+    userPreferencesApi.get<ProjectsDefaultFilter>('projects:defaultFilter')
+      .then((saved) => {
+        if (saved) {
+          setHasDefaultFilter(true);
+          if (saved.dateFilter) setDateFilter(saved.dateFilter);
+          if (saved.facets) setFacets(saved.facets);
+          if (saved.kanbanCategory !== undefined) setSelectedKanbanCategory(saved.kanbanCategory);
+          if (saved.kanbanType !== undefined) setSelectedKanbanType(saved.kanbanType);
+          if (saved.view) setView(saved.view);
+        } else {
+          // Fall back to localStorage for kanban tab selections only
+          const storedCat = localStorage.getItem('projects:kanbanCategory');
+          const storedType = localStorage.getItem('projects:kanbanType');
+          if (storedCat) setSelectedKanbanCategory(storedCat);
+          if (storedType) setSelectedKanbanType(storedType);
+        }
+      })
+      .catch(() => {
+        // On auth failure (e.g. SSR timing), just use localStorage
+        const storedCat = localStorage.getItem('projects:kanbanCategory');
+        const storedType = localStorage.getItem('projects:kanbanType');
+        if (storedCat) setSelectedKanbanCategory(storedCat);
+        if (storedType) setSelectedKanbanType(storedType);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('projects:viewMode', view);
+  }, [view]);
 
   function selectKanbanCategory(cat: string | null) {
     setSelectedKanbanCategory(cat);
@@ -103,6 +147,36 @@ export default function ProjectsView({
     setSearchQuery('');
     setFacets({});
     selectKanbanCategory(null);
+  }
+
+  async function saveDefaultFilter() {
+    setIsSavingDefault(true);
+    try {
+      const payload: ProjectsDefaultFilter = {
+        dateFilter,
+        facets,
+        kanbanCategory: selectedKanbanCategory,
+        kanbanType: selectedKanbanType,
+        view,
+      };
+      await userPreferencesApi.set('projects:defaultFilter', payload);
+      setHasDefaultFilter(true);
+      toast.success('Default filter saved');
+    } catch {
+      toast.error('Failed to save default filter');
+    } finally {
+      setIsSavingDefault(false);
+    }
+  }
+
+  async function clearDefaultFilter() {
+    try {
+      await userPreferencesApi.remove('projects:defaultFilter');
+      setHasDefaultFilter(false);
+      toast.success('Default filter cleared');
+    } catch {
+      toast.error('Failed to clear default filter');
+    }
   }
 
   // Bulk action state
@@ -183,7 +257,8 @@ export default function ProjectsView({
     if (!passesFilter(p.status, facets.status ?? [])) return false;
     if (!passesFilter(p.riskStatus || 'On Track', facets.riskStatus ?? [])) return false;
     if (!passesFilter(p.client?.name, facets.client ?? [])) return false;
-    // In kanban view the tab strip owns service type filtering; in table view use the facet
+    // In kanban view the tab strip owns category + service type filtering; in table view use the facets
+    if (view === 'table' && !passesFilter(p.serviceType?.category?.name, facets.category ?? [])) return false;
     if (view === 'table' && !passesFilter(p.serviceType?.name, facets.serviceType ?? [])) return false;
     if ((facets.county ?? []).length > 0 && !(p.county ?? []).some((c) => (facets.county ?? []).includes(c))) return false;
     if (!passesFilter(p.projectManager?.name || 'Unassigned', facets.projectManager ?? [])) return false;
@@ -242,6 +317,14 @@ export default function ProjectsView({
       options: [...new Set(projects.map((p) => p.client?.name).filter(Boolean))].map((v) => ({
         label: v!, value: v!,
         count: projects.filter((p) => p.client?.name === v).length,
+      })),
+    },
+    {
+      id: 'category',
+      title: 'Category',
+      options: [...new Set(projects.map((p) => p.serviceType?.category?.name).filter(Boolean))].map((v) => ({
+        label: v!, value: v!,
+        count: projects.filter((p) => p.serviceType?.category?.name === v).length,
       })),
     },
     {
@@ -522,20 +605,45 @@ export default function ProjectsView({
           <div className="h-5 w-px bg-border/60 shrink-0" />
           <span className="text-xs text-muted-foreground shrink-0">Start / Created:</span>
           <DatePresetFilter value={dateFilter} onChange={setDateFilter} label="All time" />
-          {isFiltered && (
-            <div className="ml-auto flex items-center gap-2 shrink-0">
-              <span className="text-xs text-muted-foreground">
-                {filteredProjects.length} of {projects.length}
-              </span>
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            {isFiltered && (
+              <>
+                <span className="text-xs text-muted-foreground">
+                  {filteredProjects.length} of {projects.length}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
+                  Clear all
+                </Button>
+                <div className="h-4 w-px bg-border/60" />
+              </>
+            )}
+            {hasDefaultFilter ? (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={clearAllFilters}
-                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
-                Clear all
+                onClick={clearDefaultFilter}
+                className="h-7 px-2 text-xs gap-1 text-primary hover:text-destructive"
+                title="Clear saved default filter">
+                <BookmarkCheck className="h-3.5 w-3.5" />
+                Default
               </Button>
-            </div>
-          )}
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={saveDefaultFilter}
+                disabled={isSavingDefault}
+                className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                title="Save current filters as default">
+                <Bookmark className="h-3.5 w-3.5" />
+                Set default
+              </Button>
+            )}
+          </div>
         </div>
         {/* Row 2: faceted filters */}
         <FilterBar

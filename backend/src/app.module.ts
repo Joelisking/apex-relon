@@ -16,6 +16,7 @@ import { ActivitiesModule } from './activities/activities.module';
 import { StorageModule } from './storage/storage.module';
 import { FilesModule } from './files/files.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { UserPreferencesModule } from './user-preferences/user-preferences.module';
 import { HealthModule } from './health/health.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from './permissions/permissions.guard';
@@ -59,6 +60,7 @@ import { WorkCodesModule } from './work-codes/work-codes.module';
     ActivitiesModule,
     FilesModule,
     DashboardModule,
+    UserPreferencesModule,
     LeadsModule,
     ClientsModule,
     ProjectsModule,
