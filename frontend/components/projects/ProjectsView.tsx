@@ -257,22 +257,17 @@ export default function ProjectsView({
     if (!passesFilter(p.status, facets.status ?? [])) return false;
     if (!passesFilter(p.riskStatus || 'On Track', facets.riskStatus ?? [])) return false;
     if (!passesFilter(p.client?.name, facets.client ?? [])) return false;
-    // In kanban view the tab strip owns category + service type filtering; in table view use the facets
-    if (view === 'table' && !passesFilter(p.serviceType?.category?.name, facets.category ?? [])) return false;
-    if (view === 'table' && !passesFilter(p.serviceType?.name, facets.serviceType ?? [])) return false;
     if ((facets.county ?? []).length > 0 && !(p.county ?? []).some((c) => (facets.county ?? []).includes(c))) return false;
     if (!passesFilter(p.projectManager?.name || 'Unassigned', facets.projectManager ?? [])) return false;
     return true;
   });
 
-  // In kanban view, narrow by selected category and/or service type
-  const kanbanProjects = view === 'kanban'
-    ? filteredProjects.filter((p) => {
-        if (selectedKanbanCategory && p.serviceType?.category?.name !== selectedKanbanCategory) return false;
-        if (selectedKanbanType && p.serviceType?.name !== selectedKanbanType) return false;
-        return true;
-      })
-    : filteredProjects;
+  // Narrow by selected category and/or service type (applies to both kanban and list)
+  const filteredByType = filteredProjects.filter((p) => {
+    if (selectedKanbanCategory && p.serviceType?.category?.name !== selectedKanbanCategory) return false;
+    if (selectedKanbanType && p.serviceType?.name !== selectedKanbanType) return false;
+    return true;
+  });
 
   // Unique parent categories present in the project list (for row 1 of tab strip)
   const kanbanCategories = [...new Set(
@@ -292,6 +287,7 @@ export default function ProjectsView({
   const isFiltered =
     dateFilter.preset !== 'all' ||
     !!searchQuery.trim() ||
+    !!selectedKanbanCategory ||
     Object.values(facets).some((v) => v.length > 0);
 
   const projectFilterDefs: FilterDef[] = [
@@ -317,22 +313,6 @@ export default function ProjectsView({
       options: [...new Set(projects.map((p) => p.client?.name).filter(Boolean))].map((v) => ({
         label: v!, value: v!,
         count: projects.filter((p) => p.client?.name === v).length,
-      })),
-    },
-    {
-      id: 'category',
-      title: 'Category',
-      options: [...new Set(projects.map((p) => p.serviceType?.category?.name).filter(Boolean))].map((v) => ({
-        label: v!, value: v!,
-        count: projects.filter((p) => p.serviceType?.category?.name === v).length,
-      })),
-    },
-    {
-      id: 'serviceType',
-      title: 'Service Type',
-      options: [...new Set(projects.map((p) => p.serviceType?.name).filter(Boolean))].map((v) => ({
-        label: v!, value: v!,
-        count: projects.filter((p) => p.serviceType?.name === v).length,
       })),
     },
     {
@@ -537,8 +517,8 @@ export default function ProjectsView({
             Projects
           </h1>
           <p className="text-muted-foreground hidden sm:block">
-            {filteredProjects.length} project
-            {filteredProjects.length !== 1 ? 's' : ''} across all
+            {filteredByType.length} project
+            {filteredByType.length !== 1 ? 's' : ''} across all
             clients
           </p>
         </div>
@@ -609,7 +589,7 @@ export default function ProjectsView({
             {isFiltered && (
               <>
                 <span className="text-xs text-muted-foreground">
-                  {filteredProjects.length} of {projects.length}
+                  {filteredByType.length} of {projects.length}
                 </span>
                 <Button
                   variant="ghost"
@@ -655,7 +635,7 @@ export default function ProjectsView({
       </div>
 
       {/* Two-level service type tab strip — kanban only */}
-      {view === 'kanban' && !isLoading && kanbanCategories.length > 0 && (
+      {!isLoading && kanbanCategories.length > 0 && (
         <div className="flex flex-col gap-1 -mb-1">
           {/* Row 1 — parent categories */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
@@ -731,7 +711,7 @@ export default function ProjectsView({
       )}
 
       {/* Stats — only shown when user can see all projects, not just assigned ones */}
-      {!isLoading && canMoveStage && hasPermission('projects:view_all') && <ProjectStats projects={filteredProjects} />}
+      {!isLoading && canMoveStage && hasPermission('projects:view_all') && <ProjectStats projects={filteredByType} />}
 
       {/* Content */}
       {isLoading ? (
@@ -768,7 +748,7 @@ export default function ProjectsView({
         </div>
       ) : view === 'kanban' ? (
         <ProjectKanbanBoard
-          projects={kanbanProjects}
+          projects={filteredByType}
           onProjectClick={handleProjectClick}
           onStatusChange={handleProjectStatusChange}
           stages={projectStages}
@@ -826,7 +806,7 @@ export default function ProjectsView({
           )}
           <DataTable
             columns={projectColumns}
-            data={filteredProjects}
+            data={filteredByType}
             onRowClick={(row) => handleProjectClick(row)}
             onSelectionChange={setSelectedProjects}
           />
