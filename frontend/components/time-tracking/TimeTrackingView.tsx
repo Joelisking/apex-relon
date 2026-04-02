@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Clock, Users, Trash2, Pencil, CalendarDays, ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
+import { Plus, Clock, Users, Trash2, Pencil, CalendarDays, ChevronLeft, ChevronRight, UserPlus, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Label } from '@/components/ui/label';
@@ -108,6 +108,38 @@ function formatDate(iso: string) {
   });
 }
 
+type SortDir = 'asc' | 'desc';
+type EntrySortKey = 'date' | 'project' | 'user' | 'hours' | 'billable';
+
+function toggleSort<K extends string>(
+  current: { key: K; dir: SortDir },
+  key: K,
+  set: (v: { key: K; dir: SortDir }) => void,
+) {
+  set({ key, dir: current.key === key && current.dir === 'asc' ? 'desc' : 'asc' });
+}
+
+function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
+  if (!active) return <ChevronsUpDown className="h-3 w-3 ml-1 text-muted-foreground/50 shrink-0" />;
+  return dir === 'asc'
+    ? <ChevronUp className="h-3 w-3 ml-1 shrink-0" />
+    : <ChevronDown className="h-3 w-3 ml-1 shrink-0" />;
+}
+
+function sortEntries(entries: TimeEntry[], sort: { key: EntrySortKey; dir: SortDir }): TimeEntry[] {
+  return [...entries].sort((a, b) => {
+    let cmp = 0;
+    switch (sort.key) {
+      case 'date': cmp = a.date.localeCompare(b.date); break;
+      case 'project': cmp = (a.project?.name ?? '').localeCompare(b.project?.name ?? ''); break;
+      case 'user': cmp = (a.user?.name ?? '').localeCompare(b.user?.name ?? ''); break;
+      case 'hours': cmp = a.hours - b.hours; break;
+      case 'billable': cmp = Number(a.billable) - Number(b.billable); break;
+    }
+    return sort.dir === 'asc' ? cmp : -cmp;
+  });
+}
+
 export function TimeTrackingView() {
   const { user, hasPermission } = useAuth();
   const canManageAll = hasPermission('time_tracking:manage_all');
@@ -130,6 +162,11 @@ export function TimeTrackingView() {
 
   // Weekly timesheet navigation
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
+
+  // Column sort state
+  const [mySort, setMySort] = useState<{ key: EntrySortKey; dir: SortDir }>({ key: 'date', dir: 'desc' });
+  const [teamSort, setTeamSort] = useState<{ key: EntrySortKey; dir: SortDir }>({ key: 'date', dir: 'desc' });
+  const [sheetSort, setSheetSort] = useState<{ key: string; dir: SortDir }>({ key: 'name', dir: 'asc' });
 
   const dateQuery = startDate && endDate
     ? `&startDate=${startDate}&endDate=${endDate}`
@@ -172,6 +209,19 @@ export function TimeTrackingView() {
 
   const totalHours = myEntries.reduce((s, e) => s + e.hours, 0);
   const billableHours = myEntries.filter((e) => e.billable).reduce((s, e) => s + e.hours, 0);
+
+  const sortedMyEntries = useMemo(() => sortEntries(myEntries, mySort), [myEntries, mySort]);
+  const sortedAllEntries = useMemo(() => sortEntries(allEntries, teamSort), [allEntries, teamSort]);
+  const sortedTimesheetRows = useMemo(() => {
+    if (!timesheet) return [];
+    return [...timesheet.rows].sort((a, b) => {
+      let cmp = 0;
+      if (sheetSort.key === 'name') cmp = a.user.name.localeCompare(b.user.name);
+      else if (sheetSort.key === 'total') cmp = a.totalHours - b.totalHours;
+      else cmp = (a.days[sheetSort.key] ?? 0) - (b.days[sheetSort.key] ?? 0);
+      return sheetSort.dir === 'asc' ? cmp : -cmp;
+    });
+  }, [timesheet, sheetSort]);
 
   // Week days for timesheet header
   const weekDays = useMemo(() => {
@@ -479,16 +529,33 @@ export function TimeTrackingView() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Project</TableHead>
+                          {(['date', 'project'] as EntrySortKey[]).map((key) => (
+                            <TableHead
+                              key={key}
+                              className="cursor-pointer select-none hover:text-foreground"
+                              onClick={() => toggleSort(mySort, key, setMySort)}>
+                              <span className="flex items-center capitalize">
+                                {key === 'date' ? 'Date' : 'Project'}
+                                <SortIcon active={mySort.key === key} dir={mySort.dir} />
+                              </span>
+                            </TableHead>
+                          ))}
                           <TableHead>Service Item</TableHead>
                           <TableHead>Description</TableHead>
-                          <TableHead>Hours</TableHead>
-                          <TableHead>Billable</TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none hover:text-foreground"
+                            onClick={() => toggleSort(mySort, 'hours', setMySort)}>
+                            <span className="flex items-center">Hours<SortIcon active={mySort.key === 'hours'} dir={mySort.dir} /></span>
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none hover:text-foreground"
+                            onClick={() => toggleSort(mySort, 'billable', setMySort)}>
+                            <span className="flex items-center">Billable<SortIcon active={mySort.key === 'billable'} dir={mySort.dir} /></span>
+                          </TableHead>
                           <TableHead></TableHead>
                         </TableRow>
                       </TableHeader>
-                      <TableBody>{myEntries.map((e) => renderEntryRow(e, false))}</TableBody>
+                      <TableBody>{sortedMyEntries.map((e) => renderEntryRow(e, false))}</TableBody>
                     </Table>
                   </div>
                 </>
@@ -519,17 +586,33 @@ export function TimeTrackingView() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>User</TableHead>
-                          <TableHead>Project</TableHead>
+                          {(['date', 'user', 'project'] as EntrySortKey[]).map((key) => (
+                            <TableHead
+                              key={key}
+                              className="cursor-pointer select-none hover:text-foreground"
+                              onClick={() => toggleSort(teamSort, key, setTeamSort)}>
+                              <span className="flex items-center capitalize">
+                                {key === 'date' ? 'Date' : key === 'user' ? 'User' : 'Project'}
+                                <SortIcon active={teamSort.key === key} dir={teamSort.dir} />
+                              </span>
+                            </TableHead>
+                          ))}
                           <TableHead>Service Item</TableHead>
                           <TableHead>Description</TableHead>
-                          <TableHead>Hours</TableHead>
-                          <TableHead>Billable</TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none hover:text-foreground"
+                            onClick={() => toggleSort(teamSort, 'hours', setTeamSort)}>
+                            <span className="flex items-center">Hours<SortIcon active={teamSort.key === 'hours'} dir={teamSort.dir} /></span>
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none hover:text-foreground"
+                            onClick={() => toggleSort(teamSort, 'billable', setTeamSort)}>
+                            <span className="flex items-center">Billable<SortIcon active={teamSort.key === 'billable'} dir={teamSort.dir} /></span>
+                          </TableHead>
                           {canEnterForOthers && <TableHead></TableHead>}
                         </TableRow>
                       </TableHeader>
-                      <TableBody>{allEntries.map((e) => renderEntryRow(e, true))}</TableBody>
+                      <TableBody>{sortedAllEntries.map((e) => renderEntryRow(e, true))}</TableBody>
                     </Table>
                   </div>
                 </>
@@ -574,20 +657,42 @@ export function TimeTrackingView() {
                   <Table className="min-w-[640px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-40">Team Member</TableHead>
+                        <TableHead
+                          className="w-40 cursor-pointer select-none hover:text-foreground"
+                          onClick={() => toggleSort(sheetSort, 'name', setSheetSort)}>
+                          <span className="flex items-center">
+                            Team Member
+                            <SortIcon active={sheetSort.key === 'name'} dir={sheetSort.dir} />
+                          </span>
+                        </TableHead>
                         {weekDays.map((day) => (
-                          <TableHead key={day} className="text-center w-20 text-xs">
-                            <div>{new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                            <div className="text-muted-foreground font-normal">
-                              {new Date(day + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          <TableHead
+                            key={day}
+                            className="text-center w-20 text-xs cursor-pointer select-none hover:text-foreground"
+                            onClick={() => toggleSort(sheetSort, day, setSheetSort)}>
+                            <div className="flex flex-col items-center">
+                              <span className="flex items-center gap-0.5">
+                                {new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })}
+                                <SortIcon active={sheetSort.key === day} dir={sheetSort.dir} />
+                              </span>
+                              <span className="text-muted-foreground font-normal">
+                                {new Date(day + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
                             </div>
                           </TableHead>
                         ))}
-                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead
+                          className="text-right cursor-pointer select-none hover:text-foreground"
+                          onClick={() => toggleSort(sheetSort, 'total', setSheetSort)}>
+                          <span className="flex items-center justify-end">
+                            Total
+                            <SortIcon active={sheetSort.key === 'total'} dir={sheetSort.dir} />
+                          </span>
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {timesheet.rows.map((row) => (
+                      {sortedTimesheetRows.map((row) => (
                         <TableRow key={row.user.id}>
                           <TableCell className="font-medium text-sm">{row.user.name}</TableCell>
                           {weekDays.map((day) => {

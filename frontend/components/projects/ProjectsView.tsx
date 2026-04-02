@@ -69,21 +69,29 @@ export default function ProjectsView({
   const [dateFilter, setDateFilter] = useState<DatePresetFilterValue>(DATE_PRESET_ALL);
   const [searchQuery, setSearchQuery] = useState('');
   const [facets, setFacets] = useState<FilterValues>({});
+  const [selectedKanbanCategory, setSelectedKanbanCategory] = useState<string | null>(null);
   const [selectedKanbanType, setSelectedKanbanType] = useState<string | null>(null);
 
-  // Restore persisted kanban type on mount
+  // Restore persisted kanban category + type on mount
   useEffect(() => {
-    const stored = localStorage.getItem('projects:kanbanType');
-    if (stored) setSelectedKanbanType(stored);
+    const storedCat = localStorage.getItem('projects:kanbanCategory');
+    const storedType = localStorage.getItem('projects:kanbanType');
+    if (storedCat) setSelectedKanbanCategory(storedCat);
+    if (storedType) setSelectedKanbanType(storedType);
   }, []);
+
+  function selectKanbanCategory(cat: string | null) {
+    setSelectedKanbanCategory(cat);
+    setSelectedKanbanType(null);
+    localStorage.removeItem('projects:kanbanType');
+    if (cat) localStorage.setItem('projects:kanbanCategory', cat);
+    else localStorage.removeItem('projects:kanbanCategory');
+  }
 
   function selectKanbanType(type: string | null) {
     setSelectedKanbanType(type);
-    if (type) {
-      localStorage.setItem('projects:kanbanType', type);
-    } else {
-      localStorage.removeItem('projects:kanbanType');
-    }
+    if (type) localStorage.setItem('projects:kanbanType', type);
+    else localStorage.removeItem('projects:kanbanType');
   }
 
   function setFacet(id: string, values: string[]) {
@@ -94,7 +102,7 @@ export default function ProjectsView({
     setDateFilter(DATE_PRESET_ALL);
     setSearchQuery('');
     setFacets({});
-    selectKanbanType(null);
+    selectKanbanCategory(null);
   }
 
   // Bulk action state
@@ -125,7 +133,7 @@ export default function ProjectsView({
     staleTime: 60 * 1000,
   });
 
-  // The active service type tab drives stage fetching in kanban view
+  // The selected service type (not category) drives stage fetching in kanban view
   const kanbanServiceType = view === 'kanban' ? selectedKanbanType ?? undefined : undefined;
 
   const { data: projectStages = [], isLoading: stagesLoading } = useQuery<PipelineStage[]>({
@@ -182,15 +190,29 @@ export default function ProjectsView({
     return true;
   });
 
-  // In kanban view, further narrow by the selected service type tab
-  const kanbanProjects = view === 'kanban' && selectedKanbanType
-    ? filteredProjects.filter((p) => p.serviceType?.name === selectedKanbanType)
+  // In kanban view, narrow by selected category and/or service type
+  const kanbanProjects = view === 'kanban'
+    ? filteredProjects.filter((p) => {
+        if (selectedKanbanCategory && p.serviceType?.category?.name !== selectedKanbanCategory) return false;
+        if (selectedKanbanType && p.serviceType?.name !== selectedKanbanType) return false;
+        return true;
+      })
     : filteredProjects;
 
-  // Unique service types across all projects (for tab strip)
-  const kanbanServiceTypes = [...new Set(
-    projects.map((p) => p.serviceType?.name).filter(Boolean)
+  // Unique parent categories present in the project list (for row 1 of tab strip)
+  const kanbanCategories = [...new Set(
+    projects.map((p) => p.serviceType?.category?.name).filter(Boolean)
   )] as string[];
+
+  // Service types within the selected category (for row 2 of tab strip)
+  const kanbanServiceTypesForCategory = selectedKanbanCategory
+    ? [...new Set(
+        projects
+          .filter((p) => p.serviceType?.category?.name === selectedKanbanCategory)
+          .map((p) => p.serviceType?.name)
+          .filter(Boolean)
+      )] as string[]
+    : [];
 
   const isFiltered =
     dateFilter.preset !== 'all' ||
@@ -524,40 +546,79 @@ export default function ProjectsView({
         />
       </div>
 
-      {/* Service type tab strip — kanban only */}
-      {view === 'kanban' && !isLoading && kanbanServiceTypes.length > 0 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mb-1">
-          <button
-            onClick={() => selectKanbanType(null)}
-            className={[
-              'text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap transition-colors border shrink-0',
-              selectedKanbanType === null
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-muted/60 text-muted-foreground border-border/60 hover:bg-muted hover:text-foreground',
-            ].join(' ')}>
-            All Types
-            <span className="ml-1.5 opacity-70 tabular-nums">
-              {filteredProjects.length}
-            </span>
-          </button>
-          {kanbanServiceTypes.map((st) => {
-            const count = filteredProjects.filter((p) => p.serviceType?.name === st).length;
-            const active = selectedKanbanType === st;
-            return (
+      {/* Two-level service type tab strip — kanban only */}
+      {view === 'kanban' && !isLoading && kanbanCategories.length > 0 && (
+        <div className="flex flex-col gap-1 -mb-1">
+          {/* Row 1 — parent categories */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+            <button
+              onClick={() => selectKanbanCategory(null)}
+              className={[
+                'text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap transition-colors border shrink-0',
+                selectedKanbanCategory === null
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-muted/60 text-muted-foreground border-border/60 hover:bg-muted hover:text-foreground',
+              ].join(' ')}>
+              All Types
+              <span className="ml-1.5 opacity-70 tabular-nums">{filteredProjects.length}</span>
+            </button>
+            {kanbanCategories.map((cat) => {
+              const count = filteredProjects.filter((p) => p.serviceType?.category?.name === cat).length;
+              const active = selectedKanbanCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => selectKanbanCategory(cat)}
+                  className={[
+                    'text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap transition-colors border shrink-0',
+                    active
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted/60 text-muted-foreground border-border/60 hover:bg-muted hover:text-foreground',
+                  ].join(' ')}>
+                  {cat}
+                  <span className="ml-1.5 opacity-70 tabular-nums">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Row 2 — service types within selected category */}
+          {selectedKanbanCategory && kanbanServiceTypesForCategory.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 pl-2">
+              <div className="h-4 w-px bg-border/50 shrink-0 mx-0.5" />
               <button
-                key={st}
-                onClick={() => selectKanbanType(st)}
+                onClick={() => selectKanbanType(null)}
                 className={[
-                  'text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap transition-colors border shrink-0',
-                  active
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-muted/60 text-muted-foreground border-border/60 hover:bg-muted hover:text-foreground',
+                  'text-xs px-3 py-1 rounded-full whitespace-nowrap transition-colors border shrink-0',
+                  selectedKanbanType === null
+                    ? 'bg-primary/15 text-primary border-primary/50 font-semibold'
+                    : 'bg-muted/40 text-muted-foreground border-border/50 hover:bg-muted hover:text-foreground',
                 ].join(' ')}>
-                {st}
-                <span className="ml-1.5 opacity-70 tabular-nums">{count}</span>
+                All {selectedKanbanCategory}
+                <span className="ml-1.5 opacity-70 tabular-nums">
+                  {filteredProjects.filter((p) => p.serviceType?.category?.name === selectedKanbanCategory).length}
+                </span>
               </button>
-            );
-          })}
+              {kanbanServiceTypesForCategory.map((st) => {
+                const count = filteredProjects.filter((p) => p.serviceType?.name === st).length;
+                const active = selectedKanbanType === st;
+                return (
+                  <button
+                    key={st}
+                    onClick={() => selectKanbanType(st)}
+                    className={[
+                      'text-xs px-3 py-1 rounded-full whitespace-nowrap transition-colors border shrink-0',
+                      active
+                        ? 'bg-primary text-primary-foreground border-primary font-semibold'
+                        : 'bg-muted/40 text-muted-foreground border-border/50 hover:bg-muted hover:text-foreground',
+                    ].join(' ')}>
+                    {st}
+                    <span className="ml-1.5 opacity-70 tabular-nums">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
