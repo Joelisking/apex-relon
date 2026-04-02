@@ -190,8 +190,66 @@ export function TimeTrackingView() {
     setWeekStart(d.toISOString().split('T')[0]);
   };
 
+  // Mobile card view for a single entry
+  const renderEntryCard = (entry: TimeEntry, showUser = false) => {
+    const canEditThis = showUser ? canEnterForOthers : entry.userId === user?.id;
+    return (
+      <div key={entry.id} className="px-4 py-3 space-y-1.5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="font-medium text-sm truncate">
+              {entry.project?.name ?? <span className="text-muted-foreground">No project</span>}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {new Date(entry.date.split('T')[0] + 'T12:00:00').toLocaleDateString()}
+              {showUser && entry.user?.name ? ` · ${entry.user.name}` : ''}
+            </p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="font-mono font-semibold text-sm">{formatHours(entry.hours)}</p>
+            {entry.billable ? (
+              <Badge className="bg-green-100 text-green-800 border-green-200 text-xs mt-0.5">Billable</Badge>
+            ) : (
+              <Badge variant="secondary" className="text-xs mt-0.5">Non-bill.</Badge>
+            )}
+          </div>
+        </div>
+        {entry.serviceItem && (
+          <p className="text-xs text-muted-foreground">
+            {entry.serviceItem.name}
+            {entry.serviceItemSubtask ? ` · ${entry.serviceItemSubtask.name}` : ''}
+          </p>
+        )}
+        {entry.description && (
+          <p className="text-xs text-muted-foreground line-clamp-2">{entry.description}</p>
+        )}
+        {entry.submittedBy && (
+          <p className="text-xs text-muted-foreground">Logged by {entry.submittedBy.name}</p>
+        )}
+        {canEditThis && (
+          <div className="flex gap-1 justify-end pt-0.5">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => { setEditingEntry(entry); setProxyUser(null); setEntryDialogOpen(true); }}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-destructive hover:text-destructive"
+              onClick={() => deleteMutation.mutate(entry.id)}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Desktop table row for a single entry
   const renderEntryRow = (entry: TimeEntry, showUser = false) => {
-    // My Time tab: always show actions (own entries). Team Time tab: only if enter_for_others.
     const canEditThis = showUser ? canEnterForOthers : entry.userId === user?.id;
     return (
       <TableRow key={entry.id}>
@@ -257,7 +315,7 @@ export function TimeTrackingView() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
@@ -266,7 +324,7 @@ export function TimeTrackingView() {
             Log hours, track billability, and monitor project budgets.
           </p>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-wrap gap-2 shrink-0">
           <TimerWidget onSaved={() => queryClient.invalidateQueries({ queryKey: ['time-entries'] })} />
           {canEnterForOthers && (
             <Button
@@ -274,7 +332,8 @@ export function TimeTrackingView() {
               variant="outline"
               onClick={() => setProxyPickerOpen(true)}>
               <UserPlus className="h-4 w-4 mr-1" />
-              Log for Team Member
+              <span className="sm:hidden">For Team</span>
+              <span className="hidden sm:inline">Log for Team Member</span>
             </Button>
           )}
           <Button
@@ -289,30 +348,32 @@ export function TimeTrackingView() {
       {/* Date range filter */}
       <Card>
         <CardContent className="pt-4">
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="space-y-1">
-              <Label className="text-xs">From</Label>
-              <DatePicker
-                value={startDate}
-                onChange={setStartDate}
-                className="h-8 w-44 text-sm"
-                clearable={false}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">To</Label>
-              <DatePicker
-                value={endDate}
-                onChange={setEndDate}
-                className="h-8 w-44 text-sm"
-                clearable={false}
-              />
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:contents">
+              <div className="space-y-1">
+                <Label className="text-xs">From</Label>
+                <DatePicker
+                  value={startDate}
+                  onChange={setStartDate}
+                  className="h-8 w-full sm:w-44 text-sm"
+                  clearable={false}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">To</Label>
+                <DatePicker
+                  value={endDate}
+                  onChange={setEndDate}
+                  className="h-8 w-full sm:w-44 text-sm"
+                  clearable={false}
+                />
+              </div>
             </div>
             <div className="flex gap-2">
               <Button
                 size="sm"
                 variant="outline"
-                className="h-8 text-xs"
+                className="h-8 text-xs flex-1 sm:flex-none"
                 onClick={() => {
                   const d = new Date();
                   setStartDate(new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]);
@@ -323,7 +384,7 @@ export function TimeTrackingView() {
               <Button
                 size="sm"
                 variant="outline"
-                className="h-8 text-xs"
+                className="h-8 text-xs flex-1 sm:flex-none"
                 onClick={() => {
                   const d = new Date();
                   const start = new Date(d);
@@ -339,27 +400,34 @@ export function TimeTrackingView() {
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="pt-4">
+          <CardContent className="p-3 sm:pt-4">
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" /> Total Hours
+              <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+              <span className="hidden sm:inline">Total Hours</span>
+              <span className="sm:hidden">Total</span>
             </p>
-            <p className="text-2xl font-bold mt-1">{formatHours(totalHours)}</p>
+            <p className="text-lg sm:text-2xl font-bold mt-1 tabular-nums">{formatHours(totalHours)}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4">
+          <CardContent className="p-3 sm:pt-4">
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5 text-green-500" /> Billable Hours
+              <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-green-500 shrink-0" />
+              <span className="hidden sm:inline">Billable Hours</span>
+              <span className="sm:hidden">Billable</span>
             </p>
-            <p className="text-2xl font-bold mt-1 text-green-600">{formatHours(billableHours)}</p>
+            <p className="text-lg sm:text-2xl font-bold mt-1 text-green-600 tabular-nums">{formatHours(billableHours)}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4">
-            <p className="text-xs text-muted-foreground">Billability Rate</p>
-            <p className="text-2xl font-bold mt-1">
+          <CardContent className="p-3 sm:pt-4">
+            <p className="text-xs text-muted-foreground">
+              <span className="hidden sm:inline">Billability Rate</span>
+              <span className="sm:hidden">Rate</span>
+            </p>
+            <p className="text-lg sm:text-2xl font-bold mt-1 tabular-nums">
               {totalHours > 0 ? Math.round((billableHours / totalHours) * 100) : 0}%
             </p>
           </CardContent>
@@ -368,20 +436,21 @@ export function TimeTrackingView() {
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="my-time">
-            <Clock className="h-4 w-4 sm:mr-1.5" />
-            <span className="hidden sm:inline">My Time</span>
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="my-time" className="flex-1 sm:flex-none">
+            <Clock className="h-4 w-4 mr-1.5" />
+            My Time
           </TabsTrigger>
           {canViewAll && (
-            <TabsTrigger value="team-time">
-              <Users className="h-4 w-4 sm:mr-1.5" />
+            <TabsTrigger value="team-time" className="flex-1 sm:flex-none">
+              <Users className="h-4 w-4 mr-1.5" />
+              <span className="sm:hidden">Team</span>
               <span className="hidden sm:inline">Team Time</span>
             </TabsTrigger>
           )}
-          <TabsTrigger value="timesheet">
-            <CalendarDays className="h-4 w-4 sm:mr-1.5" />
-            <span className="hidden sm:inline">Timesheet</span>
+          <TabsTrigger value="timesheet" className="flex-1 sm:flex-none">
+            <CalendarDays className="h-4 w-4 mr-1.5" />
+            Timesheet
           </TabsTrigger>
         </TabsList>
 
@@ -399,23 +468,29 @@ export function TimeTrackingView() {
                   No time entries for this period. Click &quot;Log Time&quot; to get started.
                 </p>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Project</TableHead>
-                        <TableHead>Service Item</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Hours</TableHead>
-                        <TableHead>Billable</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>{myEntries.map((e) => renderEntryRow(e, false))}</TableBody>
-                  </Table>
-
-                </div>
+                <>
+                  {/* Mobile card list */}
+                  <div className="sm:hidden divide-y">
+                    {myEntries.map((e) => renderEntryCard(e, false))}
+                  </div>
+                  {/* Desktop table */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Project</TableHead>
+                          <TableHead>Service Item</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Hours</TableHead>
+                          <TableHead>Billable</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>{myEntries.map((e) => renderEntryRow(e, false))}</TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -433,23 +508,30 @@ export function TimeTrackingView() {
               ) : allEntries.length === 0 ? (
                 <p className="p-4 text-sm text-muted-foreground">No entries for this period.</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>User</TableHead>
-                        <TableHead>Project</TableHead>
-                        <TableHead>Service Item</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Hours</TableHead>
-                        <TableHead>Billable</TableHead>
-                        {canEnterForOthers && <TableHead></TableHead>}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>{allEntries.map((e) => renderEntryRow(e, true))}</TableBody>
-                  </Table>
-                </div>
+                <>
+                  {/* Mobile card list */}
+                  <div className="sm:hidden divide-y">
+                    {allEntries.map((e) => renderEntryCard(e, true))}
+                  </div>
+                  {/* Desktop table */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>User</TableHead>
+                          <TableHead>Project</TableHead>
+                          <TableHead>Service Item</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Hours</TableHead>
+                          <TableHead>Billable</TableHead>
+                          {canEnterForOthers && <TableHead></TableHead>}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>{allEntries.map((e) => renderEntryRow(e, true))}</TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -488,7 +570,7 @@ export function TimeTrackingView() {
                 <p className="p-4 text-sm text-muted-foreground">No hours logged this week.</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <Table>
+                  <Table className="min-w-[640px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-40">Team Member</TableHead>

@@ -238,7 +238,7 @@ export function TimeEntryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-xl flex flex-col max-h-[90dvh]">
         <DialogHeader>
           <DialogTitle>{entry ? 'Edit Time Entry' : 'Log Time'}</DialogTitle>
           {targetUser && !entry && (
@@ -249,7 +249,7 @@ export function TimeEntryDialog({
           )}
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1">
           {/* Date */}
           <div className="space-y-1.5">
             <Label>Date</Label>
@@ -257,11 +257,11 @@ export function TimeEntryDialog({
           </div>
 
           {/* Time input mode toggle */}
-          <div className="flex gap-1 rounded-md border p-1 w-fit">
+          <div className="flex gap-1 rounded-md border p-1 w-full sm:w-fit">
             <button
               type="button"
               onClick={() => setInputMode('times')}
-              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+              className={`flex-1 sm:flex-none px-3 py-1.5 sm:py-1 rounded text-xs font-medium transition-colors text-center ${
                 inputMode === 'times'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground'
@@ -272,7 +272,7 @@ export function TimeEntryDialog({
             <button
               type="button"
               onClick={() => setInputMode('hours')}
-              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+              className={`flex-1 sm:flex-none px-3 py-1.5 sm:py-1 rounded text-xs font-medium transition-colors text-center ${
                 inputMode === 'hours'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground'
@@ -438,7 +438,7 @@ export function TimeEntryDialog({
                 type="button"
                 size="sm"
                 variant={billable === true ? 'default' : 'outline'}
-                className={billable === true ? 'bg-green-600 hover:bg-green-700 text-white' : ''}
+                className={`flex-1 sm:flex-none ${billable === true ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
                 onClick={() => setBillable(true)}
               >
                 Billable
@@ -447,7 +447,7 @@ export function TimeEntryDialog({
                 type="button"
                 size="sm"
                 variant={billable === false ? 'default' : 'outline'}
-                className={billable === false ? 'bg-slate-600 hover:bg-slate-700 text-white' : ''}
+                className={`flex-1 sm:flex-none ${billable === false ? 'bg-slate-600 hover:bg-slate-700 text-white' : ''}`}
                 onClick={() => setBillable(false)}
               >
                 Non-billable

@@ -32,7 +32,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full bg-background">
+      <div className="flex h-dvh w-full bg-background">
         <div className="print:hidden">
           <AppSidebar />
         </div>
