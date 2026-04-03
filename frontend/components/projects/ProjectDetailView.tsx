@@ -34,6 +34,7 @@ import { EditProjectDialog } from './EditProjectDialog';
 import { ProjectAssignmentPanel } from './ProjectAssignmentPanel';
 import { ProjectDetailHeader } from './ProjectDetailHeader';
 import { ProjectOverviewPanel } from './ProjectOverviewPanel';
+import { ProjectVicinityMap } from './ProjectVicinityMap';
 import { PageBreadcrumbs } from '../layout/PageBreadcrumbs';
 import { ProjectSwitcher } from './ProjectSwitcher';
 import {
@@ -296,6 +297,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
     { value: 'crew', label: 'Crew' },
     ...(isEngineeringProject ? [{ value: 'time', label: 'Time Tracking' }] : []),
     { value: 'documents', label: `Documents${files.length > 0 ? ` (${files.length})` : ''}` },
+    { value: 'location', label: 'Location' },
   ];
 
   return (
@@ -488,6 +490,14 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
                 files={files}
                 currentUserId={currentUserId}
                 onFilesChanged={refreshProject}
+              />
+            </TabsContent>
+
+            <TabsContent value="location" className="mt-0">
+              <ProjectVicinityMap
+                project={project}
+                canEdit={hasPermission('projects:edit')}
+                onEdit={() => setIsEditOpen(true)}
               />
             </TabsContent>
 

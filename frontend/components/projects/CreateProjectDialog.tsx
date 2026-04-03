@@ -37,6 +37,7 @@ import { Loader2, Users, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ProjectCostSegments, type CostSegmentInput } from './ProjectCostSegments';
+import { AddressAutocomplete } from './AddressAutocomplete';
 import { MultiCreatableSelect } from '@/components/ui/multi-creatable-select';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import { UserPicker } from '@/components/ui/user-picker';
@@ -65,6 +66,9 @@ const formSchema = z.object({
   riskStatus: z.string().optional(),
   county: z.array(z.string()).optional(),
   description: z.string().optional(),
+  address: z.string().optional(),
+  latitude: z.coerce.number().optional().nullable(),
+  longitude: z.coerce.number().optional().nullable(),
 });
 
 interface CreateProjectDialogProps {
@@ -114,6 +118,8 @@ export function CreateProjectDialog({
     useState<string[]>([]);
   const [costSegments, setCostSegments] = useState<CostSegmentInput[]>([]);
   const [activeOptionalStages, setActiveOptionalStages] = useState<string[]>([]);
+  const [geocodedLat, setGeocodedLat] = useState<number | null>(null);
+  const [geocodedLng, setGeocodedLng] = useState<number | null>(null);
 
   const { data: serviceCategories = [] } = useQuery<
     ServiceCategory[]
@@ -267,6 +273,9 @@ export function CreateProjectDialog({
             : undefined,
         costSegments: costSegments.length > 0 ? costSegments : undefined,
         activeOptionalStages,
+        address: values.address || undefined,
+        latitude: geocodedLat ?? (values.latitude ? Number(values.latitude) : undefined),
+        longitude: geocodedLng ?? (values.longitude ? Number(values.longitude) : undefined),
       });
       toast.success('Project created successfully');
       onProjectCreated();
@@ -277,6 +286,8 @@ export function CreateProjectDialog({
       setSelectedServiceTypeIds([]);
       setCostSegments([]);
       setActiveOptionalStages([]);
+      setGeocodedLat(null);
+      setGeocodedLng(null);
     } catch (error) {
       toast.error('Failed to create project');
       console.error(error);
@@ -629,6 +640,87 @@ export function CreateProjectDialog({
               contractedValue={Number(watchedContractedValue) || 0}
               onUseSegmentTotal={handleUseSegmentTotal}
             />
+
+            {/* Location */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium">Location</p>
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Site Address</FormLabel>
+                    <FormControl>
+                      <AddressAutocomplete
+                        value={field.value ?? ''}
+                        onChange={(address, lat, lng) => {
+                          field.onChange(address);
+                          if (lat !== null && lng !== null) {
+                            setGeocodedLat(lat);
+                            setGeocodedLng(lng);
+                            form.setValue('latitude', lat);
+                            form.setValue('longitude', lng);
+                          } else {
+                            setGeocodedLat(null);
+                            setGeocodedLng(null);
+                          }
+                        }}
+                        placeholder="Search for site address…"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="latitude"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Latitude</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="any"
+                          placeholder="e.g. 41.0793"
+                          {...field}
+                          value={field.value ?? ''}
+                          onChange={(e) => {
+                            field.onChange(e.target.value === '' ? null : e.target.value);
+                            setGeocodedLat(e.target.value === '' ? null : Number(e.target.value));
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="longitude"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Longitude</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="any"
+                          placeholder="e.g. -85.1394"
+                          {...field}
+                          value={field.value ?? ''}
+                          onChange={(e) => {
+                            field.onChange(e.target.value === '' ? null : e.target.value);
+                            setGeocodedLng(e.target.value === '' ? null : Number(e.target.value));
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
 
             <FormField
               control={form.control}

@@ -101,4 +101,18 @@ export class CreateProjectDto {
   @IsString({ each: true })
   @IsOptional()
   activeOptionalStages?: string[];
+
+  @IsString()
+  @IsOptional()
+  address?: string;
+
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  latitude?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  longitude?: number;
 }

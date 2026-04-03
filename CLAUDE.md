@@ -238,6 +238,83 @@ Every file must have a single, clear responsibility. Do not put everything in on
 - If you find yourself thinking "I'll just add this here for now" — stop and create the right file instead.
 - Shared types belong in `lib/types.ts` (frontend) or a dedicated `*.types.ts` file (backend) — not in the file that first needed them.
 - Never add a new feature to a file that already has a different responsibility.
+- Constants and enums shared across files belong in a dedicated `*.constants.ts` file — not scattered inline.
+- Never co-locate test logic with production code. Tests live in `*.spec.ts` / `*.test.ts` files alongside the unit under test.
+
+---
+
+## React Best Practices
+
+### Component Design
+- Prefer **composition over inheritance** — build small, focused components and compose them.
+- A component does one thing. If it fetches data, transforms it, AND renders a complex layout, split it.
+- Pass only the props a component needs. If you're drilling 3+ props down, use context or restructure.
+- Avoid anonymous functions and object literals as JSX props — they create new references on every render and break memoization.
+
+```tsx
+// Bad — new function reference every render
+<Button onClick={() => handleClick(id)} />
+
+// Good
+const handleClickItem = useCallback(() => handleClick(id), [id]);
+<Button onClick={handleClickItem} />
+```
+
+### Server vs Client Components (Next.js App Router)
+- **Default to Server Components.** Only add `"use client"` when you need browser APIs, event handlers, or React state/effects.
+- Push `"use client"` as far down the component tree as possible — never make an entire page client-side just because one leaf needs interactivity.
+- Data fetching belongs in Server Components or Route Handlers — never `useEffect` + fetch for initial page data.
+- Use `Suspense` + `loading.tsx` for async Server Component boundaries.
+
+### Hooks
+- Follow the Rules of Hooks strictly — only call hooks at the top level, never inside conditionals or loops.
+- **`useEffect` dependencies must be complete and honest.** If adding a dependency breaks things, the underlying logic is wrong — fix it, don't suppress the lint rule.
+- Effects are for synchronizing with external systems (DOM, timers, subscriptions). Avoid using `useEffect` for derived state or data transformation — compute it inline or with `useMemo`.
+- Extract complex effect logic into a custom hook in `hooks/` — never leave a multi-step effect inline in a component.
+
+### State Management
+- Keep state as local as possible. Only lift state when multiple siblings need it.
+- Never mutate state directly — always return new objects/arrays.
+- For form state, use `react-hook-form` — do not manually manage every field with `useState`.
+- Use `useReducer` when state transitions are complex (multiple related values, next state depends on previous).
+- Contexts are for low-frequency, global values (auth, theme, tenant config) — not for high-frequency updates like form state or list filters.
+
+### Performance
+- `React.memo`, `useMemo`, and `useCallback` are **opt-in optimizations** — only add them when there's a measured performance problem, not preemptively.
+- Virtualize long lists (100+ rows) with a library like `react-window` or `TanStack Virtual` — never render unbounded lists.
+- Avoid expensive computations in the render path — move them into `useMemo` with correct deps.
+- Keys in lists must be **stable, unique IDs** — never use array index unless the list is static and never reordered.
+
+```tsx
+// Bad
+items.map((item, i) => <Row key={i} {...item} />)
+
+// Good
+items.map((item) => <Row key={item.id} {...item} />)
+```
+
+### Error & Loading States
+- Every async operation needs an explicit loading state and error state — never leave the UI empty.
+- Use `ErrorBoundary` components around data-heavy sections to prevent full-page crashes.
+- Show skeleton loaders (shadcn `Skeleton`) for content that loads asynchronously — not spinners that block interaction.
+
+### Data Fetching Patterns
+- Use TanStack Query (`useQuery`, `useMutation`) for all client-side data fetching — never raw `useEffect` + `fetch`.
+- Queries belong in custom hooks in `hooks/` (e.g. `useProjects`, `useClientById`) — not inlined in components.
+- Invalidate queries after mutations — never manually patch the cache unless necessary.
+
+---
+
+## TypeScript Best Practices
+
+- **No `any`.** Use `unknown` if the type is truly unknown, then narrow it. If you reach for `any`, stop and model the type properly.
+- **No `as` type assertions** except at system boundaries (API response parsing, external SDK return types). Inside the application, if you need `as`, the types are wrong.
+- Define explicit types/interfaces for all API response shapes, component props, and shared data structures in `lib/types.ts`.
+- Use **discriminated unions** to model state machines (e.g. `{ status: 'loading' } | { status: 'success'; data: T } | { status: 'error'; error: string }`).
+- Prefer `interface` for object shapes that may be extended; prefer `type` for unions, intersections, and mapped types.
+- Use the `satisfies` operator for config objects to get type-checking without widening the inferred type.
+- Avoid non-null assertions (`!`) — handle the `null`/`undefined` case explicitly.
+- Enable and respect strict mode — do not add `@ts-ignore` or `@ts-expect-error` without a comment explaining why.
 
 ---
 

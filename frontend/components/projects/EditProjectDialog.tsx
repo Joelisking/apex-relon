@@ -37,6 +37,7 @@ import { Loader2, Users, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ProjectCostSegments, type CostSegmentInput } from './ProjectCostSegments';
+import { AddressAutocomplete } from './AddressAutocomplete';
 import { MultiCreatableSelect } from '@/components/ui/multi-creatable-select';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import { UserPicker } from '@/components/ui/user-picker';
@@ -64,6 +65,9 @@ const formSchema = z.object({
   statusNote: z.string().optional(),
   county: z.array(z.string()).optional(),
   description: z.string().optional(),
+  address: z.string().optional(),
+  latitude: z.coerce.number().optional().nullable(),
+  longitude: z.coerce.number().optional().nullable(),
 });
 
 interface EditProjectDialogProps {
@@ -114,6 +118,8 @@ export function EditProjectDialog({
   const [activeOptionalStages, setActiveOptionalStages] = useState<string[]>(
     project.activeOptionalStages ?? [],
   );
+  const [geocodedLat, setGeocodedLat] = useState<number | null>(project.latitude ?? null);
+  const [geocodedLng, setGeocodedLng] = useState<number | null>(project.longitude ?? null);
 
   const { data: serviceCategories = [] } = useQuery<ServiceCategory[]>({
     queryKey: ['service-categories'],
@@ -150,6 +156,9 @@ export function EditProjectDialog({
       statusNote: project.statusNote ?? '',
       county: project.county ?? [],
       description: project.description ?? '',
+      address: project.address ?? '',
+      latitude: project.latitude ?? undefined,
+      longitude: project.longitude ?? undefined,
     },
   });
 
@@ -169,7 +178,12 @@ export function EditProjectDialog({
       statusNote: project.statusNote ?? '',
       county: project.county ?? [],
       description: project.description ?? '',
+      address: project.address ?? '',
+      latitude: project.latitude ?? undefined,
+      longitude: project.longitude ?? undefined,
     });
+    setGeocodedLat(project.latitude ?? null);
+    setGeocodedLng(project.longitude ?? null);
     setAssignments(project.assignments ?? []);
     setSelectedCategoryIds(project.categoryIds ?? []);
     setSelectedServiceTypeIds(project.serviceTypeIds ?? []);
@@ -265,6 +279,9 @@ export function EditProjectDialog({
         serviceTypeIds: selectedServiceTypeIds,
         costSegments,
         activeOptionalStages,
+        address: values.address || undefined,
+        latitude: geocodedLat ?? (values.latitude ? Number(values.latitude) : undefined),
+        longitude: geocodedLng ?? (values.longitude ? Number(values.longitude) : undefined),
       });
       toast.success('Project updated successfully');
       onProjectUpdated(updated);
@@ -633,6 +650,87 @@ export function EditProjectDialog({
                 </FormItem>
               )}
             />
+
+            {/* Location */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium">Location</p>
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Site Address</FormLabel>
+                    <FormControl>
+                      <AddressAutocomplete
+                        value={field.value ?? ''}
+                        onChange={(address, lat, lng) => {
+                          field.onChange(address);
+                          if (lat !== null && lng !== null) {
+                            setGeocodedLat(lat);
+                            setGeocodedLng(lng);
+                            form.setValue('latitude', lat);
+                            form.setValue('longitude', lng);
+                          } else {
+                            setGeocodedLat(null);
+                            setGeocodedLng(null);
+                          }
+                        }}
+                        placeholder="Search for site address…"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="latitude"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Latitude</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="any"
+                          placeholder="e.g. 41.0793"
+                          {...field}
+                          value={field.value ?? ''}
+                          onChange={(e) => {
+                            field.onChange(e.target.value === '' ? null : e.target.value);
+                            setGeocodedLat(e.target.value === '' ? null : Number(e.target.value));
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="longitude"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Longitude</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="any"
+                          placeholder="e.g. -85.1394"
+                          {...field}
+                          value={field.value ?? ''}
+                          onChange={(e) => {
+                            field.onChange(e.target.value === '' ? null : e.target.value);
+                            setGeocodedLng(e.target.value === '' ? null : Number(e.target.value));
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
 
             <FormField
               control={form.control}

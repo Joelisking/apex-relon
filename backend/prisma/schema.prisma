@@ -272,6 +272,9 @@ model Project {
   description       String?
   estimatedDueDate  DateTime?
   closedDate        DateTime?
+  address              String?
+  latitude             Float?
+  longitude            Float?
   riskStatus           String?                @default("On Track")
   statusNote           String?
   activeOptionalStages String[]               @default([])

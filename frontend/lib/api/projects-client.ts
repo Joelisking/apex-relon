@@ -51,6 +51,9 @@ export interface Project {
   categoryIds?: string[];
   serviceTypeIds?: string[];
   county?: string[];
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   activeOptionalStages?: string[];
   projectManagerId?: string;
   projectManager?: { id: string; name: string; email: string };
@@ -133,6 +136,9 @@ export interface CreateProjectDto {
   categoryIds?: string[];
   serviceTypeIds?: string[];
   county?: string[];
+  address?: string;
+  latitude?: number;
+  longitude?: number;
   activeOptionalStages?: string[];
   statusNote?: string | null;
   costSegments?: { name: string; amount: number; sortOrder?: number }[];

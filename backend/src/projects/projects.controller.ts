@@ -18,6 +18,9 @@ interface AuthenticatedUser {
   email: string;
 }
 import { ProjectsService } from './projects.service';
+import { ProjectsCostService } from './projects-cost.service';
+import { ProjectsAssignmentService } from './projects-assignment.service';
+import { ProjectsBulkService } from './projects-bulk.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { CreateCostLogDto } from './dto/create-cost-log.dto';
@@ -25,7 +28,12 @@ import { CreateProjectAssignmentDto } from './dto/create-project-assignment.dto'
 
 @Controller('projects')
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(
+    private readonly projectsService: ProjectsService,
+    private readonly projectsCostService: ProjectsCostService,
+    private readonly projectsAssignmentService: ProjectsAssignmentService,
+    private readonly projectsBulkService: ProjectsBulkService,
+  ) {}
 
   @Get()
   @Permissions('projects:view')
@@ -48,7 +56,7 @@ export class ProjectsController {
     @Body() body: { ids: string[]; data: Record<string, unknown> },
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.projectsService.bulkUpdate(
+    return this.projectsBulkService.bulkUpdate(
       body.ids,
       body.data,
       user?.id,
@@ -63,7 +71,7 @@ export class ProjectsController {
     @Body() body: { ids: string[] },
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.projectsService.bulkDelete(body.ids, user?.id, user?.role);
+    return this.projectsBulkService.bulkDelete(body.ids, user?.id, user?.role);
   }
 
   @Get('client/:clientId')
@@ -107,7 +115,7 @@ export class ProjectsController {
   @Get(':id/costs')
   @Permissions('costs:view')
   getCostLogs(@Param('id') id: string) {
-    return this.projectsService.getCostLogs(id);
+    return this.projectsCostService.getCostLogs(id);
   }
 
   @Post(':id/costs')
@@ -117,7 +125,7 @@ export class ProjectsController {
     @Body() dto: CreateCostLogDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.projectsService.addCostLog(id, dto, user?.id);
+    return this.projectsCostService.addCostLog(id, dto, user?.id);
   }
 
   @Delete(':id/costs/:costId')
@@ -127,7 +135,7 @@ export class ProjectsController {
     @Param('id') id: string,
     @Param('costId') costId: string,
   ) {
-    return this.projectsService.removeCostLog(id, costId);
+    return this.projectsCostService.removeCostLog(id, costId);
   }
 
   // --- Crew Assignments ---
@@ -135,7 +143,7 @@ export class ProjectsController {
   @Get(':id/assignments')
   @Permissions('projects:view')
   getAssignments(@Param('id') id: string) {
-    return this.projectsService.getAssignments(id);
+    return this.projectsAssignmentService.getAssignments(id);
   }
 
   @Post(':id/assignments')
@@ -144,7 +152,7 @@ export class ProjectsController {
     @Param('id') id: string,
     @Body() dto: CreateProjectAssignmentDto,
   ) {
-    return this.projectsService.addAssignment(id, dto);
+    return this.projectsAssignmentService.addAssignment(id, dto);
   }
 
   @Delete(':id/assignments/:assignmentId')
@@ -154,6 +162,6 @@ export class ProjectsController {
     @Param('id') id: string,
     @Param('assignmentId') assignmentId: string,
   ) {
-    return this.projectsService.removeAssignment(id, assignmentId);
+    return this.projectsAssignmentService.removeAssignment(id, assignmentId);
   }
 }

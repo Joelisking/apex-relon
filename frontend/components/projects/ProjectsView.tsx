@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   LayoutGrid,
   List,
+  Map,
   RefreshCw,
   Trash2,
   ChevronDown,
@@ -20,6 +21,7 @@ import { FilterBar, passesFilter, type FilterValues, type FilterDef } from '@/co
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { ProjectKanbanBoard } from './ProjectKanbanBoard';
+import { ProjectsMapView } from './ProjectsMapView';
 import { CreateProjectDialog } from './CreateProjectDialog';
 import { projectColumns } from './columns-projects';
 import { DataTable } from '@/components/ui/data-table';
@@ -58,7 +60,7 @@ interface ProjectsDefaultFilter {
   facets?: FilterValues;
   kanbanCategory?: string | null;
   kanbanType?: string | null;
-  view?: 'kanban' | 'table';
+  view?: 'kanban' | 'table' | 'map';
 }
 
 interface ProjectsViewProps {
@@ -73,10 +75,10 @@ export default function ProjectsView({
   const { hasPermission } = useAuth();
   const canMoveStage = hasPermission('projects:move_stage');
   const [localProjects, setLocalProjects] = useState<Project[]>([]);
-  const [view, setView] = useState<'kanban' | 'table'>(() => {
+  const [view, setView] = useState<'kanban' | 'table' | 'map'>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('projects:viewMode');
-      if (stored === 'kanban' || stored === 'table') return stored;
+      if (stored === 'kanban' || stored === 'table' || stored === 'map') return stored;
     }
     return canMoveStage ? 'kanban' : 'table';
   });
@@ -548,8 +550,8 @@ export default function ProjectsView({
             </Button>
           )}
 
-          {canMoveStage && (
-            <div className="flex border rounded-lg overflow-hidden">
+          <div className="flex border rounded-lg overflow-hidden">
+            {canMoveStage && (
               <Button
                 variant={view === 'kanban' ? 'default' : 'ghost'}
                 size="sm"
@@ -557,15 +559,22 @@ export default function ProjectsView({
                 onClick={() => setView('kanban')}>
                 <LayoutGrid className="h-4 w-4" />
               </Button>
-              <Button
-                variant={view === 'table' ? 'default' : 'ghost'}
-                size="sm"
-                className="rounded-none"
-                onClick={() => { setView('table'); selectKanbanType(null); }}>
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+            )}
+            <Button
+              variant={view === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none"
+              onClick={() => { setView('table'); selectKanbanType(null); }}>
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={view === 'map' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none"
+              onClick={() => { setView('map'); selectKanbanType(null); }}>
+              <Map className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -754,6 +763,8 @@ export default function ProjectsView({
           stages={projectStages}
           stagesLoading={stagesLoading}
         />
+      ) : view === 'map' ? (
+        <ProjectsMapView projects={filteredByType} />
       ) : (
         <>
           {selectedProjects.length > 0 && (
