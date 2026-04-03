@@ -33,7 +33,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Users, X } from 'lucide-react';
+import { Loader2, Users, X, FolderOpen } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ProjectCostSegments, type CostSegmentInput } from './ProjectCostSegments';
@@ -66,6 +66,7 @@ const formSchema = z.object({
   county: z.array(z.string()).optional(),
   description: z.string().optional(),
   address: z.string().optional(),
+  folderPath: z.string().optional(),
   latitude: z.coerce.number().optional().nullable(),
   longitude: z.coerce.number().optional().nullable(),
 });
@@ -157,6 +158,7 @@ export function EditProjectDialog({
       county: project.county ?? [],
       description: project.description ?? '',
       address: project.address ?? '',
+      folderPath: project.folderPath ?? '',
       latitude: project.latitude ?? undefined,
       longitude: project.longitude ?? undefined,
     },
@@ -179,6 +181,7 @@ export function EditProjectDialog({
       county: project.county ?? [],
       description: project.description ?? '',
       address: project.address ?? '',
+      folderPath: project.folderPath ?? '',
       latitude: project.latitude ?? undefined,
       longitude: project.longitude ?? undefined,
     });
@@ -280,6 +283,7 @@ export function EditProjectDialog({
         costSegments,
         activeOptionalStages,
         address: values.address || undefined,
+        folderPath: values.folderPath || undefined,
         latitude: geocodedLat ?? (values.latitude ? Number(values.latitude) : undefined),
         longitude: geocodedLng ?? (values.longitude ? Number(values.longitude) : undefined),
       });
@@ -768,6 +772,26 @@ export function EditProjectDialog({
                   <FormControl>
                     <Textarea
                       placeholder="Project details..."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="folderPath"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1.5">
+                    <FolderOpen className="h-3.5 w-3.5" />
+                    Server Folder Path
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="P:\2026\Allen\Large Jobs\26020044 - Project Name"
                       {...field}
                     />
                   </FormControl>

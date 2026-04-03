@@ -37,6 +37,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { UserRatesSection } from './UserRatesSection';
 
 interface UpdateUserDialogProps {
   open: boolean;
@@ -210,6 +211,8 @@ export function UpdateUserDialog({
             </div>
           </form>
         </Form>
+
+        {user && <UserRatesSection userId={user.id} />}
       </DialogContent>
     </Dialog>
   );

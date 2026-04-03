@@ -106,7 +106,7 @@ export default function QuoteLineItemsTable({
 
       <div className="rounded-xl border border-border/60 overflow-hidden">
         <div className="bg-muted/40 grid grid-cols-[1fr_60px_110px_90px_32px] gap-0 px-3 py-2">
-          {['Description', 'Qty', 'Unit Price', 'Total', ''].map((h, i) => (
+          {['Description', 'Hours', 'Rate', 'Total', ''].map((h, i) => (
             <span
               key={i}
               className={`text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground ${

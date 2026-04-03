@@ -275,6 +275,7 @@ model Project {
   address              String?
   latitude             Float?
   longitude            Float?
+  folderPath           String?
   riskStatus           String?                @default("On Track")
   statusNote           String?
   activeOptionalStages String[]               @default([])

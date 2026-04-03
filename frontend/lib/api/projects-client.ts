@@ -52,6 +52,7 @@ export interface Project {
   serviceTypeIds?: string[];
   county?: string[];
   address?: string | null;
+  folderPath?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   activeOptionalStages?: string[];
@@ -137,6 +138,7 @@ export interface CreateProjectDto {
   serviceTypeIds?: string[];
   county?: string[];
   address?: string;
+  folderPath?: string;
   latitude?: number;
   longitude?: number;
   activeOptionalStages?: string[];

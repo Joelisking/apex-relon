@@ -115,4 +115,8 @@ export class CreateProjectDto {
   @IsOptional()
   @Type(() => Number)
   longitude?: number;
+
+  @IsString()
+  @IsOptional()
+  folderPath?: string;
 }

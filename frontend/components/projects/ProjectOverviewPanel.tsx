@@ -1,6 +1,8 @@
 'use client';
 
 import { format } from 'date-fns';
+import { Copy, Check } from 'lucide-react';
+import { useState } from 'react';
 import { ProjectStageTimeline } from './ProjectStageTimeline';
 import type { Project, CostLog } from '@/lib/api/projects-client';
 import type { ServiceCategory } from '@/lib/types';
@@ -39,6 +41,32 @@ interface Props {
 
 function avatarInitials(name: string): string {
   return name.trim().split(/\s+/).map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function FolderPathRow({ path }: { path: string }) {
+  const [copied, setCopied] = useState(false);
+
+  function copyPath() {
+    navigator.clipboard.writeText(path).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <div className="flex items-center justify-between px-4 py-3 gap-3">
+      <span className="text-sm text-muted-foreground shrink-0">Server Folder</span>
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="text-sm font-mono truncate text-right">{path}</span>
+        <button
+          onClick={copyPath}
+          className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+          title="Copy path">
+          {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export function ProjectOverviewPanel({ project, activities, files, costLogs, serviceCategories = [] }: Props) {
@@ -137,7 +165,7 @@ export function ProjectOverviewPanel({ project, activities, files, costLogs, ser
       </div>
 
       {/* Service info */}
-      {(resolvedProjectTypes.length > 0 || resolvedServiceTypes.length > 0 || project.county) && (
+      {(resolvedProjectTypes.length > 0 || resolvedServiceTypes.length > 0 || project.county || project.folderPath) && (
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
@@ -161,6 +189,9 @@ export function ProjectOverviewPanel({ project, activities, files, costLogs, ser
                   <span className="text-sm text-muted-foreground">County</span>
                   <span className="text-sm font-medium">{(project.county ?? []).join(', ')}</span>
                 </div>
+              )}
+              {project.folderPath && (
+                <FolderPathRow path={project.folderPath} />
               )}
             </div>
           </div>

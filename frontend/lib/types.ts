@@ -358,6 +358,7 @@ export interface Project {
   estimatedDueDate?: string;
   closedDate?: string;
   riskStatus?: string;
+  folderPath?: string | null;
   estimatedRevenue?: number;
   totalCost?: number;
   serviceTypeId?: string | null;
