@@ -122,7 +122,6 @@ model ServiceType {
   leads             Lead[]
   projects          Project[]
   taskTypes         TaskType[]
-  serviceItems      ServiceItem[]
   proposalTemplates ProposalTemplate[]
 
   @@index([categoryId])
@@ -1037,9 +1036,9 @@ model TaskType {
 model ServiceItem {
   id            String               @id @default(uuid())
   name          String
-  description   String?              @db.Text
-  serviceTypeId String?
-  unit          String?
+  description    String?              @db.Text
+  serviceTypeIds String[]             @default([])
+  unit           String?
   defaultPrice  Float?
   qbItemId      String?
   isActive      Boolean              @default(true)
@@ -1047,12 +1046,10 @@ model ServiceItem {
   sortOrder     Int                  @default(0)
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
-  serviceType   ServiceType?         @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
   subtasks      ServiceItemSubtask[]
   timeEntries   TimeEntry[]
   quoteLineItems QuoteLineItem[]
 
-  @@index([serviceTypeId])
   @@index([isActive])
   @@map("service_items")
 }

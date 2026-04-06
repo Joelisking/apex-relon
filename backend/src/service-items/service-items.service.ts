@@ -9,7 +9,6 @@ export class ServiceItemsService {
   constructor(private readonly prisma: PrismaService) {}
 
   private readonly itemInclude = {
-    serviceType: { select: { id: true, name: true } },
     subtasks: {
       orderBy: { sortOrder: 'asc' as const },
       include: {
@@ -21,7 +20,7 @@ export class ServiceItemsService {
 
   async findAll(serviceTypeId?: string) {
     return this.prisma.serviceItem.findMany({
-      where: serviceTypeId ? { serviceTypeId } : undefined,
+      where: serviceTypeId ? { serviceTypeIds: { has: serviceTypeId } } : undefined,
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: this.itemInclude,
     });

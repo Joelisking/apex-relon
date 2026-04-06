@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsNumber, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNumber, IsArray } from 'class-validator';
 
 export class CreateServiceItemDto {
   @IsString()
@@ -9,8 +9,9 @@ export class CreateServiceItemDto {
   description?: string;
 
   @IsOptional()
-  @IsUUID()
-  serviceTypeId?: string;
+  @IsArray()
+  @IsString({ each: true })
+  serviceTypeIds?: string[];
 
   @IsOptional()
   @IsString()

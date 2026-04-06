@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Trash2, Plus, Loader2, ChevronRight, ChevronDown, Pencil, X, Check } from 'lucide-react';
 import { serviceItemsApi, settingsApi, API_URL, getTokenFromClientCookies } from '@/lib/api/client';
-import { SearchableSelect } from '@/components/ui/searchable-select';
+import { MultiSelect } from '@/components/ui/multi-select';
 import type { ServiceItem, ServiceType } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -31,12 +31,12 @@ export function ServiceItemsView() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ServiceItem | null>(null);
-  const [newItem, setNewItem] = useState({ name: '', description: '', serviceTypeId: '', unit: '', defaultPrice: '', isActive: true, isIndot: false });
+  const [newItem, setNewItem] = useState({ name: '', description: '', serviceTypeIds: [] as string[], unit: '', defaultPrice: '', isActive: true, isIndot: false });
   const [adding, setAdding] = useState(false);
   const [newSubtask, setNewSubtask] = useState<Record<string, string>>({});
   const [newRoleRow, setNewRoleRow] = useState<Record<string, { role: string; hours: string }>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', description: '', serviceTypeId: '', unit: '', defaultPrice: '', isActive: true, isIndot: false });
+  const [editForm, setEditForm] = useState({ name: '', description: '', serviceTypeIds: [] as string[], unit: '', defaultPrice: '', isActive: true, isIndot: false });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { loadAll(); }, []);
@@ -68,13 +68,13 @@ export function ServiceItemsView() {
       await serviceItemsApi.create({
         name: newItem.name.trim(),
         description: newItem.description.trim() || undefined,
-        serviceTypeId: newItem.serviceTypeId || undefined,
+        serviceTypeIds: newItem.serviceTypeIds.length > 0 ? newItem.serviceTypeIds : undefined,
         unit: newItem.unit.trim() || undefined,
         defaultPrice: newItem.defaultPrice ? parseFloat(newItem.defaultPrice) : undefined,
         isActive: newItem.isActive,
         isIndot: newItem.isIndot,
       });
-      setNewItem({ name: '', description: '', serviceTypeId: '', unit: '', defaultPrice: '', isActive: true, isIndot: false });
+      setNewItem({ name: '', description: '', serviceTypeIds: [], unit: '', defaultPrice: '', isActive: true, isIndot: false });
       toast.success('Service item created');
       await loadAll();
     } catch (e) {
@@ -100,7 +100,7 @@ export function ServiceItemsView() {
     setEditForm({
       name: item.name,
       description: item.description ?? '',
-      serviceTypeId: item.serviceTypeId ?? '',
+      serviceTypeIds: item.serviceTypeIds ?? [],
       unit: item.unit ?? '',
       defaultPrice: item.defaultPrice != null ? String(item.defaultPrice) : '',
       isActive: item.isActive,
@@ -116,7 +116,7 @@ export function ServiceItemsView() {
       await serviceItemsApi.update(itemId, {
         name: editForm.name.trim(),
         description: editForm.description.trim() || undefined,
-        serviceTypeId: editForm.serviceTypeId || undefined,
+        serviceTypeIds: editForm.serviceTypeIds.length > 0 ? editForm.serviceTypeIds : [],
         unit: editForm.unit.trim() || undefined,
         defaultPrice: editForm.defaultPrice ? parseFloat(editForm.defaultPrice) : undefined,
         isActive: editForm.isActive,
@@ -210,7 +210,9 @@ export function ServiceItemsView() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium">{item.name}</span>
-                        {item.serviceType && <Badge variant="secondary" className="text-xs">{item.serviceType.name}</Badge>}
+                        {serviceTypes.filter((st) => item.serviceTypeIds?.includes(st.id)).map((st) => (
+                          <Badge key={st.id} variant="secondary" className="text-xs">{st.name}</Badge>
+                        ))}
                         {item.unit && <Badge variant="outline" className="text-xs">{item.unit}</Badge>}
                         {item.defaultPrice != null && <span className="text-sm text-muted-foreground">${item.defaultPrice.toFixed(2)}</span>}
                         {item.qbItemId && <Badge variant="outline" className="text-xs text-green-700 border-green-300">QB Synced</Badge>}
@@ -246,16 +248,13 @@ export function ServiceItemsView() {
                       <Input value={editForm.name} onChange={(e) => setEditForm((d) => ({ ...d, name: e.target.value }))} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Project Type</Label>
-                      <SearchableSelect
-                        value={editForm.serviceTypeId || '__none__'}
-                        onValueChange={(v) => setEditForm((d) => ({ ...d, serviceTypeId: v === '__none__' ? '' : v }))}
-                        placeholder="None"
+                      <Label>Project Types</Label>
+                      <MultiSelect
+                        value={editForm.serviceTypeIds}
+                        onValueChange={(v) => setEditForm((d) => ({ ...d, serviceTypeIds: v }))}
+                        placeholder="Select project types…"
                         searchPlaceholder="Search project types…"
-                        options={[
-                          { value: '__none__', label: 'None' },
-                          ...serviceTypes.map((st) => ({ value: st.id, label: st.name })),
-                        ]}
+                        options={serviceTypes.map((st) => ({ value: st.id, label: st.name }))}
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -462,16 +461,13 @@ export function ServiceItemsView() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Project Type</Label>
-              <SearchableSelect
-                value={newItem.serviceTypeId || '__none__'}
-                onValueChange={(v) => setNewItem((d) => ({ ...d, serviceTypeId: v === '__none__' ? '' : v }))}
-                placeholder="None"
+              <Label>Project Types</Label>
+              <MultiSelect
+                value={newItem.serviceTypeIds}
+                onValueChange={(v) => setNewItem((d) => ({ ...d, serviceTypeIds: v }))}
+                placeholder="Select project types…"
                 searchPlaceholder="Search project types…"
-                options={[
-                  { value: '__none__', label: 'None' },
-                  ...serviceTypes.map((st) => ({ value: st.id, label: st.name })),
-                ]}
+                options={serviceTypes.map((st) => ({ value: st.id, label: st.name }))}
               />
             </div>
             <div className="space-y-1.5">

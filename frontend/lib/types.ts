@@ -69,8 +69,7 @@ export interface ServiceItem {
   id: string;
   name: string;
   description?: string | null;
-  serviceTypeId?: string | null;
-  serviceType?: { id: string; name: string } | null;
+  serviceTypeIds: string[];
   unit?: string | null;
   defaultPrice?: number | null;
   qbItemId?: string | null;
