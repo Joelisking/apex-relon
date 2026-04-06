@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Trash2, Plus, Loader2, ChevronRight, ChevronDown } from 'lucide-react';
+import { Trash2, Plus, Loader2, ChevronRight, ChevronDown, Pencil, X, Check } from 'lucide-react';
 import { serviceItemsApi, settingsApi, API_URL, getTokenFromClientCookies } from '@/lib/api/client';
 import type { ServiceItem, ServiceType } from '@/lib/types';
 import { toast } from 'sonner';
@@ -34,6 +34,9 @@ export function ServiceItemsView() {
   const [adding, setAdding] = useState(false);
   const [newSubtask, setNewSubtask] = useState<Record<string, string>>({});
   const [newRoleRow, setNewRoleRow] = useState<Record<string, { role: string; hours: string }>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', description: '', serviceTypeId: '', unit: '', defaultPrice: '', isActive: true, isIndot: false });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -89,6 +92,42 @@ export function ServiceItemsView() {
       await loadAll();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to delete service item');
+    }
+  };
+
+  const handleStartEdit = (item: ServiceItem) => {
+    setEditForm({
+      name: item.name,
+      description: item.description ?? '',
+      serviceTypeId: item.serviceTypeId ?? '',
+      unit: item.unit ?? '',
+      defaultPrice: item.defaultPrice != null ? String(item.defaultPrice) : '',
+      isActive: item.isActive,
+      isIndot: item.isIndot,
+    });
+    setEditingId(item.id);
+  };
+
+  const handleSaveEdit = async (itemId: string) => {
+    if (!editForm.name.trim()) { toast.error('Name is required'); return; }
+    setSaving(true);
+    try {
+      await serviceItemsApi.update(itemId, {
+        name: editForm.name.trim(),
+        description: editForm.description.trim() || undefined,
+        serviceTypeId: editForm.serviceTypeId || undefined,
+        unit: editForm.unit.trim() || undefined,
+        defaultPrice: editForm.defaultPrice ? parseFloat(editForm.defaultPrice) : undefined,
+        isActive: editForm.isActive,
+        isIndot: editForm.isIndot,
+      });
+      toast.success('Service item updated');
+      setEditingId(null);
+      await loadAll();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to update service item');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -182,6 +221,13 @@ export function ServiceItemsView() {
                     <Button
                       size="sm"
                       variant="ghost"
+                      onClick={(e) => { e.stopPropagation(); handleStartEdit(item); }}
+                      className="shrink-0">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
                       onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); }}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50 shrink-0">
                       <Trash2 className="h-3.5 w-3.5" />
@@ -189,6 +235,71 @@ export function ServiceItemsView() {
                   </div>
                 </CardHeader>
               </CollapsibleTrigger>
+
+              {/* Inline edit form */}
+              {editingId === item.id && (
+                <CardContent className="border-t pt-4 pb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+                    <div className="space-y-1.5">
+                      <Label>Name *</Label>
+                      <Input value={editForm.name} onChange={(e) => setEditForm((d) => ({ ...d, name: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Project Type</Label>
+                      <Select
+                        value={editForm.serviceTypeId}
+                        onValueChange={(v) => setEditForm((d) => ({ ...d, serviceTypeId: v === '__none__' ? '' : v }))}>
+                        <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {serviceTypes.map((st) => <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Unit</Label>
+                      <Input value={editForm.unit} onChange={(e) => setEditForm((d) => ({ ...d, unit: e.target.value }))} placeholder="e.g., Acre, Lot, Hour" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Default Price ($)</Label>
+                      <Input type="number" min="0" step="0.01" value={editForm.defaultPrice} onChange={(e) => setEditForm((d) => ({ ...d, defaultPrice: e.target.value }))} placeholder="0.00" />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Description</Label>
+                      <Textarea value={editForm.description} onChange={(e) => setEditForm((d) => ({ ...d, description: e.target.value }))} rows={2} />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={editForm.isActive} onCheckedChange={(v) => setEditForm((d) => ({ ...d, isActive: v }))} id={`edit-si-active-${item.id}`} />
+                      <Label htmlFor={`edit-si-active-${item.id}`}>Active</Label>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>INDOT Project?</Label>
+                      <RadioGroup
+                        value={editForm.isIndot ? 'yes' : 'no'}
+                        onValueChange={(v) => setEditForm((d) => ({ ...d, isIndot: v === 'yes' }))}
+                        className="flex gap-6">
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="yes" id={`edit-si-indot-yes-${item.id}`} />
+                          <Label htmlFor={`edit-si-indot-yes-${item.id}`}>Yes</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="no" id={`edit-si-indot-no-${item.id}`} />
+                          <Label htmlFor={`edit-si-indot-no-${item.id}`}>No</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <Button size="sm" onClick={() => handleSaveEdit(item.id)} disabled={saving} className="gap-1.5">
+                      {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}Save
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingId(null)} className="gap-1.5">
+                      <X className="h-3.5 w-3.5" />Cancel
+                    </Button>
+                  </div>
+                </CardContent>
+              )}
+
               <CollapsibleContent>
                 <CardContent className="pt-0 pb-4">
                   <div className="border-t pt-4">
