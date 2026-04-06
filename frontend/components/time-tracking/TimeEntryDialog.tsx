@@ -423,6 +423,19 @@ export function TimeEntryDialog({
             </div>
           )}
 
+          {/* Cost estimate — shown when a priced service item is selected and hours are valid */}
+          {selectedItem?.defaultPrice != null && effectiveHours >= 0.25 && (
+            <div className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2">
+              <span className="text-xs text-muted-foreground">Estimated cost:</span>
+              <span className="text-sm font-medium tabular-nums">
+                ${(selectedItem.defaultPrice * effectiveHours).toFixed(2)}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                (${selectedItem.defaultPrice.toFixed(2)}/hr × {effectiveHours.toFixed(2)} hrs)
+              </span>
+            </div>
+          )}
+
           {/* Description */}
           <div className="space-y-1.5">
             <Label>Description</Label>
