@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -29,7 +30,7 @@ export function ServiceItemsView() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ServiceItem | null>(null);
-  const [newItem, setNewItem] = useState({ name: '', description: '', serviceTypeId: '', unit: '', defaultPrice: '', isActive: true });
+  const [newItem, setNewItem] = useState({ name: '', description: '', serviceTypeId: '', unit: '', defaultPrice: '', isActive: true, isIndot: false });
   const [adding, setAdding] = useState(false);
   const [newSubtask, setNewSubtask] = useState<Record<string, string>>({});
   const [newRoleRow, setNewRoleRow] = useState<Record<string, { role: string; hours: string }>>({});
@@ -67,8 +68,9 @@ export function ServiceItemsView() {
         unit: newItem.unit.trim() || undefined,
         defaultPrice: newItem.defaultPrice ? parseFloat(newItem.defaultPrice) : undefined,
         isActive: newItem.isActive,
+        isIndot: newItem.isIndot,
       });
-      setNewItem({ name: '', description: '', serviceTypeId: '', unit: '', defaultPrice: '', isActive: true });
+      setNewItem({ name: '', description: '', serviceTypeId: '', unit: '', defaultPrice: '', isActive: true, isIndot: false });
       toast.success('Service item created');
       await loadAll();
     } catch (e) {
@@ -172,6 +174,7 @@ export function ServiceItemsView() {
                         {item.unit && <Badge variant="outline" className="text-xs">{item.unit}</Badge>}
                         {item.defaultPrice != null && <span className="text-sm text-muted-foreground">${item.defaultPrice.toFixed(2)}</span>}
                         {item.qbItemId && <Badge variant="outline" className="text-xs text-green-700 border-green-300">QB Synced</Badge>}
+                        {item.isIndot && <Badge variant="outline" className="text-xs text-blue-700 border-blue-300">INDOT</Badge>}
                         {!item.isActive && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
                       </div>
                       {item.description && <p className="text-sm text-muted-foreground mt-0.5 truncate">{item.description}</p>}
@@ -392,6 +395,22 @@ export function ServiceItemsView() {
                 id="new-si-active"
               />
               <Label htmlFor="new-si-active">Active</Label>
+            </div>
+            <div className="space-y-1.5">
+              <Label>INDOT Project?</Label>
+              <RadioGroup
+                value={newItem.isIndot ? 'yes' : 'no'}
+                onValueChange={(v) => setNewItem((d) => ({ ...d, isIndot: v === 'yes' }))}
+                className="flex gap-6">
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="yes" id="new-si-indot-yes" />
+                  <Label htmlFor="new-si-indot-yes">Yes</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="no" id="new-si-indot-no" />
+                  <Label htmlFor="new-si-indot-no">No</Label>
+                </div>
+              </RadioGroup>
             </div>
           </div>
           <Button onClick={handleAdd} disabled={adding} className="mt-4 gap-2">

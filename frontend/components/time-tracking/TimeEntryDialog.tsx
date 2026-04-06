@@ -61,6 +61,7 @@ interface ProjectOption {
   id: string;
   name: string;
   jobNumber?: string | null;
+  isIndot?: boolean;
   serviceType?: { category?: { name: string } | null } | null;
 }
 
@@ -128,6 +129,7 @@ export function TimeEntryDialog({
 
   const selectedProject = projects.find((p) => p.id === projectId);
   const isEngineeringProject = selectedProject?.serviceType?.category?.name === 'Engineering';
+  const isIndotProject = selectedProject?.isIndot === true;
 
   // Fetch work codes — only when an engineering project is selected
   const { data: workCodes = [] } = useQuery<WorkCode[]>({
@@ -142,6 +144,10 @@ export function TimeEntryDialog({
     queryKey: ['service-items-active'],
     queryFn: () => serviceItemsApi.getAll(),
   });
+
+  const visibleServiceItems = isIndotProject
+    ? serviceItems.filter((si) => si.isIndot)
+    : serviceItems;
 
   // Subtasks for the currently selected service item
   const selectedItem = serviceItems.find((si) => si.id === serviceItemId);
@@ -394,7 +400,7 @@ export function TimeEntryDialog({
               emptyMessage="No service items found."
               options={[
                 { value: '', label: 'None' },
-                ...serviceItems.map((si) => ({ value: si.id, label: si.name })),
+                ...visibleServiceItems.map((si) => ({ value: si.id, label: si.name })),
               ]}
             />
           </div>

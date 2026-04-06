@@ -75,6 +75,7 @@ export interface ServiceItem {
   defaultPrice?: number | null;
   qbItemId?: string | null;
   isActive: boolean;
+  isIndot: boolean;
   sortOrder: number;
   subtasks: ServiceItemSubtask[];
   createdAt?: string;

@@ -1043,6 +1043,7 @@ model ServiceItem {
   defaultPrice  Float?
   qbItemId      String?
   isActive      Boolean              @default(true)
+  isIndot       Boolean              @default(false)
   sortOrder     Int                  @default(0)
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt

@@ -25,6 +25,10 @@ export class CreateServiceItemDto {
   isActive?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  isIndot?: boolean;
+
+  @IsOptional()
   @IsNumber()
   sortOrder?: number;
 }

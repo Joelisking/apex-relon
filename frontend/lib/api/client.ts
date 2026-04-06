@@ -819,14 +819,14 @@ export const serviceItemsApi = {
     apiFetch<ServiceItem>(`/service-items/${id}`, {}, serverToken),
 
   create: (
-    data: { name: string; description?: string; serviceTypeId?: string; unit?: string; defaultPrice?: number; isActive?: boolean; sortOrder?: number },
+    data: { name: string; description?: string; serviceTypeId?: string; unit?: string; defaultPrice?: number; isActive?: boolean; isIndot?: boolean; sortOrder?: number },
     serverToken?: string,
   ) =>
     apiFetch<ServiceItem>('/service-items', { method: 'POST', body: JSON.stringify(data) }, serverToken),
 
   update: (
     id: string,
-    data: { name?: string; description?: string; serviceTypeId?: string; unit?: string; defaultPrice?: number; isActive?: boolean; sortOrder?: number },
+    data: { name?: string; description?: string; serviceTypeId?: string; unit?: string; defaultPrice?: number; isActive?: boolean; isIndot?: boolean; sortOrder?: number },
     serverToken?: string,
   ) =>
     apiFetch<ServiceItem>(`/service-items/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, serverToken),
