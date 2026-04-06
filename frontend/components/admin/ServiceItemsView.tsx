@@ -250,7 +250,7 @@ export function ServiceItemsView() {
                         value={editForm.serviceTypeId}
                         onValueChange={(v) => setEditForm((d) => ({ ...d, serviceTypeId: v === '__none__' ? '' : v }))}>
                         <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                        <SelectContent>
+                        <SelectContent position="popper">
                           <SelectItem value="__none__">None</SelectItem>
                           {serviceTypes.map((st) => <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>)}
                         </SelectContent>
@@ -376,7 +376,7 @@ export function ServiceItemsView() {
                                           <SelectTrigger className="h-6 text-xs w-40">
                                             <SelectValue placeholder="Select role…" />
                                           </SelectTrigger>
-                                          <SelectContent>
+                                          <SelectContent position="popper">
                                             {availableRoles.map((r) => (
                                               <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>
                                             ))}
