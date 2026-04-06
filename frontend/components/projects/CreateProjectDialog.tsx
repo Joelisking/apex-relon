@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -54,6 +55,7 @@ import type { DropdownOption, ServiceCategory } from '@/lib/types';
 import { ServiceTypeSelector } from '@/components/settings/ServiceTypeSelector';
 
 const formSchema = z.object({
+  isIndot: z.boolean().default(false),
   clientId: z.string().min(1, 'Client is required'),
   leadId: z.string().optional(),
   name: z.string().min(1, 'Project name is required'),
@@ -149,6 +151,7 @@ export function CreateProjectDialog({
   const form = useForm<FormValues, unknown, FormValues>({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
     defaultValues: {
+      isIndot: false,
       clientId: initialClientId ?? '',
       name: '',
       status: '',
@@ -248,6 +251,7 @@ export function CreateProjectDialog({
       setLoading(true);
       await projectsApi.create({
         ...values,
+        isIndot: values.isIndot,
         contractedValue: Number(values.contractedValue),
         endOfProjectValue: values.endOfProjectValue
           ? Number(values.endOfProjectValue)
@@ -332,6 +336,34 @@ export function CreateProjectDialog({
           <form
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-6">
+
+            {/* INDOT Project */}
+            <FormField
+              control={form.control}
+              name="isIndot"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>INDOT Project?</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      value={field.value ? 'yes' : 'no'}
+                      onValueChange={(val) => field.onChange(val === 'yes')}
+                      className="flex gap-6">
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem value="yes" id="indot-yes" />
+                        <Label htmlFor="indot-yes">Yes</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem value="no" id="indot-no" />
+                        <Label htmlFor="indot-no">No</Label>
+                      </div>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-2 gap-4">
               {/* Client - Required (hidden when pre-selected via initialClientId) */}
               {!initialClientId && (

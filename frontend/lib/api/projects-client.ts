@@ -53,6 +53,7 @@ export interface Project {
   county?: string[];
   address?: string | null;
   folderPath?: string | null;
+  isIndot?: boolean;
   latitude?: number | null;
   longitude?: number | null;
   activeOptionalStages?: string[];
@@ -139,6 +140,7 @@ export interface CreateProjectDto {
   county?: string[];
   address?: string;
   folderPath?: string;
+  isIndot?: boolean;
   latitude?: number;
   longitude?: number;
   activeOptionalStages?: string[];

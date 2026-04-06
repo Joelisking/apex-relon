@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsNumber,
+  IsBoolean,
   IsArray,
   Min,
   ValidateNested,
@@ -119,4 +120,8 @@ export class CreateProjectDto {
   @IsString()
   @IsOptional()
   folderPath?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isIndot?: boolean;
 }
