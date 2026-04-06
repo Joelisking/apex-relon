@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Trash2, Plus, Loader2, ChevronRight, ChevronDown, Pencil, X, Check } from 'lucide-react';
 import { serviceItemsApi, settingsApi, API_URL, getTokenFromClientCookies } from '@/lib/api/client';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import type { ServiceItem, ServiceType } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -246,15 +247,16 @@ export function ServiceItemsView() {
                     </div>
                     <div className="space-y-1.5">
                       <Label>Project Type</Label>
-                      <Select
-                        value={editForm.serviceTypeId}
-                        onValueChange={(v) => setEditForm((d) => ({ ...d, serviceTypeId: v === '__none__' ? '' : v }))}>
-                        <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                        <SelectContent position="popper">
-                          <SelectItem value="__none__">None</SelectItem>
-                          {serviceTypes.map((st) => <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        value={editForm.serviceTypeId || '__none__'}
+                        onValueChange={(v) => setEditForm((d) => ({ ...d, serviceTypeId: v === '__none__' ? '' : v }))}
+                        placeholder="None"
+                        searchPlaceholder="Search project types…"
+                        options={[
+                          { value: '__none__', label: 'None' },
+                          ...serviceTypes.map((st) => ({ value: st.id, label: st.name })),
+                        ]}
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Unit</Label>
@@ -461,15 +463,16 @@ export function ServiceItemsView() {
             </div>
             <div className="space-y-1.5">
               <Label>Project Type</Label>
-              <Select
-                value={newItem.serviceTypeId}
-                onValueChange={(v) => setNewItem((d) => ({ ...d, serviceTypeId: v === '__none__' ? '' : v }))}>
-                <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">None</SelectItem>
-                  {serviceTypes.map((st) => <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={newItem.serviceTypeId || '__none__'}
+                onValueChange={(v) => setNewItem((d) => ({ ...d, serviceTypeId: v === '__none__' ? '' : v }))}
+                placeholder="None"
+                searchPlaceholder="Search project types…"
+                options={[
+                  { value: '__none__', label: 'None' },
+                  ...serviceTypes.map((st) => ({ value: st.id, label: st.name })),
+                ]}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Unit</Label>
