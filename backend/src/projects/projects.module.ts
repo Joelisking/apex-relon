@@ -3,6 +3,7 @@ import { ProjectsService } from './projects.service';
 import { ProjectsCostService } from './projects-cost.service';
 import { ProjectsAssignmentService } from './projects-assignment.service';
 import { ProjectsBulkService } from './projects-bulk.service';
+import { ProjectsServiceItemsService } from './projects-service-items.service';
 import { ProjectsController } from './projects.controller';
 import { DatabaseModule } from '../database/database.module';
 import { AuditModule } from '../audit/audit.module';
@@ -15,6 +16,7 @@ import { AuditModule } from '../audit/audit.module';
     ProjectsCostService,
     ProjectsAssignmentService,
     ProjectsBulkService,
+    ProjectsServiceItemsService,
   ],
   exports: [ProjectsService],
 })

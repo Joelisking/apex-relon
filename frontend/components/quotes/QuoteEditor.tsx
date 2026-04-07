@@ -163,7 +163,7 @@ export default function QuoteEditor({ quoteId }: QuoteEditorProps) {
         setExistingQuote(updated);
       } else {
         const created = await quotesApi.create(payload);
-        router.replace(`/quotes/${created.id}/edit`);
+        router.replace(`/invoicing/${created.id}/edit`);
       }
       return true;
     } catch (err) {
@@ -228,10 +228,10 @@ export default function QuoteEditor({ quoteId }: QuoteEditorProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push('/quotes')}
+            onClick={() => router.push('/invoicing')}
             className="gap-1.5 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
-            Quotes
+            Invoicing
           </Button>
           <span className="text-muted-foreground">|</span>
           <span className="text-sm font-semibold">{quoteTitle}</span>

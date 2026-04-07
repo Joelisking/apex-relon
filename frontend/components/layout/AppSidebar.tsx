@@ -193,8 +193,8 @@ const mainNavItems: NavItemDef[] = [
     permission: 'tasks:view',
   },
   {
-    title: 'Quotes',
-    href: '/quotes',
+    title: 'Invoicing',
+    href: '/invoicing',
     icon: FileSignature,
     permission: 'quotes:view',
   },
@@ -251,7 +251,7 @@ const adminNavGroups: AdminNavGroup[] = [
     label: 'Settings',
     items: [
       { title: 'General', href: '/admin/general-settings', icon: SlidersHorizontal, permission: 'settings:manage' },
-      { title: 'Quotes', href: '/admin/quote-settings', icon: FileSignature, permission: 'settings:manage' },
+      { title: 'Invoicing', href: '/admin/quote-settings', icon: FileSignature, permission: 'settings:manage' },
       { title: 'AI', href: '/admin/ai-settings', icon: Bot, permission: 'ai_settings:view' },
     ],
   },

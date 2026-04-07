@@ -82,6 +82,19 @@ export interface ServiceItem {
   _count?: { quoteLineItems: number; timeEntries: number };
 }
 
+export interface ProjectServiceItem {
+  id: string;
+  projectId: string;
+  serviceItemId: string;
+  quantity: number;
+  unitPrice?: number | null;
+  notes?: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  serviceItem: ServiceItem;
+}
+
 export interface DropdownOption {
   id: string;
   category: string;

@@ -9,7 +9,6 @@ import {
   XCircle,
   Eye,
   Trash2,
-  Plus,
   FileText,
   BookOpen,
 } from 'lucide-react';
@@ -30,7 +29,6 @@ import { toast } from 'sonner';
 
 interface QuotesTableProps {
   quotes: Quote[];
-  canCreate: boolean;
   canEdit: boolean;
   canDelete: boolean;
   onView: (quote: Quote) => void;
@@ -40,7 +38,6 @@ interface QuotesTableProps {
 
 export default function QuotesTable({
   quotes,
-  canCreate,
   canEdit,
   canDelete,
   onView,
@@ -71,17 +68,7 @@ export default function QuotesTable({
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-        <p className="text-sm text-muted-foreground">No quotes found</p>
-        {canCreate && (
-          <Button
-            onClick={() => router.push('/quotes/new')}
-            variant="outline"
-            size="sm"
-            className="mt-4">
-            <Plus className="mr-2 h-4 w-4" />
-            Create your first quote
-          </Button>
-        )}
+        <p className="text-sm text-muted-foreground">No invoices found</p>
       </div>
     );
   }
@@ -178,14 +165,14 @@ export default function QuotesTable({
                     </DropdownMenuItem>
                     {canEdit && quote.status === 'DRAFT' && (
                       <DropdownMenuItem
-                        onClick={() => router.push(`/quotes/${quote.id}/edit`)}>
+                        onClick={() => router.push(`/invoicing/${quote.id}/edit`)}>
                         <Pencil className="mr-2 h-3.5 w-3.5" />
                         Edit
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={() => router.push(`/quotes/${quote.id}/edit`)}>
+                      onClick={() => router.push(`/invoicing/${quote.id}/edit`)}>
                       <Download className="mr-2 h-3.5 w-3.5" />
                       Preview / Print
                     </DropdownMenuItem>

@@ -32,6 +32,7 @@ import { ProjectActivityTimeline } from './ProjectActivityTimeline';
 import { ProjectFileUploadSection } from './ProjectFileUploadSection';
 import { EditProjectDialog } from './EditProjectDialog';
 import { ProjectAssignmentPanel } from './ProjectAssignmentPanel';
+import { ProjectServiceItemsPanel } from './ProjectServiceItemsPanel';
 import { ProjectDetailHeader } from './ProjectDetailHeader';
 import { ProjectOverviewPanel } from './ProjectOverviewPanel';
 import { ProjectVicinityMap } from './ProjectVicinityMap';
@@ -295,6 +296,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
     { value: 'tasks', label: 'Tasks' },
     { value: 'quotes', label: 'Quotes' },
     { value: 'crew', label: 'Crew' },
+    { value: 'services', label: 'Services' },
     ...(isEngineeringProject ? [{ value: 'time', label: 'Time Tracking' }] : []),
     { value: 'documents', label: `Documents${files.length > 0 ? ` (${files.length})` : ''}` },
     { value: 'location', label: 'Location' },
@@ -471,6 +473,18 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
                 </h3>
                 <ProjectAssignmentPanel
                   projectId={project.id}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="services" className="mt-0">
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground mb-3">
+                  Service Items
+                </h3>
+                <ProjectServiceItemsPanel
+                  projectId={project.id}
+                  serviceTypeIds={project.serviceTypeIds ?? []}
                 />
               </div>
             </TabsContent>

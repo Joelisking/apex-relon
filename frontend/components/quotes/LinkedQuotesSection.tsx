@@ -2,14 +2,12 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Receipt, Plus, BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
+import { Receipt, BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
-import { useRouter } from 'next/navigation';
 import { quotesApi } from '@/lib/api/quotes-client';
 import type { Quote } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 
 const STATUS_META: Record<
   string,
@@ -131,7 +129,6 @@ export function LinkedQuotesSection({
   clientId,
   projectId,
 }: LinkedQuotesSectionProps) {
-  const router = useRouter();
   const entityId = leadId ?? clientId ?? projectId;
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -173,22 +170,6 @@ export function LinkedQuotesSection({
             </span>
           )}
         </h3>
-        {(leadId || projectId) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 text-xs gap-1 text-muted-foreground hover:text-foreground ml-auto"
-            onClick={() =>
-              router.push(
-                leadId
-                  ? `/quotes/new?leadId=${leadId}`
-                  : `/quotes/new?projectId=${projectId}`,
-              )
-            }>
-            <Plus className="h-3 w-3" />
-            New
-          </Button>
-        )}
       </div>
 
       {isLoading ? (

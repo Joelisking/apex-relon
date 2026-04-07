@@ -296,7 +296,8 @@ model Project {
   budget            ProjectBudget?         @relation("ProjectBudget")
   quotes            Quote[]                @relation("ProjectQuotes")
   assignments       ProjectAssignment[]
-  costSegments      ProjectCostSegment[]
+  costSegments        ProjectCostSegment[]
+  projectServiceItems ProjectServiceItem[]
 
   @@index([clientId])
   @@index([leadId])
@@ -320,6 +321,24 @@ model ProjectCostSegment {
 
   @@index([projectId])
   @@map("project_cost_segments")
+}
+
+model ProjectServiceItem {
+  id            String      @id @default(uuid())
+  projectId     String
+  serviceItemId String
+  quantity      Float       @default(1)
+  unitPrice     Float?
+  notes         String?
+  sortOrder     Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  project       Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  serviceItem   ServiceItem @relation(fields: [serviceItemId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([serviceItemId])
+  @@map("project_service_items")
 }
 
 model CostLog {
@@ -1048,7 +1067,8 @@ model ServiceItem {
   updatedAt     DateTime             @updatedAt
   subtasks      ServiceItemSubtask[]
   timeEntries   TimeEntry[]
-  quoteLineItems QuoteLineItem[]
+  quoteLineItems      QuoteLineItem[]
+  projectServiceItems ProjectServiceItem[]
 
   @@index([isActive])
   @@map("service_items")

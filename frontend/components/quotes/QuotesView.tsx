@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -26,7 +25,6 @@ const PAGE_SIZE = 25;
 
 export default function QuotesView() {
   const { hasPermission } = useAuth();
-  const router = useRouter();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [allQuotes, setAllQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,7 +95,6 @@ export default function QuotesView() {
     }
   };
 
-  const canCreate = hasPermission('quotes:create');
   const canEdit = hasPermission('quotes:edit');
   const canDelete = hasPermission('quotes:delete');
 
@@ -141,17 +138,11 @@ export default function QuotesView() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-display tracking-tight">Quotes</h1>
+          <h1 className="text-3xl font-display tracking-tight">Invoicing</h1>
           <p className="text-sm text-muted-foreground">
-            Create and manage proposals and quotes
+            Invoices synced from QuickBooks
           </p>
         </div>
-        {canCreate && (
-          <Button onClick={() => router.push('/quotes/new')} size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            New Quote
-          </Button>
-        )}
       </div>
 
       <QuoteStatsBar
@@ -202,7 +193,6 @@ export default function QuotesView() {
 
       <QuotesTable
         quotes={pagedQuotes}
-        canCreate={canCreate}
         canEdit={canEdit}
         canDelete={canDelete}
         onView={setViewingQuote}

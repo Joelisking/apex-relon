@@ -21,10 +21,13 @@ import { ProjectsService } from './projects.service';
 import { ProjectsCostService } from './projects-cost.service';
 import { ProjectsAssignmentService } from './projects-assignment.service';
 import { ProjectsBulkService } from './projects-bulk.service';
+import { ProjectsServiceItemsService } from './projects-service-items.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { CreateCostLogDto } from './dto/create-cost-log.dto';
 import { CreateProjectAssignmentDto } from './dto/create-project-assignment.dto';
+import { AddProjectServiceItemDto } from './dto/add-project-service-item.dto';
+import { UpdateProjectServiceItemDto } from './dto/update-project-service-item.dto';
 
 @Controller('projects')
 export class ProjectsController {
@@ -33,6 +36,7 @@ export class ProjectsController {
     private readonly projectsCostService: ProjectsCostService,
     private readonly projectsAssignmentService: ProjectsAssignmentService,
     private readonly projectsBulkService: ProjectsBulkService,
+    private readonly projectsServiceItemsService: ProjectsServiceItemsService,
   ) {}
 
   @Get()
@@ -163,5 +167,42 @@ export class ProjectsController {
     @Param('assignmentId') assignmentId: string,
   ) {
     return this.projectsAssignmentService.removeAssignment(id, assignmentId);
+  }
+
+  // --- Service Items ---
+
+  @Get(':id/service-items')
+  @Permissions('projects:view')
+  getProjectServiceItems(@Param('id') id: string) {
+    return this.projectsServiceItemsService.getProjectServiceItems(id);
+  }
+
+  @Post(':id/service-items')
+  @Permissions('projects:edit')
+  addProjectServiceItem(
+    @Param('id') id: string,
+    @Body() dto: AddProjectServiceItemDto,
+  ) {
+    return this.projectsServiceItemsService.addProjectServiceItem(id, dto);
+  }
+
+  @Patch(':id/service-items/:linkId')
+  @Permissions('projects:edit')
+  updateProjectServiceItem(
+    @Param('id') id: string,
+    @Param('linkId') linkId: string,
+    @Body() dto: UpdateProjectServiceItemDto,
+  ) {
+    return this.projectsServiceItemsService.updateProjectServiceItem(id, linkId, dto);
+  }
+
+  @Delete(':id/service-items/:linkId')
+  @Permissions('projects:edit')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeProjectServiceItem(
+    @Param('id') id: string,
+    @Param('linkId') linkId: string,
+  ) {
+    return this.projectsServiceItemsService.removeProjectServiceItem(id, linkId);
   }
 }

@@ -1,3 +1,5 @@
+import type { ProjectServiceItem } from '@/lib/types';
+
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -519,5 +521,70 @@ export const projectsApi = {
       { method: 'DELETE', headers: authHeaders() },
     );
     if (!response.ok) throw new Error('Failed to remove assignment');
+  },
+
+  // ── Service Items ─────────────────────────────────────────────────────────
+
+  async getServiceItems(projectId: string): Promise<ProjectServiceItem[]> {
+    const response = await fetch(`${API_BASE}/projects/${projectId}/service-items`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch project service items');
+    return response.json();
+  },
+
+  async addServiceItem(
+    projectId: string,
+    data: {
+      serviceItemId: string;
+      quantity?: number;
+      unitPrice?: number;
+      notes?: string;
+      sortOrder?: number;
+    },
+  ): Promise<ProjectServiceItem> {
+    const response = await fetch(`${API_BASE}/projects/${projectId}/service-items`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to add service item: ${error}`);
+    }
+    return response.json();
+  },
+
+  async updateServiceItem(
+    projectId: string,
+    linkId: string,
+    data: {
+      quantity?: number;
+      unitPrice?: number | null;
+      notes?: string | null;
+      sortOrder?: number;
+    },
+  ): Promise<ProjectServiceItem> {
+    const response = await fetch(
+      `${API_BASE}/projects/${projectId}/service-items/${linkId}`,
+      {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify(data),
+      },
+    );
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to update service item: ${error}`);
+    }
+    return response.json();
+  },
+
+  async removeServiceItem(projectId: string, linkId: string): Promise<void> {
+    const response = await fetch(
+      `${API_BASE}/projects/${projectId}/service-items/${linkId}`,
+      { method: 'DELETE', headers: authHeaders() },
+    );
+    if (!response.ok) throw new Error('Failed to remove service item');
   },
 };
