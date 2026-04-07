@@ -78,6 +78,7 @@ export function CloseWonDialog({
       });
       const updatedLead: Lead = {
         ...lead,
+        stage: 'Closed Won',
         contractedValue: values.contractedValue,
         dealClosedAt: values.dealClosedAt,
       };
