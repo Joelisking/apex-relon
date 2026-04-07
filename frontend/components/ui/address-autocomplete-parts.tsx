@@ -19,6 +19,7 @@ interface AddressAutocompleteWithPartsProps {
   onChange: (street: string, parts: AddressParts | null) => void;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 function parseSuggestion(s: GeocodingSuggestion): AddressParts {
@@ -47,6 +48,7 @@ export function AddressAutocompleteWithParts({
   onChange,
   placeholder = 'Search for an address…',
   className,
+  disabled = false,
 }: AddressAutocompleteWithPartsProps) {
   const [inputValue, setInputValue] = useState(value);
   const [open, setOpen] = useState(false);
@@ -94,6 +96,7 @@ export function AddressAutocompleteWithParts({
           placeholder={placeholder}
           className="pl-8"
           autoComplete="off"
+          disabled={disabled}
         />
         {isLoading && (
           <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground" />

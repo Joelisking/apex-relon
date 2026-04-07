@@ -10,6 +10,7 @@ import { contactsApi } from '@/lib/api/contacts-client';
 import { useAuth } from '@/contexts/auth-context';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import { MultiCreatableSelect } from '@/components/ui/multi-creatable-select';
+import { ClientPicker } from '@/components/ui/client-picker';
 import {
   pipelineApi,
   type PipelineStage,
@@ -54,6 +55,7 @@ import {
 } from 'lucide-react';
 import { AddressAutocompleteWithParts } from '@/components/ui/address-autocomplete-parts';
 import { UserPicker } from '@/components/ui/user-picker';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 
 interface UserOption {
@@ -69,6 +71,7 @@ interface ClientOption {
   individualName?: string;
   segment?: string;
   county?: string | null;
+  address?: string | null;
   email?: string | null;
   phone?: string | null;
   contacts?: {
@@ -193,6 +196,7 @@ export function CreateLeadDialog({
     [],
   );
   const [autoLinkedContactId, setAutoLinkedContactId] = useState<string | null>(null);
+  const [useClientAddress, setUseClientAddress] = useState(false);
   const datalistId = useId();
 
   // Set stage to first pipeline stage whenever dialog opens
@@ -249,6 +253,12 @@ export function CreateLeadDialog({
 
   // Auto-fill contact fields and build known contacts list when client changes
   useEffect(() => {
+    setUseClientAddress(false);
+    form.setValue('address', '');
+    form.setValue('city', '');
+    form.setValue('state', '');
+    form.setValue('zip', '');
+
     if (!watchedClientId) {
       setKnownContacts([]);
       return;
@@ -308,6 +318,39 @@ export function CreateLeadDialog({
   const selectedClient = clients.find(
     (c) => c.id === watchedClientId,
   );
+
+  function parseClientAddress(full: string) {
+    const parts = full.split(',').map((s) => s.trim()).filter(Boolean);
+    if (parts.length === 0) return { street: '', city: '', state: '', zip: '' };
+    if (parts.length === 1) return { street: parts[0], city: '', state: '', zip: '' };
+    if (parts.length === 2) return { street: parts[0], city: parts[1], state: '', zip: '' };
+    const street = parts[0];
+    const city = parts[1];
+    const stateZipRaw = parts.slice(2).join(', ').trim();
+    const m = stateZipRaw.match(/^([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$/);
+    return {
+      street,
+      city,
+      state: m ? m[1] : stateZipRaw,
+      zip: m ? m[2] : '',
+    };
+  }
+
+  function handleUseClientAddress(checked: boolean) {
+    setUseClientAddress(checked);
+    if (checked && selectedClient?.address) {
+      const parsed = parseClientAddress(selectedClient.address);
+      form.setValue('address', parsed.street);
+      form.setValue('city', parsed.city);
+      form.setValue('state', parsed.state);
+      form.setValue('zip', parsed.zip);
+    } else {
+      form.setValue('address', '');
+      form.setValue('city', '');
+      form.setValue('state', '');
+      form.setValue('zip', '');
+    }
+  }
 
   // Team members
   const addedMembers = allUsers.filter((u) =>
@@ -408,6 +451,7 @@ export function CreateLeadDialog({
     setPendingTeamMemberIds([]);
     setSelectedCategoryIds([]);
     setSelectedServiceTypeIds([]);
+    setUseClientAddress(false);
     onOpenChange(false);
   };
 
@@ -443,24 +487,14 @@ export function CreateLeadDialog({
                         Customer{' '}
                         <span className="text-destructive">*</span>
                       </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a customer" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {clients.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name
-                                ? `${c.name} (${c.individualName})`
-                                : c.individualName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <ClientPicker
+                          clients={clients}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Select a customer"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -629,9 +663,20 @@ export function CreateLeadDialog({
 
             {/* Address */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">
-                Mailing Address
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Mailing Address
+                </p>
+                {selectedClient?.address && (
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <Checkbox
+                      checked={useClientAddress}
+                      onCheckedChange={(checked) => handleUseClientAddress(!!checked)}
+                    />
+                    <span className="text-xs text-muted-foreground">Same as client address</span>
+                  </label>
+                )}
+              </div>
               <FormField
                 control={form.control}
                 name="address"
@@ -649,6 +694,7 @@ export function CreateLeadDialog({
                             form.setValue('zip', parts.zip);
                           }
                         }}
+                        disabled={useClientAddress}
                       />
                     </FormControl>
                     <FormMessage />
@@ -662,7 +708,7 @@ export function CreateLeadDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input placeholder="City" {...field} />
+                        <Input placeholder="City" disabled={useClientAddress} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -674,7 +720,7 @@ export function CreateLeadDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input placeholder="State" {...field} />
+                        <Input placeholder="State" disabled={useClientAddress} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -686,7 +732,7 @@ export function CreateLeadDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input placeholder="ZIP" {...field} />
+                        <Input placeholder="ZIP" disabled={useClientAddress} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,8 +11,9 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MapPin } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ProjectCostSegments } from './ProjectCostSegments';
 import { ProjectLocationSection } from './ProjectLocationSection';
 import { ProjectTeamMembersSection } from './ProjectTeamMembersSection';
@@ -50,6 +52,28 @@ export function CreateProjectDialog({
     handleClientChange, handleUseSegmentTotal, handleGeocode,
     watchedContractedValue, onSubmit,
   } = useCreateProjectForm({ open, onOpenChange, onProjectCreated, initialClientId });
+
+  const [useClientAddress, setUseClientAddress] = useState(false);
+
+  const watchedClientId = form.watch('clientId');
+  const selectedClient = clients.find((c) => c.id === watchedClientId);
+  const clientAddress = selectedClient?.address ?? null;
+
+  function handleClientChangeWithReset(clientId: string) {
+    setUseClientAddress(false);
+    form.setValue('address', '');
+    handleClientChange(clientId);
+  }
+
+  function handleUseClientAddress(checked: boolean) {
+    setUseClientAddress(checked);
+    form.setValue('address', checked && clientAddress ? clientAddress : '');
+    if (!checked) {
+      form.setValue('latitude', null);
+      form.setValue('longitude', null);
+      handleGeocode(null, null);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -96,7 +120,7 @@ export function CreateProjectDialog({
                 clients={clients}
                 leads={leads}
                 users={users}
-                onClientChange={handleClientChange}
+                onClientChange={handleClientChangeWithReset}
                 hideClient={!!initialClientId}
                 projectStages={projectStages}
                 primaryServiceTypeName={primaryServiceTypeName}
@@ -130,7 +154,28 @@ export function CreateProjectDialog({
               onUseSegmentTotal={handleUseSegmentTotal}
             />
 
-            <ProjectLocationSection onGeocode={handleGeocode} />
+            <div className="space-y-2">
+              {clientAddress && (
+                <label className="flex items-center gap-1.5 cursor-pointer select-none w-fit">
+                  <Checkbox
+                    checked={useClientAddress}
+                    onCheckedChange={(checked) => handleUseClientAddress(!!checked)}
+                  />
+                  <span className="text-xs text-muted-foreground">Same as client address</span>
+                </label>
+              )}
+              {useClientAddress && clientAddress ? (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Location</p>
+                  <div className="flex items-center gap-2 h-9 px-3 rounded-md border border-input bg-muted/40 text-sm text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{clientAddress}</span>
+                  </div>
+                </div>
+              ) : (
+                <ProjectLocationSection onGeocode={handleGeocode} />
+              )}
+            </div>
 
             <ProjectTeamMembersSection
               members={teamMembers}

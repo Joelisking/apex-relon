@@ -9,6 +9,7 @@ import { leadsApi, settingsApi } from '@/lib/api/client';
 import { useAuth } from '@/contexts/auth-context';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import { MultiCreatableSelect } from '@/components/ui/multi-creatable-select';
+import { ClientPicker } from '@/components/ui/client-picker';
 import {
   pipelineApi,
   type PipelineStage,
@@ -221,8 +222,9 @@ export function EditLeadDialog({
     defaultValues: buildDefaults(lead),
   });
 
-  // Re-populate form and team members when lead prop changes
+  // Re-populate form when dialog opens or the lead changes
   useEffect(() => {
+    if (!open) return;
     form.reset(buildDefaults(lead));
     setTeamMemberIds(
       (lead.teamMembers ?? []).map((tm) => tm.userId),
@@ -230,7 +232,7 @@ export function EditLeadDialog({
     setSelectedCategoryIds(lead.categoryIds ?? []);
     setSelectedServiceTypeIds(lead.serviceTypeIds ?? []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lead.id]);
+  }, [open, lead.id]);
 
   const watchedClientId = form.watch('clientId');
   const watchedStage = form.watch('stage');
@@ -347,6 +349,10 @@ export function EditLeadDialog({
   };
 
   const handleClose = () => {
+    form.reset(buildDefaults(lead));
+    setTeamMemberIds((lead.teamMembers ?? []).map((tm) => tm.userId));
+    setSelectedCategoryIds(lead.categoryIds ?? []);
+    setSelectedServiceTypeIds(lead.serviceTypeIds ?? []);
     onOpenChange(false);
   };
 
@@ -373,24 +379,14 @@ export function EditLeadDialog({
                   <FormLabel>
                     Customer <span className="text-red-500">*</span>
                   </FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a customer" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {clients.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.individualName
-                            ? `${c.individualName} (${c.name})`
-                            : c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <ClientPicker
+                      clients={clients}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Select a customer"
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

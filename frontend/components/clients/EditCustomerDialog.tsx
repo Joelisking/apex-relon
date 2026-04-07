@@ -24,6 +24,7 @@ import {
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { AddressAutocompleteWithParts } from '@/components/ui/address-autocomplete-parts';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -258,9 +259,19 @@ export function EditCustomerDialog({
                 <FormItem>
                   <FormLabel>Address</FormLabel>
                   <FormControl>
-                    <Input
+                    <AddressAutocompleteWithParts
+                      value={field.value ?? ''}
                       placeholder="123 Main St, City, State 12345"
-                      {...field}
+                      onChange={(street, parts) => {
+                        if (parts) {
+                          const full = [street, parts.city, `${parts.state} ${parts.zip}`.trim()]
+                            .filter(Boolean)
+                            .join(', ');
+                          field.onChange(full);
+                        } else {
+                          field.onChange(street);
+                        }
+                      }}
                     />
                   </FormControl>
                   <FormMessage />

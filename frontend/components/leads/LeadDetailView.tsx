@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Tabs,
   TabsList,
@@ -108,6 +108,24 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
     pipelineApi.getStages('prospective_project').then(setLeadStages).catch(console.error);
     settingsApi.getServiceCategories().then(setServiceCategories).catch(console.error);
   }, []);
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const { data: allUsers = [] } = useQuery<any[]>({
+    queryKey: ['users'],
+    queryFn: () => api.admin.getUsers(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: clientList = [] } = useQuery<any[]>({
+    queryKey: ['clients'],
+    queryFn: () => api.clients.getAll(),
+    staleTime: 60 * 1000,
+  });
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+
+  const allUsersArr = Array.isArray(allUsers)
+    ? allUsers
+    : ((allUsers as { users?: any[] })?.users ?? []);  // eslint-disable-line @typescript-eslint/no-explicit-any
 
   const handleStageChange = async (newStage: string) => {
     if (!lead || newStage === lead.stage) return;
@@ -400,6 +418,9 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
           open={isEditOpen}
           onOpenChange={setIsEditOpen}
           currentUser={currentUser}
+          managers={allUsersArr}
+          allUsers={allUsersArr}
+          clients={clientList}
           onLeadUpdated={(updated) => {
             setLead(updated);
           }}

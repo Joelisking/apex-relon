@@ -53,7 +53,7 @@ export function useCreateProjectForm({
   const [loading, setLoading] = useState(false);
   const [isLoadingStages, setIsLoadingStages] = useState(true);
   const [clients, setClients] = useState<
-    { id: string; name: string; individualName?: string; county?: string | null }[]
+    { id: string; name: string; individualName?: string; county?: string | null; address?: string | null }[]
   >([]);
   const [leads, setLeads] = useState<{ id: string; contactName: string; company: string }[]>([]);
   const [users, setUsers] = useState<UserDirectoryItem[]>([]);

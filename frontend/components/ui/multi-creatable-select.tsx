@@ -1,16 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { X, Plus, Check, Loader2, ChevronDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { X, Plus, Check, Loader2, ChevronDown, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { toast } from 'sonner';
 import type { DropdownOption } from '@/lib/types';
 
@@ -31,16 +29,26 @@ export function MultiCreatableSelect({
   onOptionCreated,
   onOptionsChange,
 }: MultiCreatableSelectProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [newLabel, setNewLabel] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  const filtered = useMemo(() => {
+    const available = options.filter((o) => !value.includes(o.label));
+    if (!query.trim()) return available;
+    const q = query.toLowerCase();
+    return available.filter((o) => o.label.toLowerCase().includes(q));
+  }, [options, value, query]);
 
   const handleSelect = (label: string) => {
     if (value.includes(label)) return;
     onChange([...value, label]);
   };
 
-  const handleRemove = (label: string) => {
+  const handleRemove = (label: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     onChange(value.filter((v) => v !== label));
   };
 
@@ -60,100 +68,148 @@ export function MultiCreatableSelect({
     }
   };
 
-  const available = options.filter((o) => !value.includes(o.label));
-
   return (
-    <div className="space-y-2">
-      {value.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {value.map((v) => (
-            <Badge key={v} variant="secondary" className="gap-1 pr-1">
-              {v}
-              <button
-                type="button"
-                onClick={() => handleRemove(v)}
-                className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5">
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-      )}
+    <Popover
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) {
+          setQuery('');
+          setIsAdding(false);
+          setNewLabel('');
+        }
+      }}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="min-h-9 w-full flex flex-wrap gap-1 items-center px-3 py-1.5 rounded-md border border-input bg-background text-sm text-left transition-colors hover:bg-muted/40">
+          {value.length === 0 ? (
+            <span className="flex-1 text-muted-foreground">{placeholder}</span>
+          ) : (
+            value.map((v) => (
+              <span
+                key={v}
+                className="inline-flex items-center gap-1 rounded bg-secondary text-secondary-foreground px-1.5 py-0.5 text-xs font-medium">
+                {v}
+                <span
+                  role="button"
+                  tabIndex={-1}
+                  onClick={(e) => handleRemove(v, e)}
+                  className="rounded-full hover:bg-muted-foreground/20 p-0.5 cursor-pointer">
+                  <X className="h-2.5 w-2.5" />
+                </span>
+              </span>
+            ))
+          )}
+          <ChevronDown className="h-4 w-4 opacity-50 ml-auto shrink-0" />
+        </button>
+      </PopoverTrigger>
 
-      {isAdding ? (
-        <div className="flex gap-2">
-          <Input
-            autoFocus
-            placeholder="Enter county name..."
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleSave();
-              }
-              if (e.key === 'Escape') {
-                setIsAdding(false);
-                setNewLabel('');
-              }
-            }}
-          />
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            onClick={handleSave}
-            disabled={isSaving || !newLabel.trim()}>
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-          </Button>
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            onClick={() => {
-              setIsAdding(false);
-              setNewLabel('');
-            }}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      ) : (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+      <PopoverContent
+        className="p-0 overflow-hidden flex flex-col"
+        style={{
+          width: 'var(--radix-popover-trigger-width)',
+          maxHeight: '280px',
+        }}
+        align="start"
+        sideOffset={4}>
+        {isAdding ? (
+          <div className="p-2 flex gap-2">
+            <Input
+              autoFocus
+              placeholder="Enter county name..."
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSave();
+                }
+                if (e.key === 'Escape') {
+                  setIsAdding(false);
+                  setNewLabel('');
+                }
+              }}
+              className="h-8 text-sm"
+            />
             <Button
               type="button"
+              size="icon"
               variant="outline"
-              className="w-full justify-between font-normal text-muted-foreground">
-              {value.length === 0 ? placeholder : `Add more counties...`}
-              <ChevronDown className="h-4 w-4 opacity-50" />
+              className="h-8 w-8 shrink-0"
+              onClick={handleSave}
+              disabled={isSaving || !newLabel.trim()}>
+              {isSaving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Check className="h-3.5 w-3.5" />
+              )}
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-60 overflow-y-auto">
-            <DropdownMenuItem
-              onSelect={() => setIsAdding(true)}
-              className="text-primary font-medium">
-              <Plus className="h-3.5 w-3.5 mr-2" />
-              Add new...
-            </DropdownMenuItem>
-            {available.map((opt) => (
-              <DropdownMenuItem
-                key={opt.value}
-                onSelect={() => handleSelect(opt.label)}>
-                {opt.label}
-              </DropdownMenuItem>
-            ))}
-            {available.length === 0 && !isAdding && (
-              <DropdownMenuItem disabled className="text-muted-foreground text-xs">
-                All counties selected
-              </DropdownMenuItem>
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              className="h-8 w-8 shrink-0"
+              onClick={() => {
+                setIsAdding(false);
+                setNewLabel('');
+              }}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-3 h-9 border-b border-border/60 shrink-0">
+            <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search counties..."
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery('')}>
+                <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+              </button>
             )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-    </div>
+          </div>
+        )}
+
+        {!isAdding && (
+          <div
+            className="overflow-y-auto flex-1 py-1"
+            onWheel={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setIsAdding(true)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary font-medium transition-colors hover:bg-muted/50">
+              <Plus className="h-3.5 w-3.5" />
+              Add new...
+            </button>
+
+            {filtered.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  handleSelect(opt.label);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-muted/50">
+                <span className="flex-1 text-left">{opt.label}</span>
+                {value.includes(opt.label) && (
+                  <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                )}
+              </button>
+            ))}
+
+            {filtered.length === 0 && !isAdding && (
+              <div className="py-4 text-center text-xs text-muted-foreground">
+                {query ? 'No matches' : 'All counties selected'}
+              </div>
+            )}
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
