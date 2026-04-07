@@ -1,13 +1,17 @@
-import { IsString, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsObject } from 'class-validator';
 
 export class GenerateProposalDto {
   @IsString()
   @IsOptional()
-  quoteId?: string;
+  leadId?: string;
 
   @IsString()
   @IsOptional()
-  projectId?: string;
+  costBreakdownId?: string;
+
+  @IsString()
+  @IsOptional()
+  title?: string;
 
   @IsString()
   @IsOptional()
@@ -64,4 +68,16 @@ export class GenerateProposalDto {
   @IsBoolean()
   @IsOptional()
   saveAddressToClient?: boolean;
+
+  @IsObject()
+  @IsOptional()
+  dynamicValues?: Record<string, string>;
+
+  @IsObject()
+  @IsOptional()
+  tableCellValues?: Record<string, string>;
+
+  @IsObject()
+  @IsOptional()
+  paragraphOverrides?: Record<string, string>;
 }

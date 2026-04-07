@@ -17,9 +17,11 @@ const LINE_INCLUDE = {
 export class CostBreakdownService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(tenantId: string) {
+  async findAll(tenantId: string, filters?: { leadId?: string }) {
+    const where: Record<string, unknown> = { tenantId };
+    if (filters?.leadId) where.leadId = filters.leadId;
     const breakdowns = await this.prisma.costBreakdown.findMany({
-      where: { tenantId },
+      where,
       orderBy: { createdAt: 'desc' },
       include: {
         serviceType: { select: { id: true, name: true } },

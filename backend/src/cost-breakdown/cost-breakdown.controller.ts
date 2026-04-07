@@ -7,6 +7,7 @@ import {
   Put,
   Body,
   Param,
+  Query,
   Res,
   UseGuards,
   Request,
@@ -31,8 +32,8 @@ export class CostBreakdownController {
   ) {}
 
   @Get()
-  findAll(@Request() req: any) {
-    return this.service.findAll(TENANT_ID);
+  findAll(@Query('leadId') leadId?: string) {
+    return this.service.findAll(TENANT_ID, { leadId });
   }
 
   @Get(':id')

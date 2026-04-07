@@ -24,9 +24,39 @@ export interface ProposalTemplate {
   updatedAt: string;
 }
 
+export interface EditableParagraph {
+  index: number;
+  text: string;
+}
+
+export interface EditableTableCell {
+  rowIndex: number;
+  cellIndex: number;
+  text: string;
+  key: string;
+}
+
+export interface EditableTableRow {
+  rowIndex: number;
+  cells: EditableTableCell[];
+}
+
+export interface EditableTable {
+  tableIndex: number;
+  rows: EditableTableRow[];
+}
+
+export interface TemplateContent {
+  paragraphs: string[];
+  dynamicFields: string[];
+  tables: EditableTable[];
+  editableParagraphs: EditableParagraph[];
+}
+
 export interface GenerateProposalInput {
-  quoteId?: string;
-  projectId?: string;
+  leadId?: string;
+  costBreakdownId?: string;
+  title?: string;
   totalAmount?: string;
   salutation?: string;
   firstName?: string;
@@ -41,26 +71,39 @@ export interface GenerateProposalInput {
   projectName?: string;
   projectAddress?: string;
   saveAddressToClient?: boolean;
+  dynamicValues?: Record<string, string>;
+  tableCellValues?: Record<string, string>;
+  paragraphOverrides?: Record<string, string>;
 }
 
 export interface GenerateProposalResult {
+  proposalId: string;
   fileId: string;
   fileName: string;
   downloadUrl: string;
 }
 
-export interface GeneratedProposal {
+export interface Proposal {
   id: string;
-  clientId: string | null;
-  originalName: string;
-  fileName: string;
-  fileSize: number;
+  tenantId: string;
+  title: string;
+  status: string;
+  leadId: string | null;
+  costBreakdownId: string | null;
+  fileId: string | null;
+  proposalDate: string | null;
+  acceptedAt: string | null;
   createdAt: string;
-  client: { id: string; name: string } | null;
-  uploadedBy: { id: string; name: string };
+  updatedAt: string;
+  lead: { id: string; company: string; contactName: string; projectName: string | null } | null;
+  costBreakdown: { id: string; title: string } | null;
+  file: { id: string; originalName: string; fileSize: number } | null;
+  createdBy: { id: string; name: string };
 }
 
 export const proposalTemplatesApi = {
+  // ── Templates ──────────────────────────────────────────────────────────────
+
   getAll(serviceTypeId?: string): Promise<ProposalTemplate[]> {
     const q = serviceTypeId ? `?serviceTypeId=${encodeURIComponent(serviceTypeId)}` : '';
     return apiFetch<ProposalTemplate[]>(`/proposal-templates${q}`);
@@ -98,8 +141,8 @@ export const proposalTemplatesApi = {
     return apiFetch(`/proposal-templates/${id}`, { method: 'DELETE' });
   },
 
-  getContent(templateId: string): Promise<{ paragraphs: string[] }> {
-    return apiFetch<{ paragraphs: string[] }>(`/proposal-templates/${templateId}/content`);
+  getContent(templateId: string): Promise<TemplateContent> {
+    return apiFetch<TemplateContent>(`/proposal-templates/${templateId}/content`);
   },
 
   generate(templateId: string, dto: GenerateProposalInput): Promise<GenerateProposalResult> {
@@ -109,28 +152,36 @@ export const proposalTemplatesApi = {
     });
   },
 
-  getGenerated(): Promise<GeneratedProposal[]> {
-    return apiFetch<GeneratedProposal[]>('/proposal-templates/generated');
+  // ── Proposals ──────────────────────────────────────────────────────────────
+
+  getProposals(): Promise<Proposal[]> {
+    return apiFetch<Proposal[]>('/proposal-templates/proposals');
   },
 
-  deleteGenerated(fileId: string): Promise<void> {
-    return apiFetch(`/proposal-templates/generated/${fileId}`, { method: 'DELETE' });
-  },
-
-  renameGenerated(fileId: string, name: string): Promise<GeneratedProposal> {
-    return apiFetch<GeneratedProposal>(`/proposal-templates/generated/${fileId}`, {
+  renameProposal(id: string, title: string): Promise<Proposal> {
+    return apiFetch<Proposal>(`/proposal-templates/proposals/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ title }),
     });
   },
 
-  async downloadGenerated(fileId: string): Promise<Blob> {
+  acceptProposal(id: string): Promise<Proposal> {
+    return apiFetch<Proposal>(`/proposal-templates/proposals/${id}/accept`, {
+      method: 'PATCH',
+    });
+  },
+
+  deleteProposal(id: string): Promise<void> {
+    return apiFetch(`/proposal-templates/proposals/${id}`, { method: 'DELETE' });
+  },
+
+  async downloadProposal(proposalId: string): Promise<Blob> {
     const token = getTokenFromClientCookies();
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
     const res = await fetch(
-      `${API_BASE}/proposal-templates/generated/${fileId}/download`,
+      `${API_BASE}/proposal-templates/proposals/${proposalId}/download`,
       { headers },
     );
     if (!res.ok) throw new Error('Failed to download proposal');

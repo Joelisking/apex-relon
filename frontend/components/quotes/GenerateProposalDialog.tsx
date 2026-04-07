@@ -29,13 +29,12 @@ import {
   ProposalTemplate,
   GenerateProposalResult,
 } from '@/lib/api/proposal-templates-client';
-import type { Quote, Project } from '@/lib/types';
+import type { Quote } from '@/lib/types';
 
 interface GenerateProposalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quote?: Quote | null;
-  project?: Project | null;
 }
 
 function todayIso(): string {
@@ -54,7 +53,6 @@ export default function GenerateProposalDialog({
   open,
   onOpenChange,
   quote,
-  project,
 }: GenerateProposalDialogProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [generating, setGenerating] = useState(false);
@@ -95,19 +93,13 @@ export default function GenerateProposalDialog({
       setFirstName(first);
       setLastName(last);
       setProjectName(quote.project?.name ?? '');
-      setTotalAmount('');
-    } else if (project) {
-      setFirstName('');
-      setLastName('');
-      setProjectName(project.name ?? '');
-      setTotalAmount('');
     } else {
       setFirstName('');
       setLastName('');
       setProjectName('');
-      setTotalAmount('');
     }
-  }, [open, quote, project]);
+    setTotalAmount('');
+  }, [open, quote]);
 
   const { data: allTemplates = [], isLoading: loadingTemplates } = useQuery({
     queryKey: ['proposal-templates'],
@@ -115,12 +107,7 @@ export default function GenerateProposalDialog({
     enabled: open,
   });
 
-  const clientName =
-    quote?.lead?.company ??
-    quote?.client?.name ??
-    project?.client?.name ??
-    project?.lead?.company ??
-    null;
+  const clientName = quote?.lead?.company ?? quote?.client?.name ?? null;
 
   const addressFilled = !!(address || city || stateField || zip);
 
@@ -129,8 +116,6 @@ export default function GenerateProposalDialog({
     setGenerating(true);
     try {
       const res = await proposalTemplatesApi.generate(selectedTemplateId, {
-        quoteId: quote?.id,
-        projectId: project?.id,
         salutation: salutation || undefined,
         firstName: firstName || undefined,
         lastName: lastName || undefined,
@@ -142,23 +127,20 @@ export default function GenerateProposalDialog({
         proposalDate: proposalDate || undefined,
         projectName: projectName || undefined,
         projectAddress: projectAddress || undefined,
-        totalAmount: !quote && totalAmount ? totalAmount : undefined,
+        totalAmount: totalAmount || undefined,
         saveAddressToClient: saveAddress && addressFilled ? true : undefined,
       });
       setResult(res);
 
       // Auto-download
       try {
-        const fileId = extractFileId(res.downloadUrl);
-        if (fileId) {
-          const blob = await proposalTemplatesApi.downloadGenerated(fileId);
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = res.fileName;
-          a.click();
-          URL.revokeObjectURL(url);
-        }
+        const blob = await proposalTemplatesApi.downloadProposal(res.proposalId);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = res.fileName;
+        a.click();
+        URL.revokeObjectURL(url);
       } catch {
         // Download failed — user can still use the manual download button
       }
@@ -177,10 +159,8 @@ export default function GenerateProposalDialog({
 
   const handleManualDownload = async () => {
     if (!result) return;
-    const fileId = extractFileId(result.downloadUrl);
-    if (!fileId) return;
     try {
-      const blob = await proposalTemplatesApi.downloadGenerated(fileId);
+      const blob = await proposalTemplatesApi.downloadProposal(result.proposalId);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -427,19 +407,17 @@ export default function GenerateProposalDialog({
                         className="text-sm h-8"
                       />
                     </div>
-                    {!quote && (
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground block mb-1">
-                          Fee
-                        </Label>
-                        <Input
-                          value={totalAmount}
-                          onChange={(e) => setTotalAmount(e.target.value)}
-                          className="text-sm h-8"
-                          placeholder="e.g. $5,000.00"
-                        />
-                      </div>
-                    )}
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground block mb-1">
+                        Fee
+                      </Label>
+                      <Input
+                        value={totalAmount}
+                        onChange={(e) => setTotalAmount(e.target.value)}
+                        className="text-sm h-8"
+                        placeholder="e.g. $5,000.00"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -507,7 +485,3 @@ export default function GenerateProposalDialog({
   );
 }
 
-function extractFileId(downloadUrl: string): string | null {
-  const m = downloadUrl.match(/\/proposal-templates\/generated\/([^/]+)\/download/);
-  return m ? m[1] : null;
-}

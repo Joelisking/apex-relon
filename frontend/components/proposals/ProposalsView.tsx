@@ -3,11 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, FileText, Loader2, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
+import {
+  Download, FileText, Loader2, Plus, Pencil, Trash2, Check, X, CheckCircle2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { proposalTemplatesApi, GeneratedProposal } from '@/lib/api/proposal-templates-client';
+import { proposalTemplatesApi, type Proposal } from '@/lib/api/proposal-templates-client';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -23,32 +27,30 @@ function formatDate(iso: string): string {
   });
 }
 
-function stripDocx(name: string): string {
-  return name.replace(/\.docx$/i, '');
-}
-
 export default function ProposalsView() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState('');
+  const [editingTitle, setEditingTitle] = useState('');
   const [savingId, setSavingId] = useState<string | null>(null);
 
   const { data: proposals = [], isLoading } = useQuery({
-    queryKey: ['proposals-generated'],
-    queryFn: () => proposalTemplatesApi.getGenerated(),
+    queryKey: ['proposals'],
+    queryFn: () => proposalTemplatesApi.getProposals(),
   });
 
-  const handleDownload = async (proposal: GeneratedProposal) => {
+  const handleDownload = async (proposal: Proposal) => {
+    if (!proposal.fileId) return;
     setDownloadingId(proposal.id);
     try {
-      const blob = await proposalTemplatesApi.downloadGenerated(proposal.id);
+      const blob = await proposalTemplatesApi.downloadProposal(proposal.id);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = proposal.originalName;
+      a.download = proposal.file?.originalName ?? `${proposal.title}.docx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -58,11 +60,24 @@ export default function ProposalsView() {
     }
   };
 
-  const handleDelete = async (proposal: GeneratedProposal) => {
+  const handleAccept = async (proposal: Proposal) => {
+    setAcceptingId(proposal.id);
+    try {
+      await proposalTemplatesApi.acceptProposal(proposal.id);
+      queryClient.invalidateQueries({ queryKey: ['proposals'] });
+      toast.success('Proposal marked as accepted');
+    } catch {
+      toast.error('Failed to accept proposal');
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
+  const handleDelete = async (proposal: Proposal) => {
     setDeletingId(proposal.id);
     try {
-      await proposalTemplatesApi.deleteGenerated(proposal.id);
-      queryClient.invalidateQueries({ queryKey: ['proposals-generated'] });
+      await proposalTemplatesApi.deleteProposal(proposal.id);
+      queryClient.invalidateQueries({ queryKey: ['proposals'] });
       toast.success('Proposal deleted');
     } catch {
       toast.error('Failed to delete proposal');
@@ -71,23 +86,23 @@ export default function ProposalsView() {
     }
   };
 
-  const startEditing = (proposal: GeneratedProposal) => {
+  const startEditing = (proposal: Proposal) => {
     setEditingId(proposal.id);
-    setEditingName(stripDocx(proposal.originalName));
+    setEditingTitle(proposal.title);
   };
 
   const cancelEditing = () => {
     setEditingId(null);
-    setEditingName('');
+    setEditingTitle('');
   };
 
-  const saveRename = async (proposal: GeneratedProposal) => {
-    const trimmed = editingName.trim();
+  const saveRename = async (proposal: Proposal) => {
+    const trimmed = editingTitle.trim();
     if (!trimmed) return;
     setSavingId(proposal.id);
     try {
-      await proposalTemplatesApi.renameGenerated(proposal.id, trimmed);
-      queryClient.invalidateQueries({ queryKey: ['proposals-generated'] });
+      await proposalTemplatesApi.renameProposal(proposal.id, trimmed);
+      queryClient.invalidateQueries({ queryKey: ['proposals'] });
       cancelEditing();
     } catch {
       toast.error('Failed to rename proposal');
@@ -98,100 +113,130 @@ export default function ProposalsView() {
 
   return (
     <div className="flex-1 overflow-auto">
-        <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-foreground">Proposals</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Generate and manage proposals from quote data
+      <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Proposals</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Generate and manage client proposals
+            </p>
+          </div>
+          <Button size="sm" className="gap-1.5" onClick={() => router.push('/proposals/new')}>
+            <Plus className="h-3.5 w-3.5" />
+            New Proposal
+          </Button>
+        </div>
+
+        {/* List */}
+        <div className="rounded-xl border border-border/60 bg-card shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : proposals.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+              <div className="h-10 w-10 rounded-full bg-muted/60 flex items-center justify-center mb-3">
+                <FileText className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <p className="text-[13px] font-medium text-foreground">No proposals yet</p>
+              <p className="text-[12px] text-muted-foreground mt-1">
+                Click &quot;New Proposal&quot; to create one.
               </p>
             </div>
-            <Button size="sm" className="gap-1.5" onClick={() => router.push('/proposals/new')}>
-              <Plus className="h-3.5 w-3.5" />
-              Generate Proposal
-            </Button>
-          </div>
+          ) : (
+            proposals.map((proposal, i) => {
+              const isEditing = editingId === proposal.id;
+              const isAccepted = proposal.status === 'ACCEPTED';
+              return (
+                <div
+                  key={proposal.id}
+                  className={cn(
+                    'flex items-center gap-3 px-5 py-3.5',
+                    i > 0 && 'border-t border-border/40',
+                  )}>
+                  <div className={cn(
+                    'h-8 w-8 rounded-md flex items-center justify-center shrink-0',
+                    isAccepted ? 'bg-green-500/10' : 'bg-muted/60',
+                  )}>
+                    <FileText className={cn('h-4 w-4', isAccepted ? 'text-green-600' : 'text-muted-foreground')} />
+                  </div>
 
-          {/* List */}
-          <div className="rounded-xl border border-border/60 bg-card shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              </div>
-            ) : proposals.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-                <div className="h-10 w-10 rounded-full bg-muted/60 flex items-center justify-center mb-3">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <p className="text-[13px] font-medium text-foreground">No proposals yet</p>
-                <p className="text-[12px] text-muted-foreground mt-1">
-                  Click &quot;Generate Proposal&quot; to create one.
-                </p>
-              </div>
-            ) : (
-              proposals.map((proposal, i) => {
-                const isEditing = editingId === proposal.id;
-                return (
-                  <div
-                    key={proposal.id}
-                    className={`flex items-center gap-3 px-5 py-3.5 ${
-                      i > 0 ? 'border-t border-border/40' : ''
-                    }`}>
-                    <div className="h-8 w-8 rounded-md bg-muted/60 flex items-center justify-center shrink-0">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    {isEditing ? (
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveRename(proposal);
+                            if (e.key === 'Escape') cancelEditing();
+                          }}
+                          className="h-7 text-sm py-0 w-full max-w-sm"
+                          autoFocus
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-green-600 hover:text-green-700 shrink-0"
+                          disabled={savingId === proposal.id}
+                          onClick={() => saveRename(proposal)}>
+                          {savingId === proposal.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Check className="h-3 w-3" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
+                          onClick={cancelEditing}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-[13px] font-medium text-foreground truncate">{proposal.title}</p>
+                        <Badge
+                          className={cn(
+                            'text-[10px] shrink-0',
+                            isAccepted
+                              ? 'bg-green-500/15 text-green-700 border-green-500/20'
+                              : 'bg-muted text-muted-foreground border-border/60',
+                          )}
+                          variant="outline">
+                          {isAccepted ? 'Accepted' : 'Draft'}
+                        </Badge>
+                      </div>
+                    )}
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {proposal.lead?.company ? `${proposal.lead.company} · ` : ''}
+                      {formatDate(proposal.createdAt)}
+                      {proposal.file ? ` · ${formatBytes(proposal.file.fileSize)}` : ''}
+                      {proposal.costBreakdown ? ` · ${proposal.costBreakdown.title}` : ''}
+                    </p>
+                  </div>
 
-                    <div className="flex-1 min-w-0">
-                      {isEditing ? (
-                        <div className="flex items-center gap-1.5">
-                          <Input
-                            value={editingName}
-                            onChange={(e) => setEditingName(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') saveRename(proposal);
-                              if (e.key === 'Escape') cancelEditing();
-                            }}
-                            className="h-7 text-sm py-0 w-full max-w-sm"
-                            autoFocus
-                          />
-                          <span className="text-[11px] text-muted-foreground shrink-0">.docx</span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-green-600 hover:text-green-700 shrink-0"
-                            disabled={savingId === proposal.id}
-                            onClick={() => saveRename(proposal)}>
-                            {savingId === proposal.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <Check className="h-3 w-3" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
-                            onClick={cancelEditing}>
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <p className="text-[13px] font-medium text-foreground truncate">
-                          {stripDocx(proposal.originalName)}
-                        </p>
+                  {/* Actions */}
+                  {!isEditing && (
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      {!isAccepted && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-green-600"
+                          title="Mark as accepted"
+                          disabled={acceptingId === proposal.id}
+                          onClick={() => handleAccept(proposal)}>
+                          {acceptingId === proposal.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
                       )}
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {proposal.client?.name ? `${proposal.client.name} · ` : ''}
-                        {formatDate(proposal.createdAt)}
-                        {' · '}
-                        {formatBytes(proposal.fileSize)}
-                      </p>
-                    </div>
-
-                    {/* Actions */}
-                    {!isEditing && (
-                      <div className="flex items-center gap-0.5 shrink-0">
+                      {proposal.fileId && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -205,35 +250,36 @@ export default function ProposalsView() {
                             <Download className="h-3.5 w-3.5" />
                           )}
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          title="Rename"
-                          onClick={() => startEditing(proposal)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          title="Delete"
-                          disabled={deletingId === proposal.id}
-                          onClick={() => handleDelete(proposal)}>
-                          {deletingId === proposal.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3.5 w-3.5" />
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        title="Rename"
+                        onClick={() => startEditing(proposal)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        title="Delete"
+                        disabled={deletingId === proposal.id}
+                        onClick={() => handleDelete(proposal)}>
+                        {deletingId === proposal.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
+      </div>
     </div>
   );
 }

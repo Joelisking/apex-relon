@@ -21,6 +21,7 @@ export interface PreviewData {
 interface ProposalPreviewProps {
   paragraphs: string[];
   data: PreviewData;
+  dynamicValues?: Record<string, string>;
 }
 
 const MONTHS = [
@@ -93,6 +94,19 @@ function applySubstitutions(text: string, data: PreviewData): string {
   return result;
 }
 
+function applyDynamicValues(
+  text: string,
+  dynamicValues?: Record<string, string>,
+): string {
+  if (!dynamicValues) return text;
+  let result = text;
+  for (const [name, value] of Object.entries(dynamicValues)) {
+    if (!value) continue;
+    result = result.split(`[${name}]`).join(value);
+  }
+  return result;
+}
+
 // Splits on remaining unfilled placeholder patterns and styles them distinctly
 const SPLIT_RE = /(\[[^\]]+\]|\$[#0]{1,2},?[#0]{3}\.[#0]{2}|[#0]{1,2},?[#0]{3}\.[#0]{2}|MMMM\s+DD,?\s+YYYY|#-#\s+weeks|#\s+weeks)/;
 
@@ -111,11 +125,11 @@ function renderText(text: string): React.ReactNode {
   );
 }
 
-export default function ProposalPreview({ paragraphs, data }: ProposalPreviewProps) {
+export default function ProposalPreview({ paragraphs, data, dynamicValues }: ProposalPreviewProps) {
   const substituted = useMemo(
-    () => paragraphs.map((p) => applySubstitutions(p, data)),
+    () => paragraphs.map((p) => applyDynamicValues(applySubstitutions(p, data), dynamicValues)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [paragraphs, JSON.stringify(data)],
+    [paragraphs, JSON.stringify(data), JSON.stringify(dynamicValues)],
   );
 
   return (

@@ -54,6 +54,7 @@ model Lead {
   stageHistory        StageHistory[]
   quotes              Quote[]
   costBreakdowns      CostBreakdown[]
+  proposals           Proposal[]        @relation("LeadProposals")
   leadFormSubmission  LeadFormSubmission?
 
   @@index([assignedToId])
@@ -172,13 +173,41 @@ model File {
   client       Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   lead         Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
   project      Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  uploadedBy   User     @relation("FileUploads", fields: [uploadedById], references: [id])
+  uploadedBy   User      @relation("FileUploads", fields: [uploadedById], references: [id])
+  proposal     Proposal? @relation("ProposalFile")
 
   @@index([leadId])
   @@index([clientId])
   @@index([projectId])
   @@index([createdAt])
   @@map("files")
+}
+
+model Proposal {
+  id              String    @id @default(uuid())
+  tenantId        String
+  title           String
+  status          String    @default("DRAFT")
+
+  leadId          String?
+  costBreakdownId String?   @unique
+  fileId          String?   @unique
+
+  proposalDate    DateTime?
+  acceptedAt      DateTime?
+
+  createdById     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  lead          Lead?          @relation("LeadProposals", fields: [leadId], references: [id], onDelete: SetNull)
+  costBreakdown CostBreakdown? @relation("ProposalCostBreakdown", fields: [costBreakdownId], references: [id], onDelete: SetNull)
+  file          File?          @relation("ProposalFile", fields: [fileId], references: [id], onDelete: SetNull)
+  createdBy     User           @relation("ProposalCreation", fields: [createdById], references: [id])
+
+  @@index([tenantId])
+  @@index([leadId])
+  @@map("proposals")
 }
 
 model ProposalTemplate {
@@ -442,6 +471,7 @@ model User {
   dashboardLayout         DashboardLayout?        @relation("UserDashboardLayout")
   userPreferences         UserPreference[]        @relation("UserPreferences")
   createdCostBreakdowns   CostBreakdown[]         @relation("CostBreakdownCreation")
+  createdProposals        Proposal[]              @relation("ProposalCreation")
 
   @@map("users")
 }
@@ -1158,6 +1188,7 @@ model CostBreakdown {
   serviceType ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
   createdBy   User         @relation("CostBreakdownCreation", fields: [createdById], references: [id])
   lines       CostBreakdownLine[]
+  proposal    Proposal?          @relation("ProposalCostBreakdown")
 
   @@index([tenantId])
   @@index([projectId])

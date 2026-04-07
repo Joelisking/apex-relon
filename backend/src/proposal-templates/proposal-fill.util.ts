@@ -62,7 +62,7 @@ function escapeXml(str: string): string {
  *  2. Tokenize the XML into run / non-run segments.
  *  3. Merge each maximal sequence of consecutive highlighted runs into one.
  */
-function mergeAdjacentHighlightedRuns(xml: string): string {
+export function mergeAdjacentHighlightedRuns(xml: string): string {
   // Step 1: Remove proofErr noise (spell/grammar check markers between runs)
   xml = xml.replace(/<w:proofErr\b[^/]*\/>/g, '');
 
@@ -213,7 +213,7 @@ function replacePlainBrackets(xml: string, data: ProposalData): string {
     ['[ZIP]',                      data.zip ?? ''],
     ['[Project Name]',             data.projectName ?? ''],
     ['[Project Address]',          data.projectAddress ?? ''],
-    ['[Project Description]',      data.projectDescription ?? ''],
+    // [Project Description] is handled as a dynamic field — not in fixed list
     ['[Name]',                     data.lastName || data.firstName || ''],
     ['[Month]',                    data.month ?? ''],
     ['[DD]',                       data.day ?? ''],
@@ -272,6 +272,83 @@ function updateCustomProps(customXml: string, data: ProposalData): string {
   return result;
 }
 
+/**
+ * Replace [BracketName] placeholders using caller-supplied values.
+ * Runs after the fixed replacePlainBrackets pass so custom fields take priority.
+ */
+function replaceDynamicBrackets(
+  xml: string,
+  dynamicValues: Record<string, string>,
+): string {
+  let result = xml;
+  for (const [name, value] of Object.entries(dynamicValues)) {
+    result = result.split(`[${name}]`).join(escapeXml(value));
+  }
+  return result;
+}
+
+/**
+ * Replace individual table cells by positional key ("t{ti}r{ri}c{ci}").
+ * Preserves cell/paragraph/run formatting from the original cell.
+ */
+function applyTableCellValues(
+  xml: string,
+  tableCellValues: Record<string, string>,
+): string {
+  // Group by table → row → cell
+  const groups: Record<string, Record<string, Record<string, string>>> = {};
+  for (const [key, value] of Object.entries(tableCellValues)) {
+    const m = key.match(/^t(\d+)r(\d+)c(\d+)$/);
+    if (!m) continue;
+    const [, ti, ri, ci] = m;
+    if (!groups[ti]) groups[ti] = {};
+    if (!groups[ti][ri]) groups[ti][ri] = {};
+    groups[ti][ri][ci] = value;
+  }
+  if (Object.keys(groups).length === 0) return xml;
+
+  let tableIdx = 0;
+  return xml.replace(/<w:tbl\b[^>]*>[\s\S]*?<\/w:tbl>/g, (tableXml) => {
+    const ti = String(tableIdx++);
+    if (!groups[ti]) return tableXml;
+
+    let rowIdx = 0;
+    return tableXml.replace(/<w:tr\b[^>]*>[\s\S]*?<\/w:tr>/g, (rowXml) => {
+      const ri = String(rowIdx++);
+      if (!groups[ti][ri]) return rowXml;
+
+      let cellIdx = 0;
+      return rowXml.replace(/<w:tc>[\s\S]*?<\/w:tc>/g, (cellXml) => {
+        const ci = String(cellIdx++);
+        const newValue = groups[ti]?.[ri]?.[ci];
+        if (newValue === undefined) return cellXml;
+        return setCellText(cellXml, newValue);
+      });
+    });
+  });
+}
+
+function setCellText(cellXml: string, newValue: string): string {
+  const escaped = escapeXml(newValue);
+
+  // Preserve cell properties (<w:tcPr>)
+  const tcPrMatch = cellXml.match(/<w:tcPr>[\s\S]*?<\/w:tcPr>/);
+  const tcPr = tcPrMatch ? tcPrMatch[0] : '';
+
+  // Preserve first paragraph properties (<w:pPr>) — e.g. right-alignment for prices
+  const pPrMatch = cellXml.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
+  const pPr = pPrMatch ? pPrMatch[0] : '';
+
+  // Preserve run properties from first actual run (font, size, colour)
+  const firstRunMatch = cellXml.match(/<w:r\b[^>]*>([\s\S]*?)<\/w:r>/);
+  const rPrMatch = firstRunMatch
+    ? firstRunMatch[1].match(/<w:rPr>[\s\S]*?<\/w:rPr>/)
+    : null;
+  const rPr = rPrMatch ? rPrMatch[0] : '';
+
+  return `<w:tc>${tcPr}<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${escaped}</w:t></w:r></w:p></w:tc>`;
+}
+
 const XML_FILES = [
   'word/document.xml',
   'word/header1.xml',
@@ -284,9 +361,16 @@ const XML_FILES = [
 
 /**
  * Fill a .docx template buffer with proposal data.
- * Handles both DOCPROPERTY-based and plain-bracket templates.
+ * Handles DOCPROPERTY fields, plain bracket placeholders, dynamic custom
+ * brackets, positional table-cell overrides, and full paragraph overrides.
  */
-export function fillDocx(templateBuffer: Buffer, data: ProposalData): Buffer {
+export function fillDocx(
+  templateBuffer: Buffer,
+  data: ProposalData,
+  dynamicValues?: Record<string, string>,
+  tableCellValues?: Record<string, string>,
+  paragraphOverrides?: Record<string, string>,
+): Buffer {
   const zip = new PizZip(templateBuffer);
 
   // Update docProps/custom.xml if present
@@ -302,10 +386,28 @@ export function fillDocx(templateBuffer: Buffer, data: ProposalData): Buffer {
     if (!xmlFile) continue;
 
     let xml = xmlFile.asText();
-    // Merge split highlighted runs FIRST so string replacements find full placeholders
+    // 1. Merge split highlighted runs so string patterns match
     xml = mergeAdjacentHighlightedRuns(xml);
+    // 2. Paragraph overrides (document only — before DOCPROPERTY so brackets still fill)
+    if (
+      xmlPath === 'word/document.xml' &&
+      paragraphOverrides &&
+      Object.keys(paragraphOverrides).length > 0
+    ) {
+      xml = applyParagraphOverrides(xml, paragraphOverrides);
+    }
+    // 3. DOCPROPERTY fields
     xml = replaceDocpropertyFields(xml, data);
+    // 4. Dynamic custom brackets (before fixed to avoid double-replacement)
+    if (dynamicValues && Object.keys(dynamicValues).length > 0) {
+      xml = replaceDynamicBrackets(xml, dynamicValues);
+    }
+    // 5. Fixed known brackets + numeric patterns
     xml = replacePlainBrackets(xml, data);
+    // 6. Table cell overrides (positional)
+    if (tableCellValues && Object.keys(tableCellValues).length > 0) {
+      xml = applyTableCellValues(xml, tableCellValues);
+    }
     zip.file(xmlPath, xml);
   }
 
@@ -358,10 +460,46 @@ const DOCPROPERTY_BRACKETS: Record<string, string> = {
 };
 
 /**
+ * Replace the text content of a paragraph while preserving its pPr and first run's rPr.
+ * Used by applyParagraphOverrides — does NOT XML-escape newText; callers must decide.
+ */
+function setParaText(paraXml: string, newText: string): string {
+  const pPrMatch = paraXml.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
+  const pPr = pPrMatch ? pPrMatch[0] : '';
+
+  const firstRunMatch = paraXml.match(/<w:r\b[^>]*>([\s\S]*?)<\/w:r>/);
+  const rPrMatch = firstRunMatch ? firstRunMatch[1].match(/<w:rPr>[\s\S]*?<\/w:rPr>/) : null;
+  const rPr = rPrMatch ? rPrMatch[0] : '';
+
+  if (!newText.trim()) {
+    return `<w:p>${pPr}</w:p>`;
+  }
+  return `<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${escapeXml(newText)}</w:t></w:r></w:p>`;
+}
+
+/**
+ * Replace paragraphs at the given global indices with user-supplied text.
+ * Runs BEFORE all other substitutions so bracket placeholders in overridden
+ * text are still filled by the normal pipeline.
+ * Keys are global paragraph indices (counting ALL <w:p> elements, including table ones).
+ */
+export function applyParagraphOverrides(
+  xml: string,
+  overrides: Record<string, string>,
+): string {
+  let paraIdx = 0;
+  return xml.replace(/<w:p\b[^>]*>[\s\S]*?<\/w:p>/g, (paraXml) => {
+    const key = String(paraIdx++);
+    const newText = overrides[key];
+    return newText !== undefined ? setParaText(paraXml, newText) : paraXml;
+  });
+}
+
+/**
  * Replace DOCPROPERTY field results with bracket notation and PRINTDATE with
  * "MMMM DD, YYYY" so the extracted paragraph text contains recognizable placeholders.
  */
-function normalizeDocpropertyFields(xml: string): string {
+export function normalizeDocpropertyFields(xml: string): string {
   return xml.replace(
     /(<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:fldChar[^>]*w:fldCharType="begin"[^>]*\/>[\s\S]*?<\/w:r>[\s\S]*?<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:fldChar[^>]*w:fldCharType="separate"[^>]*\/>[\s\S]*?<\/w:r>)([\s\S]*?)(<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:fldChar[^>]*w:fldCharType="end"[^>]*\/>[\s\S]*?<\/w:r>)/g,
     (match, beforeResult, _resultContent, endPart) => {

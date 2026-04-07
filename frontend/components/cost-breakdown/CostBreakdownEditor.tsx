@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, CheckCircle2, FileText, Download } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle2, FileText, Download, FilePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -313,6 +313,14 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             )}
             Download PDF
           </Button>
+          <Button
+            size="sm"
+            onClick={() => router.push(`/proposals/new?leadId=${breakdown.leadId}&costBreakdownId=${breakdown.id}`)}
+            disabled={!breakdown.leadId}
+            title={!breakdown.leadId ? 'Link this breakdown to a prospective project first' : undefined}>
+            <FilePlus className="mr-1.5 h-3.5 w-3.5" />
+            Create Proposal
+          </Button>
         </div>
       </div>
 
@@ -393,6 +401,14 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
               <Download className="mr-1.5 h-3.5 w-3.5" />
             )}
             Download PDF
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => router.push(`/proposals/new?leadId=${breakdown.leadId}&costBreakdownId=${breakdown.id}`)}
+            disabled={!breakdown.leadId}
+            title={!breakdown.leadId ? 'Link this breakdown to a prospective project first' : undefined}>
+            <FilePlus className="mr-1.5 h-3.5 w-3.5" />
+            Create Proposal
           </Button>
         </div>
       </div>

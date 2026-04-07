@@ -1,4 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit, Logger } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 import { PrismaService } from '../database/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import {
@@ -9,23 +11,100 @@ import {
   formatCurrency,
   ProposalData,
 } from './proposal-fill.util';
+import { extractTemplateFields, TemplateFields } from './proposal-extract.util';
 import { CreateProposalTemplateDto } from './dto/create-proposal-template.dto';
 import { GenerateProposalDto } from './dto/generate-proposal.dto';
 import { Readable } from 'stream';
 
+interface SeedTemplate {
+  file: string;
+  name: string;
+  serviceTypeName?: string;
+}
+
+const SEED_TEMPLATES: SeedTemplate[] = [
+  { file: 'Template - Proposal - APEX - Address - ALTA.docx',                         name: 'ALTA Survey',                        serviceTypeName: 'ALTA/NSPS' },
+  { file: 'Template - Proposal - APEX - Address - Boundary, Topo, PP, HS, & FS.docx', name: 'Boundary, Topo & Improvements',      serviceTypeName: 'Boundary' },
+  { file: 'Template - Proposal - APEX - Address -Boundary.docx',                      name: 'Boundary Survey',                    serviceTypeName: 'Boundary' },
+  { file: 'Template - Proposal - APEX - Address -Boundary - with options.docx',       name: 'Boundary Survey (with options)',     serviceTypeName: 'Boundary' },
+  { file: 'Template - Proposal - APEX - Address - Topo.docx',                         name: 'Topographic Survey',                 serviceTypeName: 'Topographic' },
+  { file: 'Template - Proposal - APEX - Address - topo & ALTA.docx',                  name: 'Topo & ALTA',                        serviceTypeName: 'Topographic' },
+  { file: 'Template - Proposal - APEX - Address - topo & boundary.docx',              name: 'Topo & Boundary',                    serviceTypeName: 'Topographic' },
+  { file: 'Template - Proposal - APEX - Address - Subdivision Plat.docx',             name: 'Subdivision Plat',                   serviceTypeName: 'Subdivision Plat' },
+  { file: 'Template - Proposal - APEX - Address - T&M.docx',                          name: 'Time & Materials',                   serviceTypeName: undefined },
+  { file: 'Template - Proposal - Topo - For VS Engineering.docx',                     name: 'Topo (VS Engineering)',              serviceTypeName: 'Topographic' },
+  { file: 'Template - COFW - Proj Name- TOPO-LCRS-RW Eng.docx',                       name: 'COFW – Topo/LCRS/RW Engineering',    serviceTypeName: 'ROW Engineering' },
+];
+
 @Injectable()
-export class ProposalTemplatesService {
+export class ProposalTemplatesService implements OnModuleInit {
+  private readonly logger = new Logger(ProposalTemplatesService.name);
+
   constructor(
     private prisma: PrismaService,
     private storageService: StorageService,
   ) {}
 
-  listGenerated() {
-    return this.prisma.file.findMany({
-      where: { category: 'proposal' },
+  async onModuleInit() {
+    try {
+      const count = await this.prisma.proposalTemplate.count();
+      if (count > 0) return; // already seeded
+      await this.seedTemplates();
+    } catch (err) {
+      this.logger.warn(`Proposal template seeding skipped: ${(err as Error).message}`);
+    }
+  }
+
+  private async seedTemplates() {
+    const seedDir = path.join(__dirname, 'seed-templates');
+    if (!fs.existsSync(seedDir)) {
+      this.logger.warn('Seed templates directory not found, skipping');
+      return;
+    }
+
+    // Build serviceType name → id map
+    const serviceTypes = await this.prisma.serviceType.findMany({
+      select: { id: true, name: true },
+    });
+    const serviceTypeMap = new Map(serviceTypes.map((s) => [s.name, s.id]));
+
+    let seeded = 0;
+    for (const tpl of SEED_TEMPLATES) {
+      const filePath = path.join(seedDir, tpl.file);
+      if (!fs.existsSync(filePath)) {
+        this.logger.warn(`Seed template not found: ${tpl.file}`);
+        continue;
+      }
+
+      const buffer = fs.readFileSync(filePath);
+      const { fileName, gcpPath } = await this.storageService.uploadBuffer(
+        buffer,
+        'proposal-templates',
+        tpl.file,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      );
+
+      const serviceTypeId = tpl.serviceTypeName
+        ? (serviceTypeMap.get(tpl.serviceTypeName) ?? null)
+        : null;
+
+      await this.prisma.proposalTemplate.create({
+        data: { name: tpl.name, serviceTypeId, gcpPath, fileName },
+      });
+      seeded++;
+    }
+
+    this.logger.log(`Seeded ${seeded} proposal templates`);
+  }
+
+  listProposals(tenantId: string) {
+    return this.prisma.proposal.findMany({
+      where: { tenantId },
       include: {
-        client: { select: { id: true, name: true } },
-        uploadedBy: { select: { id: true, name: true } },
+        lead: { select: { id: true, company: true, contactName: true, projectName: true } },
+        costBreakdown: { select: { id: true, title: true } },
+        file: { select: { id: true, originalName: true, fileSize: true } },
+        createdBy: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 200,
@@ -73,150 +152,126 @@ export class ProposalTemplatesService {
     return this.prisma.proposalTemplate.delete({ where: { id } });
   }
 
-  async deleteGeneratedFile(fileId: string) {
-    const file = await this.prisma.file.findUnique({ where: { id: fileId } });
-    if (!file) throw new NotFoundException('File not found');
-    await this.storageService.deleteFile(file.gcpPath);
-    return this.prisma.file.delete({ where: { id: fileId } });
+  async deleteProposal(proposalId: string) {
+    const proposal = await this.prisma.proposal.findUnique({
+      where: { id: proposalId },
+      include: { file: true },
+    });
+    if (!proposal) throw new NotFoundException('Proposal not found');
+    if (proposal.file) {
+      await this.storageService.deleteFile(proposal.file.gcpPath);
+      await this.prisma.file.delete({ where: { id: proposal.file.id } });
+    }
+    return this.prisma.proposal.delete({ where: { id: proposalId } });
   }
 
-  async renameGeneratedFile(fileId: string, name: string) {
-    const file = await this.prisma.file.findUnique({ where: { id: fileId } });
-    if (!file) throw new NotFoundException('File not found');
-    const newName = name.trim().endsWith('.docx') ? name.trim() : `${name.trim()}.docx`;
-    return this.prisma.file.update({
-      where: { id: fileId },
-      data: { originalName: newName },
+  async renameProposal(proposalId: string, title: string) {
+    const proposal = await this.prisma.proposal.findUnique({
+      where: { id: proposalId },
+    });
+    if (!proposal) throw new NotFoundException('Proposal not found');
+    return this.prisma.proposal.update({
+      where: { id: proposalId },
+      data: { title: title.trim() },
       include: {
-        client: { select: { id: true, name: true } },
-        uploadedBy: { select: { id: true, name: true } },
+        lead: { select: { id: true, company: true, contactName: true, projectName: true } },
+        costBreakdown: { select: { id: true, title: true } },
+        file: { select: { id: true, originalName: true, fileSize: true } },
+        createdBy: { select: { id: true, name: true } },
       },
     });
   }
 
-  async getTemplateContent(templateId: string): Promise<{ paragraphs: string[] }> {
+  async acceptProposal(proposalId: string) {
+    const proposal = await this.prisma.proposal.findUnique({
+      where: { id: proposalId },
+    });
+    if (!proposal) throw new NotFoundException('Proposal not found');
+    return this.prisma.proposal.update({
+      where: { id: proposalId },
+      data: { status: 'ACCEPTED', acceptedAt: new Date() },
+      include: {
+        lead: { select: { id: true, company: true, contactName: true, projectName: true } },
+        costBreakdown: { select: { id: true, title: true } },
+        file: { select: { id: true, originalName: true, fileSize: true } },
+        createdBy: { select: { id: true, name: true } },
+      },
+    });
+  }
+
+  async getTemplateContent(
+    templateId: string,
+  ): Promise<{ paragraphs: string[] } & TemplateFields> {
     const template = await this.prisma.proposalTemplate.findUnique({
       where: { id: templateId },
     });
     if (!template) throw new NotFoundException('Template not found');
     const stream = this.storageService.getFileStream(template.gcpPath);
     const buffer = await streamToBuffer(stream);
-    return { paragraphs: extractParagraphs(buffer) };
+    return {
+      paragraphs: extractParagraphs(buffer),
+      ...extractTemplateFields(buffer),
+    };
   }
 
-  async downloadGeneratedFile(fileId: string) {
-    const file = await this.prisma.file.findUnique({ where: { id: fileId } });
-    if (!file) throw new NotFoundException('File not found');
-    const stream = this.storageService.getFileStream(file.gcpPath);
-    return { stream, fileName: file.originalName, mimeType: file.mimeType };
+  async downloadProposalFile(proposalId: string) {
+    const proposal = await this.prisma.proposal.findUnique({
+      where: { id: proposalId },
+      include: { file: true },
+    });
+    if (!proposal) throw new NotFoundException('Proposal not found');
+    if (!proposal.file) throw new NotFoundException('No file generated for this proposal');
+    const stream = this.storageService.getFileStream(proposal.file.gcpPath);
+    return {
+      stream,
+      fileName: proposal.file.originalName,
+      mimeType: proposal.file.mimeType,
+    };
   }
 
   async generateProposal(
     templateId: string,
     dto: GenerateProposalDto,
     userId: string,
-  ): Promise<{ fileId: string; fileName: string; downloadUrl: string }> {
+    tenantId: string,
+  ): Promise<{ proposalId: string; fileId: string; fileName: string; downloadUrl: string }> {
     // 1. Fetch template
     const template = await this.prisma.proposalTemplate.findUnique({
       where: { id: templateId },
     });
     if (!template) throw new NotFoundException('Template not found');
 
-    // 2. Determine data source and derive CRM values
+    // 2. Derive CRM values from lead (if provided)
     let clientId: string | null = null;
     let crmFirstName = '';
     let crmLastName = '';
     let companyName = '';
     let derivedProjectName = '';
-    let quoteTotal = dto.totalAmount ?? '';
 
-    if (dto.quoteId) {
-      // Source: Quote
-      const quote = await this.prisma.quote.findUnique({
-        where: { id: dto.quoteId },
+    if (dto.leadId) {
+      const lead = await this.prisma.lead.findUnique({
+        where: { id: dto.leadId },
         include: {
-          lead: {
-            include: {
-              client: {
-                include: {
-                  contacts: { where: { isPrimary: true }, take: 1 },
-                },
-              },
-            },
-          },
           client: {
-            include: {
-              contacts: { where: { isPrimary: true }, take: 1 },
-            },
-          },
-          project: {
-            include: {
-              client: {
-                include: {
-                  contacts: { where: { isPrimary: true }, take: 1 },
-                },
-              },
-            },
+            include: { contacts: { where: { isPrimary: true }, take: 1 } },
           },
         },
       });
-      if (!quote) throw new NotFoundException('Quote not found');
+      if (!lead) throw new NotFoundException('Lead not found');
 
-      const client =
-        quote.client ??
-        quote.lead?.client ??
-        (quote.project as any)?.client ??
-        null;
-      clientId =
-        quote.clientId ??
-        quote.lead?.clientId ??
-        (quote.project as any)?.clientId ??
-        null;
-      const primaryContact = (client as any)?.contacts?.[0] ?? null;
-
-      if (quote.lead?.contactName) {
-        const parts = quote.lead.contactName.trim().split(/\s+/);
+      if (lead.contactName) {
+        const parts = lead.contactName.trim().split(/\s+/);
         crmFirstName = parts[0] ?? '';
         crmLastName = parts.slice(1).join(' ');
-      } else if (primaryContact) {
-        crmFirstName = primaryContact.firstName ?? '';
-        crmLastName = primaryContact.lastName ?? '';
+      } else if ((lead.client as any)?.contacts?.[0]) {
+        const contact = (lead.client as any).contacts[0];
+        crmFirstName = contact.firstName ?? '';
+        crmLastName = contact.lastName ?? '';
       }
 
-      companyName = (client as any)?.name ?? '';
-      derivedProjectName =
-        quote.lead?.projectName ??
-        (quote.project as any)?.name ??
-        '';
-      quoteTotal = dto.totalAmount ?? formatCurrency(quote.total);
-
-      if (dto.saveAddressToClient && clientId && dto.address) {
-        await this.prisma.client.update({
-          where: { id: clientId },
-          data: { address: dto.address },
-        });
-      }
-    } else if (dto.projectId) {
-      // Source: Project
-      const project = await this.prisma.project.findUnique({
-        where: { id: dto.projectId },
-        include: {
-          client: {
-            include: {
-              contacts: { where: { isPrimary: true }, take: 1 },
-            },
-          },
-          lead: true,
-        },
-      });
-      if (!project) throw new NotFoundException('Project not found');
-
-      clientId = (project as any).clientId ?? null;
-      companyName = (project as any).client?.name ?? (project as any).lead?.company ?? '';
-      const contact = (project as any).client?.contacts?.[0] ?? null;
-      crmFirstName = contact?.firstName ?? '';
-      crmLastName = contact?.lastName ?? '';
-      derivedProjectName = project.name ?? '';
+      companyName = lead.company ?? '';
+      derivedProjectName = lead.projectName ?? '';
+      clientId = lead.clientId ?? null;
 
       if (dto.saveAddressToClient && clientId && dto.address) {
         await this.prisma.client.update({
@@ -225,13 +280,9 @@ export class ProposalTemplatesService {
         });
       }
     }
-    // else: manual mode — all values come from DTO
 
     // 3. Build ProposalData — DTO overrides win over CRM
-    const today = dto.proposalDate
-      ? new Date(dto.proposalDate)
-      : new Date();
-
+    const today = dto.proposalDate ? new Date(dto.proposalDate) : new Date();
     const firstName = dto.firstName ?? crmFirstName;
     const lastName = dto.lastName ?? crmLastName;
 
@@ -240,7 +291,7 @@ export class ProposalTemplatesService {
       lastName,
       fullName: `${firstName} ${lastName}`.trim(),
       salutation: dto.salutation ?? '',
-      companyName: dto.firstName ? companyName : companyName,
+      companyName,
       address: dto.address ?? '',
       suite: dto.suite ?? '',
       city: dto.city ?? '',
@@ -249,7 +300,7 @@ export class ProposalTemplatesService {
       projectName: dto.projectName ?? derivedProjectName,
       projectAddress: dto.projectAddress ?? '',
       projectDescription: '',
-      totalAmount: quoteTotal,
+      totalAmount: dto.totalAmount ?? '',
       timeline: dto.timeline ?? '',
       proposalDate: formatProposalDate(today),
       month: monthName(today),
@@ -262,7 +313,13 @@ export class ProposalTemplatesService {
     const templateBuffer = await streamToBuffer(stream);
 
     // 5. Fill the template
-    const filledBuffer = fillDocx(templateBuffer, data);
+    const filledBuffer = fillDocx(
+      templateBuffer,
+      data,
+      dto.dynamicValues,
+      dto.tableCellValues,
+      dto.paragraphOverrides,
+    );
 
     // 6. Upload filled .docx to GCS
     const slug = template.name
@@ -283,6 +340,7 @@ export class ProposalTemplatesService {
     const fileRecord = await this.prisma.file.create({
       data: {
         clientId: clientId ?? undefined,
+        leadId: dto.leadId ?? undefined,
         fileName,
         originalName,
         mimeType:
@@ -294,10 +352,32 @@ export class ProposalTemplatesService {
       },
     });
 
+    // 8. Auto-generate title if not provided
+    const title =
+      dto.title?.trim() ||
+      (companyName
+        ? `${companyName}${derivedProjectName ? ` – ${derivedProjectName}` : ''}`
+        : 'Proposal');
+
+    // 9. Create Proposal record
+    const proposal = await this.prisma.proposal.create({
+      data: {
+        tenantId,
+        title,
+        status: 'DRAFT',
+        leadId: dto.leadId ?? undefined,
+        costBreakdownId: dto.costBreakdownId ?? undefined,
+        fileId: fileRecord.id,
+        proposalDate: today,
+        createdById: userId,
+      },
+    });
+
     return {
+      proposalId: proposal.id,
       fileId: fileRecord.id,
       fileName: originalName,
-      downloadUrl: `/proposal-templates/generated/${fileRecord.id}/download`,
+      downloadUrl: `/proposal-templates/proposals/${proposal.id}/download`,
     };
   }
 }

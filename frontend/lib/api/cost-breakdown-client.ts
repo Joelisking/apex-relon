@@ -25,7 +25,10 @@ export interface UpsertRoleEstimateDto {
 }
 
 export const costBreakdownApi = {
-  getAll: () => apiFetch<CostBreakdown[]>('/cost-breakdowns'),
+  getAll: (filters?: { leadId?: string }) => {
+    const params = filters?.leadId ? `?leadId=${filters.leadId}` : '';
+    return apiFetch<CostBreakdown[]>(`/cost-breakdowns${params}`);
+  },
   getOne: (id: string) => apiFetch<CostBreakdown>(`/cost-breakdowns/${id}`),
   create: (dto: CreateCostBreakdownDto) =>
     apiFetch<CostBreakdown>('/cost-breakdowns', { method: 'POST', body: JSON.stringify(dto) }),

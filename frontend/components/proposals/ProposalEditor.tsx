@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
-  ArrowLeft, Download, FileSignature, FolderKanban, PenLine,
-  Search, FileText, Check, Loader2,
+  ArrowLeft, Download, UserRound, PenLine,
+  Search, FileText, Check, Loader2, ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,18 +15,20 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { quotesApi } from '@/lib/api/quotes-client';
-import { projectsApi } from '@/lib/api/projects-client';
+import { leadsApi } from '@/lib/api/client';
+import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
 import { proposalTemplatesApi } from '@/lib/api/proposal-templates-client';
-import { formatCurrency, STATUS_COLORS } from '@/components/quotes/quote-utils';
 import ProposalPreview from './ProposalPreview';
-import type { Quote, Project } from '@/lib/types';
+import DynamicFieldsSection from './DynamicFieldsSection';
+import TableEditorSection from './TableEditorSection';
+import AdvancedEditSection from './AdvancedEditSection';
+import type { Lead, CostBreakdown } from '@/lib/types';
 
-type Source = 'quote' | 'project' | 'manual';
+type Source = 'lead' | 'manual';
+type ViewMode = 'preview' | 'advanced';
 
 const SOURCE_OPTIONS: { id: Source; label: string; icon: React.ElementType }[] = [
-  { id: 'quote', label: 'From Quote', icon: FileSignature },
-  { id: 'project', label: 'From Project', icon: FolderKanban },
+  { id: 'lead', label: 'From Lead', icon: UserRound },
   { id: 'manual', label: 'Manual', icon: PenLine },
 ];
 
@@ -42,19 +44,29 @@ function splitName(name?: string | null): { first: string; last: string } {
   return { first: parts[0] ?? '', last: parts.slice(1).join(' ') };
 }
 
+function formatCurrencyDisplay(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
 export default function ProposalEditor() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefilledLeadId = searchParams.get('leadId');
+  const prefilledBreakdownId = searchParams.get('costBreakdownId');
 
-  // Source selection
-  const [source, setSource] = useState<Source>('quote');
+  const [source, setSource] = useState<Source>(prefilledLeadId ? 'lead' : 'manual');
   const [search, setSearch] = useState('');
-  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedBreakdown, setSelectedBreakdown] = useState<CostBreakdown | null>(null);
+  const [showBreakdownPicker, setShowBreakdownPicker] = useState(false);
 
-  // Template selection
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
-  // Form fields
   const [salutation, setSalutation] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -69,18 +81,18 @@ export default function ProposalEditor() {
   const [totalAmount, setTotalAmount] = useState('');
   const [saveAddress, setSaveAddress] = useState(false);
 
+  const [dynamicValues, setDynamicValues] = useState<Record<string, string>>({});
+  const [tableCellValues, setTableCellValues] = useState<Record<string, string>>({});
+  const [paragraphOverrides, setParagraphOverrides] = useState<Record<string, string>>({});
+  const [viewMode, setViewMode] = useState<ViewMode>('preview');
+
   const [generating, setGenerating] = useState(false);
 
   // Data queries
-  const { data: quotes = [], isLoading: loadingQuotes } = useQuery({
-    queryKey: ['quotes'],
-    queryFn: () => quotesApi.getAll(),
-    enabled: source === 'quote',
-  });
-  const { data: projects = [], isLoading: loadingProjects } = useQuery({
-    queryKey: ['projects'],
-    queryFn: () => projectsApi.getAll(),
-    enabled: source === 'project',
+  const { data: leads = [], isLoading: loadingLeads } = useQuery({
+    queryKey: ['leads'],
+    queryFn: () => leadsApi.getAll(),
+    enabled: source === 'lead',
   });
   const { data: templates = [], isLoading: loadingTemplates } = useQuery({
     queryKey: ['proposal-templates'],
@@ -91,36 +103,82 @@ export default function ProposalEditor() {
     queryFn: () => proposalTemplatesApi.getContent(selectedTemplateId),
     enabled: !!selectedTemplateId,
   });
+  const { data: leadBreakdowns = [], isLoading: loadingBreakdowns } = useQuery({
+    queryKey: ['cost-breakdowns', selectedLead?.id],
+    queryFn: () => costBreakdownApi.getAll({ leadId: selectedLead!.id }),
+    enabled: !!selectedLead,
+  });
 
-  // Pre-fill from quote
+  // Pre-fill from URL param lead
+  const { data: prefilledLead } = useQuery({
+    queryKey: ['lead', prefilledLeadId],
+    queryFn: () => leadsApi.getById(prefilledLeadId!),
+    enabled: !!prefilledLeadId,
+  });
+  const { data: prefilledBreakdown } = useQuery({
+    queryKey: ['cost-breakdown', prefilledBreakdownId],
+    queryFn: () => costBreakdownApi.getOne(prefilledBreakdownId!),
+    enabled: !!prefilledBreakdownId,
+  });
+
+  // Reset dynamic state when template changes
   useEffect(() => {
-    if (!selectedQuote) return;
-    const { first, last } = splitName(selectedQuote.lead?.contactName);
+    if (!templateContent) return;
+    const initial: Record<string, string> = {};
+    for (const field of templateContent.dynamicFields) {
+      initial[field] = '';
+    }
+    setDynamicValues(initial);
+    setTableCellValues({});
+    setParagraphOverrides({});
+  }, [templateContent]);
+
+  // Apply URL param pre-fills
+  useEffect(() => {
+    if (!prefilledLead) return;
+    setSelectedLead(prefilledLead as unknown as Lead);
+  }, [prefilledLead]);
+
+  useEffect(() => {
+    if (!prefilledBreakdown) return;
+    setSelectedBreakdown(prefilledBreakdown);
+  }, [prefilledBreakdown]);
+
+  // Pre-fill form when lead is selected
+  useEffect(() => {
+    if (!selectedLead) return;
+    const { first, last } = splitName(selectedLead.contactName);
     setFirstName(first);
     setLastName(last);
-    setProjectName(selectedQuote.project?.name ?? '');
-  }, [selectedQuote]);
+    if (selectedLead.projectName) setProjectName(selectedLead.projectName);
+  }, [selectedLead]);
 
-  // Pre-fill from project
+  // Pre-fill fee from selected breakdown
   useEffect(() => {
-    if (!selectedProject) return;
-    setProjectName(selectedProject.name ?? '');
-  }, [selectedProject]);
+    if (!selectedBreakdown) return;
+    if (selectedBreakdown.totalEstimatedCost > 0) {
+      setTotalAmount(formatCurrencyDisplay(selectedBreakdown.totalEstimatedCost));
+    }
+  }, [selectedBreakdown]);
 
   const handleSourceChange = (s: Source) => {
     setSource(s);
     setSearch('');
-    setSelectedQuote(null);
-    setSelectedProject(null);
+    setSelectedLead(null);
+    setSelectedBreakdown(null);
+    setShowBreakdownPicker(false);
   };
 
-  const clientName =
-    selectedQuote?.lead?.company ||
-    selectedQuote?.client?.name ||
-    selectedProject?.client?.name ||
-    selectedProject?.lead?.company ||
-    null;
+  const handleSelectLead = (lead: Lead) => {
+    const isDeselecting = selectedLead?.id === lead.id;
+    setSelectedLead(isDeselecting ? null : lead);
+    if (isDeselecting) {
+      setSelectedBreakdown(null);
+      setShowBreakdownPicker(false);
+    }
+  };
 
+  const companyName = selectedLead?.company ?? null;
   const addressFilled = !!(address || city || stateVal || zip);
 
   const handleGenerate = async () => {
@@ -128,8 +186,8 @@ export default function ProposalEditor() {
     setGenerating(true);
     try {
       const res = await proposalTemplatesApi.generate(selectedTemplateId, {
-        quoteId: selectedQuote?.id,
-        projectId: selectedProject?.id,
+        leadId: selectedLead?.id,
+        costBreakdownId: selectedBreakdown?.id,
         salutation: salutation || undefined,
         firstName: firstName || undefined,
         lastName: lastName || undefined,
@@ -141,23 +199,25 @@ export default function ProposalEditor() {
         proposalDate: proposalDate || undefined,
         projectName: projectName || undefined,
         projectAddress: projectAddress || undefined,
-        totalAmount: !selectedQuote && totalAmount ? totalAmount : undefined,
+        totalAmount: totalAmount || undefined,
         saveAddressToClient: saveAddress && addressFilled ? true : undefined,
+        dynamicValues: Object.keys(dynamicValues).length > 0 ? dynamicValues : undefined,
+        tableCellValues: Object.keys(tableCellValues).length > 0 ? tableCellValues : undefined,
+        paragraphOverrides: Object.keys(paragraphOverrides).length > 0 ? paragraphOverrides : undefined,
       });
+
       // Auto-download
       try {
-        const fileId = res.downloadUrl.match(/\/generated\/([^/]+)\/download/)?.[1];
-        if (fileId) {
-          const blob = await proposalTemplatesApi.downloadGenerated(fileId);
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = res.fileName;
-          a.click();
-          URL.revokeObjectURL(url);
-        }
+        const blob = await proposalTemplatesApi.downloadProposal(res.proposalId);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = res.fileName;
+        a.click();
+        URL.revokeObjectURL(url);
       } catch { /* silent — user can download from Proposals list */ }
-      toast.success(clientName ? `Proposal saved to ${clientName}'s files` : 'Proposal generated');
+
+      toast.success(companyName ? `Proposal saved to ${companyName}'s files` : 'Proposal generated');
       router.push('/proposals');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to generate proposal');
@@ -166,23 +226,19 @@ export default function ProposalEditor() {
     }
   };
 
-  // Filtered lists
-  const filteredQuotes = quotes.filter((q) => {
+  const filteredLeads = leads.filter((l) => {
     const s = search.toLowerCase();
     if (!s) return true;
-    const num = String(q.quoteNumber).padStart(4, '0');
-    const entity = q.lead?.company ?? q.lead?.contactName ?? q.client?.name ?? '';
-    return `q-${num}`.includes(s) || entity.toLowerCase().includes(s);
-  });
-  const filteredProjects = projects.filter((p) => {
-    const s = search.toLowerCase();
-    if (!s) return true;
-    return p.name.toLowerCase().includes(s) || (p.client?.name ?? '').toLowerCase().includes(s);
+    return (
+      l.company.toLowerCase().includes(s) ||
+      l.contactName.toLowerCase().includes(s) ||
+      (l.projectName ?? '').toLowerCase().includes(s)
+    );
   });
 
   const previewData = {
     salutation, firstName, lastName,
-    companyName: clientName ?? '',
+    companyName: companyName ?? '',
     address, city, state: stateVal, zip,
     totalAmount, timeline, proposalDate,
     projectName, projectAddress,
@@ -227,7 +283,7 @@ export default function ProposalEditor() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground mb-2">
               Source
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {SOURCE_OPTIONS.map((opt) => {
                 const Icon = opt.icon;
                 const sel = source === opt.id;
@@ -249,84 +305,99 @@ export default function ProposalEditor() {
             </div>
           </div>
 
-          {/* Quote / Project picker */}
-          {source !== 'manual' && (
+          {/* Lead picker */}
+          {source === 'lead' && (
             <div className="px-6 py-4 border-b border-border/40">
               <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground mb-2">
-                {source === 'quote' ? 'Select Quote' : 'Select Project'}
+                Select Lead
               </p>
               <div className="relative mb-2">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder={source === 'quote' ? 'Search quotes…' : 'Search projects…'}
+                  placeholder="Search leads…"
                   className="pl-8 text-sm h-8"
                 />
               </div>
               <div className="max-h-44 overflow-y-auto space-y-0.5">
-                {source === 'quote' && (
-                  loadingQuotes ? (
-                    <div className="flex justify-center py-4">
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : filteredQuotes.length === 0 ? (
-                    <p className="text-[12px] text-muted-foreground text-center py-4">No quotes found</p>
-                  ) : filteredQuotes.map((q) => {
-                    const num = String(q.quoteNumber).padStart(4, '0');
-                    const entity = q.lead?.company ?? q.lead?.contactName ?? q.client?.name ?? null;
-                    const sel = selectedQuote?.id === q.id;
-                    return (
-                      <button
-                        key={q.id}
-                        onClick={() => setSelectedQuote(sel ? null : q)}
-                        className={cn(
-                          'w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition-colors',
-                          sel ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted/50 hover:border-border/60',
-                        )}>
-                        <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                          <span className="text-[12px] font-medium shrink-0">Q-{num}</span>
-                          {entity && <span className="text-[12px] text-muted-foreground truncate">{entity}</span>}
-                        </div>
-                        <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
-                          {formatCurrency(q.total, q.currency)}
+                {loadingLeads ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : filteredLeads.length === 0 ? (
+                  <p className="text-[12px] text-muted-foreground text-center py-4">No leads found</p>
+                ) : filteredLeads.map((l) => {
+                  const sel = selectedLead?.id === l.id;
+                  return (
+                    <button
+                      key={l.id}
+                      onClick={() => handleSelectLead(l)}
+                      className={cn(
+                        'w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition-colors',
+                        sel ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted/50 hover:border-border/60',
+                      )}>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[12px] font-medium block truncate">{l.company}</span>
+                        <span className="text-[11px] text-muted-foreground truncate">
+                          {l.contactName}
+                          {l.projectName ? ` · ${l.projectName}` : ''}
                         </span>
-                        <Badge className={cn('text-[10px] shrink-0', STATUS_COLORS[q.status] ?? '')}>
-                          {q.status}
-                        </Badge>
-                      </button>
-                    );
-                  })
-                )}
-                {source === 'project' && (
-                  loadingProjects ? (
-                    <div className="flex justify-center py-4">
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : filteredProjects.length === 0 ? (
-                    <p className="text-[12px] text-muted-foreground text-center py-4">No projects found</p>
-                  ) : filteredProjects.map((p) => {
-                    const sel = selectedProject?.id === p.id;
-                    return (
-                      <button
-                        key={p.id}
-                        onClick={() => setSelectedProject(sel ? null : p)}
-                        className={cn(
-                          'w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition-colors',
-                          sel ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted/50 hover:border-border/60',
-                        )}>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[12px] font-medium truncate">{p.name}</span>
-                          {p.client?.name && (
-                            <span className="text-[11px] text-muted-foreground ml-1.5">{p.client.name}</span>
-                          )}
-                        </div>
-                        <Badge variant="secondary" className="text-[10px] shrink-0">{p.status}</Badge>
-                      </button>
-                    );
-                  })
-                )}
+                      </div>
+                      <Badge variant="secondary" className="text-[10px] shrink-0">{l.stage}</Badge>
+                      {sel && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                    </button>
+                  );
+                })}
               </div>
+
+              {/* Cost breakdown picker (shown when lead selected) */}
+              {selectedLead && (
+                <div className="mt-3">
+                  <button
+                    onClick={() => setShowBreakdownPicker((v) => !v)}
+                    className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground hover:text-foreground transition-colors w-full">
+                    Cost Breakdown
+                    <span className="text-[10px] font-normal normal-case tracking-normal ml-0.5">(optional)</span>
+                    <ChevronDown className={cn('h-3 w-3 ml-auto transition-transform', showBreakdownPicker && 'rotate-180')} />
+                  </button>
+                  {showBreakdownPicker && (
+                    <div className="mt-2 space-y-0.5">
+                      {loadingBreakdowns ? (
+                        <div className="flex justify-center py-3">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : leadBreakdowns.length === 0 ? (
+                        <p className="text-[12px] text-muted-foreground py-2">
+                          No cost breakdowns for this lead.
+                        </p>
+                      ) : leadBreakdowns.map((cb) => {
+                        const sel = selectedBreakdown?.id === cb.id;
+                        return (
+                          <button
+                            key={cb.id}
+                            onClick={() => setSelectedBreakdown(sel ? null : cb)}
+                            className={cn(
+                              'w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left transition-colors',
+                              sel ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted/50 hover:border-border/60',
+                            )}>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[12px] font-medium truncate block">{cb.title}</span>
+                              {cb.totalEstimatedCost > 0 && (
+                                <span className="text-[11px] text-muted-foreground">
+                                  {formatCurrencyDisplay(cb.totalEstimatedCost)}
+                                </span>
+                              )}
+                            </div>
+                            <Badge variant="secondary" className="text-[10px] shrink-0">{cb.status}</Badge>
+                            {sel && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -370,6 +441,24 @@ export default function ProposalEditor() {
             )}
           </div>
 
+          {/* Dynamic custom fields (template-specific brackets) */}
+          <DynamicFieldsSection
+            fields={templateContent?.dynamicFields ?? []}
+            values={dynamicValues}
+            onChange={(name, value) =>
+              setDynamicValues((prev) => ({ ...prev, [name]: value }))
+            }
+          />
+
+          {/* Editable table data */}
+          <TableEditorSection
+            tables={templateContent?.tables ?? []}
+            values={tableCellValues}
+            onChange={(key, value) =>
+              setTableCellValues((prev) => ({ ...prev, [key]: value }))
+            }
+          />
+
           {/* Details form */}
           <div className="px-6 py-5 space-y-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
@@ -411,11 +500,11 @@ export default function ProposalEditor() {
                   <Input value={stateVal} onChange={(e) => setStateVal(e.target.value)} className="text-sm h-8" placeholder="State" />
                   <Input value={zip} onChange={(e) => setZip(e.target.value)} className="text-sm h-8" placeholder="ZIP" />
                 </div>
-                {addressFilled && clientName && (
+                {addressFilled && companyName && (
                   <div className="flex items-center gap-2 pt-0.5">
                     <Checkbox id="save-addr" checked={saveAddress} onCheckedChange={(v) => setSaveAddress(!!v)} />
                     <label htmlFor="save-addr" className="text-[12px] text-muted-foreground cursor-pointer">
-                      Save this address to {clientName}&apos;s record
+                      Save this address to {companyName}&apos;s record
                     </label>
                   </div>
                 )}
@@ -447,18 +536,60 @@ export default function ProposalEditor() {
                 <Label className="text-[10px] text-muted-foreground block mb-1">Proposal Date</Label>
                 <Input type="date" value={proposalDate} onChange={(e) => setProposalDate(e.target.value)} className="text-sm h-8" />
               </div>
-              {!selectedQuote && (
-                <div>
-                  <Label className="text-[10px] text-muted-foreground block mb-1">Fee</Label>
-                  <Input value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} className="text-sm h-8" placeholder="$5,000.00" />
-                </div>
-              )}
+              <div>
+                <Label className="text-[10px] text-muted-foreground block mb-1">
+                  Fee{selectedBreakdown ? ' (from breakdown)' : ''}
+                </Label>
+                <Input
+                  value={totalAmount}
+                  onChange={(e) => setTotalAmount(e.target.value)}
+                  className="text-sm h-8"
+                  placeholder="$5,000.00"
+                  readOnly={!!selectedBreakdown}
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Right: preview */}
+        {/* Right: preview / advanced edit */}
         <div className="flex-1 overflow-hidden flex flex-col">
+          {/* Right pane header — only shown when a template is selected */}
+          {selectedTemplateId && !loadingContent && (
+            <div className="flex items-center justify-between px-4 py-1.5 border-b border-border/60 bg-background shrink-0">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                {viewMode === 'preview' ? 'Live Preview' : 'Advanced Edit'}
+              </span>
+              <div className="flex gap-0.5">
+                <button
+                  onClick={() => setViewMode('preview')}
+                  className={cn(
+                    'text-[11px] px-2.5 py-1 rounded transition-colors',
+                    viewMode === 'preview'
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                  )}>
+                  Preview
+                </button>
+                <button
+                  onClick={() => setViewMode('advanced')}
+                  className={cn(
+                    'text-[11px] px-2.5 py-1 rounded transition-colors',
+                    viewMode === 'advanced'
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                  )}>
+                  Advanced Edit
+                  {Object.keys(paragraphOverrides).length > 0 && (
+                    <span className="ml-1.5 bg-primary text-primary-foreground text-[9px] font-bold px-1 py-0.5 rounded-full">
+                      {Object.keys(paragraphOverrides).length}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
           {!selectedTemplateId ? (
             <div className="flex flex-col items-center justify-center flex-1 gap-3 text-center px-8 bg-muted/20">
               <div className="h-12 w-12 rounded-full bg-muted/60 flex items-center justify-center">
@@ -475,10 +606,26 @@ export default function ProposalEditor() {
             <div className="flex items-center justify-center flex-1 bg-muted/20">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
+          ) : viewMode === 'advanced' ? (
+            <AdvancedEditSection
+              paragraphs={templateContent?.editableParagraphs ?? []}
+              overrides={paragraphOverrides}
+              onChange={(idx, val) =>
+                setParagraphOverrides((prev) => ({ ...prev, [String(idx)]: val }))
+              }
+              onReset={(idx) =>
+                setParagraphOverrides((prev) => {
+                  const next = { ...prev };
+                  delete next[String(idx)];
+                  return next;
+                })
+              }
+            />
           ) : (
             <ProposalPreview
               paragraphs={templateContent?.paragraphs ?? []}
               data={previewData}
+              dynamicValues={dynamicValues}
             />
           )}
         </div>
