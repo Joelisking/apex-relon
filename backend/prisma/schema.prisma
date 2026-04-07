@@ -1090,6 +1090,7 @@ model ServiceItemSubtask {
   serviceItem   ServiceItem               @relation(fields: [serviceItemId], references: [id], onDelete: Cascade)
   roleEstimates ServiceItemRoleEstimate[]
   timeEntries   TimeEntry[]
+  costBreakdownEstimates CostBreakdownRoleEstimate[]
 
   @@index([serviceItemId])
   @@map("service_item_subtasks")
@@ -1183,15 +1184,17 @@ model CostBreakdownLine {
 model CostBreakdownRoleEstimate {
   id             String   @id @default(uuid())
   lineId         String
+  subtaskId      String
   role           String
   estimatedHours Float    @default(0)
   hourlyRate     Float?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  line CostBreakdownLine @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  line    CostBreakdownLine  @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  subtask ServiceItemSubtask @relation(fields: [subtaskId], references: [id])
 
-  @@unique([lineId, role])
+  @@unique([lineId, subtaskId, role])
   @@index([lineId])
   @@map("cost_breakdown_role_estimates")
 }

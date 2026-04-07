@@ -16,6 +16,7 @@ export interface UpdateCostBreakdownDto {
 }
 
 export interface UpsertRoleEstimateDto {
+  subtaskId: string;
   role: string;
   estimatedHours: number;
   hourlyRate?: number;
@@ -34,8 +35,9 @@ export const costBreakdownApi = {
       method: 'PUT',
       body: JSON.stringify(dto),
     }),
-  deleteRoleEstimate: (lineId: string, role: string) =>
-    apiFetch<void>(`/cost-breakdowns/lines/${lineId}/role-estimates/${encodeURIComponent(role)}`, {
-      method: 'DELETE',
-    }),
+  deleteRoleEstimate: (lineId: string, subtaskId: string, role: string) =>
+    apiFetch<void>(
+      `/cost-breakdowns/lines/${lineId}/role-estimates/${encodeURIComponent(subtaskId)}/${encodeURIComponent(role)}`,
+      { method: 'DELETE' },
+    ),
 };

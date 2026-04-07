@@ -113,27 +113,27 @@ export class CostBreakdownService {
   }
 
   async upsertRoleEstimate(lineId: string, dto: UpsertRoleEstimateDto, tenantId: string) {
-    // Verify line belongs to a breakdown in this tenant
     const line = await this.prisma.costBreakdownLine.findFirst({
       where: { id: lineId, costBreakdown: { tenantId } },
     });
     if (!line) throw new NotFoundException('Cost breakdown line not found');
 
+    const { subtaskId, role, estimatedHours, hourlyRate } = dto;
     return this.prisma.costBreakdownRoleEstimate.upsert({
-      where: { lineId_role: { lineId, role: dto.role } },
-      update: { estimatedHours: dto.estimatedHours, hourlyRate: dto.hourlyRate },
-      create: { lineId, role: dto.role, estimatedHours: dto.estimatedHours, hourlyRate: dto.hourlyRate },
+      where: { lineId_subtaskId_role: { lineId, subtaskId, role } },
+      update: { estimatedHours, hourlyRate },
+      create: { lineId, subtaskId, role, estimatedHours, hourlyRate },
     });
   }
 
-  async deleteRoleEstimate(lineId: string, role: string, tenantId: string) {
+  async deleteRoleEstimate(lineId: string, subtaskId: string, role: string, tenantId: string) {
     const line = await this.prisma.costBreakdownLine.findFirst({
       where: { id: lineId, costBreakdown: { tenantId } },
     });
     if (!line) throw new NotFoundException('Cost breakdown line not found');
 
     return this.prisma.costBreakdownRoleEstimate.delete({
-      where: { lineId_role: { lineId, role } },
+      where: { lineId_subtaskId_role: { lineId, subtaskId, role } },
     });
   }
 

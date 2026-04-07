@@ -1,6 +1,10 @@
-import { IsString, IsNumber, IsOptional, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsOptional, Min } from 'class-validator';
 
 export class UpsertRoleEstimateDto {
+  @IsString()
+  @IsNotEmpty()
+  subtaskId: string;
+
   @IsString()
   role: string;
 

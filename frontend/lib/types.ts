@@ -938,6 +938,7 @@ export interface WorkflowExecution {
 export interface CostBreakdownRoleEstimate {
   id: string;
   lineId: string;
+  subtaskId: string;
   role: string;
   estimatedHours: number;
   hourlyRate?: number | null;

@@ -56,11 +56,12 @@ export class CostBreakdownController {
     return this.service.upsertRoleEstimate(lineId, dto, TENANT_ID);
   }
 
-  @Delete('lines/:lineId/role-estimates/:role')
+  @Delete('lines/:lineId/role-estimates/:subtaskId/:role')
   deleteRoleEstimate(
     @Param('lineId') lineId: string,
+    @Param('subtaskId') subtaskId: string,
     @Param('role') role: string,
   ) {
-    return this.service.deleteRoleEstimate(lineId, role, TENANT_ID);
+    return this.service.deleteRoleEstimate(lineId, subtaskId, role, TENANT_ID);
   }
 }
