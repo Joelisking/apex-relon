@@ -31,7 +31,7 @@ export const WIDGET_DEFINITIONS: Record<WidgetType, { label: string; requiredPer
   BarChart:   { label: 'Bar Chart',     requiredPermissions: [] },  // gated per-metric
   FunnelChart:{ label: 'Funnel Chart',  requiredPermissions: ['leads:view'] },
   TaskList:   { label: 'Task List',     requiredPermissions: ['tasks:view'] },
-  LeadsList:  { label: 'Leads List',    requiredPermissions: ['leads:view'] },
+  LeadsList:  { label: 'Prospective Projects List', requiredPermissions: ['leads:view'] },
   AIPanel:         { label: 'AI Panel',            requiredPermissions: ['reports:view', 'leads:view', 'clients:view'] },
   BottleneckWidget: { label: 'Bottleneck Analysis', requiredPermissions: ['bottleneck:view'] },
 };
@@ -52,8 +52,8 @@ export const AVAILABLE_METRICS = [
   { value: 'monthlyRevenue',  label: 'Monthly Revenue',     requiredPermissions: ['reports:view', 'clients:view'] },
   { value: 'quarterlyRevenue',label: 'Quarterly Revenue',   requiredPermissions: ['reports:view', 'clients:view'] },
   { value: 'pipelineValue',   label: 'Pipeline Value',      requiredPermissions: ['leads:view'] },
-  { value: 'totalLeads',      label: 'Total Leads',         requiredPermissions: ['leads:view'] },
-  { value: 'wonLeads',        label: 'Won Leads',           requiredPermissions: ['leads:view'] },
+  { value: 'totalLeads',      label: 'Total Prospective Projects', requiredPermissions: ['leads:view'] },
+  { value: 'wonLeads',        label: 'Won Prospective Projects',  requiredPermissions: ['leads:view'] },
   { value: 'winRate',         label: 'Win Rate',            requiredPermissions: ['leads:view', 'clients:view'] },
   { value: 'avgDealSize',     label: 'Avg Deal Size',       requiredPermissions: ['leads:view'] },
   { value: 'activeClients',   label: 'Active Clients',      requiredPermissions: ['clients:view'] },

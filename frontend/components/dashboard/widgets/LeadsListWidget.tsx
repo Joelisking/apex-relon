@@ -47,7 +47,7 @@ function getStagePillColor(stage: string): string {
 }
 
 export function LeadsListWidget({ widget }: Props) {
-  const title = widget.config.title || 'Recent Leads';
+  const title = widget.config.title || 'Recent Prospective Projects';
   const { fmtFull } = useCurrency();
 
   const { data, isLoading } = useQuery({
@@ -91,7 +91,7 @@ export function LeadsListWidget({ widget }: Props) {
       ) : leads.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-2.5">
           <Inbox className="h-6 w-6 text-muted-foreground" />
-          <p className="text-[11px] font-medium text-muted-foreground">No leads yet</p>
+          <p className="text-[11px] font-medium text-muted-foreground">No prospective projects yet</p>
         </div>
       ) : (
         <div className="flex-1 overflow-auto divide-y divide-border/40">

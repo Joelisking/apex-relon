@@ -93,7 +93,7 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
     } catch (error) {
       if (signal?.aborted) return;
       console.error('Failed to load lead:', error);
-      toast.error('Failed to load lead');
+      toast.error('Failed to load prospective project');
       setLoading(false);
     }
   };
@@ -152,11 +152,11 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
     setIsDeleting(true);
     try {
       await apiFetch(`/leads/${lead.id}`, { method: 'DELETE' });
-      toast.success('Lead deleted');
+      toast.success('Prospective project deleted');
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       router.push('/leads');
     } catch {
-      toast.error('Failed to delete lead');
+      toast.error('Failed to delete prospective project');
     } finally {
       setIsDeleting(false);
     }

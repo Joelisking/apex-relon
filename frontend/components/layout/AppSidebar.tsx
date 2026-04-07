@@ -170,7 +170,7 @@ const mainNavItems: NavItemDef[] = [
     permission: 'clients:view',
   },
   {
-    title: 'Leads',
+    title: 'Prospective Projects',
     href: '/leads',
     icon: Target,
     permission: 'leads:view',
@@ -251,7 +251,7 @@ const adminNavGroups: AdminNavGroup[] = [
       { title: 'Service Items', href: '/admin/service-items', icon: Package, permission: 'settings:manage' },
       { title: 'Task Types', href: '/admin/task-types', icon: CheckSquare, permission: 'settings:manage' },
       { title: 'Work Codes', href: '/admin/work-codes', icon: Hash, permission: 'settings:manage' },
-      { title: 'Lead Forms', href: '/admin/lead-forms', icon: FormInput, permission: 'settings:manage' },
+      { title: 'Intake Forms', href: '/admin/lead-forms', icon: FormInput, permission: 'settings:manage' },
     ],
   },
   {

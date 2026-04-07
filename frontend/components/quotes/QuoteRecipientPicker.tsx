@@ -60,12 +60,12 @@ export default function QuoteRecipientPicker({
   return (
     <div className="space-y-4">
       <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
-        Link to Lead, Client, or Project
+        Link to Prospective Project, Client, or Project
       </p>
       <div className="grid grid-cols-3 gap-3">
         {/* Lead picker */}
         <div>
-          <label className={LABEL_CLASS}>Lead</label>
+          <label className={LABEL_CLASS}>Prospective Project</label>
           <Popover open={leadOpen} onOpenChange={setLeadOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -81,7 +81,7 @@ export default function QuoteRecipientPicker({
                     {selectedLead.company}
                   </Badge>
                 ) : (
-                  <span className="text-muted-foreground">Select lead...</span>
+                  <span className="text-muted-foreground">Select prospective project...</span>
                 )}
                 <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
               </Button>
@@ -89,7 +89,7 @@ export default function QuoteRecipientPicker({
             <PopoverContent className="w-[260px] p-0" align="start">
               <div className="p-2 border-b">
                 <Input
-                  placeholder="Search leads..."
+                  placeholder="Search prospective projects..."
                   value={leadSearch}
                   onChange={(e) => setLeadSearch(e.target.value)}
                   className="h-8 text-sm"
@@ -98,7 +98,7 @@ export default function QuoteRecipientPicker({
               <div className="max-h-48 overflow-y-auto">
                 {filteredLeads.length === 0 ? (
                   <p className="text-sm text-muted-foreground p-3 text-center">
-                    No leads found
+                    No prospective projects found
                   </p>
                 ) : (
                   filteredLeads.map((lead) => (

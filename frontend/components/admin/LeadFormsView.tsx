@@ -129,10 +129,10 @@ export default function LeadFormsView() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">
-              Lead Forms
+              Intake Forms
             </h2>
             <p className="text-sm text-muted-foreground">
-              Capture inbound leads from your website
+              Capture inbound project inquiries from your website
             </p>
           </div>
           {canManage && (

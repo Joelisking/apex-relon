@@ -80,7 +80,7 @@ export function LeadSwitcher({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Find lead..."
+              placeholder="Find prospective project..."
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               onKeyDown={(e) => e.key === 'Escape' && close()}
             />
@@ -96,7 +96,7 @@ export function LeadSwitcher({
               </p>
             ) : filtered.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-6">
-                No leads found
+                No prospective projects found
               </p>
             ) : (
               filtered.map((l) => {
