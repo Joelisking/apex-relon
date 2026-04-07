@@ -275,12 +275,10 @@ export class ProposalTemplatesService implements OnModuleInit {
 
       companyName = lead.company ?? '';
       derivedProjectName = lead.projectName ?? '';
-      // address/city/state/zip added in migration — cast until Prisma client regenerates
-      const leadAny = lead as unknown as Record<string, string | null>;
-      derivedAddress = leadAny['address'] ?? '';
-      derivedCity = leadAny['city'] ?? '';
-      derivedState = leadAny['state'] ?? '';
-      derivedZip = leadAny['zip'] ?? '';
+      derivedAddress = lead.address ?? '';
+      derivedCity = lead.city ?? '';
+      derivedState = lead.state ?? '';
+      derivedZip = lead.zip ?? '';
       clientId = lead.clientId ?? null;
 
       if (dto.saveAddressToClient && clientId && dto.address) {

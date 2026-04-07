@@ -52,6 +52,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { AddressAutocompleteWithParts } from '@/components/ui/address-autocomplete-parts';
 import { UserPicker } from '@/components/ui/user-picker';
 import { toast } from 'sonner';
 
@@ -637,7 +638,18 @@ export function CreateLeadDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <Input placeholder="Street address" {...field} />
+                      <AddressAutocompleteWithParts
+                        value={field.value ?? ''}
+                        placeholder="Street address"
+                        onChange={(street, parts) => {
+                          field.onChange(street);
+                          if (parts) {
+                            form.setValue('city', parts.city);
+                            form.setValue('state', parts.state);
+                            form.setValue('zip', parts.zip);
+                          }
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

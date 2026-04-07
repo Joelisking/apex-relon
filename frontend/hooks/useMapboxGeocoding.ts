@@ -2,10 +2,20 @@
 
 import { useState, useEffect, useRef } from 'react';
 
+export interface MapboxContext {
+  id: string;
+  text: string;
+  short_code?: string;
+}
+
 export interface GeocodingSuggestion {
   id: string;
   place_name: string;
   center: [number, number]; // [lng, lat]
+  // Raw fields for structured address parsing
+  text?: string;       // street name (e.g. "Main St")
+  address?: string;    // street number (e.g. "123")
+  context?: MapboxContext[];
 }
 
 export function useMapboxGeocoding(query: string, enabled = true) {
@@ -41,10 +51,14 @@ export function useMapboxGeocoding(query: string, enabled = true) {
         if (!res.ok) return;
         const data = await res.json();
         setSuggestions(
-          (data.features ?? []).map((f: { id: string; place_name: string; center: [number, number] }) => ({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (data.features ?? []).map((f: any) => ({
             id: f.id,
             place_name: f.place_name,
             center: f.center,
+            text: f.text,
+            address: f.address,
+            context: f.context,
           })),
         );
       } catch {
