@@ -48,13 +48,22 @@ export class CustomerLeadConversionService {
     const existingProject = await this.prisma.project.findFirst({ where: { leadId } });
     if (existingProject) throw new BadRequestException('A project already exists for this lead');
 
-    // Determine first pipeline stage if no status provided
+    // Determine first pipeline stage if no status provided.
+    // Prefer stages scoped to the lead's service type; fall back to __all__.
     let resolvedStatus = projectData?.status;
     if (!resolvedStatus) {
-      const firstStage = await this.prisma.pipelineStage.findFirst({
-        where: { pipelineType: 'project' },
-        orderBy: { sortOrder: 'asc' },
-      });
+      const serviceTypeName = lead.serviceType?.name;
+      const firstStage =
+        (serviceTypeName
+          ? await this.prisma.pipelineStage.findFirst({
+              where: { pipelineType: 'project', serviceType: serviceTypeName },
+              orderBy: { sortOrder: 'asc' },
+            })
+          : null) ??
+        (await this.prisma.pipelineStage.findFirst({
+          where: { pipelineType: 'project', serviceType: '__all__' },
+          orderBy: { sortOrder: 'asc' },
+        }));
       resolvedStatus = firstStage?.name ?? 'Planning';
     }
 
