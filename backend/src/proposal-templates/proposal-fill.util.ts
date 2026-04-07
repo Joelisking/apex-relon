@@ -236,9 +236,13 @@ function replacePlainBrackets(xml: string, data: ProposalData): string {
     [/[#0]{1,2},?[#0]{3}\.[#0]{2}/g,    amountNoSign],
 
     // ── Timeline ─────────────────────────────────────────────────────────────
-    // "#-# weeks" (range) must come before "# weeks" (single) to avoid partial match
-    ['#-# weeks',                  data.timeline ?? ''],
-    ['# weeks',                    data.timeline ?? ''],
+    // In templates, only the "#-#" or "#" is highlighted (a separate run) while
+    // " weeks" is plain text in the next run — so the full phrase "#-# weeks" is
+    // never contiguous in the raw XML.  Match the standalone patterns first so
+    // the plain-text " weeks" that follows is left in place naturally.
+    ['#-# weeks',                  data.timeline ?? ''],   // full phrase (fallback)
+    ['#-#',                        data.timeline ?? ''],   // just the highlighted range
+    ['# weeks',                    data.timeline ?? ''],   // full phrase (fallback)
   ];
 
   let result = xml;
@@ -285,6 +289,14 @@ function replaceDynamicBrackets(
     result = result.split(`[${name}]`).join(escapeXml(value));
   }
   return result;
+}
+
+/**
+ * Strip yellow highlights from every run in the XML.
+ * Called as the last step so any filled-in value loses its placeholder highlight.
+ */
+function removeYellowHighlights(xml: string): string {
+  return xml.replace(/<w:highlight\s+w:val="yellow"\s*\/>/g, '');
 }
 
 /**
@@ -408,6 +420,8 @@ export function fillDocx(
     if (tableCellValues && Object.keys(tableCellValues).length > 0) {
       xml = applyTableCellValues(xml, tableCellValues);
     }
+    // 7. Strip yellow highlights — placeholders are filled, highlight is no longer needed
+    xml = removeYellowHighlights(xml);
     zip.file(xmlPath, xml);
   }
 
