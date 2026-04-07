@@ -47,6 +47,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Prospective Projects', href: '/leads', icon: Users, permission: 'leads:view' },
   { label: 'Projects', href: '/projects', icon: FolderKanban, permission: 'projects:view' },
   { label: 'Invoicing', href: '/invoicing', icon: FileText, permission: 'quotes:view' },
+  { label: 'Cost Breakdown', href: '/cost-breakdown', icon: FileText, permission: 'quotes:view' },
   { label: 'Time Tracking', href: '/time-tracking', icon: Clock, permission: 'time_tracking:view' },
   { label: 'Reports', href: '/reports', icon: BarChart3, permission: 'reports:view' },
   { label: 'Settings', href: '/settings', icon: Settings, permission: undefined },

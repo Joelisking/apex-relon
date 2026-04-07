@@ -44,6 +44,7 @@ import {
   Layers,
   Package,
   Hash,
+  Calculator,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import {
@@ -196,6 +197,12 @@ const mainNavItems: NavItemDef[] = [
     title: 'Invoicing',
     href: '/invoicing',
     icon: FileSignature,
+    permission: 'quotes:view',
+  },
+  {
+    title: 'Cost Breakdown',
+    href: '/cost-breakdown',
+    icon: Calculator,
     permission: 'quotes:view',
   },
   {

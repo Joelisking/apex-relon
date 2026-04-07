@@ -42,6 +42,7 @@ import { TimeTrackingModule } from './time-tracking/time-tracking.module';
 import { BottleneckModule } from './bottleneck/bottleneck.module';
 import { ProposalTemplatesModule } from './proposal-templates/proposal-templates.module';
 import { WorkCodesModule } from './work-codes/work-codes.module';
+import { CostBreakdownModule } from './cost-breakdown/cost-breakdown.module';
 
 @Module({
   imports: [
@@ -88,6 +89,7 @@ import { WorkCodesModule } from './work-codes/work-codes.module';
     BottleneckModule,
     ProposalTemplatesModule,
     WorkCodesModule,
+    CostBreakdownModule,
   ],
   providers: [
     {

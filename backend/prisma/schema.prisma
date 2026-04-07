@@ -53,6 +53,7 @@ model Lead {
   project             Project?
   stageHistory        StageHistory[]
   quotes              Quote[]
+  costBreakdowns      CostBreakdown[]
   leadFormSubmission  LeadFormSubmission?
 
   @@index([assignedToId])
@@ -123,6 +124,7 @@ model ServiceType {
   projects          Project[]
   taskTypes         TaskType[]
   proposalTemplates ProposalTemplate[]
+  costBreakdowns    CostBreakdown[]
 
   @@index([categoryId])
   @@map("service_types")
@@ -296,6 +298,7 @@ model Project {
   budget            ProjectBudget?         @relation("ProjectBudget")
   quotes            Quote[]                @relation("ProjectQuotes")
   assignments       ProjectAssignment[]
+  costBreakdowns    CostBreakdown[]
   costSegments        ProjectCostSegment[]
   projectServiceItems ProjectServiceItem[]
 
@@ -438,6 +441,7 @@ model User {
   team                    Team?                   @relation("TeamMembers", fields: [teamId], references: [id])
   dashboardLayout         DashboardLayout?        @relation("UserDashboardLayout")
   userPreferences         UserPreference[]        @relation("UserPreferences")
+  createdCostBreakdowns   CostBreakdown[]         @relation("CostBreakdownCreation")
 
   @@map("users")
 }
@@ -1065,10 +1069,11 @@ model ServiceItem {
   sortOrder     Int                  @default(0)
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
-  subtasks      ServiceItemSubtask[]
-  timeEntries   TimeEntry[]
+  subtasks            ServiceItemSubtask[]
+  timeEntries         TimeEntry[]
   quoteLineItems      QuoteLineItem[]
   projectServiceItems ProjectServiceItem[]
+  costBreakdownLines  CostBreakdownLine[]
 
   @@index([isActive])
   @@map("service_items")
@@ -1130,4 +1135,63 @@ model AIAnalyticsReport {
 
   @@index([reportType, generatedAt])
   @@map("ai_analytics_reports")
+}
+
+// ── Cost Breakdown ────────────────────────────────────────────────────────────
+
+model CostBreakdown {
+  id            String   @id @default(uuid())
+  tenantId      String
+  projectId     String?
+  leadId        String?
+  serviceTypeId String?
+  title         String
+  status        String   @default("DRAFT")
+  notes         String?  @db.Text
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  project     Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  serviceType ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
+  createdBy   User         @relation("CostBreakdownCreation", fields: [createdById], references: [id])
+  lines       CostBreakdownLine[]
+
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([leadId])
+  @@map("cost_breakdowns")
+}
+
+model CostBreakdownLine {
+  id              String   @id @default(uuid())
+  costBreakdownId String
+  serviceItemId   String
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  costBreakdown CostBreakdown              @relation(fields: [costBreakdownId], references: [id], onDelete: Cascade)
+  serviceItem   ServiceItem                @relation(fields: [serviceItemId], references: [id])
+  roleEstimates CostBreakdownRoleEstimate[]
+
+  @@index([costBreakdownId])
+  @@map("cost_breakdown_lines")
+}
+
+model CostBreakdownRoleEstimate {
+  id             String   @id @default(uuid())
+  lineId         String
+  role           String
+  estimatedHours Float    @default(0)
+  hourlyRate     Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  line CostBreakdownLine @relation(fields: [lineId], references: [id], onDelete: Cascade)
+
+  @@unique([lineId, role])
+  @@index([lineId])
+  @@map("cost_breakdown_role_estimates")
 }

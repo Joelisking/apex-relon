@@ -32,6 +32,8 @@ export class SettingsService implements OnModuleInit {
       this.seedServiceCategories(),
       this.seedCounties(),
     ]);
+    // Run after categories/types are seeded (sequential, not parallel)
+    await this.seedServiceItemPhases();
   }
 
   private async seedTeamTypes() {
@@ -524,5 +526,237 @@ export class SettingsService implements OnModuleInit {
       });
     }
     this.logger.log(`County dropdown options seeded (${COUNTIES.length} entries).`);
+  }
+
+  // ── Service Item Phases (from Excel template data) ─────────────────────────
+
+  private async seedServiceItemPhases() {
+    const existingWithSubtasks = await this.prisma.serviceItem.count({
+      where: { subtasks: { some: {} } },
+    });
+    if (existingWithSubtasks > 0) {
+      this.logger.log(`Service item phases already seeded (${existingWithSubtasks} items with subtasks). Skipping.`);
+      return;
+    }
+
+    type PhaseTemplate = { name: string; officeField: string; sortOrder: number; tasks: string[] };
+    const TEMPLATES: Array<{ serviceTypeName: string; phases: PhaseTemplate[] }> = [
+      {
+        serviceTypeName: 'ALTA/NSPS Survey',
+        phases: [
+          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
+          { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'Building Dimensions', 'Site Features, Encroachments, & Possession', 'Find Monuments', 'Shoot Utilities', 'Set Monuments'] },
+          { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Boundary Resolution'] },
+          { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Importing Points', 'Legal Description', 'Titleblock', 'Drafting', 'Labeling', 'Layout', 'Review', 'Calc Points'] },
+          { name: 'Documentation', officeField: 'Office', sortOrder: 4, tasks: ['Legal Description', 'Surveyors Report'] },
+          { name: 'Project Management', officeField: 'Office', sortOrder: 5, tasks: ['Project Management - External', 'Project Management - Internal', 'Sending Deliverables'] },
+          { name: 'Review', officeField: 'Office', sortOrder: 6, tasks: ['Legal Description', 'QA/QC Review', 'General Review'] },
+          { name: 'Deliverable Creation', officeField: 'Office', sortOrder: 7, tasks: ['Email Deliverables to Client'] },
+          { name: 'Finance', officeField: 'Office', sortOrder: 8, tasks: ['Invoice', 'Processing Payment'] },
+          { name: 'Recordation', officeField: 'Office', sortOrder: 9, tasks: ['Plotting', 'Review', 'Recordation'] },
+          { name: 'Training', officeField: 'Office', sortOrder: 10, tasks: ['Training'] },
+        ],
+      },
+      {
+        serviceTypeName: 'Boundary Survey',
+        phases: [
+          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
+          { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'Building Dimensions', 'Site Features, Encroachments, & Possession', 'Find Monuments', 'Set Monuments'] },
+          { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Boundary Resolution'] },
+          { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Importing Points', 'Titleblock', 'Drafting', 'Labeling', 'Layout', 'Plotting', 'Review', 'Calc Points'] },
+          { name: 'Documentation', officeField: 'Office', sortOrder: 4, tasks: ['Legal Description', 'Surveyors Report'] },
+          { name: 'Project Management', officeField: 'Office', sortOrder: 5, tasks: ['Project Management - External', 'Project Management - Internal', 'Sending Deliverables'] },
+          { name: 'Review', officeField: 'Office', sortOrder: 6, tasks: ['Legal Description', 'QA/QC Review', 'Review'] },
+          { name: 'Deliverable Creation', officeField: 'Office', sortOrder: 7, tasks: ['Email Deliverables to Client'] },
+          { name: 'Finance', officeField: 'Office', sortOrder: 8, tasks: ['Invoice', 'Processing Payment'] },
+          { name: 'Recordation', officeField: 'Office', sortOrder: 9, tasks: ['Plotting', 'Review', 'Recordation'] },
+          { name: 'Training', officeField: 'Office', sortOrder: 10, tasks: ['Training'] },
+        ],
+      },
+      {
+        serviceTypeName: 'As-Built Survey',
+        phases: [
+          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Utility Locates Called In'] },
+          { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'TBM Setup', 'General Field Survey', 'Shoot Utilities', 'Structure Dips', 'Building Dimensions', 'Site Features, Encroachments, & Possession', 'Find Monuments', 'Set Monuments'] },
+          { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Boundary Resolution'] },
+          { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Importing Points', 'Processing', 'Labeling', 'Titleblock'] },
+          { name: 'Project Management', officeField: 'Office', sortOrder: 4, tasks: ['Project Management - External', 'Project Management - Internal', 'Sending Deliverables'] },
+          { name: 'Review', officeField: 'Office', sortOrder: 5, tasks: ['Legal Description', 'QA/QC Review', 'Review'] },
+          { name: 'Deliverable Creation', officeField: 'Office', sortOrder: 6, tasks: ['Email Deliverables to Client'] },
+          { name: 'Finance', officeField: 'Office', sortOrder: 7, tasks: ['Invoice', 'Processing Payment'] },
+          { name: 'Recordation', officeField: 'Office', sortOrder: 8, tasks: ['Plotting', 'Review', 'Recordation'] },
+          { name: 'Training', officeField: 'Office', sortOrder: 9, tasks: ['Training'] },
+        ],
+      },
+      {
+        serviceTypeName: 'Construction Engineering',
+        phases: [
+          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup'] },
+          { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'TBM Setup', 'Construction Staking'] },
+          { name: 'Documentation', officeField: 'Office', sortOrder: 2, tasks: ['Field Book'] },
+          { name: 'Project Management', officeField: 'Office', sortOrder: 3, tasks: ['Project Management - External', 'Project Management - Internal', 'Sending Deliverables'] },
+          { name: 'Review', officeField: 'Office', sortOrder: 4, tasks: ['QA/QC Review', 'Review'] },
+          { name: 'Finance', officeField: 'Office', sortOrder: 5, tasks: ['Invoice', 'Processing Payment'] },
+          { name: 'Training', officeField: 'Office', sortOrder: 6, tasks: ['Training'] },
+        ],
+      },
+      {
+        serviceTypeName: 'Drone Survey',
+        phases: [
+          { name: 'Field', officeField: 'Field', sortOrder: 0, tasks: ['Drone Target Setup', 'Drone Flight'] },
+          { name: 'Drafting', officeField: 'Office', sortOrder: 1, tasks: ['Importing Drone Data', 'Processing Drone Data', 'Breakline Drafting', 'Surface Creation'] },
+          { name: 'Documentation', officeField: 'Office', sortOrder: 2, tasks: ['Survey Book'] },
+        ],
+      },
+      {
+        serviceTypeName: 'Easement Preparation',
+        phases: [
+          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
+          { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Site Features, Encroachments, & Possession', 'Find Monuments', 'Staking'] },
+          { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Boundary Resolution'] },
+          { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Importing Points', 'Drafting', 'Labeling', 'Layout'] },
+          { name: 'Documentation', officeField: 'Office', sortOrder: 4, tasks: ['Legal Description'] },
+          { name: 'Project Management', officeField: 'Office', sortOrder: 5, tasks: ['Project Management - External', 'Project Management - Internal', 'Sending Deliverables'] },
+          { name: 'Review', officeField: 'Office', sortOrder: 6, tasks: ['Legal Description', 'QA/QC Review', 'Review'] },
+          { name: 'Deliverable Creation', officeField: 'Office', sortOrder: 7, tasks: ['Email Deliverables to Client'] },
+          { name: 'Finance', officeField: 'Office', sortOrder: 8, tasks: ['Invoice', 'Processing Payment'] },
+          { name: 'Training', officeField: 'Office', sortOrder: 9, tasks: ['Training'] },
+        ],
+      },
+      {
+        serviceTypeName: 'Plot Plan & House Stake',
+        phases: [
+          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
+          { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Find Monuments / Control', 'Stake House', 'Establish FPG/TBM', 'Importing & Manipulating Points'] },
+          { name: 'Drafting', officeField: 'Office', sortOrder: 2, tasks: ['Titleblock', 'Drafting', 'Labeling', 'Layout'] },
+          { name: 'Project Management', officeField: 'Office', sortOrder: 3, tasks: ['Project Management - External', 'Project Management - Internal'] },
+          { name: 'Review', officeField: 'Office', sortOrder: 4, tasks: ['QA/QC Review', 'General Review'] },
+          { name: 'Deliverable Creation', officeField: 'Office', sortOrder: 5, tasks: ['Email Deliverables to Client'] },
+          { name: 'Finance', officeField: 'Office', sortOrder: 6, tasks: ['Invoice', 'Processing Payment'] },
+          { name: 'Training', officeField: 'Office', sortOrder: 7, tasks: ['Training'] },
+        ],
+      },
+      {
+        serviceTypeName: 'LCRS',
+        phases: [
+          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
+          { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'Find Monuments', 'Witnesses (CP, Alignment, Sec. Cor)'] },
+          { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Alignment, PL, & R/W Resolution'] },
+          { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Importing Points', 'Titleblock', 'Drafting', 'Labeling', 'Layout', 'Witnesses', 'Table', 'Plotting', 'Review', 'Calc Points'] },
+          { name: 'Documentation', officeField: 'Office', sortOrder: 4, tasks: ['Surveyors Report'] },
+          { name: 'Project Management', officeField: 'Office', sortOrder: 5, tasks: ['Project Management - External', 'Project Management - Internal', 'Sending Deliverables'] },
+          { name: 'Review', officeField: 'Office', sortOrder: 6, tasks: ['QA/QC Review', 'Review', 'Deliverable Creation'] },
+          { name: 'Deliverable Creation', officeField: 'Office', sortOrder: 7, tasks: ['Email Deliverables to Client'] },
+          { name: 'Finance', officeField: 'Office', sortOrder: 8, tasks: ['Invoice', 'Processing Payment'] },
+          { name: 'Recordation', officeField: 'Office', sortOrder: 9, tasks: ['Plotting', 'Review', 'Recordation'] },
+          { name: 'Training', officeField: 'Office', sortOrder: 10, tasks: ['Training'] },
+        ],
+      },
+      {
+        serviceTypeName: 'Lot Survey',
+        phases: [
+          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
+          { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'Building Dimensions', 'Site Features, Encroachments, & Possession', 'Find Monuments', 'Set Monuments'] },
+          { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Boundary Resolution'] },
+          { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Importing Points', 'Titleblock', 'Drafting', 'Labeling', 'Layout', 'Plotting', 'Review', 'Calc Points'] },
+          { name: 'Documentation', officeField: 'Office', sortOrder: 4, tasks: ['Legal Description', 'Surveyors Report', 'Legal Description of Record', 'Attach Deed to Deliverable'] },
+          { name: 'Project Management', officeField: 'Office', sortOrder: 5, tasks: ['Project Management - External', 'Project Management - Internal', 'Sending Deliverables'] },
+          { name: 'Review', officeField: 'Office', sortOrder: 6, tasks: ['Legal Description', 'QA/QC Review', 'Review', 'Deliverable Creation'] },
+          { name: 'Deliverable Creation', officeField: 'Office', sortOrder: 7, tasks: ['Email Deliverables to Client'] },
+          { name: 'Finance', officeField: 'Office', sortOrder: 8, tasks: ['Invoice', 'Processing Payment'] },
+          { name: 'Recordation', officeField: 'Office', sortOrder: 9, tasks: ['Plotting', 'Review', 'Recordation'] },
+          { name: 'Training', officeField: 'Office', sortOrder: 10, tasks: ['Training'] },
+        ],
+      },
+      {
+        serviceTypeName: 'Right-of-Way Engineering',
+        phases: [
+          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup'] },
+          { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'Find Monuments'] },
+          { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Alignment, PL, & R/W Resolution', 'R/W Resolution'] },
+          { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Importing Points', 'Exhibit', 'Table', 'Bearing & Distance Sheet', 'Calc Points'] },
+          { name: 'Documentation', officeField: 'Office', sortOrder: 4, tasks: ['Legal Description', 'Computation Sheet', 'Closure Sheet', 'Report', 'Survey Book'] },
+          { name: 'Project Management', officeField: 'Office', sortOrder: 5, tasks: ['Project Management - External', 'Project Management - Internal', 'Sending Deliverables'] },
+          { name: 'Review', officeField: 'Office', sortOrder: 6, tasks: ['Legal Description', 'QA/QC Review', 'Review'] },
+          { name: 'Deliverable Creation', officeField: 'Office', sortOrder: 7, tasks: ['Email Deliverables to Client'] },
+          { name: 'Finance', officeField: 'Office', sortOrder: 8, tasks: ['Invoice', 'Processing Payment'] },
+          { name: 'Training', officeField: 'Office', sortOrder: 9, tasks: ['Training'] },
+        ],
+      },
+      {
+        serviceTypeName: 'Topographic Survey',
+        phases: [
+          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Homeowner Letters Sent', 'Utility Locates Called In'] },
+          { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Site Photos & Notes', 'Find Monuments', 'Control Point Setup', 'TBM Setup', 'General Field Survey', 'Shoot Utilities', 'Witnessing Control', 'Structure Dips'] },
+          { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Boundary Resolution'] },
+          { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Boundary Resolution', 'Importing Points', 'Processing', 'Structure Analysis', 'Pipe Networks', 'Labeling', 'Boundary Labeling', 'Structure Data Sheets'] },
+          { name: 'Documentation', officeField: 'Office', sortOrder: 4, tasks: ['Survey Book'] },
+          { name: 'Project Management', officeField: 'Office', sortOrder: 5, tasks: ['Project Management - External', 'Project Management - Internal', 'Sending Deliverables'] },
+          { name: 'Review', officeField: 'Office', sortOrder: 6, tasks: ['QA/QC Review', 'Review', 'Deliverable Creation'] },
+          { name: 'Deliverable Creation', officeField: 'Office', sortOrder: 7, tasks: ['Email Deliverables to Client'] },
+          { name: 'Finance', officeField: 'Office', sortOrder: 8, tasks: ['Invoice', 'Processing Payment'] },
+          { name: 'Training', officeField: 'Office', sortOrder: 9, tasks: ['Training'] },
+        ],
+      },
+      {
+        serviceTypeName: 'Construction Staking',
+        phases: [
+          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Utility Locates Called In'] },
+          { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'TBM Setup', 'General Field Survey', 'Shoot Utilities', 'Structure Dips', 'Structure Analysis', 'Pipe Networks', 'Structure Data Sheets', 'Punch List'] },
+          { name: 'Drafting', officeField: 'Office', sortOrder: 2, tasks: ['Importing Points', 'Processing', 'Labeling', 'Titleblock', 'Punch List Creation'] },
+          { name: 'Project Management', officeField: 'Office', sortOrder: 3, tasks: ['Project Management - External', 'Project Management - Internal', 'Sending Deliverables'] },
+          { name: 'Review', officeField: 'Office', sortOrder: 4, tasks: ['QA/QC Review', 'General Review', 'Deliverable Creation'] },
+          { name: 'Deliverable Creation', officeField: 'Office', sortOrder: 5, tasks: ['Email Deliverables to Client'] },
+          { name: 'Finance', officeField: 'Office', sortOrder: 6, tasks: ['Invoice', 'Processing Payment'] },
+          { name: 'Training', officeField: 'Office', sortOrder: 7, tasks: ['Training'] },
+        ],
+      },
+    ];
+
+    let itemsCreated = 0;
+
+    for (const template of TEMPLATES) {
+      const serviceType = await this.prisma.serviceType.findFirst({
+        where: { name: template.serviceTypeName },
+      });
+      if (!serviceType) {
+        this.logger.warn(`ServiceType not found: "${template.serviceTypeName}" — skipping its phases.`);
+        continue;
+      }
+
+      for (const phase of template.phases) {
+        const existing = await this.prisma.serviceItem.findFirst({
+          where: {
+            name: phase.name,
+            serviceTypeIds: { has: serviceType.id },
+          },
+        });
+        if (existing) continue;
+
+        const item = await this.prisma.serviceItem.create({
+          data: {
+            name: phase.name,
+            description: `${phase.officeField} work phase`,
+            serviceTypeIds: [serviceType.id],
+            isActive: true,
+            sortOrder: phase.sortOrder,
+          },
+        });
+
+        for (let i = 0; i < phase.tasks.length; i++) {
+          await this.prisma.serviceItemSubtask.create({
+            data: {
+              serviceItemId: item.id,
+              name: phase.tasks[i],
+              sortOrder: i,
+            },
+          });
+        }
+
+        itemsCreated++;
+      }
+    }
+
+    this.logger.log(`Service item phases seeded: ${itemsCreated} phases created from survey template data.`);
   }
 }

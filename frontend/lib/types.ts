@@ -932,3 +932,48 @@ export interface WorkflowExecution {
   details?: Record<string, unknown> | null;
   executedAt: string;
 }
+
+// ── Cost Breakdown ────────────────────────────────────────────────────────────
+
+export interface CostBreakdownRoleEstimate {
+  id: string;
+  lineId: string;
+  role: string;
+  estimatedHours: number;
+  hourlyRate?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CostBreakdownLine {
+  id: string;
+  costBreakdownId: string;
+  serviceItemId: string;
+  sortOrder: number;
+  serviceItem: ServiceItem;
+  roleEstimates: CostBreakdownRoleEstimate[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CostBreakdown {
+  id: string;
+  tenantId: string;
+  projectId?: string | null;
+  leadId?: string | null;
+  serviceTypeId?: string | null;
+  title: string;
+  status: string;
+  notes?: string | null;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  serviceType?: { id: string; name: string } | null;
+  project?: { id: string; name: string } | null;
+  lead?: { id: string; company: string; contactName: string } | null;
+  createdBy?: { id: string; name: string } | null;
+  lines: CostBreakdownLine[];
+  totalEstimatedHours: number;
+  totalEstimatedCost: number;
+  hasUnratedLines?: boolean;
+}

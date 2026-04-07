@@ -13,6 +13,7 @@ export function middleware(request: NextRequest) {
     '/reports',
     '/tasks',
     '/invoicing',
+    '/cost-breakdown',
     '/admin',
     '/settings',
   ];
@@ -57,6 +58,7 @@ export const config = {
     '/reports/:path*',
     '/tasks/:path*',
     '/invoicing/:path*',
+    '/cost-breakdown/:path*',
     '/admin/:path*',
     '/settings/:path*',
     '/login',
