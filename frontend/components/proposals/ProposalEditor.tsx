@@ -596,13 +596,24 @@ export default function ProposalEditor() {
                 <Label className="text-[10px] text-muted-foreground block mb-1">
                   Fee{selectedBreakdown ? ' (from breakdown)' : ''}
                 </Label>
-                <Input
-                  value={totalAmount}
-                  onChange={(e) => setTotalAmount(e.target.value)}
-                  className="text-sm h-8"
-                  placeholder="$5,000.00"
-                  readOnly={!!selectedBreakdown}
-                />
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none select-none">$</span>
+                  <Input
+                    value={totalAmount.replace(/^\$/, '')}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^0-9.]/g, '');
+                      setTotalAmount(raw ? `$${raw}` : '');
+                    }}
+                    onBlur={() => {
+                      const num = parseFloat(totalAmount.replace(/[^0-9.]/g, ''));
+                      if (!isNaN(num)) setTotalAmount(formatCurrencyDisplay(num));
+                      else setTotalAmount('');
+                    }}
+                    className="text-sm h-8 pl-6"
+                    placeholder="5,000.00"
+                    readOnly={!!selectedBreakdown}
+                  />
+                </div>
               </div>
             </div>
           </div>
