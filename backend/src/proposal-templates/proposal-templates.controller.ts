@@ -123,4 +123,19 @@ export class ProposalTemplatesController {
     );
     stream.pipe(res);
   }
+
+  @Get('proposals/:id/combined-pdf')
+  @Permissions('quotes:view')
+  async downloadCombinedPdf(
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const { buffer, fileName } = await this.service.downloadCombinedPdf(id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${encodeURIComponent(fileName)}"`,
+    );
+    res.send(buffer);
+  }
 }

@@ -193,9 +193,10 @@ model Proposal {
   title           String
   status          String    @default("DRAFT")
 
-  leadId          String?
-  costBreakdownId String?   @unique
-  fileId          String?   @unique
+  leadId              String?
+  costBreakdownId     String?   @unique
+  fileId              String?   @unique
+  proposalTemplateId  String?
 
   proposalDate    DateTime?
   acceptedAt      DateTime?
@@ -204,10 +205,11 @@ model Proposal {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  lead          Lead?          @relation("LeadProposals", fields: [leadId], references: [id], onDelete: SetNull)
-  costBreakdown CostBreakdown? @relation("ProposalCostBreakdown", fields: [costBreakdownId], references: [id], onDelete: SetNull)
-  file          File?          @relation("ProposalFile", fields: [fileId], references: [id], onDelete: SetNull)
-  createdBy     User           @relation("ProposalCreation", fields: [createdById], references: [id])
+  lead             Lead?             @relation("LeadProposals", fields: [leadId], references: [id], onDelete: SetNull)
+  costBreakdown    CostBreakdown?    @relation("ProposalCostBreakdown", fields: [costBreakdownId], references: [id], onDelete: SetNull)
+  file             File?             @relation("ProposalFile", fields: [fileId], references: [id], onDelete: SetNull)
+  createdBy        User              @relation("ProposalCreation", fields: [createdById], references: [id])
+  proposalTemplate ProposalTemplate? @relation("TemplateProposals", fields: [proposalTemplateId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([leadId])
@@ -224,6 +226,7 @@ model ProposalTemplate {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   serviceType   ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
+  proposals     Proposal[]   @relation("TemplateProposals")
 
   @@map("proposal_templates")
 }

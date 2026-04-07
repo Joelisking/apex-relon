@@ -91,6 +91,7 @@ export interface Proposal {
   leadId: string | null;
   costBreakdownId: string | null;
   fileId: string | null;
+  proposalTemplateId: string | null;
   proposalDate: string | null;
   acceptedAt: string | null;
   createdAt: string;
@@ -98,6 +99,7 @@ export interface Proposal {
   lead: { id: string; company: string; contactName: string; projectName: string | null } | null;
   costBreakdown: { id: string; title: string } | null;
   file: { id: string; originalName: string; fileSize: number } | null;
+  proposalTemplate: { id: string; name: string } | null;
   createdBy: { id: string; name: string };
 }
 
@@ -186,5 +188,21 @@ export const proposalTemplatesApi = {
     );
     if (!res.ok) throw new Error('Failed to download proposal');
     return res.blob();
+  },
+
+  async downloadCombinedPdf(proposalId: string): Promise<{ blob: Blob; fileName: string }> {
+    const token = getTokenFromClientCookies();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(
+      `${API_BASE}/proposal-templates/proposals/${proposalId}/combined-pdf`,
+      { headers },
+    );
+    if (!res.ok) throw new Error('Failed to generate combined PDF');
+    const disposition = res.headers.get('Content-Disposition') ?? '';
+    const match = disposition.match(/filename="([^"]+)"/);
+    const fileName = match ? decodeURIComponent(match[1]) : 'proposal-combined.pdf';
+    return { blob: await res.blob(), fileName };
   },
 };

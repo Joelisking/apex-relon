@@ -1,8 +1,13 @@
 import { Injectable, NotFoundException, OnModuleInit, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import { promisify } from 'util';
+import { PDFDocument } from 'pdf-lib';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const libre = require('libreoffice-convert') as { convert: typeof import('libreoffice-convert').convert };
 import { PrismaService } from '../database/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { PdfService } from '../quotes/pdf.service';
 import {
   fillDocx,
   extractParagraphs,
@@ -15,6 +20,8 @@ import { extractTemplateFields, TemplateFields } from './proposal-extract.util';
 import { CreateProposalTemplateDto } from './dto/create-proposal-template.dto';
 import { GenerateProposalDto } from './dto/generate-proposal.dto';
 import { Readable } from 'stream';
+
+const libreConvertAsync = promisify(libre.convert);
 
 interface SeedTemplate {
   file: string;
@@ -43,6 +50,7 @@ export class ProposalTemplatesService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     private storageService: StorageService,
+    private pdfService: PdfService,
   ) {}
 
   async onModuleInit() {
@@ -105,6 +113,7 @@ export class ProposalTemplatesService implements OnModuleInit {
         costBreakdown: { select: { id: true, title: true } },
         file: { select: { id: true, originalName: true, fileSize: true } },
         createdBy: { select: { id: true, name: true } },
+        proposalTemplate: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 200,
@@ -227,6 +236,46 @@ export class ProposalTemplatesService implements OnModuleInit {
       fileName: proposal.file.originalName,
       mimeType: proposal.file.mimeType,
     };
+  }
+
+  async downloadCombinedPdf(proposalId: string): Promise<{ buffer: Buffer; fileName: string }> {
+    const proposal = await this.prisma.proposal.findUnique({
+      where: { id: proposalId },
+      include: { file: true },
+    });
+    if (!proposal) throw new NotFoundException('Proposal not found');
+    if (!proposal.file) throw new NotFoundException('No file generated for this proposal');
+
+    // 1. Download the proposal .docx from GCS
+    const docxStream = this.storageService.getFileStream(proposal.file.gcpPath);
+    const docxBuffer = await streamToBuffer(docxStream);
+
+    // 2. Convert .docx → PDF via LibreOffice
+    const proposalPdfBuffer: Buffer = await libreConvertAsync(docxBuffer, '.pdf', undefined);
+
+    // 3. If no cost breakdown linked, just return the proposal PDF
+    if (!proposal.costBreakdownId) {
+      const baseName = proposal.file.originalName.replace(/\.docx$/i, '');
+      return { buffer: proposalPdfBuffer, fileName: `${baseName}.pdf` };
+    }
+
+    // 4. Generate cost breakdown PDF via existing service
+    const breakdownPdfBuffer = await this.pdfService.generateCostBreakdownPdf(proposal.costBreakdownId);
+
+    // 5. Merge: proposal pages first, then cost breakdown pages
+    const merged = await PDFDocument.create();
+
+    const proposalDoc = await PDFDocument.load(proposalPdfBuffer);
+    const proposalPages = await merged.copyPages(proposalDoc, proposalDoc.getPageIndices());
+    proposalPages.forEach((p) => merged.addPage(p));
+
+    const breakdownDoc = await PDFDocument.load(breakdownPdfBuffer);
+    const breakdownPages = await merged.copyPages(breakdownDoc, breakdownDoc.getPageIndices());
+    breakdownPages.forEach((p) => merged.addPage(p));
+
+    const mergedBytes = await merged.save();
+    const baseName = proposal.file.originalName.replace(/\.docx$/i, '');
+    return { buffer: Buffer.from(mergedBytes), fileName: `${baseName}-with-breakdown.pdf` };
   }
 
   async generateProposal(
@@ -375,6 +424,7 @@ export class ProposalTemplatesService implements OnModuleInit {
         status: 'DRAFT',
         leadId: dto.leadId ?? undefined,
         costBreakdownId: dto.costBreakdownId ?? undefined,
+        proposalTemplateId: templateId,
         fileId: fileRecord.id,
         proposalDate: today,
         createdById: userId,

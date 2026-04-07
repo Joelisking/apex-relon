@@ -58,6 +58,7 @@ export default function ProposalEditor() {
   const searchParams = useSearchParams();
   const prefilledLeadId = searchParams.get('leadId');
   const prefilledBreakdownId = searchParams.get('costBreakdownId');
+  const prefilledTemplateId = searchParams.get('templateId');
 
   const [source, setSource] = useState<Source>(prefilledLeadId ? 'lead' : 'manual');
   const [search, setSearch] = useState('');
@@ -65,7 +66,7 @@ export default function ProposalEditor() {
   const [selectedBreakdown, setSelectedBreakdown] = useState<CostBreakdown | null>(null);
   const [showBreakdownPicker, setShowBreakdownPicker] = useState(false);
 
-  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState(prefilledTemplateId ?? '');
 
   const [salutation, setSalutation] = useState('');
   const [firstName, setFirstName] = useState('');

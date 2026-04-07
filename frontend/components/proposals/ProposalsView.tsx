@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Download, FileText, Loader2, Plus, Pencil, Trash2, Check, X, CheckCircle2,
+  Download, FileText, Loader2, Plus, Pencil, Trash2, Check, X, CheckCircle2, FileStack, PenLine,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,7 @@ export default function ProposalsView() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [combinedPdfId, setCombinedPdfId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -58,6 +59,31 @@ export default function ProposalsView() {
     } finally {
       setDownloadingId(null);
     }
+  };
+
+  const handleCombinedPdf = async (proposal: Proposal) => {
+    setCombinedPdfId(proposal.id);
+    try {
+      const { blob, fileName } = await proposalTemplatesApi.downloadCombinedPdf(proposal.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Failed to generate combined PDF — is LibreOffice installed on the server?');
+    } finally {
+      setCombinedPdfId(null);
+    }
+  };
+
+  const handleOpenEditor = (proposal: Proposal) => {
+    const params = new URLSearchParams();
+    if (proposal.leadId) params.set('leadId', proposal.leadId);
+    if (proposal.costBreakdownId) params.set('costBreakdownId', proposal.costBreakdownId);
+    if (proposal.proposalTemplateId) params.set('templateId', proposal.proposalTemplateId);
+    router.push(`/proposals/new?${params.toString()}`);
   };
 
   const handleAccept = async (proposal: Proposal) => {
@@ -241,7 +267,7 @@ export default function ProposalsView() {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          title="Download"
+                          title="Download .docx"
                           disabled={downloadingId === proposal.id}
                           onClick={() => handleDownload(proposal)}>
                           {downloadingId === proposal.id ? (
@@ -251,6 +277,29 @@ export default function ProposalsView() {
                           )}
                         </Button>
                       )}
+                      {proposal.costBreakdownId && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          title="Download combined PDF (proposal + cost breakdown)"
+                          disabled={combinedPdfId === proposal.id}
+                          onClick={() => handleCombinedPdf(proposal)}>
+                          {combinedPdfId === proposal.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <FileStack className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        title="Open in editor"
+                        onClick={() => handleOpenEditor(proposal)}>
+                        <PenLine className="h-3.5 w-3.5" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
