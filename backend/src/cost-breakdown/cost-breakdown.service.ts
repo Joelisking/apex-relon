@@ -132,10 +132,9 @@ export class CostBreakdownService {
     });
     if (!line) throw new NotFoundException('Cost breakdown line not found');
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return this.prisma.costBreakdownLine.update({
       where: { id: lineId },
-      data: dto as any,
+      data: dto,
     });
   }
 

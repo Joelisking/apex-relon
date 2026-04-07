@@ -360,12 +360,41 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
               {hasRatedCost ? formatCurrency(breakdown.totalEstimatedCost) : '—'}
             </p>
           </div>
+          {breakdown.hasUnratedLines && (
+            <p className="text-xs text-amber-600 self-end pb-0.5">
+              Partial — some roles missing rates
+            </p>
+          )}
         </div>
-        {breakdown.hasUnratedLines && (
-          <p className="text-xs text-amber-600">
-            Some phases are missing hourly rates — cost estimate is partial.
-          </p>
-        )}
+
+        {/* Bottom action buttons (mirrors top bar) */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleStatusToggle}>
+            {breakdown.status === 'DRAFT' ? (
+              <>
+                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                Mark Final
+              </>
+            ) : (
+              'Revert to Draft'
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleDownloadPdf}
+            disabled={downloading}>
+            {downloading ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            Download PDF
+          </Button>
+        </div>
       </div>
     </div>
   );
