@@ -17,6 +17,7 @@ import { CostBreakdownService } from './cost-breakdown.service';
 import { PdfService } from '../quotes/pdf.service';
 import { CreateCostBreakdownDto } from './dto/create-cost-breakdown.dto';
 import { UpdateCostBreakdownDto } from './dto/update-cost-breakdown.dto';
+import { UpdateCostBreakdownLineDto } from './dto/update-cost-breakdown-line.dto';
 import { UpsertRoleEstimateDto } from './dto/upsert-role-estimate.dto';
 
 const TENANT_ID = 'apex';
@@ -63,6 +64,11 @@ export class CostBreakdownController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.service.remove(id, TENANT_ID);
+  }
+
+  @Patch('lines/:lineId')
+  updateLine(@Param('lineId') lineId: string, @Body() dto: UpdateCostBreakdownLineDto) {
+    return this.service.updateLine(lineId, dto, TENANT_ID);
   }
 
   @Put('lines/:lineId/role-estimates')

@@ -37,6 +37,11 @@ export const costBreakdownApi = {
       method: 'PUT',
       body: JSON.stringify(dto),
     }),
+  updateLine: (lineId: string, dto: { excludedSubtaskIds: string[] }) =>
+    apiFetch<{ id: string; excludedSubtaskIds: string[] }>(`/cost-breakdowns/lines/${lineId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    }),
   deleteRoleEstimate: (lineId: string, subtaskId: string, role: string) =>
     apiFetch<void>(
       `/cost-breakdowns/lines/${lineId}/role-estimates/${encodeURIComponent(subtaskId)}/${encodeURIComponent(role)}`,

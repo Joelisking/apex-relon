@@ -1,16 +1,9 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
 import type { RoleResponse } from '@/lib/api/roles-client';
 import type { ServiceItemSubtask, CostBreakdownRoleEstimate } from '@/lib/types';
@@ -33,6 +26,7 @@ interface Props {
   onAdd: (estimate: CostBreakdownRoleEstimate) => void;
   onUpdate: (estimate: CostBreakdownRoleEstimate, hours: number, rate?: number) => void;
   onDelete: (estimate: CostBreakdownRoleEstimate) => void;
+  onRemove: () => void;
 }
 
 export default function CostBreakdownSubtaskSection({
@@ -44,6 +38,7 @@ export default function CostBreakdownSubtaskSection({
   onAdd,
   onUpdate,
   onDelete,
+  onRemove,
 }: Props) {
   const [adding, setAdding] = useState(false);
   const [newRole, setNewRole] = useState('');
@@ -51,11 +46,13 @@ export default function CostBreakdownSubtaskSection({
   const [newRate, setNewRate] = useState(defaultRate != null ? String(defaultRate) : '');
   const [saving, setSaving] = useState(false);
 
+  // Roles already added to this subtask (by key or free-text value)
   const usedRoles = new Set(estimates.map((e) => e.role));
-  const availableRoles = roles.filter((r) => !usedRoles.has(r.key));
+  // Available API roles not yet used (shown as datalist suggestions)
+  const availableRoles = roles.filter((r) => !usedRoles.has(r.key) && !usedRoles.has(r.label));
 
   const handleAdd = useCallback(async () => {
-    if (!newRole || !newHours) return;
+    if (!newRole.trim() || !newHours) return;
     const hours = parseFloat(newHours);
     const rate = newRate ? parseFloat(newRate) : undefined;
     if (isNaN(hours) || hours < 0) return;
@@ -64,7 +61,7 @@ export default function CostBreakdownSubtaskSection({
     try {
       const created = await costBreakdownApi.upsertRoleEstimate(lineId, {
         subtaskId: subtask.id,
-        role: newRole,
+        role: newRole.trim(),
         estimatedHours: hours,
         hourlyRate: rate,
       });
@@ -81,100 +78,119 @@ export default function CostBreakdownSubtaskSection({
   }, [newRole, newHours, newRate, lineId, subtask.id, defaultRate, onAdd]);
 
   const subtaskTotal = estimates.reduce((s, e) => s + e.estimatedHours, 0);
+  const datalistId = `roles-${subtask.id}`;
 
   return (
     <div className="border-t border-border/30 first:border-t-0">
       {/* Subtask header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-muted/5">
-        <span className="text-xs font-medium text-foreground/80">{subtask.name}</span>
-        {subtaskTotal > 0 && (
-          <span className="text-[11px] text-muted-foreground tabular-nums">
-            {subtaskTotal.toFixed(1)} hrs
-          </span>
-        )}
+      <div className="flex items-center justify-between px-4 py-2 bg-muted/20 border-b border-border/25">
+        <span className="text-xs font-semibold text-foreground">{subtask.name}</span>
+        <div className="flex items-center gap-2">
+          {subtaskTotal > 0 && (
+            <span className="text-[11px] text-muted-foreground tabular-nums">
+              {subtaskTotal.toFixed(1)} hrs
+            </span>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 text-muted-foreground hover:text-destructive"
+            title="Remove from breakdown"
+            onClick={onRemove}>
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
       </div>
 
-      {/* Estimates */}
-      <div className="divide-y divide-border/20">
-        {estimates.map((estimate) => (
-          <EstimateRow
-            key={estimate.id}
-            estimate={estimate}
-            roles={roles}
-            lineId={lineId}
-            onUpdate={onUpdate}
-            onDelete={onDelete}
-          />
-        ))}
-
+      {/* Estimates — indented with left accent */}
+      <div className="ml-4 border-l border-border/40">
         {estimates.length === 0 && !adding && (
-          <div className="px-4 py-1.5 text-[11px] text-muted-foreground italic">
+          <div className="px-4 py-1.5 text-[11px] text-red-400 italic">
             No roles assigned
           </div>
         )}
-      </div>
 
-      {/* Add form */}
-      {adding ? (
-        <div className="flex items-center gap-2 px-4 py-2 bg-muted/10">
-          <Select value={newRole} onValueChange={setNewRole}>
-            <SelectTrigger className="h-7 w-40 text-xs">
-              <SelectValue placeholder="Role..." />
-            </SelectTrigger>
-            <SelectContent>
+        <div className="divide-y divide-border/15">
+          {estimates.map((estimate) => (
+            <EstimateRow
+              key={estimate.id}
+              estimate={estimate}
+              roles={roles}
+              lineId={lineId}
+              onUpdate={onUpdate}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+
+        {/* Add form */}
+        {adding ? (
+          <div className="flex items-center gap-2 px-4 py-2 bg-muted/10">
+            <datalist id={datalistId}>
               {availableRoles.map((r) => (
-                <SelectItem key={r.id} value={r.key}>{r.label}</SelectItem>
+                <option key={r.id} value={r.label} />
               ))}
-              {availableRoles.length === 0 && (
-                <SelectItem value="__none" disabled>All roles added</SelectItem>
-              )}
-            </SelectContent>
-          </Select>
-          <Input
-            type="number"
-            min="0"
-            step="0.5"
-            placeholder="Hours"
-            value={newHours}
-            onChange={(e) => setNewHours(e.target.value)}
-            className="h-7 w-20 text-xs"
-          />
-          <Input
-            type="number"
-            min="0"
-            step="1"
-            placeholder="Rate (opt)"
-            value={newRate}
-            onChange={(e) => setNewRate(e.target.value)}
-            className="h-7 w-24 text-xs"
-          />
-          <Button
-            size="sm"
-            className="h-7 text-xs"
-            onClick={handleAdd}
-            disabled={saving || !newRole || !newHours}>
-            Add
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 text-xs"
-            onClick={() => setAdding(false)}>
-            Cancel
-          </Button>
-        </div>
-      ) : (
-        <div className="px-4 pb-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
-            onClick={() => setAdding(true)}>
-            <Plus className="h-3 w-3" />
-            Add Role
-          </Button>
-        </div>
-      )}
+            </datalist>
+            <Input
+              list={datalistId}
+              placeholder="Role..."
+              value={newRole}
+              onChange={(e) => setNewRole(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAdd();
+                if (e.key === 'Escape') setAdding(false);
+              }}
+              className="h-7 w-44 text-xs"
+              autoFocus
+            />
+            <Input
+              type="number"
+              min="0"
+              step="0.5"
+              placeholder="Hours"
+              value={newHours}
+              onChange={(e) => setNewHours(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+              className="h-7 w-20 text-xs"
+            />
+            <Input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Rate (opt)"
+              value={newRate}
+              onChange={(e) => setNewRate(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+              className="h-7 w-24 text-xs"
+            />
+            <Button
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleAdd}
+              disabled={saving || !newRole.trim() || !newHours}>
+              Add
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs"
+              onClick={() => setAdding(false)}>
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <div className="px-4 py-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
+              onClick={() => setAdding(true)}>
+              <Plus className="h-3 w-3" />
+              Add Role
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -191,7 +207,7 @@ function EstimateRow({ estimate, roles, lineId, onUpdate, onDelete }: RowProps) 
   const [hours, setHours] = useState(estimate.estimatedHours.toString());
   const [rate, setRate] = useState(estimate.hourlyRate?.toString() ?? '');
 
-  const roleLabel = roles.find((r) => r.key === estimate.role)?.label ?? estimate.role;
+  const roleLabel = roles.find((r) => r.key === estimate.role || r.label === estimate.role)?.label ?? estimate.role;
   const cost = estimate.hourlyRate != null ? estimate.estimatedHours * estimate.hourlyRate : null;
 
   const handleBlur = useCallback(() => {

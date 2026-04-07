@@ -66,6 +66,19 @@ export default function CostBreakdownLineCard({ line, roles, onChange }: Props) 
     }
   }, [newTaskName, line, onChange]);
 
+  const handleRemoveSubtask = useCallback(
+    async (subtaskId: string) => {
+      const next = [...(line.excludedSubtaskIds ?? []), subtaskId];
+      try {
+        await costBreakdownApi.updateLine(line.id, { excludedSubtaskIds: next });
+        onChange({ ...line, excludedSubtaskIds: next });
+      } catch {
+        toast.error('Failed to remove task');
+      }
+    },
+    [line, onChange],
+  );
+
   const handleAddEstimate = useCallback(
     (created: CostBreakdownRoleEstimate) => {
       onChange({ ...line, roleEstimates: [...line.roleEstimates, created] });
@@ -105,7 +118,11 @@ export default function CostBreakdownLineCard({ line, roles, onChange }: Props) 
     [line, onChange],
   );
 
-  const sortedSubtasks = line.serviceItem.subtasks.slice().sort((a, b) => a.sortOrder - b.sortOrder);
+  const excluded = new Set(line.excludedSubtaskIds ?? []);
+  const visibleSubtasks = line.serviceItem.subtasks
+    .slice()
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .filter((s) => !excluded.has(s.id));
 
   return (
     <div className="rounded-xl border border-border/60 overflow-hidden">
@@ -141,7 +158,7 @@ export default function CostBreakdownLineCard({ line, roles, onChange }: Props) 
       </div>
 
       {/* Subtask sections */}
-      {sortedSubtasks.map((subtask) => (
+      {visibleSubtasks.map((subtask) => (
         <CostBreakdownSubtaskSection
           key={subtask.id}
           subtask={subtask}
@@ -152,6 +169,7 @@ export default function CostBreakdownLineCard({ line, roles, onChange }: Props) 
           onAdd={handleAddEstimate}
           onUpdate={handleUpdateEstimate}
           onDelete={handleDeleteEstimate}
+          onRemove={() => handleRemoveSubtask(subtask.id)}
         />
       ))}
 

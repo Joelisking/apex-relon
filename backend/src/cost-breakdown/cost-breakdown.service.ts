@@ -126,6 +126,19 @@ export class CostBreakdownService {
     });
   }
 
+  async updateLine(lineId: string, dto: { excludedSubtaskIds?: string[] }, tenantId: string) {
+    const line = await this.prisma.costBreakdownLine.findFirst({
+      where: { id: lineId, costBreakdown: { tenantId } },
+    });
+    if (!line) throw new NotFoundException('Cost breakdown line not found');
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.prisma.costBreakdownLine.update({
+      where: { id: lineId },
+      data: dto as any,
+    });
+  }
+
   async deleteRoleEstimate(lineId: string, subtaskId: string, role: string, tenantId: string) {
     const line = await this.prisma.costBreakdownLine.findFirst({
       where: { id: lineId, costBreakdown: { tenantId } },

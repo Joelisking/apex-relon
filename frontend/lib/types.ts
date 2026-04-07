@@ -951,6 +951,7 @@ export interface CostBreakdownLine {
   costBreakdownId: string;
   serviceItemId: string;
   sortOrder: number;
+  excludedSubtaskIds: string[];
   serviceItem: ServiceItem;
   roleEstimates: CostBreakdownRoleEstimate[];
   createdAt: string;
