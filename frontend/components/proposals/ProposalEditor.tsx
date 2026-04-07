@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft, Download, UserRound, PenLine,
-  Search, FileText, Check, Loader2, ChevronDown,
+  Search, FileText, Check, Loader2, ChevronDown, Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -627,32 +627,43 @@ export default function ProposalEditor() {
               <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                 {viewMode === 'preview' ? 'Live Preview' : 'Advanced Edit'}
               </span>
-              <div className="flex gap-0.5">
-                <button
-                  onClick={() => setViewMode('preview')}
-                  className={cn(
-                    'text-[11px] px-2.5 py-1 rounded transition-colors',
-                    viewMode === 'preview'
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                  )}>
-                  Preview
-                </button>
-                <button
-                  onClick={() => setViewMode('advanced')}
-                  className={cn(
-                    'text-[11px] px-2.5 py-1 rounded transition-colors',
-                    viewMode === 'advanced'
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                  )}>
-                  Advanced Edit
-                  {Object.keys(paragraphOverrides).length > 0 && (
-                    <span className="ml-1.5 bg-primary text-primary-foreground text-[9px] font-bold px-1 py-0.5 rounded-full">
-                      {Object.keys(paragraphOverrides).length}
-                    </span>
-                  )}
-                </button>
+              <div className="flex items-center gap-2">
+                {viewMode === 'advanced' && Object.keys(paragraphOverrides).length > 0 && (
+                  <button
+                    onClick={() => setParagraphOverrides({})}
+                    title="Discard all advanced edits"
+                    className="flex items-center gap-1 text-[11px] px-2 py-1 rounded text-destructive hover:bg-destructive/10 transition-colors">
+                    <Trash2 className="h-3 w-3" />
+                    Discard all
+                  </button>
+                )}
+                <div className="flex gap-0.5">
+                  <button
+                    onClick={() => setViewMode('preview')}
+                    className={cn(
+                      'text-[11px] px-2.5 py-1 rounded transition-colors',
+                      viewMode === 'preview'
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                    )}>
+                    Preview
+                  </button>
+                  <button
+                    onClick={() => setViewMode('advanced')}
+                    className={cn(
+                      'text-[11px] px-2.5 py-1 rounded transition-colors',
+                      viewMode === 'advanced'
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                    )}>
+                    Advanced Edit
+                    {Object.keys(paragraphOverrides).length > 0 && (
+                      <span className="ml-1.5 bg-primary text-primary-foreground text-[9px] font-bold px-1 py-0.5 rounded-full">
+                        {Object.keys(paragraphOverrides).length}
+                      </span>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           )}

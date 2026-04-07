@@ -80,6 +80,11 @@ export default function AdvancedEditSection({
     );
   }
 
+  // Only show paragraphs that have actual content OR have been overridden
+  const displayParagraphs = paragraphs.filter(
+    (p) => p.text.trim() !== '' || String(p.index) in overrides,
+  );
+
   return (
     <div className="flex-1 overflow-y-auto bg-muted/20 p-8 h-full">
       <div className="max-w-[680px] mx-auto bg-white rounded-lg shadow-sm border border-border/30 px-10 py-12 min-h-[600px]">
@@ -94,7 +99,7 @@ export default function AdvancedEditSection({
           </p>
         </div>
         <div className="space-y-0.5">
-          {paragraphs.map((para) => {
+          {displayParagraphs.map((para) => {
             const key = String(para.index);
             const isOverridden = key in overrides;
             const value = isOverridden ? overrides[key] : para.text;
