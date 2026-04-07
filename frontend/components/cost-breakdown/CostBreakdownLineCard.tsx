@@ -1,13 +1,17 @@
 'use client';
 
-import { useCallback } from 'react';
-import { Briefcase, Wrench } from 'lucide-react';
+import { useState, useCallback, useRef } from 'react';
+import { Briefcase, Wrench, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
+import { serviceItemsApi } from '@/lib/api/client';
 import type { RoleResponse } from '@/lib/api/roles-client';
 import type { CostBreakdownLine, CostBreakdownRoleEstimate } from '@/lib/types';
 import CostBreakdownSubtaskSection from './CostBreakdownSubtaskSection';
+import { toast } from 'sonner';
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat('en-US', {
@@ -25,6 +29,10 @@ interface Props {
 
 export default function CostBreakdownLineCard({ line, roles, onChange }: Props) {
   const isField = line.serviceItem.description === 'Field';
+  const [addingTask, setAddingTask] = useState(false);
+  const [newTaskName, setNewTaskName] = useState('');
+  const [savingTask, setSavingTask] = useState(false);
+  const taskInputRef = useRef<HTMLInputElement>(null);
 
   const phaseTotal = line.roleEstimates.reduce((s, r) => s + r.estimatedHours, 0);
   const phaseCost = line.roleEstimates.reduce(
@@ -33,14 +41,39 @@ export default function CostBreakdownLineCard({ line, roles, onChange }: Props) 
   );
   const hasMissingRates = line.roleEstimates.some((r) => r.hourlyRate == null);
 
-  const handleAdd = useCallback(
+  const handleAddTask = useCallback(async () => {
+    const name = newTaskName.trim();
+    if (!name) return;
+    setSavingTask(true);
+    try {
+      const created = await serviceItemsApi.createSubtask(line.serviceItemId, {
+        name,
+        sortOrder: line.serviceItem.subtasks.length,
+      });
+      onChange({
+        ...line,
+        serviceItem: {
+          ...line.serviceItem,
+          subtasks: [...line.serviceItem.subtasks, created],
+        },
+      });
+      setNewTaskName('');
+      setAddingTask(false);
+    } catch {
+      toast.error('Failed to add task');
+    } finally {
+      setSavingTask(false);
+    }
+  }, [newTaskName, line, onChange]);
+
+  const handleAddEstimate = useCallback(
     (created: CostBreakdownRoleEstimate) => {
       onChange({ ...line, roleEstimates: [...line.roleEstimates, created] });
     },
     [line, onChange],
   );
 
-  const handleUpdate = useCallback(
+  const handleUpdateEstimate = useCallback(
     async (estimate: CostBreakdownRoleEstimate, hours: number, rate?: number) => {
       try {
         await costBreakdownApi.upsertRoleEstimate(line.id, {
@@ -56,13 +89,13 @@ export default function CostBreakdownLineCard({ line, roles, onChange }: Props) 
           ),
         });
       } catch {
-        // EstimateRow handles its own toast
+        // EstimateRow shows its own toast
       }
     },
     [line, onChange],
   );
 
-  const handleDelete = useCallback(
+  const handleDeleteEstimate = useCallback(
     (estimate: CostBreakdownRoleEstimate) => {
       onChange({
         ...line,
@@ -71,6 +104,8 @@ export default function CostBreakdownLineCard({ line, roles, onChange }: Props) 
     },
     [line, onChange],
   );
+
+  const sortedSubtasks = line.serviceItem.subtasks.slice().sort((a, b) => a.sortOrder - b.sortOrder);
 
   return (
     <div className="rounded-xl border border-border/60 overflow-hidden">
@@ -106,30 +141,54 @@ export default function CostBreakdownLineCard({ line, roles, onChange }: Props) 
       </div>
 
       {/* Subtask sections */}
-      {line.serviceItem.subtasks.length === 0 ? (
-        <div className="px-4 py-3 text-xs text-muted-foreground italic">
-          No subtasks defined for this phase.
-        </div>
-      ) : (
-        <div>
-          {line.serviceItem.subtasks
-            .slice()
-            .sort((a, b) => a.sortOrder - b.sortOrder)
-            .map((subtask) => (
-              <CostBreakdownSubtaskSection
-                key={subtask.id}
-                subtask={subtask}
-                lineId={line.id}
-                estimates={line.roleEstimates.filter((e) => e.subtaskId === subtask.id)}
-                roles={roles}
-                defaultRate={line.serviceItem.defaultPrice}
-                onAdd={handleAdd}
-                onUpdate={handleUpdate}
-                onDelete={handleDelete}
-              />
-            ))}
-        </div>
-      )}
+      {sortedSubtasks.map((subtask) => (
+        <CostBreakdownSubtaskSection
+          key={subtask.id}
+          subtask={subtask}
+          lineId={line.id}
+          estimates={line.roleEstimates.filter((e) => e.subtaskId === subtask.id)}
+          roles={roles}
+          defaultRate={line.serviceItem.defaultPrice}
+          onAdd={handleAddEstimate}
+          onUpdate={handleUpdateEstimate}
+          onDelete={handleDeleteEstimate}
+        />
+      ))}
+
+      {/* Add task footer */}
+      <div className="border-t border-border/30 px-4 py-2">
+        {addingTask ? (
+          <div className="flex items-center gap-2">
+            <Input
+              ref={taskInputRef}
+              autoFocus
+              placeholder="Task name..."
+              value={newTaskName}
+              onChange={(e) => setNewTaskName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAddTask();
+                if (e.key === 'Escape') { setAddingTask(false); setNewTaskName(''); }
+              }}
+              className="h-7 text-xs flex-1"
+            />
+            <Button size="sm" className="h-7 text-xs" onClick={handleAddTask} disabled={savingTask || !newTaskName.trim()}>
+              Add
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setAddingTask(false); setNewTaskName(''); }}>
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
+            onClick={() => setAddingTask(true)}>
+            <Plus className="h-3 w-3" />
+            Add Task
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
