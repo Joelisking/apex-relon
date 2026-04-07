@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -81,10 +81,21 @@ export default function ProposalEditor() {
   const [totalAmount, setTotalAmount] = useState('');
   const [saveAddress, setSaveAddress] = useState(false);
 
+  const [sameAddress, setSameAddress] = useState(false);
+
   const [dynamicValues, setDynamicValues] = useState<Record<string, string>>({});
   const [tableCellValues, setTableCellValues] = useState<Record<string, string>>({});
   const [paragraphOverrides, setParagraphOverrides] = useState<Record<string, string>>({});
   const [viewMode, setViewMode] = useState<ViewMode>('preview');
+
+  // Formatted client address for the "same as client address" checkbox
+  const clientAddressFormatted = useMemo(() => {
+    const cityStateZip = [
+      city,
+      stateVal && zip ? `${stateVal} ${zip}` : stateVal || zip,
+    ].filter(Boolean).join(', ');
+    return [address, cityStateZip].filter(Boolean).join(', ');
+  }, [address, city, stateVal, zip]);
 
   const [generating, setGenerating] = useState(false);
 
@@ -171,6 +182,16 @@ export default function ProposalEditor() {
     setSelectedLead(null);
     setSelectedBreakdown(null);
     setShowBreakdownPicker(false);
+    setFirstName('');
+    setLastName('');
+    setAddress('');
+    setCity('');
+    setStateVal('');
+    setZip('');
+    setProjectName('');
+    setProjectAddress('');
+    setTotalAmount('');
+    setSameAddress(false);
   };
 
   const handleSelectLead = (lead: Lead) => {
@@ -179,6 +200,16 @@ export default function ProposalEditor() {
     if (isDeselecting) {
       setSelectedBreakdown(null);
       setShowBreakdownPicker(false);
+      setFirstName('');
+      setLastName('');
+      setAddress('');
+      setCity('');
+      setStateVal('');
+      setZip('');
+      setProjectName('');
+      setProjectAddress('');
+      setTotalAmount('');
+      setSameAddress(false);
     }
   };
 
@@ -202,7 +233,7 @@ export default function ProposalEditor() {
         timeline: timeline || undefined,
         proposalDate: proposalDate || undefined,
         projectName: projectName || undefined,
-        projectAddress: projectAddress || undefined,
+        projectAddress: (sameAddress ? clientAddressFormatted : projectAddress) || undefined,
         totalAmount: totalAmount || undefined,
         saveAddressToClient: saveAddress && addressFilled ? true : undefined,
         dynamicValues: Object.keys(dynamicValues).length > 0 ? dynamicValues : undefined,
@@ -240,12 +271,14 @@ export default function ProposalEditor() {
     );
   });
 
+  const effectiveProjectAddress = sameAddress ? clientAddressFormatted : projectAddress;
+
   const previewData = {
     salutation, firstName, lastName,
     companyName: companyName ?? '',
     address, city, state: stateVal, zip,
     totalAmount, timeline, proposalDate,
-    projectName, projectAddress,
+    projectName, projectAddress: effectiveProjectAddress,
   };
 
   return (
@@ -518,14 +551,33 @@ export default function ProposalEditor() {
             {/* Project */}
             <div>
               <p className="text-[11px] text-muted-foreground font-medium mb-2">Project</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
                 <div>
                   <Label className="text-[10px] text-muted-foreground block mb-1">Project Name</Label>
                   <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} className="text-sm h-8" placeholder="Project name" />
                 </div>
                 <div>
-                  <Label className="text-[10px] text-muted-foreground block mb-1">Project Address</Label>
-                  <Input value={projectAddress} onChange={(e) => setProjectAddress(e.target.value)} className="text-sm h-8" placeholder="Site address" />
+                  <Label className="text-[10px] text-muted-foreground block mb-1">Project / Site Address</Label>
+                  <Input
+                    value={sameAddress ? clientAddressFormatted : projectAddress}
+                    onChange={(e) => setProjectAddress(e.target.value)}
+                    className="text-sm h-8"
+                    placeholder="Site address"
+                    readOnly={sameAddress}
+                  />
+                </div>
+                <div className="flex items-center gap-2 pt-0.5">
+                  <Checkbox
+                    id="same-address"
+                    checked={sameAddress}
+                    onCheckedChange={(v) => {
+                      setSameAddress(!!v);
+                      if (!v) setProjectAddress('');
+                    }}
+                  />
+                  <label htmlFor="same-address" className="text-[12px] text-muted-foreground cursor-pointer">
+                    Same as client address
+                  </label>
                 </div>
               </div>
             </div>
