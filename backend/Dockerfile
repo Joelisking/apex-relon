@@ -31,13 +31,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Non-root user
 RUN groupadd -g 1001 nodejs && useradd -r -u 1001 -g nodejs nestjs
 
-# Install production deps + prisma CLI (needed for migrate deploy at startup)
+# Install production deps (omit dev)
 COPY package*.json ./
-RUN npm ci --omit=dev && npm install prisma
+RUN npm ci --omit=dev
 
-# Copy generated Prisma client and schema
+# Copy prisma CLI from builder — avoids a second npm install network call
+# @prisma/engines (schema/migration engine) is already pulled in via @prisma below
+
+# Copy generated Prisma client, engines, and CLI from builder
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 COPY --chown=nestjs:nodejs prisma ./prisma
 
 # Copy compiled app
