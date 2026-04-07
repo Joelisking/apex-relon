@@ -1,5 +1,7 @@
-import { apiFetch } from './client';
+import { apiFetch, getTokenFromClientCookies } from './client';
 import type { CostBreakdown, CostBreakdownRoleEstimate } from '../types';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export interface CreateCostBreakdownDto {
   title: string;
@@ -40,4 +42,12 @@ export const costBreakdownApi = {
       `/cost-breakdowns/lines/${lineId}/role-estimates/${encodeURIComponent(subtaskId)}/${encodeURIComponent(role)}`,
       { method: 'DELETE' },
     ),
+  downloadPdf: async (id: string): Promise<Blob> => {
+    const token = getTokenFromClientCookies();
+    const response = await fetch(`${API_URL}/cost-breakdowns/${id}/pdf`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!response.ok) throw new Error(`PDF download failed: ${response.status}`);
+    return response.blob();
+  },
 };

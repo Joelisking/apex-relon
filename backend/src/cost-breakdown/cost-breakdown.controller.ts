@@ -7,11 +7,14 @@ import {
   Put,
   Body,
   Param,
+  Res,
   UseGuards,
   Request,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CostBreakdownService } from './cost-breakdown.service';
+import { PdfService } from '../quotes/pdf.service';
 import { CreateCostBreakdownDto } from './dto/create-cost-breakdown.dto';
 import { UpdateCostBreakdownDto } from './dto/update-cost-breakdown.dto';
 import { UpsertRoleEstimateDto } from './dto/upsert-role-estimate.dto';
@@ -21,7 +24,10 @@ const TENANT_ID = 'apex';
 @UseGuards(JwtAuthGuard)
 @Controller('cost-breakdowns')
 export class CostBreakdownController {
-  constructor(private readonly service: CostBreakdownService) {}
+  constructor(
+    private readonly service: CostBreakdownService,
+    private readonly pdfService: PdfService,
+  ) {}
 
   @Get()
   findAll(@Request() req: any) {
@@ -31,6 +37,17 @@ export class CostBreakdownController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id, TENANT_ID);
+  }
+
+  @Get(':id/pdf')
+  async downloadPdf(@Param('id') id: string, @Res() res: Response) {
+    const buffer = await this.pdfService.generateCostBreakdownPdf(id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="cost-breakdown-${id}.pdf"`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
   }
 
   @Post()

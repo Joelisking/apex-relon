@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, CheckCircle2, FileText } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle2, FileText, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +44,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const [breakdown, setBreakdown] = useState<CostBreakdown | null>(null);
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
@@ -117,6 +118,24 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
       setBreakdown((prev) => (prev ? { ...prev, status: updated.status } : null));
     } catch {
       toast.error('Failed to update status');
+    }
+  }, [breakdown]);
+
+  const handleDownloadPdf = useCallback(async () => {
+    if (!breakdown) return;
+    setDownloading(true);
+    try {
+      const blob = await costBreakdownApi.downloadPdf(breakdown.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cost-breakdown-${breakdown.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Failed to download PDF');
+    } finally {
+      setDownloading(false);
     }
   }, [breakdown]);
 
@@ -282,8 +301,17 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
               'Revert to Draft'
             )}
           </Button>
-          <Button size="sm" variant="ghost" disabled className="text-muted-foreground cursor-not-allowed">
-            Generate Proposal
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleDownloadPdf}
+            disabled={downloading}>
+            {downloading ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            Download PDF
           </Button>
         </div>
       </div>

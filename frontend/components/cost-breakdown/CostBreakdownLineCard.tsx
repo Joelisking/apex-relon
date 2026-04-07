@@ -180,9 +180,9 @@ export default function CostBreakdownLineCard({ line, roles, onChange }: Props) 
           </div>
         ) : (
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="h-6 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
+            className="h-6 text-[11px] gap-1 border-dashed text-muted-foreground hover:text-foreground hover:border-border/80 w-full justify-center"
             onClick={() => setAddingTask(true)}>
             <Plus className="h-3 w-3" />
             Add Task
