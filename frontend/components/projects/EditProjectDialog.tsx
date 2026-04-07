@@ -44,8 +44,9 @@ import { UserPicker } from '@/components/ui/user-picker';
 import { toast } from 'sonner';
 import { projectsApi, type Project, type ProjectAssignment } from '@/lib/api/projects-client';
 import { usersApi, type UserDirectoryItem } from '@/lib/api/users-client';
-import { clientsApi, leadsApi, settingsApi } from '@/lib/api/client';
+import { clientsApi, leadsApi, settingsApi, serviceItemsApi } from '@/lib/api/client';
 import { useQuery } from '@tanstack/react-query';
+import type { ProjectServiceItem } from '@/lib/types';
 import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
 import type { DropdownOption, ServiceCategory } from '@/lib/types';
 import { ServiceTypeSelector } from '@/components/settings/ServiceTypeSelector';
@@ -121,12 +122,36 @@ export function EditProjectDialog({
   );
   const [geocodedLat, setGeocodedLat] = useState<number | null>(project.latitude ?? null);
   const [geocodedLng, setGeocodedLng] = useState<number | null>(project.longitude ?? null);
+  const [projectServiceItems, setProjectServiceItems] = useState<ProjectServiceItem[]>([]);
+  const [serviceItemPickerValue, setServiceItemPickerValue] = useState('');
 
   const { data: serviceCategories = [] } = useQuery<ServiceCategory[]>({
     queryKey: ['service-categories'],
     queryFn: () => settingsApi.getServiceCategories(),
     staleTime: 10 * 60 * 1000,
   });
+
+  const { data: allServiceItems = [] } = useQuery({
+    queryKey: ['service-items'],
+    queryFn: () => serviceItemsApi.getAll(),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const linkedServiceItemIds = useMemo(
+    () => new Set(projectServiceItems.map((l) => l.serviceItemId)),
+    [projectServiceItems],
+  );
+
+  const filteredServiceItems = useMemo(
+    () =>
+      allServiceItems
+        .filter((si) => si.isActive && !linkedServiceItemIds.has(si.id))
+        .filter((si) => {
+          if (selectedServiceTypeIds.length === 0) return true;
+          return si.serviceTypeIds.some((id) => selectedServiceTypeIds.includes(id));
+        }),
+    [allServiceItems, linkedServiceItemIds, selectedServiceTypeIds],
+  );
 
   function toggleCategory(id: string) {
     setSelectedCategoryIds((prev) =>
@@ -138,6 +163,26 @@ export function EditProjectDialog({
     setSelectedServiceTypeIds((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
     );
+  }
+
+  async function addServiceItemToProject(serviceItemId: string) {
+    if (!serviceItemId) return;
+    setServiceItemPickerValue('');
+    try {
+      const link = await projectsApi.addServiceItem(project.id, { serviceItemId });
+      setProjectServiceItems((prev) => [...prev, link]);
+    } catch {
+      toast.error('Failed to add service item');
+    }
+  }
+
+  async function removeServiceItemFromProject(linkId: string) {
+    try {
+      await projectsApi.removeServiceItem(project.id, linkId);
+      setProjectServiceItems((prev) => prev.filter((l) => l.id !== linkId));
+    } catch {
+      toast.error('Failed to remove service item');
+    }
   }
 
   type FormValues = z.infer<typeof formSchema>;
@@ -194,6 +239,8 @@ export function EditProjectDialog({
       project.costSegments?.map((s) => ({ name: s.name, amount: s.amount, sortOrder: s.sortOrder })) ?? [],
     );
     setActiveOptionalStages(project.activeOptionalStages ?? []);
+    setProjectServiceItems([]);
+    setServiceItemPickerValue('');
   }, [project.id]);
 
   // Derive a single service type name for stage filtering (only when exactly one is selected)
@@ -230,10 +277,11 @@ export function EditProjectDialog({
     if (!open) return;
     const fetchData = async () => {
       try {
-        const [clientsData, leadsData, usersRes] = await Promise.all([
+        const [clientsData, leadsData, usersRes, serviceItemLinks] = await Promise.all([
           clientsApi.getAll(),
           leadsApi.getAll(),
           usersApi.getUsersDirectory(),
+          projectsApi.getServiceItems(project.id),
         ]);
 
         setClients(
@@ -244,12 +292,13 @@ export function EditProjectDialog({
         );
         setLeads(Array.isArray(leadsData) ? leadsData : []);
         setUsers(usersRes.users || []);
+        setProjectServiceItems(serviceItemLinks);
       } catch (error) {
         console.error('Failed to load form data', error);
       }
     };
     fetchData();
-  }, [open]);
+  }, [open, project.id]);
 
   const watchedContractedValue = form.watch('contractedValue');
 
@@ -596,6 +645,57 @@ export function EditProjectDialog({
                   onServiceTypeToggle={toggleServiceType}
                 />
               </div>
+
+              {/* Service Items */}
+              {allServiceItems.some((si) => si.isActive) && (
+                <div className="col-span-2 space-y-2">
+                  <p className="text-sm font-medium leading-none">Service Items</p>
+                  {projectServiceItems.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {projectServiceItems.map((link) => (
+                        <div
+                          key={link.id}
+                          className="flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1">
+                          <span className="text-sm font-medium">{link.serviceItem.name}</span>
+                          {link.serviceItem.unit && (
+                            <Badge variant="secondary" className="h-4 px-1 text-[10px]">
+                              {link.serviceItem.unit}
+                            </Badge>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeServiceItemFromProject(link.id)}
+                            className="ml-0.5 text-muted-foreground hover:text-destructive">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {filteredServiceItems.length > 0 && (
+                    <UserPicker
+                      users={filteredServiceItems.map((si) => ({
+                        id: si.id,
+                        name: si.unit ? `${si.name} (${si.unit})` : si.name,
+                      }))}
+                      value={serviceItemPickerValue}
+                      onChange={(val) => { if (val) addServiceItemToProject(val); }}
+                      placeholder={
+                        selectedServiceTypeIds.length > 0
+                          ? 'Add a service item for this type…'
+                          : 'Add a service item…'
+                      }
+                    />
+                  )}
+                  {filteredServiceItems.length === 0 && projectServiceItems.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {selectedServiceTypeIds.length > 0
+                        ? 'No service items match the selected service types.'
+                        : 'No active service items available.'}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Risk Status */}
               <FormField

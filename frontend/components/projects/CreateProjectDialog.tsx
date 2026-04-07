@@ -45,7 +45,7 @@ import { UserPicker } from '@/components/ui/user-picker';
 import { toast } from 'sonner';
 import { projectsApi } from '@/lib/api/projects-client';
 import { usersApi, type UserDirectoryItem } from '@/lib/api/users-client';
-import { clientsApi, leadsApi, settingsApi } from '@/lib/api/client';
+import { clientsApi, leadsApi, settingsApi, serviceItemsApi } from '@/lib/api/client';
 import { useQuery } from '@tanstack/react-query';
 import {
   pipelineApi,
@@ -122,6 +122,8 @@ export function CreateProjectDialog({
   const [activeOptionalStages, setActiveOptionalStages] = useState<string[]>([]);
   const [geocodedLat, setGeocodedLat] = useState<number | null>(null);
   const [geocodedLng, setGeocodedLng] = useState<number | null>(null);
+  const [selectedServiceItemIds, setSelectedServiceItemIds] = useState<string[]>([]);
+  const [serviceItemPickerValue, setServiceItemPickerValue] = useState('');
 
   const { data: serviceCategories = [] } = useQuery<
     ServiceCategory[]
@@ -130,6 +132,29 @@ export function CreateProjectDialog({
     queryFn: () => settingsApi.getServiceCategories(),
     staleTime: 10 * 60 * 1000,
   });
+
+  const { data: allServiceItems = [] } = useQuery({
+    queryKey: ['service-items'],
+    queryFn: () => serviceItemsApi.getAll(),
+    staleTime: 10 * 60 * 1000,
+    enabled: open,
+  });
+
+  const filteredServiceItems = useMemo(
+    () =>
+      allServiceItems
+        .filter((si) => si.isActive && !selectedServiceItemIds.includes(si.id))
+        .filter((si) => {
+          if (selectedServiceTypeIds.length === 0) return true;
+          return si.serviceTypeIds.some((id) => selectedServiceTypeIds.includes(id));
+        }),
+    [allServiceItems, selectedServiceItemIds, selectedServiceTypeIds],
+  );
+
+  const selectedServiceItems = useMemo(
+    () => allServiceItems.filter((si) => selectedServiceItemIds.includes(si.id)),
+    [allServiceItems, selectedServiceItemIds],
+  );
 
   function toggleCategory(id: string) {
     setSelectedCategoryIds((prev) =>
@@ -145,6 +170,17 @@ export function CreateProjectDialog({
         ? prev.filter((s) => s !== id)
         : [...prev, id],
     );
+  }
+
+  function addServiceItemSelection(id: string) {
+    if (id && !selectedServiceItemIds.includes(id)) {
+      setSelectedServiceItemIds((prev) => [...prev, id]);
+    }
+    setServiceItemPickerValue('');
+  }
+
+  function removeServiceItemSelection(id: string) {
+    setSelectedServiceItemIds((prev) => prev.filter((i) => i !== id));
   }
 
   type FormValues = z.infer<typeof formSchema>;
@@ -249,7 +285,7 @@ export function CreateProjectDialog({
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setLoading(true);
-      await projectsApi.create({
+      const project = await projectsApi.create({
         ...values,
         isIndot: values.isIndot,
         contractedValue: Number(values.contractedValue),
@@ -281,6 +317,13 @@ export function CreateProjectDialog({
         latitude: geocodedLat ?? (values.latitude ? Number(values.latitude) : undefined),
         longitude: geocodedLng ?? (values.longitude ? Number(values.longitude) : undefined),
       });
+      if (selectedServiceItemIds.length > 0) {
+        await Promise.all(
+          selectedServiceItemIds.map((serviceItemId) =>
+            projectsApi.addServiceItem(project.id, { serviceItemId }),
+          ),
+        );
+      }
       toast.success('Project created successfully');
       onProjectCreated();
       onOpenChange(false);
@@ -288,6 +331,8 @@ export function CreateProjectDialog({
       setPendingTeamMemberIds([]);
       setSelectedCategoryIds([]);
       setSelectedServiceTypeIds([]);
+      setSelectedServiceItemIds([]);
+      setServiceItemPickerValue('');
       setCostSegments([]);
       setActiveOptionalStages([]);
       setGeocodedLat(null);
@@ -612,6 +657,57 @@ export function CreateProjectDialog({
                   onServiceTypeToggle={toggleServiceType}
                 />
               </div>
+
+              {/* Service Items */}
+              {allServiceItems.some((si) => si.isActive) && (
+                <div className="col-span-2 space-y-2">
+                  <p className="text-sm font-medium leading-none">Service Items</p>
+                  {selectedServiceItems.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedServiceItems.map((si) => (
+                        <div
+                          key={si.id}
+                          className="flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1">
+                          <span className="text-sm font-medium">{si.name}</span>
+                          {si.unit && (
+                            <Badge variant="secondary" className="h-4 px-1 text-[10px]">
+                              {si.unit}
+                            </Badge>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeServiceItemSelection(si.id)}
+                            className="ml-0.5 text-muted-foreground hover:text-destructive">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {filteredServiceItems.length > 0 && (
+                    <UserPicker
+                      users={filteredServiceItems.map((si) => ({
+                        id: si.id,
+                        name: si.unit ? `${si.name} (${si.unit})` : si.name,
+                      }))}
+                      value={serviceItemPickerValue}
+                      onChange={(val) => { if (val) addServiceItemSelection(val); }}
+                      placeholder={
+                        selectedServiceTypeIds.length > 0
+                          ? 'Add a service item for this type…'
+                          : 'Add a service item…'
+                      }
+                    />
+                  )}
+                  {filteredServiceItems.length === 0 && selectedServiceItems.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {selectedServiceTypeIds.length > 0
+                        ? 'No service items match the selected service types.'
+                        : 'No active service items available.'}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Risk Status */}
               <FormField

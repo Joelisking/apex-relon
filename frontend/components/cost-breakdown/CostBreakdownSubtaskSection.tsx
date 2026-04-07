@@ -4,10 +4,23 @@ import { useState, useCallback } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
 import type { RoleResponse } from '@/lib/api/roles-client';
 import type { ServiceItemSubtask, CostBreakdownRoleEstimate } from '@/lib/types';
 import { toast } from 'sonner';
+
+const SKIP_REMOVE_KEY = 'cb.skipRemoveSubtask';
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat('en-US', {
@@ -45,6 +58,8 @@ export default function CostBreakdownSubtaskSection({
   const [newHours, setNewHours] = useState('');
   const [newRate, setNewRate] = useState(defaultRate != null ? String(defaultRate) : '');
   const [saving, setSaving] = useState(false);
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   // Roles already added to this subtask (by key or free-text value)
   const usedRoles = new Set(estimates.map((e) => e.role));
@@ -96,7 +111,14 @@ export default function CostBreakdownSubtaskSection({
             size="icon"
             className="h-5 w-5 text-muted-foreground hover:text-destructive"
             title="Remove from breakdown"
-            onClick={onRemove}>
+            onClick={() => {
+              if (localStorage.getItem(SKIP_REMOVE_KEY) === 'true') {
+                onRemove();
+              } else {
+                setDontShowAgain(false);
+                setShowRemoveDialog(true);
+              }
+            }}>
             <X className="h-3 w-3" />
           </Button>
         </div>
@@ -191,6 +213,39 @@ export default function CostBreakdownSubtaskSection({
           </div>
         )}
       </div>
+
+      <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove task from breakdown?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{subtask.name}</strong> will be hidden from this cost breakdown. The task itself
+              is not deleted and can still be seen in the service item settings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex items-center gap-2 px-1 pb-2">
+            <Checkbox
+              id="dont-show-again"
+              checked={dontShowAgain}
+              onCheckedChange={(v) => setDontShowAgain(v === true)}
+            />
+            <label htmlFor="dont-show-again" className="text-sm text-muted-foreground cursor-pointer select-none">
+              Don't show this again
+            </label>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (dontShowAgain) localStorage.setItem(SKIP_REMOVE_KEY, 'true');
+                onRemove();
+              }}>
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
