@@ -97,6 +97,10 @@ const editLeadSchema = z.object({
     .min(0, 'Value must be positive')
     .optional(),
   projectName: z.string().min(1, 'Project name is required'),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip: z.string().optional(),
   stage: z.string().min(1, 'Stage is required'),
   serviceTypeId: z.string().optional(),
   urgency: z.string().min(1, 'Urgency is required'),
@@ -195,6 +199,10 @@ export function EditLeadDialog({
     expectedValue: l.expectedValue ?? 0,
     contractedValue: l.contractedValue ?? undefined,
     projectName: l.projectName || '',
+    address: l.address || '',
+    city: l.city || '',
+    state: l.state || '',
+    zip: l.zip || '',
     stage: l.stage || 'New',
     serviceTypeId: l.serviceTypeId || '',
     urgency: l.urgency || 'Medium',
@@ -300,6 +308,10 @@ export function EditLeadDialog({
         expectedValue: data.expectedValue,
         contractedValue: data.contractedValue ?? undefined,
         projectName: data.projectName,
+        address: data.address || undefined,
+        city: data.city || undefined,
+        state: data.state || undefined,
+        zip: data.zip || undefined,
         stage: data.stage,
         serviceTypeId: selectedServiceTypeIds[0] || undefined,
         categoryIds: selectedCategoryIds,
@@ -395,7 +407,7 @@ export function EditLeadDialog({
                   </FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="e.g., Office Fitout - Level 3"
+                      placeholder="e.g., Oldsdale Addition Lot 20 – Boundary Survey"
                       {...field}
                     />
                   </FormControl>
@@ -403,6 +415,61 @@ export function EditLeadDialog({
                 </FormItem>
               )}
             />
+
+            {/* Mailing Address */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Mailing Address</p>
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input placeholder="Street address" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-3 gap-2">
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input placeholder="City" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input placeholder="State" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="zip"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input placeholder="ZIP" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               {/* Contact Name with autocomplete */}

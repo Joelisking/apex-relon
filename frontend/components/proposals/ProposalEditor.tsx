@@ -151,6 +151,10 @@ export default function ProposalEditor() {
     setFirstName(first);
     setLastName(last);
     if (selectedLead.projectName) setProjectName(selectedLead.projectName);
+    if (selectedLead.address) setAddress(selectedLead.address);
+    if (selectedLead.city) setCity(selectedLead.city);
+    if (selectedLead.state) setStateVal(selectedLead.state);
+    if (selectedLead.zip) setZip(selectedLead.zip);
   }, [selectedLead]);
 
   // Pre-fill fee from selected breakdown

@@ -33,6 +33,10 @@ export interface CreateLeadDto {
   expectedValue: number;
   contractedValue?: number;
   projectName?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
   stage: string;
   serviceTypeId?: string;
   categoryIds?: string[];
@@ -55,6 +59,10 @@ export interface UpdateLeadDto {
   expectedValue?: number;
   contractedValue?: number;
   projectName?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
   stage?: string;
   serviceTypeId?: string;
   categoryIds?: string[];

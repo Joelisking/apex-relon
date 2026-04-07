@@ -229,6 +229,10 @@ export interface Lead {
   expectedValue: number;
   contractedValue?: number | null;
   projectName?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
   stage: string;
   serviceTypeId?: string | null;
   serviceType?: ServiceType | null;

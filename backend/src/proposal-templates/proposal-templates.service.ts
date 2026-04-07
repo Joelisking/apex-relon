@@ -247,6 +247,10 @@ export class ProposalTemplatesService implements OnModuleInit {
     let crmLastName = '';
     let companyName = '';
     let derivedProjectName = '';
+    let derivedAddress = '';
+    let derivedCity = '';
+    let derivedState = '';
+    let derivedZip = '';
 
     if (dto.leadId) {
       const lead = await this.prisma.lead.findUnique({
@@ -271,6 +275,12 @@ export class ProposalTemplatesService implements OnModuleInit {
 
       companyName = lead.company ?? '';
       derivedProjectName = lead.projectName ?? '';
+      // address/city/state/zip added in migration — cast until Prisma client regenerates
+      const leadAny = lead as unknown as Record<string, string | null>;
+      derivedAddress = leadAny['address'] ?? '';
+      derivedCity = leadAny['city'] ?? '';
+      derivedState = leadAny['state'] ?? '';
+      derivedZip = leadAny['zip'] ?? '';
       clientId = lead.clientId ?? null;
 
       if (dto.saveAddressToClient && clientId && dto.address) {
@@ -292,11 +302,11 @@ export class ProposalTemplatesService implements OnModuleInit {
       fullName: `${firstName} ${lastName}`.trim(),
       salutation: dto.salutation ?? '',
       companyName,
-      address: dto.address ?? '',
+      address: dto.address ?? derivedAddress,
       suite: dto.suite ?? '',
-      city: dto.city ?? '',
-      state: dto.state ?? '',
-      zip: dto.zip ?? '',
+      city: dto.city ?? derivedCity,
+      state: dto.state ?? derivedState,
+      zip: dto.zip ?? derivedZip,
       projectName: dto.projectName ?? derivedProjectName,
       projectAddress: dto.projectAddress ?? '',
       projectDescription: '',

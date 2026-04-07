@@ -79,6 +79,22 @@ export class CreateLeadDto {
   @IsOptional()
   projectName?: string;
 
+  @IsString()
+  @IsOptional()
+  address?: string;
+
+  @IsString()
+  @IsOptional()
+  city?: string;
+
+  @IsString()
+  @IsOptional()
+  state?: string;
+
+  @IsString()
+  @IsOptional()
+  zip?: string;
+
   @IsNumber()
   @Min(0)
   @IsOptional()

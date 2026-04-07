@@ -25,6 +25,10 @@ model Lead {
   aiSummary           String?
   aiRecommendations   String?
   projectName         String?
+  address             String?
+  city                String?
+  state               String?
+  zip                 String?
   contractedValue     Float?
   quoteSentAt         DateTime?
   dealClosedAt        DateTime?

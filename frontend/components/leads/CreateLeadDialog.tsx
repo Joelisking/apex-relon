@@ -117,6 +117,10 @@ const createLeadSchema = z.object({
     .min(0, 'Value must be positive')
     .optional(),
   projectName: z.string().min(1, 'Project name is required'),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip: z.string().optional(),
   stage: z.string().min(1, 'Stage is required'),
   serviceTypeId: z.string().optional(),
   urgency: z.string().min(1, 'Urgency is required'),
@@ -224,6 +228,10 @@ export function CreateLeadDialog({
       expectedValue: 0,
       contractedValue: undefined,
       projectName: '',
+      address: '',
+      city: '',
+      state: '',
+      zip: '',
       stage: '',
       serviceTypeId: '',
       urgency: '',
@@ -332,6 +340,10 @@ export function CreateLeadDialog({
         expectedValue: data.expectedValue,
         contractedValue: data.contractedValue ?? undefined,
         projectName: data.projectName,
+        address: data.address || undefined,
+        city: data.city || undefined,
+        state: data.state || undefined,
+        zip: data.zip || undefined,
         stage: data.stage,
         serviceTypeId: selectedServiceTypeIds[0] || undefined,
         categoryIds:
@@ -606,6 +618,63 @@ export function CreateLeadDialog({
                           onChange={field.onChange}
                           placeholder="Pick a date"
                         />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Address */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                Mailing Address
+              </p>
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input placeholder="Street address" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-3 gap-2">
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input placeholder="City" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input placeholder="State" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="zip"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input placeholder="ZIP" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
