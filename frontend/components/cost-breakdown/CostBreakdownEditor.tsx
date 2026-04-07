@@ -17,10 +17,9 @@ import {
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
 import { settingsApi, leadsApi } from '@/lib/api/client';
-import { projectsApi } from '@/lib/api/projects-client';
 import { rolesApi } from '@/lib/api/roles-client';
 import type { RoleResponse } from '@/lib/api/roles-client';
-import type { CostBreakdown, CostBreakdownLine, ServiceType, Lead, Project } from '@/lib/types';
+import type { CostBreakdown, CostBreakdownLine, ServiceType, Lead } from '@/lib/types';
 import CostBreakdownLineCard from './CostBreakdownLineCard';
 import { toast } from 'sonner';
 
@@ -49,28 +48,34 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
   const [breakdown, setBreakdown] = useState<CostBreakdown | null>(null);
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [roles, setRoles] = useState<RoleResponse[]>([]);
 
   // Create-mode form
   const [title, setTitle] = useState('');
   const [serviceTypeId, setServiceTypeId] = useState('');
-  const [linkType, setLinkType] = useState<'none' | 'project' | 'lead'>('none');
-  const [linkedId, setLinkedId] = useState('');
+  const [leadId, setLeadId] = useState('');
+  const [titleManuallyEdited, setTitleManuallyEdited] = useState(false);
+
+  // Auto-populate title from the selected lead's project/company name
+  useEffect(() => {
+    if (!leadId || titleManuallyEdited) return;
+    const lead = leads.find((l) => l.id === leadId);
+    if (lead) {
+      setTitle(lead.projectName || lead.company || lead.contactName);
+    }
+  }, [leadId, leads, titleManuallyEdited]);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       try {
-        const [fetchedTypes, fetchedLeads, fetchedProjects, fetchedRoles] = await Promise.all([
+        const [fetchedTypes, fetchedLeads, fetchedRoles] = await Promise.all([
           settingsApi.getServiceTypes(),
           leadsApi.getAll(),
-          projectsApi.getAll(),
           rolesApi.getAll(),
         ]);
         setServiceTypes(fetchedTypes);
         setLeads(fetchedLeads);
-        setProjects(fetchedProjects);
         setRoles(fetchedRoles);
 
         if (breakdownId) {
@@ -93,8 +98,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
       const created = await costBreakdownApi.create({
         title: title.trim(),
         serviceTypeId: serviceTypeId || undefined,
-        projectId: linkType === 'project' ? linkedId || undefined : undefined,
-        leadId: linkType === 'lead' ? linkedId || undefined : undefined,
+        leadId: leadId || undefined,
       });
       router.push(`/cost-breakdown/${created.id}`);
     } catch (err) {
@@ -103,7 +107,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
     } finally {
       setSaving(false);
     }
-  }, [title, serviceTypeId, linkType, linkedId, router]);
+  }, [title, serviceTypeId, leadId, router]);
 
   const handleStatusToggle = useCallback(async () => {
     if (!breakdown) return;
@@ -151,7 +155,6 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
       value: l.id,
       label: l.company ? `${l.company} — ${l.contactName}` : l.contactName,
     }));
-    const projectOptions = projects.map((p) => ({ value: p.id, label: p.name }));
 
     return (
       <div className="max-w-lg mx-auto space-y-6 pt-4">
@@ -165,17 +168,29 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             Cost Breakdown
           </Button>
           <h1 className="text-2xl font-display tracking-tight">New Cost Breakdown</h1>
-          <p className="text-sm text-muted-foreground">Set up an estimating document for a project</p>
+          <p className="text-sm text-muted-foreground">Set up an estimating document for a prospective project</p>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card p-6 space-y-5">
+          <div className="space-y-1.5">
+            <Label>Prospective Project</Label>
+            <SearchableSelect
+              value={leadId}
+              onValueChange={(val) => { setLeadId(val); setTitleManuallyEdited(false); }}
+              options={leadOptions}
+              placeholder="Select prospective project..."
+              searchPlaceholder="Search..."
+              emptyMessage="No prospective projects found."
+            />
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="cb-title">Title</Label>
             <Input
               id="cb-title"
               placeholder="e.g. Boundary Survey — Smith Property"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => { setTitle(e.target.value); setTitleManuallyEdited(true); }}
               onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
             />
           </div>
@@ -195,40 +210,6 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             <p className="text-[11px] text-muted-foreground">
               Phases and tasks will be auto-populated from the job type template.
             </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Link To (optional)</Label>
-            <div className="flex gap-2">
-              {(['none', 'project', 'lead'] as const).map((t) => (
-                <Button
-                  key={t}
-                  size="sm"
-                  variant={linkType === t ? 'default' : 'outline'}
-                  className="h-7 text-xs capitalize"
-                  onClick={() => { setLinkType(t); setLinkedId(''); }}>
-                  {t === 'none' ? 'None' : t === 'project' ? 'Project' : 'Lead'}
-                </Button>
-              ))}
-            </div>
-            {linkType === 'project' && (
-              <SearchableSelect
-                value={linkedId}
-                onValueChange={setLinkedId}
-                options={projectOptions}
-                placeholder="Select project..."
-                searchPlaceholder="Search projects..."
-              />
-            )}
-            {linkType === 'lead' && (
-              <SearchableSelect
-                value={linkedId}
-                onValueChange={setLinkedId}
-                options={leadOptions}
-                placeholder="Select lead..."
-                searchPlaceholder="Search leads..."
-              />
-            )}
           </div>
         </div>
 

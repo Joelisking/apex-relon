@@ -29,7 +29,10 @@ export function ServiceItemsView() {
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
   const [roles, setRoles] = useState<SystemRole[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // expandedGroup tracks which name-group is open
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  // selectedVariant maps group name → active item ID within that group
+  const [selectedVariant, setSelectedVariant] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<ServiceItem | null>(null);
   const [newItem, setNewItem] = useState({ name: '', description: '', serviceTypeIds: [] as string[], unit: '', defaultPrice: '', isActive: true, isIndot: false });
   const [adding, setAdding] = useState(false);
@@ -96,7 +99,7 @@ export function ServiceItemsView() {
     }
   };
 
-  const handleStartEdit = (item: ServiceItem) => {
+  const handleStartEdit = (item: ServiceItem, groupName?: string) => {
     setEditForm({
       name: item.name,
       description: item.description ?? '',
@@ -107,6 +110,7 @@ export function ServiceItemsView() {
       isIndot: item.isIndot,
     });
     setEditingId(item.id);
+    if (groupName) setExpandedGroup(groupName);
   };
 
   const handleSaveEdit = async (itemId: string) => {
@@ -177,6 +181,19 @@ export function ServiceItemsView() {
     }
   };
 
+  // Group items by name, preserving sort order of first occurrence
+  const groupedItems: ServiceItem[][] = [];
+  const seenNames = new Map<string, number>();
+  for (const item of [...items].sort((a, b) => a.sortOrder - b.sortOrder)) {
+    const idx = seenNames.get(item.name);
+    if (idx !== undefined) {
+      groupedItems[idx].push(item);
+    } else {
+      seenNames.set(item.name, groupedItems.length);
+      groupedItems.push([item]);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -192,197 +209,234 @@ export function ServiceItemsView() {
         <p className="text-muted-foreground mt-1">Billable deliverables used in quotes and time entries. Define subtasks and per-role hour estimates for scope of work generation.</p>
       </div>
 
-      {/* Items List */}
+      {/* Items List — grouped by name */}
       <div className="space-y-2">
-        {items.length === 0 ? (
+        {groupedItems.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-sm text-muted-foreground">No service items yet. Add one below.</CardContent>
           </Card>
-        ) : items.map((item) => (
-          <Card key={item.id}>
-            <Collapsible open={expandedId === item.id} onOpenChange={(o) => setExpandedId(o ? item.id : null)}>
-              <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors rounded-t-lg py-3">
-                  <div className="flex items-center gap-3">
-                    {expandedId === item.id
-                      ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium">{item.name}</span>
-                        {serviceTypes.filter((st) => item.serviceTypeIds?.includes(st.id)).map((st) => (
-                          <Badge key={st.id} variant="secondary" className="text-xs">{st.name}</Badge>
-                        ))}
-                        {item.unit && <Badge variant="outline" className="text-xs">{item.unit}</Badge>}
-                        {item.defaultPrice != null && <span className="text-sm text-muted-foreground">${item.defaultPrice.toFixed(2)}</span>}
-                        {item.qbItemId && <Badge variant="outline" className="text-xs text-green-700 border-green-300">QB Synced</Badge>}
-                        {item.isIndot && <Badge variant="outline" className="text-xs text-blue-700 border-blue-300">INDOT</Badge>}
-                        {!item.isActive && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
+        ) : groupedItems.map((group) => {
+          const groupName = group[0].name;
+          const isGrouped = group.length > 1;
+          const isExpanded = expandedGroup === groupName;
+          const activeId = selectedVariant[groupName] ?? group[0].id;
+          const activeItem = group.find((i) => i.id === activeId) ?? group[0];
+
+          return (
+            <Card key={groupName}>
+              <Collapsible
+                open={isExpanded}
+                onOpenChange={(o) => {
+                  setExpandedGroup(o ? groupName : null);
+                  if (o && !selectedVariant[groupName]) {
+                    setSelectedVariant((p) => ({ ...p, [groupName]: group[0].id }));
+                  }
+                }}
+              >
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors rounded-t-lg py-3">
+                    <div className="flex items-center gap-3">
+                      {isExpanded
+                        ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                        : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium">{groupName}</span>
+                          {isGrouped ? (
+                            <Badge variant="secondary" className="text-xs">{group.length} project types</Badge>
+                          ) : (
+                            <>
+                              {serviceTypes.filter((st) => group[0].serviceTypeIds?.includes(st.id)).map((st) => (
+                                <Badge key={st.id} variant="secondary" className="text-xs">{st.name}</Badge>
+                              ))}
+                              {group[0].unit && <Badge variant="outline" className="text-xs">{group[0].unit}</Badge>}
+                              {group[0].defaultPrice != null && <span className="text-sm text-muted-foreground">${group[0].defaultPrice.toFixed(2)}</span>}
+                            </>
+                          )}
+                          {group.some((i) => i.qbItemId) && <Badge variant="outline" className="text-xs text-green-700 border-green-300">QB Synced</Badge>}
+                          {group.some((i) => i.isIndot) && <Badge variant="outline" className="text-xs text-blue-700 border-blue-300">INDOT</Badge>}
+                          {group.every((i) => !i.isActive) && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
+                        </div>
+                        {!isGrouped && group[0].description && (
+                          <p className="text-sm text-muted-foreground mt-0.5 truncate">{group[0].description}</p>
+                        )}
                       </div>
-                      {item.description && <p className="text-sm text-muted-foreground mt-0.5 truncate">{item.description}</p>}
+                      {!isGrouped && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => { e.stopPropagation(); handleStartEdit(group[0], groupName); }}
+                            className="shrink-0">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => { e.stopPropagation(); setDeleteTarget(group[0]); }}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 shrink-0">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => { e.stopPropagation(); handleStartEdit(item); }}
-                      className="shrink-0">
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); }}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 shrink-0">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </CardHeader>
-              </CollapsibleTrigger>
+                  </CardHeader>
+                </CollapsibleTrigger>
 
-              {/* Inline edit form */}
-              {editingId === item.id && (
-                <CardContent className="border-t pt-4 pb-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
-                    <div className="space-y-1.5">
-                      <Label>Name *</Label>
-                      <Input value={editForm.name} onChange={(e) => setEditForm((d) => ({ ...d, name: e.target.value }))} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Project Types</Label>
-                      <MultiSelect
-                        value={editForm.serviceTypeIds}
-                        onValueChange={(v) => setEditForm((d) => ({ ...d, serviceTypeIds: v }))}
-                        placeholder="Select project types…"
-                        searchPlaceholder="Search project types…"
-                        options={serviceTypes.map((st) => ({ value: st.id, label: st.name }))}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Unit</Label>
-                      <Input value={editForm.unit} onChange={(e) => setEditForm((d) => ({ ...d, unit: e.target.value }))} placeholder="e.g., Acre, Lot, Hour" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Default Price ($)</Label>
-                      <Input type="number" min="0" step="0.01" value={editForm.defaultPrice} onChange={(e) => setEditForm((d) => ({ ...d, defaultPrice: e.target.value }))} placeholder="0.00" />
-                    </div>
-                    <div className="space-y-1.5 sm:col-span-2">
-                      <Label>Description</Label>
-                      <Textarea value={editForm.description} onChange={(e) => setEditForm((d) => ({ ...d, description: e.target.value }))} rows={2} />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch checked={editForm.isActive} onCheckedChange={(v) => setEditForm((d) => ({ ...d, isActive: v }))} id={`edit-si-active-${item.id}`} />
-                      <Label htmlFor={`edit-si-active-${item.id}`}>Active</Label>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>INDOT Project?</Label>
-                      <RadioGroup
-                        value={editForm.isIndot ? 'yes' : 'no'}
-                        onValueChange={(v) => setEditForm((d) => ({ ...d, isIndot: v === 'yes' }))}
-                        className="flex gap-6">
-                        <div className="flex items-center gap-2">
-                          <RadioGroupItem value="yes" id={`edit-si-indot-yes-${item.id}`} />
-                          <Label htmlFor={`edit-si-indot-yes-${item.id}`}>Yes</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <RadioGroupItem value="no" id={`edit-si-indot-no-${item.id}`} />
-                          <Label htmlFor={`edit-si-indot-no-${item.id}`}>No</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <Button size="sm" onClick={() => handleSaveEdit(item.id)} disabled={saving} className="gap-1.5">
-                      {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}Save
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditingId(null)} className="gap-1.5">
-                      <X className="h-3.5 w-3.5" />Cancel
-                    </Button>
-                  </div>
-                </CardContent>
-              )}
+                <CollapsibleContent>
+                  <CardContent className="pt-0 pb-4">
+                    <div className="border-t pt-4">
 
-              <CollapsibleContent>
-                <CardContent className="pt-0 pb-4">
-                  <div className="border-t pt-4">
-                    <h4 className="text-sm font-medium mb-3">Subtasks &amp; Role Estimates</h4>
-                    {item.subtasks.length === 0 ? (
-                      <p className="text-sm text-muted-foreground mb-3">No subtasks yet.</p>
-                    ) : (
-                      <div className="space-y-4 mb-4">
-                        {item.subtasks.map((subtask) => (
-                          <div key={subtask.id} className="border rounded-lg p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium">{subtask.name}</span>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleDeleteSubtask(item.id, subtask.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                      {/* Job-type variant selector — only shown when grouped */}
+                      {isGrouped && (
+                        <div className="flex flex-wrap gap-1.5 mb-4">
+                          {group.map((item) => {
+                            const label = serviceTypes
+                              .filter((st) => item.serviceTypeIds?.includes(st.id))
+                              .map((st) => st.name).join(' / ') || 'General';
+                            const isActive = activeId === item.id;
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => setSelectedVariant((p) => ({ ...p, [groupName]: item.id }))}
+                                className={[
+                                  'px-2.5 py-1 text-xs rounded-md border transition-colors',
+                                  isActive
+                                    ? 'bg-primary text-primary-foreground border-primary'
+                                    : 'bg-background text-muted-foreground border-input hover:bg-muted/60',
+                                ].join(' ')}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Active variant metadata row — only shown when grouped */}
+                      {isGrouped && (
+                        <div className="flex items-center gap-2 mb-3 flex-wrap">
+                          <div className="flex gap-2 flex-wrap flex-1 items-center">
+                            {activeItem.unit && <Badge variant="outline" className="text-xs">{activeItem.unit}</Badge>}
+                            {activeItem.defaultPrice != null && <span className="text-sm text-muted-foreground">${activeItem.defaultPrice.toFixed(2)}</span>}
+                            {activeItem.qbItemId && <Badge variant="outline" className="text-xs text-green-700 border-green-300">QB Synced</Badge>}
+                            {activeItem.isIndot && <Badge variant="outline" className="text-xs text-blue-700 border-blue-300">INDOT</Badge>}
+                            {!activeItem.isActive && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleStartEdit(activeItem)}
+                            className="h-7 px-2 shrink-0">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setDeleteTarget(activeItem)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 px-2 shrink-0">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
+
+                      {isGrouped && activeItem.description && (
+                        <p className="text-sm text-muted-foreground mb-3">{activeItem.description}</p>
+                      )}
+
+                      {/* Inline edit form — shown for whichever item is being edited */}
+                      {editingId === activeItem.id && (
+                        <div className="border rounded-lg p-4 mb-4 bg-muted/20">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+                            <div className="space-y-1.5">
+                              <Label>Name *</Label>
+                              <Input value={editForm.name} onChange={(e) => setEditForm((d) => ({ ...d, name: e.target.value }))} />
                             </div>
-                            <Table className="text-xs">
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead className="h-7 py-1">Role</TableHead>
-                                  <TableHead className="h-7 py-1 w-28">Est. Hours</TableHead>
-                                  <TableHead className="h-7 py-1 w-16"></TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {subtask.roleEstimates.map((re) => (
-                                  <TableRow key={re.id}>
-                                    <TableCell className="py-1">
-                                      {roles.find((r) => r.key === re.role)?.label ?? re.role}
-                                    </TableCell>
-                                    <TableCell className="py-1">
-                                      <Input
-                                        className="h-6 text-xs w-20"
-                                        type="number"
-                                        min="0"
-                                        step="0.5"
-                                        defaultValue={re.estimatedHours}
-                                        onBlur={(e) => {
-                                          if (e.target.value !== String(re.estimatedHours)) {
-                                            handleUpsertRole(item.id, subtask.id, re.role, e.target.value);
-                                          }
-                                        }}
-                                      />
-                                    </TableCell>
-                                    <TableCell className="py-1">
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => handleDeleteRole(item.id, subtask.id, re.role)}
-                                        className="text-red-600 hover:text-red-700 hover:bg-red-50 h-6 w-6 p-0">
-                                        <Trash2 className="h-3 w-3" />
-                                      </Button>
-                                    </TableCell>
+                            <div className="space-y-1.5">
+                              <Label>Project Types</Label>
+                              <MultiSelect
+                                value={editForm.serviceTypeIds}
+                                onValueChange={(v) => setEditForm((d) => ({ ...d, serviceTypeIds: v }))}
+                                placeholder="Select project types…"
+                                searchPlaceholder="Search project types…"
+                                options={serviceTypes.map((st) => ({ value: st.id, label: st.name }))}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label>Unit</Label>
+                              <Input value={editForm.unit} onChange={(e) => setEditForm((d) => ({ ...d, unit: e.target.value }))} placeholder="e.g., Acre, Lot, Hour" />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label>Default Price ($)</Label>
+                              <Input type="number" min="0" step="0.01" value={editForm.defaultPrice} onChange={(e) => setEditForm((d) => ({ ...d, defaultPrice: e.target.value }))} placeholder="0.00" />
+                            </div>
+                            <div className="space-y-1.5 sm:col-span-2">
+                              <Label>Description</Label>
+                              <Textarea value={editForm.description} onChange={(e) => setEditForm((d) => ({ ...d, description: e.target.value }))} rows={2} />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Switch checked={editForm.isActive} onCheckedChange={(v) => setEditForm((d) => ({ ...d, isActive: v }))} id={`edit-si-active-${activeItem.id}`} />
+                              <Label htmlFor={`edit-si-active-${activeItem.id}`}>Active</Label>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label>INDOT Project?</Label>
+                              <RadioGroup
+                                value={editForm.isIndot ? 'yes' : 'no'}
+                                onValueChange={(v) => setEditForm((d) => ({ ...d, isIndot: v === 'yes' }))}
+                                className="flex gap-6">
+                                <div className="flex items-center gap-2">
+                                  <RadioGroupItem value="yes" id={`edit-si-indot-yes-${activeItem.id}`} />
+                                  <Label htmlFor={`edit-si-indot-yes-${activeItem.id}`}>Yes</Label>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <RadioGroupItem value="no" id={`edit-si-indot-no-${activeItem.id}`} />
+                                  <Label htmlFor={`edit-si-indot-no-${activeItem.id}`}>No</Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 mt-4">
+                            <Button size="sm" onClick={() => handleSaveEdit(activeItem.id)} disabled={saving} className="gap-1.5">
+                              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}Save
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingId(null)} className="gap-1.5">
+                              <X className="h-3.5 w-3.5" />Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Subtasks & Role Estimates */}
+                      <h4 className="text-sm font-medium mb-3">Subtasks &amp; Role Estimates</h4>
+                      {activeItem.subtasks.length === 0 ? (
+                        <p className="text-sm text-muted-foreground mb-3">No subtasks yet.</p>
+                      ) : (
+                        <div className="space-y-4 mb-4">
+                          {activeItem.subtasks.map((subtask) => (
+                            <div key={subtask.id} className="border rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium">{subtask.name}</span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDeleteSubtask(activeItem.id, subtask.id)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              <Table className="text-xs">
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="h-7 py-1">Role</TableHead>
+                                    <TableHead className="h-7 py-1 w-28">Est. Hours</TableHead>
+                                    <TableHead className="h-7 py-1 w-16"></TableHead>
                                   </TableRow>
-                                ))}
-                                {/* Add new role row */}
-                                {(() => {
-                                  const usedRoles = new Set(subtask.roleEstimates.map((re) => re.role));
-                                  const availableRoles = roles.filter((r) => !usedRoles.has(r.key));
-                                  if (availableRoles.length === 0) return null;
-                                  return (
-                                    <TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {subtask.roleEstimates.map((re) => (
+                                    <TableRow key={re.id}>
                                       <TableCell className="py-1">
-                                        <Select
-                                          value={newRoleRow[subtask.id]?.role ?? ''}
-                                          onValueChange={(v) => setNewRoleRow((p) => ({
-                                            ...p,
-                                            [subtask.id]: { ...p[subtask.id], role: v, hours: p[subtask.id]?.hours ?? '' },
-                                          }))}>
-                                          <SelectTrigger className="h-6 text-xs w-40">
-                                            <SelectValue placeholder="Select role…" />
-                                          </SelectTrigger>
-                                          <SelectContent position="popper">
-                                            {availableRoles.map((r) => (
-                                              <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
+                                        {roles.find((r) => r.key === re.role)?.label ?? re.role}
                                       </TableCell>
                                       <TableCell className="py-1">
                                         <Input
@@ -390,57 +444,109 @@ export function ServiceItemsView() {
                                           type="number"
                                           min="0"
                                           step="0.5"
-                                          placeholder="0"
-                                          value={newRoleRow[subtask.id]?.hours ?? ''}
-                                          onChange={(e) => setNewRoleRow((p) => ({
-                                            ...p,
-                                            [subtask.id]: { ...p[subtask.id], hours: e.target.value, role: p[subtask.id]?.role ?? '' },
-                                          }))}
+                                          defaultValue={re.estimatedHours}
+                                          onBlur={(e) => {
+                                            if (e.target.value !== String(re.estimatedHours)) {
+                                              handleUpsertRole(activeItem.id, subtask.id, re.role, e.target.value);
+                                            }
+                                          }}
                                         />
                                       </TableCell>
                                       <TableCell className="py-1">
                                         <Button
                                           size="sm"
                                           variant="ghost"
-                                          className="h-6 w-6 p-0"
-                                          onClick={() => {
-                                            const row = newRoleRow[subtask.id];
-                                            if (!row?.role || !row?.hours) return;
-                                            handleUpsertRole(item.id, subtask.id, row.role, row.hours).then(() => {
-                                              setNewRoleRow((p) => ({ ...p, [subtask.id]: { role: '', hours: '' } }));
-                                            });
-                                          }}>
-                                          <Plus className="h-3 w-3" />
+                                          onClick={() => handleDeleteRole(activeItem.id, subtask.id, re.role)}
+                                          className="text-red-600 hover:text-red-700 hover:bg-red-50 h-6 w-6 p-0">
+                                          <Trash2 className="h-3 w-3" />
                                         </Button>
                                       </TableCell>
                                     </TableRow>
-                                  );
-                                })()}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        ))}
+                                  ))}
+                                  {/* Add new role row */}
+                                  {(() => {
+                                    const usedRoles = new Set(subtask.roleEstimates.map((re) => re.role));
+                                    const availableRoles = roles.filter((r) => !usedRoles.has(r.key));
+                                    if (availableRoles.length === 0) return null;
+                                    return (
+                                      <TableRow>
+                                        <TableCell className="py-1">
+                                          <Select
+                                            value={newRoleRow[subtask.id]?.role ?? ''}
+                                            onValueChange={(v) => setNewRoleRow((p) => ({
+                                              ...p,
+                                              [subtask.id]: { ...p[subtask.id], role: v, hours: p[subtask.id]?.hours ?? '' },
+                                            }))}>
+                                            <SelectTrigger className="h-6 text-xs w-40">
+                                              <SelectValue placeholder="Select role…" />
+                                            </SelectTrigger>
+                                            <SelectContent position="popper">
+                                              {availableRoles.map((r) => (
+                                                <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </TableCell>
+                                        <TableCell className="py-1">
+                                          <Input
+                                            className="h-6 text-xs w-20"
+                                            type="number"
+                                            min="0"
+                                            step="0.5"
+                                            placeholder="0"
+                                            value={newRoleRow[subtask.id]?.hours ?? ''}
+                                            onChange={(e) => setNewRoleRow((p) => ({
+                                              ...p,
+                                              [subtask.id]: { ...p[subtask.id], hours: e.target.value, role: p[subtask.id]?.role ?? '' },
+                                            }))}
+                                          />
+                                        </TableCell>
+                                        <TableCell className="py-1">
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-6 w-6 p-0"
+                                            onClick={() => {
+                                              const row = newRoleRow[subtask.id];
+                                              if (!row?.role || !row?.hours) return;
+                                              handleUpsertRole(activeItem.id, subtask.id, row.role, row.hours).then(() => {
+                                                setNewRoleRow((p) => ({ ...p, [subtask.id]: { role: '', hours: '' } }));
+                                              });
+                                            }}>
+                                            <Plus className="h-3 w-3" />
+                                          </Button>
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })()}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Add subtask inline form */}
+                      <div className="flex items-center gap-2">
+                        <Input
+                          className="h-8 text-sm max-w-xs"
+                          placeholder="New subtask name"
+                          value={newSubtask[activeItem.id] ?? ''}
+                          onChange={(e) => setNewSubtask((p) => ({ ...p, [activeItem.id]: e.target.value }))}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleAddSubtask(activeItem.id); }}
+                        />
+                        <Button size="sm" variant="outline" onClick={() => handleAddSubtask(activeItem.id)}>
+                          <Plus className="h-3.5 w-3.5 mr-1" />Add Subtask
+                        </Button>
                       </div>
-                    )}
-                    {/* Add subtask inline form */}
-                    <div className="flex items-center gap-2">
-                      <Input
-                        className="h-8 text-sm max-w-xs"
-                        placeholder="New subtask name"
-                        value={newSubtask[item.id] ?? ''}
-                        onChange={(e) => setNewSubtask((p) => ({ ...p, [item.id]: e.target.value }))}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleAddSubtask(item.id); }}
-                      />
-                      <Button size="sm" variant="outline" onClick={() => handleAddSubtask(item.id)}>
-                        <Plus className="h-3.5 w-3.5 mr-1" />Add Subtask
-                      </Button>
+
                     </div>
-                  </div>
-                </CardContent>
-              </CollapsibleContent>
-            </Collapsible>
-          </Card>
-        ))}
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Add Service Item form */}

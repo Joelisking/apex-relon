@@ -113,7 +113,7 @@ export function CreatableSelect({
       <SelectTrigger>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent className="max-h-60 overflow-y-auto">
+      <SelectContent>
         <SelectItem value={ADD_NEW_SENTINEL}>
           <span className="flex items-center gap-2 text-primary font-medium">
             <Plus className="h-3.5 w-3.5" />

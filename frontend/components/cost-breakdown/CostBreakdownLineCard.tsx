@@ -218,7 +218,12 @@ export default function CostBreakdownLineCard({ line, roles, onChange }: Props) 
           variant="ghost"
           size="sm"
           className="h-6 text-xs gap-1 text-muted-foreground hover:text-foreground"
-          onClick={() => setAddingRole(true)}
+          onClick={() => {
+            setAddingRole(true);
+            if (line.serviceItem.defaultPrice != null) {
+              setNewRate(line.serviceItem.defaultPrice.toString());
+            }
+          }}
           disabled={addingRole}>
           <Plus className="h-3 w-3" />
           Add Role

@@ -132,7 +132,7 @@ export function MultiCreatableSelect({
               <ChevronDown className="h-4 w-4 opacity-50" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56 max-h-60 overflow-y-auto">
+          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-60 overflow-y-auto">
             <DropdownMenuItem
               onSelect={() => setIsAdding(true)}
               className="text-primary font-medium">

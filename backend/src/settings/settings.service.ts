@@ -531,11 +531,9 @@ export class SettingsService implements OnModuleInit {
   // ── Service Item Phases (from Excel template data) ─────────────────────────
 
   private async seedServiceItemPhases() {
-    const existingWithSubtasks = await this.prisma.serviceItem.count({
-      where: { subtasks: { some: {} } },
-    });
-    if (existingWithSubtasks > 0) {
-      this.logger.log(`Service item phases already seeded (${existingWithSubtasks} items with subtasks). Skipping.`);
+    const subtaskCount = await this.prisma.serviceItemSubtask.count();
+    if (subtaskCount > 0) {
+      this.logger.log(`Service item subtasks already seeded (${subtaskCount} subtasks). Skipping.`);
       return;
     }
 
@@ -544,7 +542,7 @@ export class SettingsService implements OnModuleInit {
       {
         serviceTypeName: 'ALTA/NSPS Survey',
         phases: [
-          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
+          { name: 'Administrative Services', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
           { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'Building Dimensions', 'Site Features, Encroachments, & Possession', 'Find Monuments', 'Shoot Utilities', 'Set Monuments'] },
           { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Boundary Resolution'] },
           { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Importing Points', 'Legal Description', 'Titleblock', 'Drafting', 'Labeling', 'Layout', 'Review', 'Calc Points'] },
@@ -560,7 +558,7 @@ export class SettingsService implements OnModuleInit {
       {
         serviceTypeName: 'Boundary Survey',
         phases: [
-          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
+          { name: 'Administrative Services', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
           { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'Building Dimensions', 'Site Features, Encroachments, & Possession', 'Find Monuments', 'Set Monuments'] },
           { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Boundary Resolution'] },
           { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Importing Points', 'Titleblock', 'Drafting', 'Labeling', 'Layout', 'Plotting', 'Review', 'Calc Points'] },
@@ -576,7 +574,7 @@ export class SettingsService implements OnModuleInit {
       {
         serviceTypeName: 'As-Built Survey',
         phases: [
-          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Utility Locates Called In'] },
+          { name: 'Administrative Services', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Utility Locates Called In'] },
           { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'TBM Setup', 'General Field Survey', 'Shoot Utilities', 'Structure Dips', 'Building Dimensions', 'Site Features, Encroachments, & Possession', 'Find Monuments', 'Set Monuments'] },
           { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Boundary Resolution'] },
           { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Importing Points', 'Processing', 'Labeling', 'Titleblock'] },
@@ -591,7 +589,7 @@ export class SettingsService implements OnModuleInit {
       {
         serviceTypeName: 'Construction Engineering',
         phases: [
-          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup'] },
+          { name: 'Administrative Services', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup'] },
           { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'TBM Setup', 'Construction Staking'] },
           { name: 'Documentation', officeField: 'Office', sortOrder: 2, tasks: ['Field Book'] },
           { name: 'Project Management', officeField: 'Office', sortOrder: 3, tasks: ['Project Management - External', 'Project Management - Internal', 'Sending Deliverables'] },
@@ -611,7 +609,7 @@ export class SettingsService implements OnModuleInit {
       {
         serviceTypeName: 'Easement Preparation',
         phases: [
-          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
+          { name: 'Administrative Services', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
           { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Site Features, Encroachments, & Possession', 'Find Monuments', 'Staking'] },
           { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Boundary Resolution'] },
           { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Importing Points', 'Drafting', 'Labeling', 'Layout'] },
@@ -626,7 +624,7 @@ export class SettingsService implements OnModuleInit {
       {
         serviceTypeName: 'Plot Plan & House Stake',
         phases: [
-          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
+          { name: 'Administrative Services', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
           { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Find Monuments / Control', 'Stake House', 'Establish FPG/TBM', 'Importing & Manipulating Points'] },
           { name: 'Drafting', officeField: 'Office', sortOrder: 2, tasks: ['Titleblock', 'Drafting', 'Labeling', 'Layout'] },
           { name: 'Project Management', officeField: 'Office', sortOrder: 3, tasks: ['Project Management - External', 'Project Management - Internal'] },
@@ -639,7 +637,7 @@ export class SettingsService implements OnModuleInit {
       {
         serviceTypeName: 'LCRS',
         phases: [
-          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
+          { name: 'Administrative Services', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
           { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'Find Monuments', 'Witnesses (CP, Alignment, Sec. Cor)'] },
           { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Alignment, PL, & R/W Resolution'] },
           { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Importing Points', 'Titleblock', 'Drafting', 'Labeling', 'Layout', 'Witnesses', 'Table', 'Plotting', 'Review', 'Calc Points'] },
@@ -655,7 +653,7 @@ export class SettingsService implements OnModuleInit {
       {
         serviceTypeName: 'Lot Survey',
         phases: [
-          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
+          { name: 'Administrative Services', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Research'] },
           { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'Building Dimensions', 'Site Features, Encroachments, & Possession', 'Find Monuments', 'Set Monuments'] },
           { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Boundary Resolution'] },
           { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Importing Points', 'Titleblock', 'Drafting', 'Labeling', 'Layout', 'Plotting', 'Review', 'Calc Points'] },
@@ -671,7 +669,7 @@ export class SettingsService implements OnModuleInit {
       {
         serviceTypeName: 'Right-of-Way Engineering',
         phases: [
-          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup'] },
+          { name: 'Administrative Services', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup'] },
           { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'Find Monuments'] },
           { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Alignment, PL, & R/W Resolution', 'R/W Resolution'] },
           { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Importing Points', 'Exhibit', 'Table', 'Bearing & Distance Sheet', 'Calc Points'] },
@@ -686,7 +684,7 @@ export class SettingsService implements OnModuleInit {
       {
         serviceTypeName: 'Topographic Survey',
         phases: [
-          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Homeowner Letters Sent', 'Utility Locates Called In'] },
+          { name: 'Administrative Services', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Homeowner Letters Sent', 'Utility Locates Called In'] },
           { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Site Photos & Notes', 'Find Monuments', 'Control Point Setup', 'TBM Setup', 'General Field Survey', 'Shoot Utilities', 'Witnessing Control', 'Structure Dips'] },
           { name: 'Resolution', officeField: 'Office', sortOrder: 2, tasks: ['Boundary Resolution'] },
           { name: 'Drafting', officeField: 'Office', sortOrder: 3, tasks: ['Boundary Resolution', 'Importing Points', 'Processing', 'Structure Analysis', 'Pipe Networks', 'Labeling', 'Boundary Labeling', 'Structure Data Sheets'] },
@@ -701,7 +699,7 @@ export class SettingsService implements OnModuleInit {
       {
         serviceTypeName: 'Construction Staking',
         phases: [
-          { name: 'Admin', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Utility Locates Called In'] },
+          { name: 'Administrative Services', officeField: 'Office', sortOrder: 0, tasks: ['Folder Setup', 'Utility Locates Called In'] },
           { name: 'Field', officeField: 'Field', sortOrder: 1, tasks: ['Control Point Setup', 'TBM Setup', 'General Field Survey', 'Shoot Utilities', 'Structure Dips', 'Structure Analysis', 'Pipe Networks', 'Structure Data Sheets', 'Punch List'] },
           { name: 'Drafting', officeField: 'Office', sortOrder: 2, tasks: ['Importing Points', 'Processing', 'Labeling', 'Titleblock', 'Punch List Creation'] },
           { name: 'Project Management', officeField: 'Office', sortOrder: 3, tasks: ['Project Management - External', 'Project Management - Internal', 'Sending Deliverables'] },
@@ -731,32 +729,37 @@ export class SettingsService implements OnModuleInit {
             serviceTypeIds: { has: serviceType.id },
           },
         });
-        if (existing) continue;
 
-        const item = await this.prisma.serviceItem.create({
-          data: {
-            name: phase.name,
-            description: `${phase.officeField} work phase`,
-            serviceTypeIds: [serviceType.id],
-            isActive: true,
-            sortOrder: phase.sortOrder,
-          },
-        });
+        let targetId: string;
+
+        if (existing) {
+          targetId = existing.id;
+        } else {
+          const item = await this.prisma.serviceItem.create({
+            data: {
+              name: phase.name,
+              description: phase.officeField,
+              serviceTypeIds: [serviceType.id],
+              isActive: true,
+              sortOrder: phase.sortOrder,
+            },
+          });
+          targetId = item.id;
+          itemsCreated++;
+        }
 
         for (let i = 0; i < phase.tasks.length; i++) {
           await this.prisma.serviceItemSubtask.create({
             data: {
-              serviceItemId: item.id,
+              serviceItemId: targetId,
               name: phase.tasks[i],
               sortOrder: i,
             },
           });
         }
-
-        itemsCreated++;
       }
     }
 
-    this.logger.log(`Service item phases seeded: ${itemsCreated} phases created from survey template data.`);
+    this.logger.log(`Service item phases seeded: ${itemsCreated} phases created.`);
   }
 }
