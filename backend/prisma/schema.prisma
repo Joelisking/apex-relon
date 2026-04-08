@@ -1191,6 +1191,15 @@ model CostBreakdown {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // Direct expenses for PDF footer and total fee calculation
+  mileageQty    Float?
+  mileageRate   Float?
+  lodgingQty    Float?
+  lodgingRate   Float?
+  perDiemQty    Float?
+  perDiemRate   Float?
+  roundedFee    Float?
+
   project     Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
   serviceType ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)

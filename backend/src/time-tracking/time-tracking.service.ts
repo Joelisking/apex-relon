@@ -216,6 +216,85 @@ export class TimeTrackingService {
     };
   }
 
+  async getWeeklyTimesheetByProject(startDate: string, userId?: string) {
+    const start = new Date(`${startDate}T00:00:00.000Z`);
+    const end = new Date(`${startDate}T23:59:59.999Z`);
+    end.setDate(end.getDate() + 6);
+
+    const where: Record<string, unknown> = { date: { gte: start, lte: end } };
+    if (userId) where.userId = userId;
+
+    const entries = await this.prisma.timeEntry.findMany({
+      where,
+      include: {
+        project: { select: { id: true, name: true, status: true, jobNumber: true } },
+      },
+      orderBy: [{ projectId: 'asc' }, { date: 'asc' }],
+    });
+
+    const byProject: Record<string, {
+      project: { id: string; name: string; status: string; jobNumber: string | null } | null;
+      days: Record<string, {
+        hours: number;
+        entries: {
+          id: string; hours: number; description: string | null; billable: boolean;
+          workCodeId: string | null; serviceItemId: string | null;
+          serviceItemSubtaskId: string | null; hourlyRate: number | null;
+        }[];
+      }>;
+      totalHours: number;
+    }> = {};
+
+    for (const entry of entries) {
+      const pid = entry.projectId ?? '__none__';
+      const day = entry.date.toISOString().split('T')[0];
+
+      if (!byProject[pid]) {
+        byProject[pid] = {
+          project: entry.project
+            ? { id: entry.project.id, name: entry.project.name, status: entry.project.status, jobNumber: entry.project.jobNumber }
+            : null,
+          days: {},
+          totalHours: 0,
+        };
+      }
+
+      if (!byProject[pid].days[day]) {
+        byProject[pid].days[day] = { hours: 0, entries: [] };
+      }
+
+      byProject[pid].days[day].hours += entry.hours;
+      byProject[pid].days[day].entries.push({
+        id: entry.id,
+        hours: entry.hours,
+        description: entry.description,
+        billable: entry.billable,
+        workCodeId: entry.workCodeId,
+        serviceItemId: entry.serviceItemId,
+        serviceItemSubtaskId: entry.serviceItemSubtaskId,
+        hourlyRate: entry.hourlyRate,
+      });
+      byProject[pid].totalHours += entry.hours;
+    }
+
+    const dailyTotals: Record<string, number> = {};
+    for (const row of Object.values(byProject)) {
+      for (const [day, data] of Object.entries(row.days)) {
+        dailyTotals[day] = (dailyTotals[day] ?? 0) + data.hours;
+      }
+    }
+
+    const grandTotal = Object.values(byProject).reduce((s, r) => s + r.totalHours, 0);
+
+    return {
+      startDate,
+      endDate: end.toISOString().split('T')[0],
+      rows: Object.values(byProject),
+      dailyTotals,
+      grandTotal,
+    };
+  }
+
   async getWeeklyTimesheet(startDate: string, userId?: string) {
     const start = new Date(`${startDate}T00:00:00.000Z`);
     const end = new Date(`${startDate}T23:59:59.999Z`);

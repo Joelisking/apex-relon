@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE "cost_breakdowns" ADD COLUMN     "lodgingQty" DOUBLE PRECISION,
+ADD COLUMN     "lodgingRate" DOUBLE PRECISION,
+ADD COLUMN     "mileageQty" DOUBLE PRECISION,
+ADD COLUMN     "mileageRate" DOUBLE PRECISION,
+ADD COLUMN     "perDiemQty" DOUBLE PRECISION,
+ADD COLUMN     "perDiemRate" DOUBLE PRECISION,
+ADD COLUMN     "roundedFee" DOUBLE PRECISION;

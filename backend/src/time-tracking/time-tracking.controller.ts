@@ -149,6 +149,19 @@ export class TimeTrackingController {
     return this.timeTrackingService.getUserSummary(id, startDate, endDate);
   }
 
+  @Get('timesheet/by-project')
+  @Permissions('time_tracking:view')
+  async getTimesheetByProject(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('startDate') startDate: string,
+    @Query('userId') userId?: string,
+  ) {
+    const canManageAll = await this.permissionsService.hasPermission(user.role, 'time_tracking:manage_all');
+    const canEnterForOthers = await this.permissionsService.hasPermission(user.role, 'time_tracking:enter_for_others');
+    const effectiveUserId = (canManageAll || canEnterForOthers) && userId ? userId : user.id;
+    return this.timeTrackingService.getWeeklyTimesheetByProject(startDate, effectiveUserId);
+  }
+
   @Get('timesheet')
   @Permissions('time_tracking:view')
   async getTimesheet(

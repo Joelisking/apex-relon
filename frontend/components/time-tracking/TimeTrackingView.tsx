@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Clock, Users, Trash2, Pencil, CalendarDays, ChevronLeft, ChevronRight, UserPlus, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Plus, Clock, Users, Trash2, Pencil, CalendarDays, ChevronLeft, ChevronRight, UserPlus, ChevronUp, ChevronDown, ChevronsUpDown, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Label } from '@/components/ui/label';
@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import { TimeEntryDialog } from './TimeEntryDialog';
 import { TimerWidget } from './TimerWidget';
 import { ProxyUserPickerDialog } from './ProxyUserPickerDialog';
+import { WeeklySheetTab } from './WeeklySheetTab';
 import type { UserDirectoryItem } from '@/lib/api/users-client';
 import { API_URL, getTokenFromClientCookies } from '@/lib/api/client';
 import { useAuth } from '@/contexts/auth-context';
@@ -503,6 +504,11 @@ export function TimeTrackingView() {
             <CalendarDays className="h-4 w-4 mr-1.5" />
             Timesheet
           </TabsTrigger>
+          <TabsTrigger value="weekly-sheet" className="flex-1 sm:flex-none">
+            <LayoutGrid className="h-4 w-4 mr-1.5" />
+            <span className="sm:hidden">Sheet</span>
+            <span className="hidden sm:inline">Weekly Sheet</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* My Time */}
@@ -733,6 +739,15 @@ export function TimeTrackingView() {
                   </Table>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Weekly Sheet — interactive QB-style grid */}
+        <TabsContent value="weekly-sheet">
+          <Card>
+            <CardContent className="pt-4">
+              <WeeklySheetTab />
             </CardContent>
           </Card>
         </TabsContent>

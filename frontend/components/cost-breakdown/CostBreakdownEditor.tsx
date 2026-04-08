@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, CheckCircle2, FileText, Download, FilePlus } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle2, FileText, Download, FilePlus, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +57,17 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
   const [leadId, setLeadId] = useState('');
   const [titleManuallyEdited, setTitleManuallyEdited] = useState(false);
 
+  // Direct expenses (edit mode)
+  const [mileageQty, setMileageQty] = useState('');
+  const [mileageRate, setMileageRate] = useState('');
+  const [lodgingQty, setLodgingQty] = useState('');
+  const [lodgingRate, setLodgingRate] = useState('');
+  const [perDiemQty, setPerDiemQty] = useState('');
+  const [perDiemRate, setPerDiemRate] = useState('');
+  const [roundedFee, setRoundedFee] = useState('');
+  const [savingExpenses, setSavingExpenses] = useState(false);
+  const expenseSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Auto-populate title from the selected lead's project/company name
   useEffect(() => {
     if (!leadId || titleManuallyEdited) return;
@@ -91,6 +102,53 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
     };
     load();
   }, [breakdownId]);
+
+  // Seed direct expense fields when breakdown is loaded
+  useEffect(() => {
+    if (!breakdown) return;
+    setMileageQty(breakdown.mileageQty != null ? String(breakdown.mileageQty) : '');
+    setMileageRate(breakdown.mileageRate != null ? String(breakdown.mileageRate) : '');
+    setLodgingQty(breakdown.lodgingQty != null ? String(breakdown.lodgingQty) : '');
+    setLodgingRate(breakdown.lodgingRate != null ? String(breakdown.lodgingRate) : '');
+    setPerDiemQty(breakdown.perDiemQty != null ? String(breakdown.perDiemQty) : '');
+    setPerDiemRate(breakdown.perDiemRate != null ? String(breakdown.perDiemRate) : '');
+    setRoundedFee(breakdown.roundedFee != null ? String(breakdown.roundedFee) : '');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [breakdown?.id]);
+
+  const saveExpenses = useCallback(async (fields: {
+    mileageQty: string; mileageRate: string;
+    lodgingQty: string; lodgingRate: string;
+    perDiemQty: string; perDiemRate: string;
+    roundedFee: string;
+  }) => {
+    if (!breakdown) return;
+    setSavingExpenses(true);
+    try {
+      const toNum = (v: string) => v.trim() === '' ? null : Number(v);
+      const updated = await costBreakdownApi.update(breakdown.id, {
+        mileageQty: toNum(fields.mileageQty),
+        mileageRate: toNum(fields.mileageRate),
+        lodgingQty: toNum(fields.lodgingQty),
+        lodgingRate: toNum(fields.lodgingRate),
+        perDiemQty: toNum(fields.perDiemQty),
+        perDiemRate: toNum(fields.perDiemRate),
+        roundedFee: toNum(fields.roundedFee),
+      });
+      setBreakdown((prev) => prev ? { ...prev, ...updated } : null);
+    } catch {
+      toast.error('Failed to save direct expenses');
+    } finally {
+      setSavingExpenses(false);
+    }
+  }, [breakdown]);
+
+  const scheduleExpenseSave = useCallback(() => {
+    if (expenseSaveTimer.current) clearTimeout(expenseSaveTimer.current);
+    expenseSaveTimer.current = setTimeout(() => {
+      saveExpenses({ mileageQty, mileageRate, lodgingQty, lodgingRate, perDiemQty, perDiemRate, roundedFee });
+    }, 800);
+  }, [saveExpenses, mileageQty, mileageRate, lodgingQty, lodgingRate, perDiemQty, perDiemRate, roundedFee]);
 
   const handleCreate = useCallback(async () => {
     if (!title.trim()) return;
@@ -259,6 +317,14 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
   const linkedLabel = breakdown.project?.name ?? breakdown.lead?.company ?? null;
   const hasRatedCost = breakdown.totalEstimatedCost > 0;
 
+  const toN = (v: string) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+  const mileageTotal = toN(mileageQty) * toN(mileageRate);
+  const lodgingTotal = toN(lodgingQty) * toN(lodgingRate);
+  const perDiemTotal = toN(perDiemQty) * toN(perDiemRate);
+  const directExpenseTotal = mileageTotal + lodgingTotal + perDiemTotal;
+  const totalFee = breakdown.totalEstimatedCost + directExpenseTotal;
+  const displayedFee = toN(roundedFee) > 0 ? toN(roundedFee) : totalFee;
+
   return (
     <div className="space-y-6">
       {/* Top bar */}
@@ -349,6 +415,144 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
         </div>
       )}
 
+      {/* Direct Expenses */}
+      <div className="rounded-xl border border-border/60 bg-card px-5 py-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Direct Expenses</h2>
+          {savingExpenses && (
+            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              <Save className="h-3 w-3 animate-pulse" />
+              Saving…
+            </span>
+          )}
+        </div>
+
+        {/* Column headers */}
+        <div className="grid grid-cols-[1fr_120px_120px_100px] gap-3 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-1">
+          <span>Expense</span>
+          <span>Qty / Units</span>
+          <span>Rate</span>
+          <span className="text-right">Total</span>
+        </div>
+
+        {/* Mileage */}
+        <div className="grid grid-cols-[1fr_120px_120px_100px] gap-3 items-center">
+          <span className="text-sm">Mileage</span>
+          <Input
+            type="number"
+            min="0"
+            placeholder="miles"
+            value={mileageQty}
+            onChange={(e) => setMileageQty(e.target.value)}
+            onBlur={scheduleExpenseSave}
+            className="h-8 text-sm"
+          />
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="$/mile"
+            value={mileageRate}
+            onChange={(e) => setMileageRate(e.target.value)}
+            onBlur={scheduleExpenseSave}
+            className="h-8 text-sm"
+          />
+          <p className="text-sm tabular-nums text-right">
+            {mileageTotal > 0 ? formatCurrency(mileageTotal) : '—'}
+          </p>
+        </div>
+
+        {/* Lodging */}
+        <div className="grid grid-cols-[1fr_120px_120px_100px] gap-3 items-center">
+          <span className="text-sm">Lodging</span>
+          <Input
+            type="number"
+            min="0"
+            placeholder="nights"
+            value={lodgingQty}
+            onChange={(e) => setLodgingQty(e.target.value)}
+            onBlur={scheduleExpenseSave}
+            className="h-8 text-sm"
+          />
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="$/night"
+            value={lodgingRate}
+            onChange={(e) => setLodgingRate(e.target.value)}
+            onBlur={scheduleExpenseSave}
+            className="h-8 text-sm"
+          />
+          <p className="text-sm tabular-nums text-right">
+            {lodgingTotal > 0 ? formatCurrency(lodgingTotal) : '—'}
+          </p>
+        </div>
+
+        {/* Per Diem */}
+        <div className="grid grid-cols-[1fr_120px_120px_100px] gap-3 items-center">
+          <span className="text-sm">Per Diem</span>
+          <Input
+            type="number"
+            min="0"
+            placeholder="days"
+            value={perDiemQty}
+            onChange={(e) => setPerDiemQty(e.target.value)}
+            onBlur={scheduleExpenseSave}
+            className="h-8 text-sm"
+          />
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="$/day"
+            value={perDiemRate}
+            onChange={(e) => setPerDiemRate(e.target.value)}
+            onBlur={scheduleExpenseSave}
+            className="h-8 text-sm"
+          />
+          <p className="text-sm tabular-nums text-right">
+            {perDiemTotal > 0 ? formatCurrency(perDiemTotal) : '—'}
+          </p>
+        </div>
+
+        {/* Direct expense subtotal */}
+        {directExpenseTotal > 0 && (
+          <div className="flex justify-end pt-1 border-t border-border/40">
+            <div className="text-right">
+              <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+                Direct Expense Subtotal
+              </p>
+              <p className="text-base font-semibold tabular-nums mt-0.5">
+                {formatCurrency(directExpenseTotal)}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Rounded fee override */}
+        <div className="flex items-end gap-3 pt-3 border-t border-border/40">
+          <div className="space-y-1.5 w-48">
+            <Label className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+              Rounded Fee (override)
+            </Label>
+            <Input
+              type="number"
+              min="0"
+              step="100"
+              placeholder={totalFee > 0 ? `Calc: ${formatCurrency(totalFee)}` : 'e.g. 12500'}
+              value={roundedFee}
+              onChange={(e) => setRoundedFee(e.target.value)}
+              onBlur={scheduleExpenseSave}
+              className="h-8 text-sm"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground pb-2">
+            Leave blank to use computed total fee
+          </p>
+        </div>
+      </div>
+
       {/* Grand total footer */}
       <div className="rounded-xl border border-border/60 bg-card px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-6">
@@ -362,10 +566,28 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
           </div>
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
-              Est. Cost
+              Labor Cost
             </p>
             <p className="text-xl font-semibold tabular-nums mt-0.5">
               {hasRatedCost ? formatCurrency(breakdown.totalEstimatedCost) : '—'}
+            </p>
+          </div>
+          {directExpenseTotal > 0 && (
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+                Direct Expenses
+              </p>
+              <p className="text-xl font-semibold tabular-nums mt-0.5">
+                {formatCurrency(directExpenseTotal)}
+              </p>
+            </div>
+          )}
+          <div className="pl-4 border-l border-border/60">
+            <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+              {toN(roundedFee) > 0 ? 'Rounded Fee' : 'Total Fee'}
+            </p>
+            <p className="text-xl font-semibold tabular-nums mt-0.5 text-primary">
+              {hasRatedCost || directExpenseTotal > 0 ? formatCurrency(displayedFee) : '—'}
             </p>
           </div>
           {breakdown.hasUnratedLines && (

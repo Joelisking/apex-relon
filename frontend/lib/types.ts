@@ -974,6 +974,14 @@ export interface CostBreakdown {
   createdById: string;
   createdAt: string;
   updatedAt: string;
+  // Direct expenses
+  mileageQty?: number | null;
+  mileageRate?: number | null;
+  lodgingQty?: number | null;
+  lodgingRate?: number | null;
+  perDiemQty?: number | null;
+  perDiemRate?: number | null;
+  roundedFee?: number | null;
   serviceType?: { id: string; name: string } | null;
   project?: { id: string; name: string } | null;
   lead?: { id: string; company: string; contactName: string } | null;

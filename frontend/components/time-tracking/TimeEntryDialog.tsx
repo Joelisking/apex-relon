@@ -70,6 +70,8 @@ interface TimeEntryDialogProps {
   entry?: TimeEntry | null;
   initialHours?: number;
   initialProjectId?: string;
+  /** Pre-fill the date field when creating a new entry (YYYY-MM-DD) */
+  initialDate?: string;
   /** When set, the entry is submitted on behalf of this user (proxy entry) */
   targetUser?: { id: string; name: string } | null;
   onOpenChange: (open: boolean) => void;
@@ -81,6 +83,7 @@ export function TimeEntryDialog({
   entry,
   initialHours,
   initialProjectId,
+  initialDate,
   targetUser,
   onOpenChange,
   onSaved,
@@ -170,8 +173,12 @@ export function TimeEntryDialog({
       setServiceItemSubtaskId(entry.serviceItemSubtaskId ?? '');
     } else {
       setInputMode('times');
-      const today = new Date();
-      setDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
+      if (initialDate) {
+        setDate(initialDate);
+      } else {
+        const today = new Date();
+        setDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
+      }
       setStartTime('08:00');
       const ih = initialHours || 1;
       const endTotalMin = 8 * 60 + Math.round(ih * 60);
@@ -186,7 +193,7 @@ export function TimeEntryDialog({
       setServiceItemId('');
       setServiceItemSubtaskId('');
     }
-  }, [entry, open, initialHours, initialProjectId]);
+  }, [entry, open, initialHours, initialProjectId, initialDate]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Reset work code when project changes away from engineering

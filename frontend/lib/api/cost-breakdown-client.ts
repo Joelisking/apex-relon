@@ -15,6 +15,13 @@ export interface UpdateCostBreakdownDto {
   title?: string;
   status?: string;
   notes?: string;
+  mileageQty?: number | null;
+  mileageRate?: number | null;
+  lodgingQty?: number | null;
+  lodgingRate?: number | null;
+  perDiemQty?: number | null;
+  perDiemRate?: number | null;
+  roundedFee?: number | null;
 }
 
 export interface UpsertRoleEstimateDto {

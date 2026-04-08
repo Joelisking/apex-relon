@@ -463,14 +463,12 @@ export class PdfService {
     const allRoles = await this.prisma.role.findMany({ orderBy: { label: 'asc' } });
     const settings = await this.quoteSettingsService.getSettings();
 
-    // Compact currency: $680, $1.2k, $12k
-    const compactCurrency = (n: number) =>
-      n >= 1000 ? `$${+(n / 1000).toFixed(1)}k` : `$${Math.round(n)}`;
+    const usd = (n: number) =>
+      new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n);
 
-    // Sparse role columns — only roles with at least one estimate
+    // ── Sparse role columns — only roles with at least one estimate ─────────────
     const allEstimates = breakdown.lines.flatMap((l) => l.roleEstimates);
     const usedRoleKeys = new Set(allEstimates.map((e) => e.role));
-    // Include known API roles first (alphabetical), then any custom free-text roles not in DB
     const apiColumns = allRoles.filter((r) => usedRoleKeys.has(r.key));
     const apiKeySet = new Set(allRoles.map((r) => r.key));
     const customRoleKeys = [...usedRoleKeys].filter((k) => !apiKeySet.has(k)).sort();
@@ -478,30 +476,48 @@ export class PdfService {
       ...apiColumns.map((r) => ({ key: r.key, label: r.label })),
       ...customRoleKeys.map((k) => ({ key: k, label: k })),
     ];
+    const nCols = columns.length; // total number of role columns
 
-    // Grand totals & cost per role
-    const grandTotalByRole: Record<string, number> = {};
-    const grandCostByRole: Record<string, number> = {};
-    columns.forEach((c) => { grandTotalByRole[c.key] = 0; grandCostByRole[c.key] = 0; });
-    let grandTotalHours = 0;
-    let grandTotalCost = 0;
-    let anyRates = false;
-    let allHaveRates = true;
+    // ── Per-role representative hourly rate (first non-null found) ──────────────
+    const rateByRole: Record<string, number | null> = {};
+    columns.forEach((c) => { rateByRole[c.key] = null; });
     for (const est of allEstimates) {
-      if (grandTotalByRole[est.role] !== undefined) {
-        grandTotalByRole[est.role] += est.estimatedHours;
+      if (rateByRole[est.role] === null && est.hourlyRate != null) {
+        rateByRole[est.role] = est.hourlyRate;
+      }
+    }
+    const anyRates = Object.values(rateByRole).some((r) => r != null);
+
+    // ── Grand totals per role ───────────────────────────────────────────────────
+    const grandHoursByRole: Record<string, number> = {};
+    const grandCostByRole: Record<string, number> = {};
+    columns.forEach((c) => { grandHoursByRole[c.key] = 0; grandCostByRole[c.key] = 0; });
+    let grandTotalHours = 0;
+    let grandTotalLaborCost = 0;
+    for (const est of allEstimates) {
+      if (grandHoursByRole[est.role] !== undefined) {
+        grandHoursByRole[est.role] += est.estimatedHours;
         grandTotalHours += est.estimatedHours;
         if (est.hourlyRate != null) {
-          const cost = est.estimatedHours * est.hourlyRate;
-          grandCostByRole[est.role] = (grandCostByRole[est.role] ?? 0) + cost;
-          grandTotalCost += cost;
-          anyRates = true;
-        } else {
-          allHaveRates = false;
+          const c = est.estimatedHours * est.hourlyRate;
+          grandCostByRole[est.role] += c;
+          grandTotalLaborCost += c;
         }
       }
     }
 
+    // ── Direct expenses ────────────────────────────────────────────────────────
+    const bd = breakdown as any;
+    const mileageTotal = (bd.mileageQty ?? 0) * (bd.mileageRate ?? 0);
+    const lodgingTotal = (bd.lodgingQty ?? 0) * (bd.lodgingRate ?? 0);
+    const perDiemTotal = (bd.perDiemQty ?? 0) * (bd.perDiemRate ?? 0);
+    const totalDirectExpenses = mileageTotal + lodgingTotal + perDiemTotal;
+    const totalFee = grandTotalLaborCost + totalDirectExpenses;
+    const roundedFee: number | null = bd.roundedFee ?? null;
+    const hasDirectExpenses =
+      bd.mileageQty != null || bd.lodgingQty != null || bd.perDiemQty != null;
+
+    // ── pdfmake setup ──────────────────────────────────────────────────────────
     const fonts = {
       Roboto: {
         normal: resolveFontPath('Roboto-Regular.ttf'),
@@ -512,266 +528,335 @@ export class PdfService {
     };
     const printer = new PdfPrinter(fonts);
 
-    // Layout constants — tight to maximise one-page fit
-    const COL_WIDTH = 30;
-    const TOTAL_WIDTH = 36;
-    const COST_WIDTH = 46;  // wider for cost row values
-    const HEADER_ROTATION_MARGIN = 44;
+    // Column widths: task-description ('*'), one per role (26pt), total-hours, total-fee
+    const COL = 26;
+    const TOT_HRS = 34;
+    const TOT_FEE = 56;
+    const HDR_ROT = 52; // margin for rotated header text
+    // Total number of cells per row: 1 (task) + nCols (roles) + 1 (hrs) + 1 (fee) = nCols + 3
+    const nCells = nCols + 3;
 
-    // ── Matrix rows ────────────────────────────────────────────────────
+    const COLORS = {
+      sectionHeader: '#D4E4F7',   // light steel blue — phase rows
+      laborRates:    '#F3F4F6',   // light gray — rates row at top
+      totalHours:    '#D4E4F7',   // same blue — TOTAL HOURS row
+      hourlyRate:    '#FFF2CC',   // pale yellow — HOURLY RATE row
+      laborCost:     '#FFE599',   // yellow — TOTAL LABOR COST row
+      expenses:      '#FCE5CD',   // peach — direct expenses rows
+      totalFee:      '#F9CB9C',   // light orange — TOTAL FEE
+      roundedFee:    '#F6B26B',   // amber — ROUNDED FEE
+    };
 
-    // Column header row: rotated role labels + "Total hrs" + optional "Est. Cost"
+    // Helper: blank filler cells for colSpan rows
+    const blanks = (n: number) => Array(n).fill({ text: '' });
+
+    // Helper: a standard numeric cell
+    const num = (val: string | number, opts: object = {}) => ({
+      text: typeof val === 'number' ? (val === 0 ? '' : val.toFixed(1)) : val,
+      fontSize: 7,
+      alignment: 'center' as const,
+      border: [false, false, false, false] as [boolean, boolean, boolean, boolean],
+      ...opts,
+    });
+
+    // Helper: a footer label cell that spans everything but last col
+    const footerLabel = (text: string, fill: string, bold = true): object[] => [
+      {
+        text,
+        colSpan: nCols + 2,
+        bold,
+        fontSize: 8,
+        border: [false, false, false, false],
+        fillColor: fill,
+        margin: [2, 2, 2, 2],
+      },
+      ...blanks(nCols + 1),
+    ];
+
+    // Helper: a footer row with per-role values + total in last col
+    const footerRow = (
+      label: string,
+      fill: string,
+      roleValues: (string | number)[],
+      lastVal: string,
+    ): object[] => [
+      {
+        text: label,
+        bold: true,
+        fontSize: 8,
+        border: [false, true, false, false],
+        fillColor: fill,
+        margin: [2, 1, 2, 1],
+      },
+      ...columns.map((col, i) => ({
+        text: roleValues[i] || '',
+        fontSize: 7,
+        bold: false,
+        alignment: 'center' as const,
+        border: [false, true, false, false],
+        fillColor: fill,
+      })),
+      { text: '', fontSize: 7, border: [false, true, false, false], fillColor: fill }, // total hrs col (blank)
+      { text: lastVal, fontSize: 8, bold: true, alignment: 'right' as const, border: [false, true, false, false], fillColor: fill, margin: [0, 1, 2, 1] },
+    ];
+
+    // ── Column header row ──────────────────────────────────────────────────────
     const headerRow: object[] = [
-      { text: '', border: [false, false, false, true], fillColor: '#ffffff' },
+      { text: 'Task Description', fontSize: 7, bold: true, color: '#6b7280', border: [false, false, false, true], fillColor: '#ffffff', margin: [2, HDR_ROT, 2, 2] },
       ...columns.map((col) => ({
         text: col.label,
         rotation: -60,
         fontSize: 7,
         bold: true,
         alignment: 'left' as const,
-        margin: [2, HEADER_ROTATION_MARGIN, 2, 2],
+        margin: [1, HDR_ROT, 1, 2],
         border: [false, false, false, true],
         color: '#374151',
       })),
-      {
-        text: 'Total\nhrs',
-        fontSize: 7,
-        bold: true,
-        alignment: 'center' as const,
-        border: [false, false, false, true],
-        margin: [0, HEADER_ROTATION_MARGIN, 0, 2],
-        color: '#374151',
-      },
-      ...(anyRates ? [{
-        text: 'Est.\nCost',
-        fontSize: 7,
-        bold: true,
-        alignment: 'center' as const,
-        border: [false, false, false, true],
-        margin: [0, HEADER_ROTATION_MARGIN, 0, 2],
-        color: '#374151',
-      }] : []),
+      { text: 'Total\nHours', fontSize: 7, bold: true, alignment: 'center' as const, border: [false, false, false, true], margin: [0, HDR_ROT, 0, 2], color: '#374151' },
+      { text: 'Total\nFee', fontSize: 7, bold: true, alignment: 'center' as const, border: [false, false, false, true], margin: [0, HDR_ROT, 0, 2], color: '#374151' },
     ];
 
-    const matrixRows: object[][] = [headerRow];
+    // ── Labor Rates row (top) ─────────────────────────────────────────────────
+    const laborRatesRow: object[] = [
+      { text: 'Labor Rates (Hrly)', fontSize: 7, bold: true, border: [false, false, false, false], fillColor: COLORS.laborRates, color: '#374151', margin: [2, 1, 2, 1] },
+      ...columns.map((col) => ({
+        text: rateByRole[col.key] != null ? usd(rateByRole[col.key]!) : '',
+        fontSize: 7,
+        alignment: 'center' as const,
+        border: [false, false, false, false],
+        fillColor: COLORS.laborRates,
+        color: '#374151',
+      })),
+      { text: '', fontSize: 7, border: [false, false, false, false], fillColor: COLORS.laborRates },
+      { text: '', fontSize: 7, border: [false, false, false, false], fillColor: COLORS.laborRates },
+    ];
 
+    const matrixRows: object[][] = [headerRow, laborRatesRow];
+
+    // ── Phase and subtask rows ─────────────────────────────────────────────────
+    let phaseIndex = 0;
     for (const line of breakdown.lines) {
       const si = line.serviceItem as any;
-      // Honour excluded subtask IDs stored on the line
       const excluded = new Set((line as any).excludedSubtaskIds ?? []);
       const usedSubtasks: any[] = (si.subtasks as any[]).filter(
         (st: any) => !excluded.has(st.id) && line.roleEstimates.some((e) => (e as any).subtaskId === st.id),
       );
       if (usedSubtasks.length === 0) continue;
 
-      // Phase totals by role
-      const phaseTotalByRole: Record<string, number> = {};
-      const phaseCostByRole: Record<string, number> = {};
-      columns.forEach((c) => { phaseTotalByRole[c.key] = 0; phaseCostByRole[c.key] = 0; });
+      phaseIndex++;
+      const phaseHoursByRole: Record<string, number> = {};
+      columns.forEach((c) => { phaseHoursByRole[c.key] = 0; });
       let phaseTotal = 0;
       let phaseCost = 0;
+
       for (const est of line.roleEstimates) {
-        if (phaseTotalByRole[est.role] !== undefined) {
-          phaseTotalByRole[est.role] += est.estimatedHours;
+        if (phaseHoursByRole[est.role] !== undefined) {
+          phaseHoursByRole[est.role] += est.estimatedHours;
           phaseTotal += est.estimatedHours;
-          if (est.hourlyRate != null) {
-            const c = est.estimatedHours * est.hourlyRate;
-            phaseCostByRole[est.role] = (phaseCostByRole[est.role] ?? 0) + c;
-            phaseCost += c;
-          }
+          if (est.hourlyRate != null) phaseCost += est.estimatedHours * est.hourlyRate;
         }
       }
 
-      // Phase row — neutral gray background, bold
+      // Phase header row — light blue
       matrixRows.push([
-        { text: si.name, bold: true, fontSize: 9, border: [false, false, false, false], fillColor: '#f3f4f6' },
+        { text: `${phaseIndex}   ${si.name}`, bold: true, fontSize: 9, border: [false, false, false, false], fillColor: COLORS.sectionHeader, margin: [2, 2, 2, 2] },
         ...columns.map((col) => ({
-          text: phaseTotalByRole[col.key] > 0 ? phaseTotalByRole[col.key].toFixed(1) : '',
-          fontSize: 8,
-          bold: true,
-          alignment: 'center' as const,
-          border: [false, false, false, false],
-          fillColor: '#f3f4f6',
-          color: phaseTotalByRole[col.key] > 0 ? '#111827' : '#d1d5db',
+          text: phaseHoursByRole[col.key] > 0 ? phaseHoursByRole[col.key].toFixed(1) : '',
+          fontSize: 8, bold: true, alignment: 'center' as const,
+          border: [false, false, false, false], fillColor: COLORS.sectionHeader,
+          color: phaseHoursByRole[col.key] > 0 ? '#1e3a5f' : '#d1d5db',
         })),
-        {
-          text: phaseTotal > 0 ? phaseTotal.toFixed(1) : '',
-          fontSize: 8,
-          bold: true,
-          alignment: 'center' as const,
-          border: [false, false, false, false],
-          fillColor: '#f3f4f6',
-        },
-        ...(anyRates ? [{
-          text: phaseCost > 0 ? compactCurrency(phaseCost) : '',
-          fontSize: 7,
-          alignment: 'center' as const,
-          border: [false, false, false, false],
-          fillColor: '#f3f4f6',
-          color: '#374151',
-        }] : []),
+        { text: phaseTotal > 0 ? phaseTotal.toFixed(1) : '', fontSize: 8, bold: true, alignment: 'center' as const, border: [false, false, false, false], fillColor: COLORS.sectionHeader, color: '#1e3a5f' },
+        { text: anyRates && phaseCost > 0 ? usd(phaseCost) : '', fontSize: 7, alignment: 'right' as const, border: [false, false, false, false], fillColor: COLORS.sectionHeader, color: '#1e3a5f', margin: [0, 0, 2, 0] },
       ]);
 
-      // Subtask rows — indented, lighter text
+      // Subtask rows
       for (const subtask of usedSubtasks) {
         const subtaskEsts = line.roleEstimates.filter((e) => (e as any).subtaskId === subtask.id);
-        const subtaskByRole: Record<string, number> = {};
-        const subtaskCostByRole: Record<string, number> = {};
-        let subtaskTotal = 0;
-        let subtaskCost = 0;
+        const stByRole: Record<string, number> = {};
+        let stTotal = 0;
+        let stCost = 0;
         for (const est of subtaskEsts) {
-          subtaskByRole[est.role] = (subtaskByRole[est.role] ?? 0) + est.estimatedHours;
-          subtaskTotal += est.estimatedHours;
-          if (est.hourlyRate != null) {
-            const c = est.estimatedHours * est.hourlyRate;
-            subtaskCostByRole[est.role] = (subtaskCostByRole[est.role] ?? 0) + c;
-            subtaskCost += c;
-          }
+          stByRole[est.role] = (stByRole[est.role] ?? 0) + est.estimatedHours;
+          stTotal += est.estimatedHours;
+          if (est.hourlyRate != null) stCost += est.estimatedHours * est.hourlyRate;
         }
 
         matrixRows.push([
-          { text: `  ${subtask.name}`, fontSize: 8, color: '#6b7280', border: [false, false, false, false] },
+          { text: `    ${subtask.name}`, fontSize: 8, color: '#4b5563', border: [false, false, false, false] },
           ...columns.map((col) => ({
-            text: subtaskByRole[col.key] > 0 ? subtaskByRole[col.key].toFixed(1) : '',
-            fontSize: 7,
-            alignment: 'center' as const,
-            color: subtaskByRole[col.key] > 0 ? '#374151' : '#e5e7eb',
+            text: stByRole[col.key] > 0 ? stByRole[col.key].toFixed(1) : '',
+            fontSize: 7, alignment: 'center' as const, color: '#374151',
             border: [false, false, false, false],
           })),
-          {
-            text: subtaskTotal > 0 ? subtaskTotal.toFixed(1) : '',
-            fontSize: 7,
-            alignment: 'center' as const,
-            color: '#6b7280',
-            border: [false, false, false, false],
-          },
-          ...(anyRates ? [{
-            text: subtaskCost > 0 ? compactCurrency(subtaskCost) : '',
-            fontSize: 7,
-            alignment: 'center' as const,
-            color: '#9ca3af',
-            border: [false, false, false, false],
-          }] : []),
+          { text: stTotal > 0 ? stTotal.toFixed(1) : '', fontSize: 7, alignment: 'center' as const, color: '#6b7280', border: [false, false, false, false] },
+          { text: anyRates && stCost > 0 ? usd(stCost) : '', fontSize: 7, alignment: 'right' as const, color: '#9ca3af', border: [false, false, false, false], margin: [0, 0, 2, 0] },
         ]);
       }
     }
 
-    // Totals row — darker background
+    // ── Footer rows ────────────────────────────────────────────────────────────
+
+    // TOTAL HOURS row
     matrixRows.push([
-      { text: 'TOTAL', bold: true, fontSize: 9, border: [false, true, false, false], fillColor: '#e5e7eb' },
+      { text: 'TOTAL HOURS', bold: true, fontSize: 8, border: [false, true, false, false], fillColor: COLORS.totalHours, margin: [2, 2, 2, 2] },
       ...columns.map((col) => ({
-        text: grandTotalByRole[col.key] > 0 ? grandTotalByRole[col.key].toFixed(1) : '',
-        fontSize: 8,
-        bold: true,
-        alignment: 'center' as const,
-        border: [false, true, false, false],
-        fillColor: '#e5e7eb',
-        color: grandTotalByRole[col.key] > 0 ? '#111827' : '#d1d5db',
+        text: grandHoursByRole[col.key] > 0 ? grandHoursByRole[col.key].toFixed(1) : '',
+        fontSize: 8, bold: true, alignment: 'center' as const,
+        border: [false, true, false, false], fillColor: COLORS.totalHours,
+        color: grandHoursByRole[col.key] > 0 ? '#1e3a5f' : '#d1d5db',
       })),
-      {
-        text: grandTotalHours > 0 ? grandTotalHours.toFixed(1) : '0',
-        fontSize: 8,
-        bold: true,
-        alignment: 'center' as const,
-        border: [false, true, false, false],
-        fillColor: '#e5e7eb',
-      },
-      ...(anyRates ? [{
-        text: grandTotalCost > 0 ? compactCurrency(grandTotalCost) : '',
-        fontSize: 8,
-        bold: true,
-        alignment: 'center' as const,
-        border: [false, true, false, false],
-        fillColor: '#e5e7eb',
-        color: '#111827',
-      }] : []),
+      { text: grandTotalHours > 0 ? grandTotalHours.toFixed(1) : '', fontSize: 8, bold: true, alignment: 'center' as const, border: [false, true, false, false], fillColor: COLORS.totalHours, color: '#1e3a5f' },
+      { text: '', border: [false, true, false, false], fillColor: COLORS.totalHours },
     ]);
 
-    // ── Document header metadata ───────────────────────────────────────
+    if (anyRates) {
+      // HOURLY RATE row
+      matrixRows.push([
+        { text: 'HOURLY RATE', bold: true, fontSize: 8, border: [false, false, false, false], fillColor: COLORS.hourlyRate, margin: [2, 1, 2, 1] },
+        ...columns.map((col) => ({
+          text: rateByRole[col.key] != null ? usd(rateByRole[col.key]!) : '',
+          fontSize: 7, alignment: 'center' as const,
+          border: [false, false, false, false], fillColor: COLORS.hourlyRate,
+        })),
+        { text: '', border: [false, false, false, false], fillColor: COLORS.hourlyRate },
+        { text: '', border: [false, false, false, false], fillColor: COLORS.hourlyRate },
+      ]);
 
-    const linkedTo = (breakdown.lead as any)?.company || (breakdown.project as any)?.name || null;
+      // TOTAL LABOR COST row — per role cost + grand total
+      matrixRows.push([
+        { text: 'TOTAL LABOR COST', bold: true, fontSize: 8, border: [false, false, false, false], fillColor: COLORS.laborCost, margin: [2, 1, 2, 1] },
+        ...columns.map((col) => ({
+          text: grandCostByRole[col.key] > 0 ? usd(grandCostByRole[col.key]) : '',
+          fontSize: 7, alignment: 'center' as const,
+          border: [false, false, false, false], fillColor: COLORS.laborCost,
+        })),
+        { text: '', border: [false, false, false, false], fillColor: COLORS.laborCost },
+        { text: grandTotalLaborCost > 0 ? usd(grandTotalLaborCost) : '', fontSize: 8, bold: true, alignment: 'right' as const, border: [false, false, false, false], fillColor: COLORS.laborCost, margin: [0, 1, 2, 1] },
+      ]);
+
+      // DIRECT EXPENSES rows
+      const mileageLabel = bd.mileageQty != null
+        ? `${(bd.mileageQty as number).toLocaleString()} miles  @  $${(bd.mileageRate ?? 0).toFixed(2)} per mile  =`
+        : '—';
+      const lodgingLabel = bd.lodgingQty != null
+        ? `${(bd.lodgingQty as number).toLocaleString()} nights  @  $${(bd.lodgingRate ?? 0).toFixed(2)} per night  =`
+        : '—';
+      const perDiemLabel = bd.perDiemQty != null
+        ? `${(bd.perDiemQty as number).toLocaleString()} days  @  $${(bd.perDiemRate ?? 0).toFixed(2)} per day  =`
+        : '—';
+
+      const expenseRow = (label: string, fill: string, total: number, rowLabel: string): object[] => [
+        {
+          text: rowLabel,
+          bold: true,
+          fontSize: 8,
+          border: [false, false, false, false],
+          fillColor: fill,
+          margin: [2, 1, 2, 1],
+        },
+        {
+          text: label,
+          colSpan: nCols + 1,
+          fontSize: 7,
+          alignment: 'left' as const,
+          border: [false, false, false, false],
+          fillColor: fill,
+          margin: [4, 1, 4, 1],
+          color: '#6b4226',
+        },
+        ...blanks(nCols),
+        {
+          text: total > 0 ? usd(total) : '$  –',
+          fontSize: 7,
+          bold: true,
+          alignment: 'right' as const,
+          border: [false, false, false, false],
+          fillColor: fill,
+          margin: [0, 1, 2, 1],
+        },
+      ];
+
+      matrixRows.push(...[
+        expenseRow(mileageLabel, COLORS.expenses, mileageTotal, 'DIRECT EXPENSES (MILEAGES)'),
+        expenseRow(lodgingLabel, COLORS.expenses, lodgingTotal, 'DIRECT EXPENSES (LODGING)'),
+        expenseRow(perDiemLabel, COLORS.expenses, perDiemTotal, 'DIRECT EXPENSES (PER DIEM)'),
+      ]);
+
+      // TOTAL FEE
+      matrixRows.push([
+        ...footerLabel('TOTAL FEE', COLORS.totalFee),
+        { text: usd(totalFee), fontSize: 9, bold: true, alignment: 'right' as const, border: [false, false, false, false], fillColor: COLORS.totalFee, margin: [0, 2, 2, 2] },
+      ]);
+
+      // ROUNDED FEE (only if explicitly set)
+      if (roundedFee != null) {
+        matrixRows.push([
+          ...footerLabel('ROUNDED FEE', COLORS.roundedFee),
+          { text: usd(roundedFee), fontSize: 9, bold: true, alignment: 'right' as const, border: [false, false, false, false], fillColor: COLORS.roundedFee, margin: [0, 2, 2, 2] },
+        ]);
+      }
+    }
+
+    // ── Document metadata ──────────────────────────────────────────────────────
+    const clientName = (breakdown.lead as any)?.company || (breakdown.project as any)?.name || null;
+    const projectName = (breakdown.lead as any)?.projectName || null;
     const jobType = (breakdown.serviceType as any)?.name || null;
-    const dateStr = new Date(breakdown.createdAt).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    const dateStr = new Date(breakdown.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const companyName = settings.companyName || 'Apex Consulting & Surveying';
 
-    const metaParts: string[] = [];
-    if (linkedTo) metaParts.push(linkedTo);
-    if (jobType) metaParts.push(jobType);
-    metaParts.push(dateStr);
-
-    const tableWidths = anyRates
-      ? ['*', ...columns.map(() => COL_WIDTH), TOTAL_WIDTH, COST_WIDTH]
-      : ['*', ...columns.map(() => COL_WIDTH), TOTAL_WIDTH];
+    const tableWidths = ['*', ...columns.map(() => COL), TOT_HRS, TOT_FEE];
 
     const content: object[] = [
-      // Compact 2-line header — no decorative elements
+      // ── Document header ──────────────────────────────────────────────
       {
         columns: [
           {
             stack: [
-              {
-                text: [
-                  { text: 'COST BREAKDOWN', bold: true, fontSize: 14, color: '#111827' },
-                  { text: `   ${breakdown.title}`, fontSize: 11, color: '#6b7280' },
-                ],
-              },
+              { text: 'MANHOUR JUSTIFICATION', bold: true, fontSize: 15, color: '#1e3a5f', margin: [0, 0, 0, 2] },
+              { text: breakdown.title, fontSize: 10, color: '#374151', bold: true },
+              ...(clientName ? [{ text: clientName, fontSize: 9, color: '#6b7280', margin: [0, 1, 0, 0] }] : []),
+              ...(projectName ? [{ text: projectName, fontSize: 8, color: '#9ca3af' }] : []),
+              ...(jobType ? [{ text: jobType, fontSize: 8, color: '#9ca3af' }] : []),
             ],
           },
           {
             stack: [
-              {
-                text: settings.companyName || 'Apex Consulting & Surveying',
-                fontSize: 9,
-                alignment: 'right' as const,
-                color: '#6b7280',
-              },
-              {
-                text: metaParts.join('  ·  '),
-                fontSize: 8,
-                alignment: 'right' as const,
-                color: '#9ca3af',
-                margin: [0, 1, 0, 0],
-              },
+              { text: companyName, fontSize: 10, bold: true, alignment: 'right' as const, color: '#1e3a5f' },
+              { text: `Date: ${dateStr}`, fontSize: 8, alignment: 'right' as const, color: '#6b7280', margin: [0, 2, 0, 0] },
             ],
+            width: 180,
           },
         ],
-        margin: [0, 0, 0, 8],
+        margin: [0, 0, 0, 10],
       },
-      // Matrix table — fills the page
+      // Horizontal rule
+      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 532, y2: 0, lineWidth: 1.5, lineColor: '#1e3a5f' }], margin: [0, 0, 0, 10] },
+      // Matrix table
       {
         table: {
-          headerRows: 1,
+          headerRows: 2,
           widths: tableWidths,
           body: matrixRows,
         },
         layout: {
-          hLineWidth: (i: number, node: any) =>
-            i === 0 || i === node.table.body.length ? 0 : 0.5,
-          vLineWidth: () => 0,
-          hLineColor: () => '#e5e7eb',
-          paddingLeft: () => 4,
-          paddingRight: () => 4,
+          hLineWidth: (i: number, node: any) => (i === 0 || i === 1 || i === node.table.body.length ? 0.5 : 0.3),
+          vLineWidth: () => 0.3,
+          hLineColor: () => '#d1d5db',
+          vLineColor: () => '#e5e7eb',
+          paddingLeft: () => 3,
+          paddingRight: () => 3,
           paddingTop: () => 2,
           paddingBottom: () => 2,
         },
       },
-      // Partial cost note if needed
-      ...(!allHaveRates && anyRates ? [{
-        text: '* Cost estimate is partial — some roles have no hourly rate set.',
-        fontSize: 7,
-        color: '#b45309',
-        italics: true,
-        margin: [0, 5, 0, 0],
-      } as object] : []),
     ];
 
     const docDefinition = {
-      pageSize: 'A4' as const,
-      pageOrientation: 'landscape' as const,
-      pageMargins: [28, 28, 28, 28] as [number, number, number, number],
+      pageSize: 'LETTER' as const,
+      pageOrientation: 'portrait' as const,
+      pageMargins: [40, 44, 40, 40] as [number, number, number, number],
       defaultStyle: { font: 'Roboto', fontSize: 8, color: '#374151' },
       content,
       footer: (currentPage: number, pageCount: number) =>
@@ -781,7 +866,7 @@ export class PdfService {
               alignment: 'right' as const,
               fontSize: 7,
               color: '#9ca3af',
-              margin: [0, 6, 28, 0],
+              margin: [0, 6, 40, 0],
             }
           : {},
     };
