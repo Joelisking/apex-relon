@@ -19,8 +19,11 @@ export class QbConnectionController {
   @Get('callback')
   @Public()
   async callback(@Query() dto: QbCallbackDto, @Res() res: Response) {
-    await this.qbConnection.handleCallback(dto);
     const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3001';
+    if (dto.error) {
+      return res.redirect(`${frontendUrl}/admin/quickbooks?error=${encodeURIComponent(dto.error_description ?? dto.error)}`);
+    }
+    await this.qbConnection.handleCallback(dto as QbCallbackDto & { code: string; realmId: string });
     return res.redirect(`${frontendUrl}/admin/quickbooks?connected=true`);
   }
 

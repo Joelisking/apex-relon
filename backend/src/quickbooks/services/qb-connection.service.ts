@@ -38,7 +38,7 @@ export class QbConnectionService {
     return `https://appcenter.intuit.com/connect/oauth2?${params.toString()}`;
   }
 
-  async handleCallback(dto: QbCallbackDto): Promise<{ companyName: string }> {
+  async handleCallback(dto: QbCallbackDto & { code: string; realmId: string }): Promise<{ companyName: string }> {
     const tokenRes = await fetch(
       'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
       {
