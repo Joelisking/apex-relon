@@ -23,6 +23,7 @@ import DynamicFieldsSection from './DynamicFieldsSection';
 import TableEditorSection from './TableEditorSection';
 import AdvancedEditSection from './AdvancedEditSection';
 import type { Lead, CostBreakdown } from '@/lib/types';
+import type { ProposalFormSnapshot } from '@/lib/api/proposal-templates-client';
 
 type Source = 'lead' | 'manual';
 type ViewMode = 'preview' | 'advanced';
@@ -59,6 +60,7 @@ export default function ProposalEditor() {
   const prefilledLeadId = searchParams.get('leadId');
   const prefilledBreakdownId = searchParams.get('costBreakdownId');
   const prefilledTemplateId = searchParams.get('templateId');
+  const prefilledProposalId = searchParams.get('proposalId');
 
   const [source, setSource] = useState<Source>(prefilledLeadId ? 'lead' : 'manual');
   const [search, setSearch] = useState('');
@@ -88,6 +90,9 @@ export default function ProposalEditor() {
   const [tableCellValues, setTableCellValues] = useState<Record<string, string>>({});
   const [paragraphOverrides, setParagraphOverrides] = useState<Record<string, string>>({});
   const [viewMode, setViewMode] = useState<ViewMode>('preview');
+
+  // Stores the saved form inputs from an existing proposal (for re-editing)
+  const [formSnapshot, setFormSnapshot] = useState<ProposalFormSnapshot | null>(null);
 
   // Formatted client address for the "same as client address" checkbox
   const clientAddressFormatted = useMemo(() => {
@@ -133,17 +138,24 @@ export default function ProposalEditor() {
     enabled: !!prefilledBreakdownId,
   });
 
-  // Reset dynamic state when template changes
+  const { data: prefilledProposal } = useQuery({
+    queryKey: ['proposal', prefilledProposalId],
+    queryFn: () => proposalTemplatesApi.getProposalById(prefilledProposalId!),
+    enabled: !!prefilledProposalId,
+  });
+
+  // Reset dynamic state when template changes; seed from snapshot if re-editing
   useEffect(() => {
     if (!templateContent) return;
+    const snap = formSnapshot;
     const initial: Record<string, string> = {};
     for (const field of templateContent.dynamicFields) {
-      initial[field] = '';
+      initial[field] = snap?.dynamicValues?.[field] ?? '';
     }
     setDynamicValues(initial);
-    setTableCellValues({});
-    setParagraphOverrides({});
-  }, [templateContent]);
+    setTableCellValues(snap?.tableCellValues ?? {});
+    setParagraphOverrides(snap?.paragraphOverrides ?? {});
+  }, [templateContent, formSnapshot]);
 
   // Apply URL param pre-fills
   useEffect(() => {
@@ -156,9 +168,30 @@ export default function ProposalEditor() {
     setSelectedBreakdown(prefilledBreakdown);
   }, [prefilledBreakdown]);
 
-  // Pre-fill form when lead is selected
+  // Pre-fill form from saved snapshot when re-editing an existing proposal
+  useEffect(() => {
+    if (!prefilledProposal?.formSnapshot) return;
+    const snap = prefilledProposal.formSnapshot as ProposalFormSnapshot;
+    setFormSnapshot(snap);
+    setSalutation(snap.salutation ?? '');
+    setFirstName(snap.firstName ?? '');
+    setLastName(snap.lastName ?? '');
+    setAddress(snap.address ?? '');
+    setCity(snap.city ?? '');
+    setStateVal(snap.state ?? '');
+    setZip(snap.zip ?? '');
+    setTimeline(snap.timeline ?? '');
+    if (snap.proposalDate) setProposalDate(snap.proposalDate);
+    setProjectName(snap.projectName ?? '');
+    setProjectAddress(snap.projectAddress ?? '');
+    if (snap.totalAmount) setTotalAmount(snap.totalAmount);
+    setSameAddress(false); // project address is explicitly set from snapshot
+  }, [prefilledProposal]);
+
+  // Pre-fill form when lead is selected (skipped when re-editing with a saved snapshot)
   useEffect(() => {
     if (!selectedLead) return;
+    if (formSnapshot) return; // snapshot takes priority
     const { first, last } = splitName(selectedLead.contactName);
     setFirstName(first);
     setLastName(last);
@@ -167,7 +200,13 @@ export default function ProposalEditor() {
     if (selectedLead.city) setCity(selectedLead.city);
     if (selectedLead.state) setStateVal(selectedLead.state);
     if (selectedLead.zip) setZip(selectedLead.zip);
-  }, [selectedLead]);
+    // When the lead has an address (project/site location), auto-check sameAddress so the
+    // Project/Site Address field also reflects it. The user can uncheck to enter a different
+    // project address if the site differs from the client's billing address.
+    if (selectedLead.address || selectedLead.city || selectedLead.state || selectedLead.zip) {
+      setSameAddress(true);
+    }
+  }, [selectedLead, formSnapshot]);
 
   // Pre-fill fee from selected breakdown
   useEffect(() => {

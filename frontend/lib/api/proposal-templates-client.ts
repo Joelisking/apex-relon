@@ -83,6 +83,24 @@ export interface GenerateProposalResult {
   downloadUrl: string;
 }
 
+export interface ProposalFormSnapshot {
+  salutation?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  timeline?: string | null;
+  proposalDate?: string | null;
+  projectName?: string | null;
+  projectAddress?: string | null;
+  totalAmount?: string | null;
+  dynamicValues?: Record<string, string> | null;
+  tableCellValues?: Record<string, string> | null;
+  paragraphOverrides?: Record<string, string> | null;
+}
+
 export interface Proposal {
   id: string;
   tenantId: string;
@@ -96,6 +114,7 @@ export interface Proposal {
   acceptedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  formSnapshot?: ProposalFormSnapshot | null;
   lead: { id: string; company: string; contactName: string; projectName: string | null } | null;
   costBreakdown: { id: string; title: string; status: string } | null;
   file: { id: string; originalName: string; fileSize: number } | null;
@@ -159,6 +178,10 @@ export const proposalTemplatesApi = {
   getProposals(filters?: { leadId?: string }): Promise<Proposal[]> {
     const q = filters?.leadId ? `?leadId=${encodeURIComponent(filters.leadId)}` : '';
     return apiFetch<Proposal[]>(`/proposal-templates/proposals${q}`);
+  },
+
+  getProposalById(id: string): Promise<Proposal> {
+    return apiFetch<Proposal>(`/proposal-templates/proposals/${id}`);
   },
 
   renameProposal(id: string, title: string): Promise<Proposal> {

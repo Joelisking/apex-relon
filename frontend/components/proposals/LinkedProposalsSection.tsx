@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { proposalTemplatesApi, type Proposal } from '@/lib/api/proposal-templates-client';
+import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
 
 interface LinkedProposalsSectionProps {
   leadId: string;
@@ -28,6 +29,15 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
     month: 'short', day: 'numeric', year: 'numeric',
   });
+}
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
 
@@ -58,6 +68,11 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
   const { data: proposals = [], isLoading } = useQuery({
     queryKey: ['proposals', { leadId }],
     queryFn: () => proposalTemplatesApi.getProposals({ leadId }),
+  });
+
+  const { data: costBreakdowns = [], isLoading: loadingBreakdowns } = useQuery({
+    queryKey: ['cost-breakdowns', { leadId }],
+    queryFn: () => costBreakdownApi.getAll({ leadId }),
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['proposals', { leadId }] });
@@ -151,12 +166,14 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
   const handleOpenEditor = (proposal: Proposal) => {
     const params = new URLSearchParams();
     params.set('leadId', leadId);
+    params.set('proposalId', proposal.id);
     if (proposal.costBreakdownId) params.set('costBreakdownId', proposal.costBreakdownId);
     if (proposal.proposalTemplateId) params.set('templateId', proposal.proposalTemplateId);
     router.push(`/proposals/new?${params.toString()}`);
   };
 
   return (
+    <div className="space-y-6">
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -364,6 +381,66 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
           })}
         </div>
       )}
+    </div>
+
+    {/* Cost Breakdowns section */}
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+          Cost Breakdowns{costBreakdowns.length > 0 ? ` (${costBreakdowns.length})` : ''}
+        </p>
+      </div>
+
+      {loadingBreakdowns ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        </div>
+      ) : costBreakdowns.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center rounded-xl border border-dashed border-border/60 bg-muted/10">
+          <div className="h-9 w-9 rounded-full bg-muted/60 flex items-center justify-center mb-2.5">
+            <FileStack className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <p className="text-[13px] font-medium text-foreground">No cost breakdowns</p>
+          <p className="text-[12px] text-muted-foreground mt-0.5">
+            No cost breakdowns linked to this lead yet
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border/60 bg-card shadow-[0_1px_4px_rgba(0,0,0,0.04)] overflow-hidden">
+          {costBreakdowns.map((cb, i) => (
+            <div
+              key={cb.id}
+              className={cn('flex items-center gap-3 px-4 py-3', i > 0 && 'border-t border-border/40')}>
+              <div className="h-7 w-7 rounded-md bg-blue-500/10 flex items-center justify-center shrink-0">
+                <FileStack className="h-3.5 w-3.5 text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[13px] font-medium text-foreground truncate">{cb.title}</span>
+                  <Badge
+                    variant="outline"
+                    className={cn('text-[10px] shrink-0', CB_STATUS_STYLES[cb.status] ?? CB_STATUS_STYLES.DRAFT)}>
+                    {cb.status}
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {formatDate(cb.createdAt)}
+                  {cb.totalEstimatedCost > 0 ? ` · ${formatCurrency(cb.totalEstimatedCost)}` : ''}
+                  {cb.serviceType ? ` · ${cb.serviceType.name}` : ''}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 text-[11px] shrink-0"
+                onClick={() => router.push(`/cost-breakdowns/${cb.id}`)}>
+                View
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
     </div>
   );
 }

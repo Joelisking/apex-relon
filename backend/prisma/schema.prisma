@@ -200,6 +200,7 @@ model Proposal {
 
   proposalDate    DateTime?
   acceptedAt      DateTime?
+  formSnapshot    Json?
 
   createdById     String
   createdAt       DateTime  @default(now())

@@ -86,6 +86,12 @@ export class ProposalTemplatesController {
     return this.service.listProposals(TENANT_ID, leadId);
   }
 
+  @Get('proposals/:id')
+  @Permissions('quotes:view')
+  getProposal(@Param('id') id: string) {
+    return this.service.getProposalById(id);
+  }
+
   @Patch('proposals/:id')
   @Permissions('quotes:create')
   renameProposal(

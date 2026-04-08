@@ -120,6 +120,21 @@ export class ProposalTemplatesService implements OnModuleInit {
     });
   }
 
+  async getProposalById(id: string) {
+    const proposal = await this.prisma.proposal.findUnique({
+      where: { id },
+      include: {
+        lead: { select: { id: true, company: true, contactName: true, projectName: true } },
+        costBreakdown: { select: { id: true, title: true, status: true } },
+        file: { select: { id: true, originalName: true, fileSize: true } },
+        createdBy: { select: { id: true, name: true } },
+        proposalTemplate: { select: { id: true, name: true } },
+      },
+    });
+    if (!proposal) throw new NotFoundException('Proposal not found');
+    return proposal;
+  }
+
   listTemplates(serviceTypeId?: string) {
     return this.prisma.proposalTemplate.findMany({
       where: serviceTypeId ? { serviceTypeId } : undefined,
@@ -428,6 +443,23 @@ export class ProposalTemplatesService implements OnModuleInit {
         fileId: fileRecord.id,
         proposalDate: today,
         createdById: userId,
+        formSnapshot: {
+          salutation: dto.salutation ?? null,
+          firstName: dto.firstName ?? null,
+          lastName: dto.lastName ?? null,
+          address: dto.address ?? null,
+          city: dto.city ?? null,
+          state: dto.state ?? null,
+          zip: dto.zip ?? null,
+          timeline: dto.timeline ?? null,
+          proposalDate: dto.proposalDate ?? null,
+          projectName: dto.projectName ?? null,
+          projectAddress: dto.projectAddress ?? null,
+          totalAmount: dto.totalAmount ?? null,
+          dynamicValues: dto.dynamicValues ?? null,
+          tableCellValues: dto.tableCellValues ?? null,
+          paragraphOverrides: dto.paragraphOverrides ?? null,
+        },
       },
     });
 
