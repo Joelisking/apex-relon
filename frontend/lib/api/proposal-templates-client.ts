@@ -97,7 +97,7 @@ export interface Proposal {
   createdAt: string;
   updatedAt: string;
   lead: { id: string; company: string; contactName: string; projectName: string | null } | null;
-  costBreakdown: { id: string; title: string } | null;
+  costBreakdown: { id: string; title: string; status: string } | null;
   file: { id: string; originalName: string; fileSize: number } | null;
   proposalTemplate: { id: string; name: string } | null;
   createdBy: { id: string; name: string };
@@ -156,8 +156,9 @@ export const proposalTemplatesApi = {
 
   // ── Proposals ──────────────────────────────────────────────────────────────
 
-  getProposals(): Promise<Proposal[]> {
-    return apiFetch<Proposal[]>('/proposal-templates/proposals');
+  getProposals(filters?: { leadId?: string }): Promise<Proposal[]> {
+    const q = filters?.leadId ? `?leadId=${encodeURIComponent(filters.leadId)}` : '';
+    return apiFetch<Proposal[]>(`/proposal-templates/proposals${q}`);
   },
 
   renameProposal(id: string, title: string): Promise<Proposal> {

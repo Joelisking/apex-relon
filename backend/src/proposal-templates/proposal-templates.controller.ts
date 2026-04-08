@@ -82,8 +82,8 @@ export class ProposalTemplatesController {
 
   @Get('proposals')
   @Permissions('quotes:view')
-  listProposals() {
-    return this.service.listProposals(TENANT_ID);
+  listProposals(@Query('leadId') leadId?: string) {
+    return this.service.listProposals(TENANT_ID, leadId);
   }
 
   @Patch('proposals/:id')

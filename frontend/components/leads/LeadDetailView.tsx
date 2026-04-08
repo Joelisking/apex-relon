@@ -43,6 +43,7 @@ import { LeadAIAnalysisSection } from './LeadAIAnalysisSection';
 import { LeadCustomFields } from './LeadCustomFields';
 import { LinkedTasksSection } from '../tasks/LinkedTasksSection';
 import { LinkedQuotesSection } from '../quotes/LinkedQuotesSection';
+import { LinkedProposalsSection } from '../proposals/LinkedProposalsSection';
 import { LeadContactsSection } from '../contacts/LeadContactsSection';
 import { PageBreadcrumbs } from '../layout/PageBreadcrumbs';
 import { LeadSwitcher } from './LeadSwitcher';
@@ -270,7 +271,8 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
     { value: 'overview', label: 'Overview' },
     { value: 'contacts', label: 'Contacts' },
     { value: 'tasks', label: 'Tasks' },
-    { value: 'quotes', label: 'Quotes' },
+    { value: 'proposals', label: 'Proposals' },
+    { value: 'quotes', label: 'Invoices' },
     { value: 'documents', label: `Documents${fileCount > 0 ? ` (${fileCount})` : ''}` },
     { value: 'fields', label: 'Custom Fields' },
   ];
@@ -393,7 +395,12 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
               <LinkedTasksSection entityType="LEAD" entityId={lead.id} />
             </TabsContent>
 
-            {/* Quotes */}
+            {/* Proposals */}
+            <TabsContent value="proposals" className="mt-0">
+              <LinkedProposalsSection leadId={lead.id} />
+            </TabsContent>
+
+            {/* Invoices */}
             <TabsContent value="quotes" className="mt-0">
               <LinkedQuotesSection leadId={lead.id} />
             </TabsContent>

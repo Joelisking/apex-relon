@@ -105,12 +105,12 @@ export class ProposalTemplatesService implements OnModuleInit {
     this.logger.log(`Seeded ${seeded} proposal templates`);
   }
 
-  listProposals(tenantId: string) {
+  listProposals(tenantId: string, leadId?: string) {
     return this.prisma.proposal.findMany({
-      where: { tenantId },
+      where: { tenantId, ...(leadId ? { leadId } : {}) },
       include: {
         lead: { select: { id: true, company: true, contactName: true, projectName: true } },
-        costBreakdown: { select: { id: true, title: true } },
+        costBreakdown: { select: { id: true, title: true, status: true } },
         file: { select: { id: true, originalName: true, fileSize: true } },
         createdBy: { select: { id: true, name: true } },
         proposalTemplate: { select: { id: true, name: true } },
