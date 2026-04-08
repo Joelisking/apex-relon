@@ -504,11 +504,13 @@ export function TimeTrackingView() {
             <CalendarDays className="h-4 w-4 mr-1.5" />
             Timesheet
           </TabsTrigger>
-          <TabsTrigger value="weekly-sheet" className="flex-1 sm:flex-none">
-            <LayoutGrid className="h-4 w-4 mr-1.5" />
-            <span className="sm:hidden">Sheet</span>
-            <span className="hidden sm:inline">Weekly Sheet</span>
-          </TabsTrigger>
+          {canEnterForOthers && (
+            <TabsTrigger value="weekly-sheet" className="flex-1 sm:flex-none">
+              <LayoutGrid className="h-4 w-4 mr-1.5" />
+              <span className="sm:hidden">Sheet</span>
+              <span className="hidden sm:inline">Weekly Sheet</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* My Time */}
