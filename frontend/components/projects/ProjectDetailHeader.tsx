@@ -147,6 +147,11 @@ export function ProjectDetailHeader({
                 className={`inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2.5 py-1 border ${riskClasses}`}>
                 <RiskIcon className="h-2.5 w-2.5" /> {riskKey}
               </span>
+              {project.isIndot && (
+                <span className="inline-flex items-center text-[11px] font-semibold rounded-full px-2.5 py-1 border text-indigo-700 bg-indigo-50 border-indigo-200">
+                  INDOT
+                </span>
+              )}
             </div>
           </div>
 

@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { API_URL, getTokenFromClientCookies, serviceItemsApi } from '@/lib/api/client';
 import { workCodesApi, groupWorkCodes, type WorkCode } from '@/lib/api/work-codes-client';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import type { ServiceItem } from '@/lib/types';
 
@@ -102,6 +103,7 @@ export function TimeEntryDialog({
   const [description, setDescription] = useState('');
   const [billable, setBillable] = useState<boolean | null>(null);
   const [workCodeId, setWorkCodeId] = useState('');
+  const [isIndot, setIsIndot] = useState(false);
   const [serviceItemId, setServiceItemId] = useState('');
   const [serviceItemSubtaskId, setServiceItemSubtaskId] = useState('');
 
@@ -132,7 +134,6 @@ export function TimeEntryDialog({
 
   const selectedProject = projects.find((p) => p.id === projectId);
   const isEngineeringProject = selectedProject?.serviceType?.category?.name === 'Engineering';
-  const isIndotProject = selectedProject?.isIndot === true;
 
   // Fetch work codes — only when an engineering project is selected
   const { data: workCodes = [] } = useQuery<WorkCode[]>({
@@ -148,7 +149,7 @@ export function TimeEntryDialog({
     queryFn: () => serviceItemsApi.getAll(),
   });
 
-  const visibleServiceItems = isIndotProject
+  const visibleServiceItems = isIndot
     ? serviceItems.filter((si) => si.isIndot)
     : serviceItems;
 
@@ -166,6 +167,7 @@ export function TimeEntryDialog({
       setStartTime('08:00');
       setEndTime('09:00');
       setProjectId(entry.projectId ?? '');
+      setIsIndot(projects.find((p) => p.id === entry.projectId)?.isIndot ?? false);
       setDescription(entry.description ?? '');
       setBillable(entry.billable);
       setWorkCodeId(entry.workCodeId ?? '');
@@ -190,13 +192,14 @@ export function TimeEntryDialog({
       setDescription('');
       setBillable(null);
       setWorkCodeId('');
+      setIsIndot(projects.find((p) => p.id === initialProjectId)?.isIndot ?? false);
       setServiceItemId('');
       setServiceItemSubtaskId('');
     }
-  }, [entry, open, initialHours, initialProjectId, initialDate]);
+  }, [entry, open, initialHours, initialProjectId, initialDate, projects]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Reset work code when project changes away from engineering
+  // Reset work code / isIndot when project changes
   const handleProjectChange = (val: string) => {
     const newProjectId = val === '__none__' ? '' : val;
     setProjectId(newProjectId);
@@ -204,6 +207,20 @@ export function TimeEntryDialog({
     if (newProject?.serviceType?.category?.name !== 'Engineering') {
       setWorkCodeId('');
     }
+    const newIsIndot = newProject?.isIndot ?? false;
+    if (newIsIndot !== isIndot) {
+      setIsIndot(newIsIndot);
+      setServiceItemId('');
+      setServiceItemSubtaskId('');
+    }
+  };
+
+  const handleIsIndotChange = (val: string) => {
+    setIsIndot(val === 'yes');
+    setProjectId('');
+    setWorkCodeId('');
+    setServiceItemId('');
+    setServiceItemSubtaskId('');
   };
 
   // Reset subtask when service item changes
@@ -348,6 +365,25 @@ export function TimeEntryDialog({
             </div>
           )}
 
+          {/* INDOT toggle */}
+          <div className="space-y-1.5">
+            <Label>INDOT Project?</Label>
+            <RadioGroup
+              value={isIndot ? 'yes' : 'no'}
+              onValueChange={handleIsIndotChange}
+              className="flex gap-6"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="yes" id="tt-indot-yes" />
+                <Label htmlFor="tt-indot-yes">Yes</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="no" id="tt-indot-no" />
+                <Label htmlFor="tt-indot-no">No</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
           {/* Project */}
           <div className="space-y-1.5">
             <Label>Project</Label>
@@ -359,11 +395,13 @@ export function TimeEntryDialog({
               emptyMessage="No projects found."
               options={[
                 { value: '__none__', label: 'None' },
-                ...projects.map((p) => ({
-                  value: p.id,
-                  label: p.jobNumber ? `${p.jobNumber} · ${p.name}` : p.name,
-                  keywords: p.jobNumber ?? undefined,
-                })),
+                ...projects
+                  .filter((p) => (isIndot ? p.isIndot === true : !p.isIndot))
+                  .map((p) => ({
+                    value: p.id,
+                    label: p.jobNumber ? `${p.jobNumber} · ${p.name}` : p.name,
+                    keywords: p.jobNumber ?? undefined,
+                  })),
               ]}
             />
           </div>
