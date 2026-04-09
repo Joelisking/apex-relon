@@ -53,6 +53,8 @@ COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 USER nestjs
 
 ENV NODE_ENV=production
+# LibreOffice needs a writable HOME to create its user profile at runtime
+ENV HOME=/tmp
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \

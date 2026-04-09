@@ -66,7 +66,7 @@ export default function ProposalEditor() {
   const [search, setSearch] = useState('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [selectedBreakdown, setSelectedBreakdown] = useState<CostBreakdown | null>(null);
-  const [showBreakdownPicker, setShowBreakdownPicker] = useState(false);
+  const [showBreakdownPicker, setShowBreakdownPicker] = useState(true);
 
   const [selectedTemplateId, setSelectedTemplateId] = useState(prefilledTemplateId ?? '');
 
@@ -93,6 +93,12 @@ export default function ProposalEditor() {
 
   // Stores the saved form inputs from an existing proposal (for re-editing)
   const [formSnapshot, setFormSnapshot] = useState<ProposalFormSnapshot | null>(null);
+
+  const breakdownAmountMismatch = useMemo(() => {
+    if (!selectedBreakdown || !totalAmount) return false;
+    const entered = parseFloat(totalAmount.replace(/[^0-9.]/g, ''));
+    return !isNaN(entered) && Math.abs(entered - selectedBreakdown.totalEstimatedCost) > 0.01;
+  }, [selectedBreakdown, totalAmount]);
 
   // Formatted client address for the "same as client address" checkbox
   const clientAddressFormatted = useMemo(() => {
@@ -356,8 +362,8 @@ export default function ProposalEditor() {
         {/* Left: form */}
         <div className="w-[45%] overflow-y-auto border-r border-border/60">
           {/* Source */}
-          <div className="px-6 py-4 border-b border-border/40">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground mb-2">
+          <div className="px-6 py-5 border-b border-border/40">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground mb-3">
               Source
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -384,8 +390,8 @@ export default function ProposalEditor() {
 
           {/* Lead picker */}
           {source === 'lead' && (
-            <div className="px-6 py-4 border-b border-border/40">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground mb-2">
+            <div className="px-6 py-5 border-b border-border/40">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground mb-3">
                 Select Lead
               </p>
               <div className="relative mb-2">
@@ -397,7 +403,7 @@ export default function ProposalEditor() {
                   className="pl-8 text-sm h-8"
                 />
               </div>
-              <div className="max-h-44 overflow-y-auto space-y-0.5">
+              <div className="max-h-52 overflow-y-auto space-y-0.5">
                 {loadingLeads ? (
                   <div className="flex justify-center py-4">
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -416,7 +422,7 @@ export default function ProposalEditor() {
                       )}>
                       <div className="flex-1 min-w-0">
                         <span className="text-[12px] font-medium block truncate">{l.company}</span>
-                        <span className="text-[11px] text-muted-foreground truncate">
+                        <span className="text-[11px] text-muted-foreground block truncate">
                           {l.contactName}
                           {l.projectName ? ` · ${l.projectName}` : ''}
                         </span>
@@ -430,16 +436,16 @@ export default function ProposalEditor() {
 
               {/* Cost breakdown picker (shown when lead selected) */}
               {selectedLead && (
-                <div className="mt-3">
+                <div className="mt-4 pt-3 border-t border-border/30">
                   <button
                     onClick={() => setShowBreakdownPicker((v) => !v)}
-                    className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground hover:text-foreground transition-colors w-full">
+                    className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground hover:text-foreground transition-colors w-full mb-2">
                     Cost Breakdown
                     <span className="text-[10px] font-normal normal-case tracking-normal ml-0.5">(optional)</span>
                     <ChevronDown className={cn('h-3 w-3 ml-auto transition-transform', showBreakdownPicker && 'rotate-180')} />
                   </button>
                   {showBreakdownPicker && (
-                    <div className="mt-2 space-y-0.5">
+                    <div className="space-y-1">
                       {loadingBreakdowns ? (
                         <div className="flex justify-center py-3">
                           <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
@@ -479,8 +485,8 @@ export default function ProposalEditor() {
           )}
 
           {/* Template picker */}
-          <div className="px-6 py-4 border-b border-border/40">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground mb-2">
+          <div className="px-6 py-5 border-b border-border/40">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground mb-3">
               Template
             </p>
             {loadingTemplates ? (
@@ -504,10 +510,10 @@ export default function ProposalEditor() {
                         sel ? 'border-primary bg-primary/5' : 'border-border/60 hover:bg-muted/40',
                       )}>
                       <FileText className={cn('h-4 w-4 shrink-0', sel ? 'text-primary' : 'text-muted-foreground')} />
-                      <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-                        <span className="text-[13px] font-medium text-foreground">{t.name}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[13px] font-medium text-foreground block truncate">{t.name}</span>
                         {t.serviceType && (
-                          <Badge variant="secondary" className="text-[10px]">{t.serviceType.name}</Badge>
+                          <Badge variant="secondary" className="text-[10px] mt-0.5">{t.serviceType.name}</Badge>
                         )}
                       </div>
                       {sel && <Check className="h-4 w-4 text-primary shrink-0" />}
@@ -537,7 +543,7 @@ export default function ProposalEditor() {
           />
 
           {/* Details form */}
-          <div className="px-6 py-5 space-y-4">
+          <div className="px-6 py-5 space-y-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
               Proposal Details
             </p>
@@ -649,11 +655,15 @@ export default function ProposalEditor() {
                       if (!isNaN(num)) setTotalAmount(formatCurrencyDisplay(num));
                       else setTotalAmount('');
                     }}
-                    className="text-sm h-8 pl-6"
+                    className={cn('text-sm h-8 pl-6', breakdownAmountMismatch && 'border-amber-400 focus-visible:ring-amber-400/30')}
                     placeholder="5,000.00"
-                    readOnly={!!selectedBreakdown}
                   />
                 </div>
+                {breakdownAmountMismatch && (
+                  <p className="text-[10px] text-amber-600 mt-1 leading-snug">
+                    Differs from breakdown ({formatCurrencyDisplay(selectedBreakdown!.totalEstimatedCost)})
+                  </p>
+                )}
               </div>
             </div>
           </div>

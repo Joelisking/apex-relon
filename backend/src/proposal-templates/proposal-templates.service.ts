@@ -4,7 +4,16 @@ import * as path from 'path';
 import { promisify } from 'util';
 import { PDFDocument } from 'pdf-lib';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const libre = require('libreoffice-convert') as { convert: typeof import('libreoffice-convert').convert };
+const libre = require('libreoffice-convert') as {
+  convert: typeof import('libreoffice-convert').convert;
+  convertWithOptions: (
+    doc: Buffer,
+    format: string,
+    filter: string | undefined,
+    options: { sofficeBinaryPaths?: string[] },
+    callback: (err: Error | null, result: Buffer) => void,
+  ) => void;
+};
 import { PrismaService } from '../database/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { PdfService } from '../quotes/pdf.service';
@@ -21,7 +30,13 @@ import { CreateProposalTemplateDto } from './dto/create-proposal-template.dto';
 import { GenerateProposalDto } from './dto/generate-proposal.dto';
 import { Readable } from 'stream';
 
-const libreConvertAsync = promisify(libre.convert);
+const libreConvertAsync = promisify(libre.convertWithOptions);
+
+// Allow overriding the soffice binary path via env var (needed on macOS Homebrew).
+// The package only checks /Applications/LibreOffice.app/... on darwin by default.
+const sofficeBinaryPaths: string[] = process.env.LIBREOFFICE_BINARY
+  ? [process.env.LIBREOFFICE_BINARY]
+  : [];
 
 interface SeedTemplate {
   file: string;
@@ -266,7 +281,13 @@ export class ProposalTemplatesService implements OnModuleInit {
     const docxBuffer = await streamToBuffer(docxStream);
 
     // 2. Convert .docx → PDF via LibreOffice
-    const proposalPdfBuffer: Buffer = await libreConvertAsync(docxBuffer, '.pdf', undefined);
+    let proposalPdfBuffer: Buffer;
+    try {
+      proposalPdfBuffer = await libreConvertAsync(docxBuffer, '.pdf', undefined, { sofficeBinaryPaths });
+    } catch (err) {
+      this.logger.error('LibreOffice conversion failed', err instanceof Error ? err.stack : String(err));
+      throw new Error(`PDF conversion failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
 
     // 3. If no cost breakdown linked, just return the proposal PDF
     if (!proposal.costBreakdownId) {

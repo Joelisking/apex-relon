@@ -12,6 +12,8 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -28,6 +30,7 @@ const TENANT_ID = 'apex';
 
 @Controller('proposal-templates')
 export class ProposalTemplatesController {
+  private readonly logger = new Logger(ProposalTemplatesController.name);
   constructor(private readonly service: ProposalTemplatesService) {}
 
   // ── Templates ──────────────────────────────────────────────────────────────
@@ -136,12 +139,19 @@ export class ProposalTemplatesController {
     @Param('id') id: string,
     @Res() res: Response,
   ) {
-    const { buffer, fileName } = await this.service.downloadCombinedPdf(id);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${encodeURIComponent(fileName)}"`,
-    );
-    res.send(buffer);
+    try {
+      const { buffer, fileName } = await this.service.downloadCombinedPdf(id);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${encodeURIComponent(fileName)}"`,
+      );
+      res.send(buffer);
+    } catch (err) {
+      this.logger.error('Combined PDF download failed', err instanceof Error ? err.stack : String(err));
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Failed to generate combined PDF',
+      );
+    }
   }
 }
