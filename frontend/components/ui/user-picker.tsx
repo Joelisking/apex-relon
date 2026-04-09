@@ -100,7 +100,8 @@ export function UserPicker({
         className="p-0 overflow-hidden flex flex-col"
         style={{ width: 'var(--radix-popover-trigger-width)', maxHeight: '260px' }}
         align="start"
-        sideOffset={4}>
+        sideOffset={4}
+        onWheelCapture={(e) => e.stopPropagation()}>
         {/* Search */}
         <div className="flex items-center gap-2 px-3 h-9 border-b border-border/60 shrink-0">
           <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />

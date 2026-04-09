@@ -142,6 +142,7 @@ export function SearchableSelect({
         className="w-[var(--radix-popover-trigger-width)] p-0"
         align="start"
         sideOffset={4}
+        onWheelCapture={(e) => e.stopPropagation()}
       >
         {commandContent}
       </PopoverContent>

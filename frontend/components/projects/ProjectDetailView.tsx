@@ -28,6 +28,7 @@ import { CostLogsSection } from './CostLogsSection';
 import { ProjectTimeTrackingSection } from './ProjectTimeTrackingSection';
 import { LinkedTasksSection } from '../tasks/LinkedTasksSection';
 import { LinkedQuotesSection } from '../quotes/LinkedQuotesSection';
+import { LinkedProposalsSection } from '../proposals/LinkedProposalsSection';
 import { ProjectActivityTimeline } from './ProjectActivityTimeline';
 import { ProjectFileUploadSection } from './ProjectFileUploadSection';
 import { EditProjectDialog } from './EditProjectDialog';
@@ -294,7 +295,8 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
     { value: 'overview', label: 'Overview' },
     { value: 'budget', label: 'Budget' },
     { value: 'tasks', label: 'Tasks' },
-    { value: 'quotes', label: 'Quotes' },
+    { value: 'quotes', label: 'Invoices' },
+    ...(project.leadId ? [{ value: 'proposals', label: 'Proposals' }] : []),
     { value: 'crew', label: 'Crew' },
     { value: 'services', label: 'Services' },
     ...(isEngineeringProject ? [{ value: 'time', label: 'Time Tracking' }] : []),
@@ -465,6 +467,12 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
             <TabsContent value="quotes" className="mt-0">
               <LinkedQuotesSection projectId={project.id} />
             </TabsContent>
+
+            {project.leadId && (
+              <TabsContent value="proposals" className="mt-0">
+                <LinkedProposalsSection leadId={project.leadId} />
+              </TabsContent>
+            )}
 
             <TabsContent value="crew" className="mt-0">
               <div className="space-y-3">

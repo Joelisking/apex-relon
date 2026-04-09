@@ -112,6 +112,7 @@ export function MultiCreatableSelect({
           maxHeight: '280px',
         }}
         align="start"
+        onWheelCapture={(e) => e.stopPropagation()}
         sideOffset={4}>
         {isAdding ? (
           <div className="p-2 flex gap-2">
