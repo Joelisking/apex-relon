@@ -20,7 +20,7 @@ import { API_URL, getTokenFromClientCookies, serviceItemsApi } from '@/lib/api/c
 import { workCodesApi, groupWorkCodes, type WorkCode } from '@/lib/api/work-codes-client';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import type { ServiceItem } from '@/lib/types';
+import type { ProjectServiceItem, ServiceItem } from '@/lib/types';
 
 function getToken() {
   return getTokenFromClientCookies() ?? '';
@@ -149,9 +149,28 @@ export function TimeEntryDialog({
     queryFn: () => serviceItemsApi.getAll(),
   });
 
+  // Fetch service items linked to the selected project
+  const { data: projectServiceItems } = useQuery<ProjectServiceItem[]>({
+    queryKey: ['project-service-items', projectId],
+    queryFn: async () => {
+      const res = await fetch(`${API_URL}/projects/${projectId}/service-items`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      return res.json();
+    },
+    enabled: !!projectId,
+  });
+
+  // If project has linked service items, restrict dropdown to those; otherwise show all
+  const projectLinkedItems =
+    projectId && projectServiceItems && projectServiceItems.length > 0
+      ? projectServiceItems.map((psi) => psi.serviceItem)
+      : null;
+
+  const baseServiceItems = projectLinkedItems ?? serviceItems;
   const visibleServiceItems = isIndot
-    ? serviceItems.filter((si) => si.isIndot)
-    : serviceItems;
+    ? baseServiceItems.filter((si) => si.isIndot)
+    : baseServiceItems;
 
   // Subtasks for the currently selected service item
   const selectedItem = serviceItems.find((si) => si.id === serviceItemId);
@@ -199,7 +218,7 @@ export function TimeEntryDialog({
   }, [entry, open, initialHours, initialProjectId, initialDate, projects]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Reset work code / isIndot when project changes
+  // Reset work code / service item / isIndot when project changes
   const handleProjectChange = (val: string) => {
     const newProjectId = val === '__none__' ? '' : val;
     setProjectId(newProjectId);
@@ -210,9 +229,10 @@ export function TimeEntryDialog({
     const newIsIndot = newProject?.isIndot ?? false;
     if (newIsIndot !== isIndot) {
       setIsIndot(newIsIndot);
-      setServiceItemId('');
-      setServiceItemSubtaskId('');
     }
+    // Always clear service item when switching projects — the linked items list changes
+    setServiceItemId('');
+    setServiceItemSubtaskId('');
   };
 
   const handleIsIndotChange = (val: string) => {
@@ -436,7 +456,14 @@ export function TimeEntryDialog({
 
           {/* Service Item */}
           <div className="space-y-1.5">
-            <Label>Service Item</Label>
+            <div className="flex items-center gap-2">
+              <Label>Service Item</Label>
+              {projectLinkedItems && (
+                <span className="text-xs text-muted-foreground">
+                  ({projectLinkedItems.length} linked to project)
+                </span>
+              )}
+            </div>
             <SearchableSelect
               value={serviceItemId}
               onValueChange={handleServiceItemChange}

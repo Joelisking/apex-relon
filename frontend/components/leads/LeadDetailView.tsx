@@ -46,7 +46,6 @@ import { ConvertLeadDialog } from './ConvertLeadDialog';
 import { LeadDetailHeader } from './LeadDetailHeader';
 import { LeadDetailsPanel } from './LeadDetailsPanel';
 import { LeadAIAnalysisSection } from './LeadAIAnalysisSection';
-import { LeadCustomFields } from './LeadCustomFields';
 import { LinkedTasksSection } from '../tasks/LinkedTasksSection';
 import { LinkedQuotesSection } from '../quotes/LinkedQuotesSection';
 import { LinkedProposalsSection } from '../proposals/LinkedProposalsSection';
