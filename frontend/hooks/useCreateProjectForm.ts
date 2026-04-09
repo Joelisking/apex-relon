@@ -68,7 +68,6 @@ export function useCreateProjectForm({
   const [geocodedLat, setGeocodedLat] = useState<number | null>(null);
   const [geocodedLng, setGeocodedLng] = useState<number | null>(null);
   const [selectedServiceItemIds, setSelectedServiceItemIds] = useState<string[]>([]);
-  const [serviceItemPickerValue, setServiceItemPickerValue] = useState('');
 
   const { data: serviceCategories = [] } = useQuery<ServiceCategory[]>({
     queryKey: ['service-categories'],
@@ -191,7 +190,6 @@ export function useCreateProjectForm({
     if (id && !selectedServiceItemIds.includes(id)) {
       setSelectedServiceItemIds((prev) => [...prev, id]);
     }
-    setServiceItemPickerValue('');
   }
 
   function removeServiceItem(id: string) {
@@ -229,7 +227,6 @@ export function useCreateProjectForm({
     setSelectedCategoryIds([]);
     setSelectedServiceTypeIds([]);
     setSelectedServiceItemIds([]);
-    setServiceItemPickerValue('');
     setCostSegments([]);
     setActiveOptionalStages([]);
     setGeocodedLat(null);
@@ -300,8 +297,6 @@ export function useCreateProjectForm({
     allServiceItems,
     linkedServiceItems,
     filteredServiceItems,
-    serviceItemPickerValue,
-    setServiceItemPickerValue,
     addServiceItem,
     removeServiceItem,
     // team members

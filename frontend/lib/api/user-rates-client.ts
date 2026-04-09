@@ -29,6 +29,7 @@ async function authFetch(path: string, init: RequestInit = {}) {
     },
   });
   if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+  if (res.status === 204 || res.headers.get('content-length') === '0') return undefined;
   return res.json();
 }
 

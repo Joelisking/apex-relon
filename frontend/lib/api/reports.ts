@@ -52,6 +52,10 @@ async function apiFetch(endpoint: string) {
     throw new Error(error.message || 'Request failed');
   }
 
+  if (response.status === 204 || response.headers.get('content-length') === '0') {
+    return undefined;
+  }
+
   return response.json();
 }
 

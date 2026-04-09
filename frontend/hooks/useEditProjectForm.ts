@@ -83,7 +83,6 @@ export function useEditProjectForm({ project, open, onOpenChange, onProjectUpdat
   const [geocodedLat, setGeocodedLat] = useState<number | null>(project.latitude ?? null);
   const [geocodedLng, setGeocodedLng] = useState<number | null>(project.longitude ?? null);
   const [projectServiceItems, setProjectServiceItems] = useState<ProjectServiceItem[]>([]);
-  const [serviceItemPickerValue, setServiceItemPickerValue] = useState('');
 
   const { data: serviceCategories = [] } = useQuery<ServiceCategory[]>({
     queryKey: ['service-categories'],
@@ -159,7 +158,6 @@ export function useEditProjectForm({ project, open, onOpenChange, onProjectUpdat
     );
     setActiveOptionalStages(project.activeOptionalStages ?? []);
     setProjectServiceItems([]);
-    setServiceItemPickerValue('');
   }, [project.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch reference data + project service items when dialog opens
@@ -244,7 +242,6 @@ export function useEditProjectForm({ project, open, onOpenChange, onProjectUpdat
 
   async function addServiceItem(serviceItemId: string) {
     if (!serviceItemId) return;
-    setServiceItemPickerValue('');
     try {
       const link = await projectsApi.addServiceItem(project.id, { serviceItemId });
       setProjectServiceItems((prev) => [...prev, link]);
@@ -350,8 +347,6 @@ export function useEditProjectForm({ project, open, onOpenChange, onProjectUpdat
     allServiceItems,
     linkedServiceItems,
     filteredServiceItems,
-    serviceItemPickerValue,
-    setServiceItemPickerValue,
     addServiceItem,
     removeServiceItem,
     // team members

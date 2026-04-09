@@ -223,6 +223,10 @@ export async function apiFetch<T>(
     throw new Error(`API Error: ${response.status} - ${error}`);
   }
 
+  if (response.status === 204 || response.headers.get('content-length') === '0') {
+    return undefined as T;
+  }
+
   return response.json();
 }
 

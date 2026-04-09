@@ -62,6 +62,10 @@ async function authFetch<T>(
     throw new Error(errorData.message || `API Error: ${response.status}`);
   }
 
+  if (response.status === 204 || response.headers.get('content-length') === '0') {
+    return undefined as T;
+  }
+
   return response.json();
 }
 

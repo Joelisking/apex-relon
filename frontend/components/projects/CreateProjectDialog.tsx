@@ -45,7 +45,6 @@ export function CreateProjectDialog({
     costSegments, setCostSegments,
     activeOptionalStages, setActiveOptionalStages,
     linkedServiceItems, filteredServiceItems,
-    serviceItemPickerValue, setServiceItemPickerValue,
     addServiceItem, removeServiceItem,
     teamMembers, availableUsers, addTeamMember, removeTeamMember,
     toggleCategory, toggleServiceType,
@@ -135,10 +134,8 @@ export function CreateProjectDialog({
                 onServiceTypeToggle={toggleServiceType}
                 linkedServiceItems={linkedServiceItems}
                 availableServiceItems={filteredServiceItems.map((si) => ({ id: si.id, name: si.name, unit: si.unit }))}
-                serviceItemPickerValue={serviceItemPickerValue}
                 onAddServiceItem={addServiceItem}
                 onRemoveServiceItem={removeServiceItem}
-                onServiceItemPickerChange={setServiceItemPickerValue}
                 riskOptions={riskOptions}
                 onRiskOptionsChange={setRiskOptions}
                 countyOptions={countyOptions}

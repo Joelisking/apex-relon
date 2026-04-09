@@ -66,10 +66,8 @@ export interface ProjectCoreFieldsProps {
   // Service items
   linkedServiceItems: LinkedServiceItem[];
   availableServiceItems: Array<{ id: string; name: string; unit?: string | null }>;
-  serviceItemPickerValue: string;
   onAddServiceItem: (id: string) => void;
   onRemoveServiceItem: (key: string) => void;
-  onServiceItemPickerChange: (val: string) => void;
 
   // Risk / dropdown options
   riskOptions: DropdownOption[];
@@ -101,10 +99,8 @@ export function ProjectCoreFields({
   onServiceTypeToggle,
   linkedServiceItems,
   availableServiceItems,
-  serviceItemPickerValue,
   onAddServiceItem,
   onRemoveServiceItem,
-  onServiceItemPickerChange,
   riskOptions,
   onRiskOptionsChange,
   countyOptions,
@@ -327,10 +323,8 @@ export function ProjectCoreFields({
       <ProjectServiceItemsField
         linkedItems={linkedServiceItems}
         availableItems={availableServiceItems}
-        pickerValue={serviceItemPickerValue}
         onAdd={onAddServiceItem}
         onRemove={onRemoveServiceItem}
-        onPickerValueChange={onServiceItemPickerChange}
         serviceTypeFilterActive={selectedServiceTypeIds.length > 0}
       />
 
