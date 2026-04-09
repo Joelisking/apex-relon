@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { CostLogsSection } from './CostLogsSection';
+import { ProjectCostSegmentsSection } from './ProjectCostSegmentsSection';
 import { ProjectTimeTrackingSection } from './ProjectTimeTrackingSection';
 import { LinkedTasksSection } from '../tasks/LinkedTasksSection';
 import { LinkedQuotesSection } from '../quotes/LinkedQuotesSection';
@@ -450,14 +451,22 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
             </TabsContent>
 
             <TabsContent value="budget" className="mt-0">
-              <CostLogsSection
-                projectId={project.id}
-                costLogs={costLogs}
-                estimatedRevenue={revenue}
-                totalCost={project.totalCost ?? 0}
-                onUpdated={refreshProject}
-                canEditCosts={canEditCosts}
-              />
+              <div className="space-y-6">
+                {(project.costSegments?.length ?? 0) > 0 && (
+                  <ProjectCostSegmentsSection
+                    segments={project.costSegments!}
+                    contractedValue={contractedValue}
+                  />
+                )}
+                <CostLogsSection
+                  projectId={project.id}
+                  costLogs={costLogs}
+                  estimatedRevenue={revenue}
+                  totalCost={project.totalCost ?? 0}
+                  onUpdated={refreshProject}
+                  canEditCosts={canEditCosts}
+                />
+              </div>
             </TabsContent>
 
             <TabsContent value="tasks" className="mt-0">
