@@ -19,6 +19,7 @@ interface UserPickerProps {
   value: string;
   onChange: (id: string) => void;
   placeholder?: string;
+  searchPlaceholder?: string;
   allowUnassigned?: boolean;
   unassignedLabel?: string;
   disabled?: boolean;
@@ -30,6 +31,7 @@ export function UserPicker({
   value,
   onChange,
   placeholder = 'Select person...',
+  searchPlaceholder = 'Search...',
   allowUnassigned = false,
   unassignedLabel = 'Unassigned',
   disabled = false,
@@ -106,7 +108,7 @@ export function UserPicker({
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search people..."
+            placeholder={searchPlaceholder}
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           {query && (

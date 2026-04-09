@@ -1,7 +1,7 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
-import { UserPicker } from '@/components/ui/user-picker';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { X } from 'lucide-react';
 
 export interface LinkedServiceItem {
@@ -34,7 +34,7 @@ export function ProjectServiceItemsField({
   if (!hasActive) return null;
 
   return (
-    <div className="col-span-2 space-y-2">
+    <div className="space-y-2">
       <p className="text-sm font-medium leading-none">Service Items</p>
 
       {linkedItems.length > 0 && (
@@ -61,19 +61,18 @@ export function ProjectServiceItemsField({
       )}
 
       {availableItems.length > 0 && (
-        <UserPicker
-          users={availableItems.map((si) => ({
-            id: si.id,
-            name: si.unit ? `${si.name} (${si.unit})` : si.name,
+        <SearchableSelect
+          options={availableItems.map((si) => ({
+            value: si.id,
+            label: si.unit ? `${si.name} (${si.unit})` : si.name,
           }))}
           value={pickerValue}
-          onChange={(val) => {
+          onValueChange={(val) => {
             onPickerValueChange('');
             if (val) onAdd(val);
           }}
-          placeholder={
-            serviceTypeFilterActive ? 'Add a service item for this type…' : 'Add a service item…'
-          }
+          placeholder={serviceTypeFilterActive ? 'Add a service item for this type…' : 'Add a service item…'}
+          searchPlaceholder="Search service items…"
         />
       )}
 

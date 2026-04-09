@@ -96,6 +96,7 @@ export function useCreateProjectForm({
   });
 
   const primaryServiceTypeName = usePrimaryServiceTypeName(selectedServiceTypeIds, serviceCategories);
+  const watchedIsIndot = form.watch('isIndot');
 
   useEffect(() => {
     if (!open) return;
@@ -149,11 +150,12 @@ export function useCreateProjectForm({
     () =>
       allServiceItems
         .filter((si) => si.isActive && !selectedServiceItemIds.includes(si.id))
+        .filter((si) => !watchedIsIndot || si.isIndot)
         .filter((si) => {
           if (selectedServiceTypeIds.length === 0) return true;
           return si.serviceTypeIds.some((id) => selectedServiceTypeIds.includes(id));
         }),
-    [allServiceItems, selectedServiceItemIds, selectedServiceTypeIds],
+    [allServiceItems, selectedServiceItemIds, selectedServiceTypeIds, watchedIsIndot],
   );
 
   const linkedServiceItems = useMemo<LinkedServiceItem[]>(

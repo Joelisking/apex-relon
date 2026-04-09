@@ -296,18 +296,7 @@ export function ProjectCoreFields({
         />
       </div>
 
-      {/* Service Items */}
-      <ProjectServiceItemsField
-        linkedItems={linkedServiceItems}
-        availableItems={availableServiceItems}
-        pickerValue={serviceItemPickerValue}
-        onAdd={onAddServiceItem}
-        onRemove={onRemoveServiceItem}
-        onPickerValueChange={onServiceItemPickerChange}
-        serviceTypeFilterActive={selectedServiceTypeIds.length > 0}
-      />
-
-      {/* Risk Status */}
+      {/* Risk Status + Service Items — same row */}
       <FormField
         control={form.control}
         name="riskStatus"
@@ -333,6 +322,16 @@ export function ProjectCoreFields({
             <FormMessage />
           </FormItem>
         )}
+      />
+
+      <ProjectServiceItemsField
+        linkedItems={linkedServiceItems}
+        availableItems={availableServiceItems}
+        pickerValue={serviceItemPickerValue}
+        onAdd={onAddServiceItem}
+        onRemove={onRemoveServiceItem}
+        onPickerValueChange={onServiceItemPickerChange}
+        serviceTypeFilterActive={selectedServiceTypeIds.length > 0}
       />
 
       {/* County */}
