@@ -28,9 +28,15 @@ import {
 } from 'lucide-react';
 import type { Lead, ServiceCategory } from '@/lib/types';
 import { api, apiFetch, settingsApi } from '@/lib/api/client';
-import { activitiesApi, type Activity as ActivityType } from '@/lib/api/activities-client';
+import {
+  activitiesApi,
+  type Activity as ActivityType,
+} from '@/lib/api/activities-client';
 import { filesApi, type FileUpload } from '@/lib/api/files-client';
-import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
+import {
+  pipelineApi,
+  type PipelineStage,
+} from '@/lib/api/pipeline-client';
 import { ActivityTimeline } from './ActivityTimeline';
 import { FileUploadSection } from './FileUploadSection';
 import { getProbability, urgencyColor } from './constants';
@@ -56,8 +62,11 @@ interface LeadDetailViewProps {
   initialTab: string;
 }
 
-
-export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailViewProps) {
+export function LeadDetailView({
+  leadId,
+  currentUser,
+  initialTab,
+}: LeadDetailViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -74,18 +83,22 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [closeWonDialogOpen, setCloseWonDialogOpen] = useState(false);
   const [leadStages, setLeadStages] = useState<PipelineStage[]>([]);
-  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
+  const [serviceCategories, setServiceCategories] = useState<
+    ServiceCategory[]
+  >([]);
   const [isUpdatingStage, setIsUpdatingStage] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
 
   const loadLeadData = async (signal?: AbortSignal) => {
     try {
-      const [leadData, activitiesData, filesData] = await Promise.all([
-        apiFetch<Lead>(`/leads/${leadId}`),
-        activitiesApi.getActivities(leadId),
-        filesApi.getFiles(leadId),
-      ]);
+      const [leadData, activitiesData, filesData] = await Promise.all(
+        [
+          apiFetch<Lead>(`/leads/${leadId}`),
+          activitiesApi.getActivities(leadId),
+          filesApi.getFiles(leadId),
+        ],
+      );
       if (signal?.aborted) return;
       setLead(leadData);
       setActivities(activitiesData);
@@ -106,8 +119,14 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
   }, [leadId]);
 
   useEffect(() => {
-    pipelineApi.getStages('prospective_project').then(setLeadStages).catch(console.error);
-    settingsApi.getServiceCategories().then(setServiceCategories).catch(console.error);
+    pipelineApi
+      .getStages('prospective_project')
+      .then(setLeadStages)
+      .catch(console.error);
+    settingsApi
+      .getServiceCategories()
+      .then(setServiceCategories)
+      .catch(console.error);
   }, []);
 
   /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -126,7 +145,7 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
 
   const allUsersArr = Array.isArray(allUsers)
     ? allUsers
-    : ((allUsers as { users?: any[] })?.users ?? []);  // eslint-disable-line @typescript-eslint/no-explicit-any
+    : ((allUsers as { users?: any[] })?.users ?? []); // eslint-disable-line @typescript-eslint/no-explicit-any
 
   const handleStageChange = async (newStage: string) => {
     if (!lead || newStage === lead.stage) return;
@@ -163,7 +182,9 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
       params.set('tab', value);
     }
     const qs = params.toString();
-    router.replace(`/leads/${leadId}${qs ? `?${qs}` : ''}`, { scroll: false });
+    router.replace(`/leads/${leadId}${qs ? `?${qs}` : ''}`, {
+      scroll: false,
+    });
   };
 
   const handleDelete = async () => {
@@ -203,10 +224,10 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
     if (!lead) return;
     setSummaryLoading(true);
     try {
-      const summary = await apiFetch<{ summary: string; recommendations: string[] }>(
-        `/leads/${lead.id}/summary`,
-        { method: 'POST' },
-      );
+      const summary = await apiFetch<{
+        summary: string;
+        recommendations: string[];
+      }>(`/leads/${lead.id}/summary`, { method: 'POST' });
       setLead({
         ...lead,
         aiSummary: summary.summary,
@@ -231,7 +252,9 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
         <p className="text-muted-foreground">Lead not found</p>
-        <button onClick={() => router.push('/leads')} className="text-primary underline text-sm">
+        <button
+          onClick={() => router.push('/leads')}
+          className="text-primary underline text-sm">
           Back to Leads
         </button>
       </div>
@@ -244,25 +267,51 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
   const activityCount = lead.metrics?.activityCount ?? 0;
   const fileCount = lead.metrics?.fileCount ?? 0;
   const stale = daysSinceContact > 14;
-  const isOverdue = lead.likelyStartDate && lead.stage !== 'Closed Won' && lead.stage !== 'Won' && lead.stage !== 'Closed Lost' && lead.stage !== 'Lost' && new Date(lead.likelyStartDate) < new Date();
+  const isOverdue =
+    lead.likelyStartDate &&
+    lead.stage !== 'Closed Won' &&
+    lead.stage !== 'Won' &&
+    lead.stage !== 'Closed Lost' &&
+    lead.stage !== 'Lost' &&
+    new Date(lead.likelyStartDate) < new Date();
   const isWon = lead.stage === 'Closed Won' || lead.stage === 'Won';
   const isConverted = !!lead.convertedToClientId;
   const accentColor = urgencyColor(lead.urgency);
-  const companyOrName = lead.projectName || lead.company || lead.contactName || 'Unknown';
+  const companyOrName =
+    lead.projectName || lead.company || lead.contactName || 'Unknown';
 
   const getTimingBadge = () => {
     if (!lead.likelyStartDate) return null;
     const expected = new Date(lead.likelyStartDate);
     const now = new Date();
-    const closed = lead.dealClosedAt ? new Date(lead.dealClosedAt) : null;
+    const closed = lead.dealClosedAt
+      ? new Date(lead.dealClosedAt)
+      : null;
     if (isWon && closed && closed <= expected) {
-      return <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full"><CheckCircle className="h-3 w-3" /> On Time</span>;
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+          <CheckCircle className="h-3 w-3" /> On Time
+        </span>
+      );
     }
     if (isWon && closed && closed > expected) {
-      return <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full"><AlertTriangle className="h-3 w-3" /> Late Start</span>;
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+          <AlertTriangle className="h-3 w-3" /> Late Start
+        </span>
+      );
     }
-    if (!closed && lead.stage !== 'Won' && lead.stage !== 'Lost' && expected < now) {
-      return <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full"><AlertTriangle className="h-3 w-3" /> Overdue</span>;
+    if (
+      !closed &&
+      lead.stage !== 'Won' &&
+      lead.stage !== 'Lost' &&
+      expected < now
+    ) {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+          <AlertTriangle className="h-3 w-3" /> Overdue
+        </span>
+      );
     }
     return null;
   };
@@ -273,8 +322,10 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
     { value: 'tasks', label: 'Tasks' },
     { value: 'proposals', label: 'Proposals' },
     { value: 'quotes', label: 'Invoices' },
-    { value: 'documents', label: `Documents${fileCount > 0 ? ` (${fileCount})` : ''}` },
-    { value: 'fields', label: 'Custom Fields' },
+    {
+      value: 'documents',
+      label: `Documents${fileCount > 0 ? ` (${fileCount})` : ''}`,
+    },
   ];
 
   return (
@@ -288,7 +339,9 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
               node: (
                 <LeadSwitcher
                   currentLeadId={lead.id}
-                  currentLeadName={lead.projectName || lead.contactName || 'Lead'}
+                  currentLeadName={
+                    lead.projectName || lead.contactName || 'Lead'
+                  }
                 />
               ),
             },
@@ -318,103 +371,129 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
       />
 
       {/* ── Tabs ── */}
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col flex-1 min-h-0">
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="flex flex-col flex-1 min-h-0">
         <TabsList className="w-full justify-start rounded-none border-b border-border bg-background p-0 h-auto gap-0 shrink-0">
           {TABS.map((tab) => (
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className="rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 text-sm font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:bg-transparent"
-            >
+              className="rounded-none border-b-2 border-transparent bg-transparent px-4 py-2.5 text-sm font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:bg-transparent">
               {tab.label}
             </TabsTrigger>
           ))}
         </TabsList>
 
         <div className="flex-1 overflow-auto min-h-0 pt-6 pb-4 md:pb-8 px-2 md:px-4">
-
-            {/* Overview */}
-            <TabsContent value="overview" className="mt-0 space-y-6">
-              {isWon && (
-                isConverted ? (
-                  <div className="flex items-center justify-between p-3.5 bg-muted/30 border border-border/60 rounded-xl">
-                    <div>
-                      <p className="font-semibold text-[13px]">Converted to Project</p>
-                      <p className="text-[12px] text-muted-foreground">This prospective project has been converted</p>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => router.push('/projects')} className="gap-1.5 text-[12px]">
-                      View Projects <ArrowRight className="h-3.5 w-3.5" />
-                    </Button>
+          {/* Overview */}
+          <TabsContent value="overview" className="mt-0 space-y-6">
+            {isWon &&
+              (isConverted ? (
+                <div className="flex items-center justify-between p-3.5 bg-muted/30 border border-border/60 rounded-xl">
+                  <div>
+                    <p className="font-semibold text-[13px]">
+                      Converted to Project
+                    </p>
+                    <p className="text-[12px] text-muted-foreground">
+                      This prospective project has been converted
+                    </p>
                   </div>
-                ) : hasPermission('clients:convert') ? (
-                  <div className="flex items-center justify-between p-3.5 bg-emerald-50/60 border border-emerald-200/60 rounded-xl">
-                    <div>
-                      <p className="font-semibold text-[13px] text-emerald-900">Ready to convert</p>
-                      <p className="text-[12px] text-emerald-700">Create an active project from this lead</p>
-                    </div>
-                    <Button size="sm" onClick={() => setConvertDialogOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 gap-1.5 text-[12px]">
-                      Convert <ArrowRight className="h-3.5 w-3.5" />
-                    </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push('/projects')}
+                    className="gap-1.5 text-[12px]">
+                    View Projects{' '}
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : hasPermission('clients:convert') ? (
+                <div className="flex items-center justify-between p-3.5 bg-emerald-50/60 border border-emerald-200/60 rounded-xl">
+                  <div>
+                    <p className="font-semibold text-[13px] text-emerald-900">
+                      Ready to convert
+                    </p>
+                    <p className="text-[12px] text-emerald-700">
+                      Create an active project from this lead
+                    </p>
                   </div>
-                ) : null
-              )}
+                  <Button
+                    size="sm"
+                    onClick={() => setConvertDialogOpen(true)}
+                    className="bg-emerald-600 hover:bg-emerald-700 gap-1.5 text-[12px]">
+                    Convert <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : null)}
 
-              <LeadAIAnalysisSection
-                lead={lead}
-                hasAnalyzePermission={hasPermission('leads:analyze')}
-                aiLoading={aiLoading}
-                summaryLoading={summaryLoading}
-                onGenerateSummary={handleGenerateAISummary}
-                onAnalyzeRisk={handleAnalyzeRisk}
-              />
+            <LeadAIAnalysisSection
+              lead={lead}
+              hasAnalyzePermission={hasPermission('leads:analyze')}
+              aiLoading={aiLoading}
+              summaryLoading={summaryLoading}
+              onGenerateSummary={handleGenerateAISummary}
+              onAnalyzeRisk={handleAnalyzeRisk}
+            />
 
-              <hr className="border-border/40" />
+            <hr className="border-border/40" />
 
-              {/* Details + Timeline */}
-              <LeadDetailsPanel lead={lead} isOverdue={!!isOverdue} serviceCategories={serviceCategories} />
+            {/* Details + Timeline */}
+            <LeadDetailsPanel
+              lead={lead}
+              isOverdue={!!isOverdue}
+              serviceCategories={serviceCategories}
+            />
 
-              <hr className="border-border/40" />
+            <hr className="border-border/40" />
 
-              <ActivityTimeline
+            <ActivityTimeline
+              leadId={lead.id}
+              activities={activities}
+              currentUserId={currentUser.id}
+              onActivityAdded={() => loadLeadData()}
+            />
+          </TabsContent>
+
+          {/* Contacts */}
+          <TabsContent value="contacts" className="mt-0">
+            {lead.clientId && (
+              <LeadContactsSection
                 leadId={lead.id}
-                activities={activities}
-                currentUserId={currentUser.id}
-                onActivityAdded={() => loadLeadData()}
+                clientId={lead.clientId}
+                canEdit={hasPermission('leads:edit')}
               />
-            </TabsContent>
+            )}
+          </TabsContent>
 
-            {/* Contacts */}
-            <TabsContent value="contacts" className="mt-0">
-              {lead.clientId && (
-                <LeadContactsSection leadId={lead.id} clientId={lead.clientId} canEdit={hasPermission('leads:edit')} />
-              )}
-            </TabsContent>
+          {/* Tasks */}
+          <TabsContent value="tasks" className="mt-0">
+            <LinkedTasksSection
+              entityType="LEAD"
+              entityId={lead.id}
+            />
+          </TabsContent>
 
-            {/* Tasks */}
-            <TabsContent value="tasks" className="mt-0">
-              <LinkedTasksSection entityType="LEAD" entityId={lead.id} />
-            </TabsContent>
+          {/* Proposals */}
+          <TabsContent value="proposals" className="mt-0">
+            <LinkedProposalsSection leadId={lead.id} />
+          </TabsContent>
 
-            {/* Proposals */}
-            <TabsContent value="proposals" className="mt-0">
-              <LinkedProposalsSection leadId={lead.id} />
-            </TabsContent>
+          {/* Invoices */}
+          <TabsContent value="quotes" className="mt-0">
+            <LinkedQuotesSection leadId={lead.id} />
+          </TabsContent>
 
-            {/* Invoices */}
-            <TabsContent value="quotes" className="mt-0">
-              <LinkedQuotesSection leadId={lead.id} />
-            </TabsContent>
-
-            {/* Documents */}
-            <TabsContent value="documents" className="mt-0">
-              <FileUploadSection leadId={lead.id} files={files} currentUserId={currentUser.id} onFilesChanged={() => loadLeadData()} />
-            </TabsContent>
-
-            {/* Custom Fields */}
-            <TabsContent value="fields" className="mt-0">
-              <LeadCustomFields leadId={lead.id} />
-            </TabsContent>
-
+          {/* Documents */}
+          <TabsContent value="documents" className="mt-0">
+            <FileUploadSection
+              leadId={lead.id}
+              files={files}
+              currentUserId={currentUser.id}
+              onFilesChanged={() => loadLeadData()}
+            />
+          </TabsContent>
         </div>
       </Tabs>
 
@@ -455,18 +534,32 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
       )}
 
       {/* Delete Confirmation */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Lead</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete <strong>{lead?.contactName || lead?.name}</strong>. This action cannot be undone.
+              This will permanently delete{' '}
+              <strong>{lead?.contactName || lead?.name}</strong>. This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-red-600 hover:bg-red-700">
-              {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : 'Delete'}
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700">
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />{' '}
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -474,4 +567,3 @@ export function LeadDetailView({ leadId, currentUser, initialTab }: LeadDetailVi
     </div>
   );
 }
-
