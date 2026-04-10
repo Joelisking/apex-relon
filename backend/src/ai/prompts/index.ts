@@ -114,7 +114,7 @@ export function buildClientHealthPrompt(client: Record<string, unknown>): string
   return `Analyze this land surveying client's health status and provide a comprehensive assessment in JSON format.
 
 Client Details:
-- Name: ${client.name}
+- Name: ${(client.name as string | null) || (client.individualName as string | null) || 'Unknown'}
 - Segment: ${client.segment}
 - Industry: ${client.industry}
 - Lifetime Revenue: $${client.lifetimeRevenue?.toLocaleString() || '0'}
@@ -265,7 +265,7 @@ export function buildUpsellPrompt(client: Record<string, unknown>): string {
   return `Develop a growth and upsell strategy for a Apex Consulting & Surveying client. Respond in JSON format.
 
 Client:
-- Name: ${client.name}
+- Name: ${(client.name as string | null) || (client.individualName as string | null) || 'Unknown'}
 - Segment: ${client.segment}
 - Industry: ${client.industry}
 - Lifetime Revenue: $${client.lifetimeRevenue?.toLocaleString() || '0'}

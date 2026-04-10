@@ -466,7 +466,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
                 <CostLogsSection
                   projectId={project.id}
                   costLogs={costLogs}
-                  estimatedRevenue={contractedValue}
+                  contractedValue={contractedValue}
                   totalCost={project.totalCost ?? 0}
                   onUpdated={refreshProject}
                   canEditCosts={canEditCosts}

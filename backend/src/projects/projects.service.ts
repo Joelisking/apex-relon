@@ -10,6 +10,7 @@ import { Prisma } from '@prisma/client';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { generateJobNumber } from './projects.util';
+import { getClientDisplayName } from '../clients/client-display.helper';
 
 @Injectable()
 export class ProjectsService {
@@ -158,7 +159,7 @@ export class ProjectsService {
         projectId: project.id,
         projectName: project.name,
         clientId: project.clientId,
-        clientName: client.name,
+        clientName: getClientDisplayName(client),
         contractedValue: project.contractedValue,
         status: project.status,
       },

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ReportFiltersDto } from '../dto/report-filters.dto';
+import { getClientDisplayName } from '../../clients/client-display.helper';
 
 interface ReportUser {
   id: string;
@@ -120,7 +121,7 @@ export class ClientsReportingService {
 
     return clients.map((client) => ({
       clientId: client.id,
-      clientName: client.name,
+      clientName: getClientDisplayName(client),
       segment: client.segment,
       status: client.status,
       healthScore: client.healthScore,

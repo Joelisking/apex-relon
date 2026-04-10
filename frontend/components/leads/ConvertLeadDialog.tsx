@@ -45,7 +45,6 @@ const formSchema = z.object({
   projectName: z.string().min(1, 'Project name is required'),
   status: z.string().default(''),
   contractedValue: z.coerce.number().min(0, 'Value must be positive'),
-  endOfProjectValue: z.coerce.number().optional().nullable(),
   startDate: z.string().optional(),
   estimatedDueDate: z.string().optional(),
   closedDate: z.string().optional(),
@@ -86,7 +85,6 @@ export function ConvertLeadDialog({
       projectName: lead?.projectName || (lead ? `${lead.company} - ${lead.jobType?.name || 'Project'}` : ''),
       status: '',
       contractedValue: lead?.contractedValue ?? lead?.expectedValue ?? 0,
-      endOfProjectValue: undefined,
       startDate: '',
       estimatedDueDate: '',
       closedDate: leadClosedDate,
@@ -106,7 +104,6 @@ export function ConvertLeadDialog({
         status: '',
         contractedValue:
           lead.contractedValue ?? lead.expectedValue ?? 0,
-        endOfProjectValue: undefined,
         startDate: '',
         estimatedDueDate: '',
         closedDate: lead.dealClosedAt
@@ -153,7 +150,6 @@ export function ConvertLeadDialog({
         {
           projectName: values.projectName,
           contractedValue: values.contractedValue,
-          endOfProjectValue: values.endOfProjectValue ?? undefined,
           startDate: values.startDate || undefined,
           estimatedDueDate: values.estimatedDueDate || undefined,
           closedDate: values.closedDate || undefined,
@@ -230,35 +226,6 @@ export function ConvertLeadDialog({
                         step="0.01"
                         {...field}
                         onFocus={(e) => e.target.select()}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* End of Project Value */}
-              <FormField
-                control={form.control}
-                name="endOfProjectValue"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>End of Project Value ($)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="Optional"
-                        value={field.value ?? ''}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) =>
-                          field.onChange(
-                            e.target.value === ''
-                              ? undefined
-                              : e.target.value
-                          )
-                        }
                       />
                     </FormControl>
                     <FormMessage />

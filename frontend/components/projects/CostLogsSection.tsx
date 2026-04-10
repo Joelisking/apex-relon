@@ -24,7 +24,7 @@ import type { DropdownOption } from '@/lib/types';
 interface CostLogsSectionProps {
   projectId: string;
   costLogs: CostLog[];
-  estimatedRevenue: number;
+  contractedValue: number;
   totalCost: number;
   onUpdated: () => void;
   canEditCosts?: boolean;
@@ -33,7 +33,7 @@ interface CostLogsSectionProps {
 export function CostLogsSection({
   projectId,
   costLogs,
-  estimatedRevenue,
+  contractedValue,
   totalCost,
   onUpdated,
   canEditCosts = false,
@@ -52,9 +52,9 @@ export function CostLogsSection({
     settingsApi.getDropdownOptions('cost_category').then(setCostCategories).catch(console.error);
   }, []);
 
-  const grossMargin = estimatedRevenue - totalCost;
+  const grossMargin = contractedValue - totalCost;
   const marginPercent =
-    estimatedRevenue > 0 ? (grossMargin / estimatedRevenue) * 100 : 0;
+    contractedValue > 0 ? (grossMargin / contractedValue) * 100 : 0;
 
   const handleAdd = async () => {
     if (!form.category || !form.description || !form.amount) {
@@ -242,7 +242,7 @@ export function CostLogsSection({
         <div>
           <p className="text-xs font-medium text-muted-foreground">Est. Revenue</p>
           <p className="text-sm font-semibold">
-            ${estimatedRevenue.toLocaleString()}
+            ${contractedValue.toLocaleString()}
           </p>
         </div>
         <div>

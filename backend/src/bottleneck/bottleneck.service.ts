@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { AiService } from '../ai/ai.service';
+import { getClientDisplayName } from '../clients/client-display.helper';
 
 export interface StageDwellResult {
   stage: string;
@@ -232,7 +233,7 @@ export class BottleneckService {
     const threshold = thresholdDays ?? (await this.getThresholds()).stuckDays;
     const projects = await this.prisma.project.findMany({
       where: { status: { notIn: ['Completed', 'Cancelled'] } },
-      include: { client: { select: { name: true } } },
+      include: { client: { select: { name: true, individualName: true } } },
     });
 
     return projects
@@ -244,7 +245,7 @@ export class BottleneckService {
       .map((p) => ({
         id: p.id,
         name: p.name,
-        clientName: p.client.name,
+        clientName: getClientDisplayName(p.client),
         status: p.status,
         daysSinceUpdate: Math.round(
           (Date.now() - p.updatedAt.getTime()) / (1000 * 60 * 60 * 24),

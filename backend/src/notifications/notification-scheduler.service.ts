@@ -4,6 +4,7 @@ import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from './notifications.service';
 import { NotificationType } from './notification-types.constants';
 import { EmailService } from '../email/email.service';
+import { getClientDisplayName } from '../clients/client-display.helper';
 
 @Injectable()
 export class NotificationSchedulerService {
@@ -258,7 +259,7 @@ export class NotificationSchedulerService {
         },
         accountManagerId: { not: null },
       },
-      select: { id: true, name: true, accountManagerId: true },
+      select: { id: true, name: true, individualName: true, accountManagerId: true },
       take: 30,
     });
 
@@ -279,7 +280,7 @@ export class NotificationSchedulerService {
         userId: client.accountManagerId,
         type: NotificationType.CLIENT_DORMANT,
         title: 'Client dormant',
-        message: `No activity with "${client.name}" in over 30 days`,
+        message: `No activity with "${getClientDisplayName(client)}" in over 30 days`,
         entityType: 'CLIENT',
         entityId: client.id,
       });
