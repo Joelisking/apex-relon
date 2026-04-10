@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -16,9 +20,20 @@ import { TimePicker } from '@/components/tasks/TimePicker';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { API_URL, getTokenFromClientCookies, serviceItemsApi } from '@/lib/api/client';
-import { workCodesApi, groupWorkCodes, type WorkCode } from '@/lib/api/work-codes-client';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  API_URL,
+  getTokenFromClientCookies,
+  serviceItemsApi,
+} from '@/lib/api/client';
+import {
+  workCodesApi,
+  groupWorkCodes,
+  type WorkCode,
+} from '@/lib/api/work-codes-client';
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from '@/components/ui/radio-group';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import {
   Command,
@@ -28,7 +43,11 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { ChevronsUpDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ProjectServiceItem, ServiceItem } from '@/lib/types';
@@ -37,7 +56,10 @@ function getToken() {
   return getTokenFromClientCookies() ?? '';
 }
 
-async function ttFetch<T>(path: string, options?: RequestInit): Promise<T> {
+async function ttFetch<T>(
+  path: string,
+  options?: RequestInit,
+): Promise<T> {
   const res = await fetch(`${API_URL}/time-tracking${path}`, {
     ...options,
     headers: {
@@ -82,7 +104,10 @@ interface ServiceSubtaskPickerProps {
   projectLinkedCount: number | null;
   serviceItemId: string;
   serviceItemSubtaskId: string;
-  onSelect: (serviceItemId: string, serviceItemSubtaskId: string) => void;
+  onSelect: (
+    serviceItemId: string,
+    serviceItemSubtaskId: string,
+  ) => void;
 }
 
 function ServiceSubtaskPicker({
@@ -94,8 +119,12 @@ function ServiceSubtaskPicker({
 }: ServiceSubtaskPickerProps) {
   const [open, setOpen] = useState(false);
 
-  const selectedItem = visibleServiceItems.find((si) => si.id === serviceItemId);
-  const selectedSubtask = selectedItem?.subtasks?.find((st) => st.id === serviceItemSubtaskId);
+  const selectedItem = visibleServiceItems.find(
+    (si) => si.id === serviceItemId,
+  );
+  const selectedSubtask = selectedItem?.subtasks?.find(
+    (st) => st.id === serviceItemSubtaskId,
+  );
 
   const displayLabel = selectedItem
     ? selectedSubtask
@@ -120,24 +149,36 @@ function ServiceSubtaskPicker({
             className={cn(
               'flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors hover:bg-muted/40',
               !displayLabel && 'text-muted-foreground',
-            )}
-          >
-            <span className="line-clamp-1 text-left">{displayLabel ?? 'Select service item / subtask (optional)'}</span>
+            )}>
+            <span className="line-clamp-1 text-left">
+              {displayLabel ??
+                'Select service item / subtask (optional)'}
+            </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" sideOffset={4}>
-          <Command>
+        <PopoverContent
+          className="w-[var(--radix-popover-trigger-width)] p-0 max-h-75"
+          align="start"
+          sideOffset={4}>
+          <Command shouldFilter>
             <CommandInput placeholder="Search…" />
-            <CommandList>
+            <CommandList className="max-h-65 overflow-y-auto">
               <CommandEmpty>No items found.</CommandEmpty>
               {/* None option */}
               <CommandGroup>
                 <CommandItem
                   value="__none__"
-                  onSelect={() => { onSelect('', ''); setOpen(false); }}
-                >
-                  <Check className={cn('mr-2 h-4 w-4 shrink-0', !serviceItemId ? 'opacity-100' : 'opacity-0')} />
+                  onSelect={() => {
+                    onSelect('', '');
+                    setOpen(false);
+                  }}>
+                  <Check
+                    className={cn(
+                      'mr-2 h-4 w-4 shrink-0',
+                      !serviceItemId ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
                   None
                 </CommandItem>
               </CommandGroup>
@@ -149,9 +190,19 @@ function ServiceSubtaskPicker({
                     <CommandGroup key={si.id} heading={si.name}>
                       <CommandItem
                         value={`${si.name}`}
-                        onSelect={() => { onSelect(si.id, ''); setOpen(false); }}
-                      >
-                        <Check className={cn('mr-2 h-4 w-4 shrink-0', serviceItemId === si.id && !serviceItemSubtaskId ? 'opacity-100' : 'opacity-0')} />
+                        onSelect={() => {
+                          onSelect(si.id, '');
+                          setOpen(false);
+                        }}>
+                        <Check
+                          className={cn(
+                            'mr-2 h-4 w-4 shrink-0',
+                            serviceItemId === si.id &&
+                              !serviceItemSubtaskId
+                              ? 'opacity-100'
+                              : 'opacity-0',
+                          )}
+                        />
                         {si.name}
                       </CommandItem>
                     </CommandGroup>
@@ -163,10 +214,22 @@ function ServiceSubtaskPicker({
                       <CommandItem
                         key={st.id}
                         value={`${si.name} ${st.name}`}
-                        onSelect={() => { onSelect(si.id, st.id); setOpen(false); }}
-                      >
-                        <Check className={cn('mr-2 h-4 w-4 shrink-0', serviceItemId === si.id && serviceItemSubtaskId === st.id ? 'opacity-100' : 'opacity-0')} />
-                        <span className="text-muted-foreground mr-1.5">↳</span>
+                        onSelect={() => {
+                          onSelect(si.id, st.id);
+                          setOpen(false);
+                        }}>
+                        <Check
+                          className={cn(
+                            'mr-2 h-4 w-4 shrink-0',
+                            serviceItemId === si.id &&
+                              serviceItemSubtaskId === st.id
+                              ? 'opacity-100'
+                              : 'opacity-0',
+                          )}
+                        />
+                        <span className="text-muted-foreground mr-1.5">
+                          ↳
+                        </span>
                         {st.name}
                       </CommandItem>
                     ))}
@@ -210,7 +273,9 @@ export function TimeEntryDialog({
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
-  const [inputMode, setInputMode] = useState<'times' | 'hours'>('times');
+  const [inputMode, setInputMode] = useState<'times' | 'hours'>(
+    'times',
+  );
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('09:00');
   const [directHours, setDirectHours] = useState('');
@@ -220,20 +285,26 @@ export function TimeEntryDialog({
   const [workCodeId, setWorkCodeId] = useState('');
   const [isIndot, setIsIndot] = useState(false);
   const [serviceItemId, setServiceItemId] = useState('');
-  const [serviceItemSubtaskId, setServiceItemSubtaskId] = useState('');
+  const [serviceItemSubtaskId, setServiceItemSubtaskId] =
+    useState('');
 
   // Compute hours from start/end times (supports HH:MM or HH:MM:SS)
   const computedHours = (() => {
     const sp = startTime.split(':').map(Number);
     const ep = endTime.split(':').map(Number);
-    const startSec = (sp[0] ?? 0) * 3600 + (sp[1] ?? 0) * 60 + (sp[2] ?? 0);
-    const endSec = (ep[0] ?? 0) * 3600 + (ep[1] ?? 0) * 60 + (ep[2] ?? 0);
+    const startSec =
+      (sp[0] ?? 0) * 3600 + (sp[1] ?? 0) * 60 + (sp[2] ?? 0);
+    const endSec =
+      (ep[0] ?? 0) * 3600 + (ep[1] ?? 0) * 60 + (ep[2] ?? 0);
     const diff = endSec - startSec;
     if (diff <= 0) return 0;
     return Math.round((diff / 3600) * 10000) / 10000;
   })();
 
-  const effectiveHours = inputMode === 'times' ? computedHours : (parseFloat(directHours) || 0);
+  const effectiveHours =
+    inputMode === 'times'
+      ? computedHours
+      : parseFloat(directHours) || 0;
 
   // Fetch projects (with service type category for engineering detection)
   const { data: projects = [] } = useQuery<ProjectOption[]>({
@@ -243,12 +314,15 @@ export function TimeEntryDialog({
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const data = await res.json();
-      return Array.isArray(data) ? data : (data.projects ?? data.data ?? []);
+      return Array.isArray(data)
+        ? data
+        : (data.projects ?? data.data ?? []);
     },
   });
 
   const selectedProject = projects.find((p) => p.id === projectId);
-  const isEngineeringProject = selectedProject?.jobType?.division?.name === 'Engineering';
+  const isEngineeringProject =
+    selectedProject?.jobType?.division?.name === 'Engineering';
 
   // Fetch work codes — only when an engineering project is selected
   const { data: workCodes = [] } = useQuery<WorkCode[]>({
@@ -265,12 +339,17 @@ export function TimeEntryDialog({
   });
 
   // Fetch service items linked to the selected project
-  const { data: projectServiceItems } = useQuery<ProjectServiceItem[]>({
+  const { data: projectServiceItems } = useQuery<
+    ProjectServiceItem[]
+  >({
     queryKey: ['project-service-items', projectId],
     queryFn: async () => {
-      const res = await fetch(`${API_URL}/projects/${projectId}/service-items`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
+      const res = await fetch(
+        `${API_URL}/projects/${projectId}/service-items`,
+        {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        },
+      );
       return res.json();
     },
     enabled: !!projectId,
@@ -288,7 +367,9 @@ export function TimeEntryDialog({
     : baseServiceItems;
 
   // The selected service item (used for estimated cost display)
-  const selectedItem = serviceItems.find((si) => si.id === serviceItemId);
+  const selectedItem = serviceItems.find(
+    (si) => si.id === serviceItemId,
+  );
 
   // Subtask budget: budget/logged/remaining when a project + subtask are selected
   const { data: subtaskBudget } = useQuery<{
@@ -297,13 +378,24 @@ export function TimeEntryDialog({
     remainingHours: number;
     role: string | null;
   } | null>({
-    queryKey: ['subtask-budget', projectId, serviceItemSubtaskId, targetUser?.id],
+    queryKey: [
+      'subtask-budget',
+      projectId,
+      serviceItemSubtaskId,
+      targetUser?.id,
+    ],
     queryFn: async () => {
-      const params = new URLSearchParams({ projectId, serviceItemSubtaskId });
-      if (targetUser?.id) params.set('targetUserId', targetUser.id);
-      const res = await fetch(`${API_URL}/time-tracking/subtask-budget?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
+      const params = new URLSearchParams({
+        projectId,
+        serviceItemSubtaskId,
       });
+      if (targetUser?.id) params.set('targetUserId', targetUser.id);
+      const res = await fetch(
+        `${API_URL}/time-tracking/subtask-budget?${params.toString()}`,
+        {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        },
+      );
       if (!res.ok) return null;
       return res.json();
     },
@@ -321,7 +413,10 @@ export function TimeEntryDialog({
       setStartTime('08:00');
       setEndTime('09:00');
       setProjectId(entry.projectId ?? '');
-      setIsIndot(projects.find((p) => p.id === entry.projectId)?.isIndot ?? false);
+      setIsIndot(
+        projects.find((p) => p.id === entry.projectId)?.isIndot ??
+          false,
+      );
       setDescription(entry.description ?? '');
       setBillable(entry.billable);
       setWorkCodeId(entry.workCodeId ?? '');
@@ -333,24 +428,38 @@ export function TimeEntryDialog({
         setDate(initialDate);
       } else {
         const today = new Date();
-        setDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
+        setDate(
+          `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`,
+        );
       }
       setStartTime('08:00');
       const ih = initialHours || 1;
       const endTotalMin = 8 * 60 + Math.round(ih * 60);
       const eh = Math.floor(endTotalMin / 60);
       const em = endTotalMin % 60;
-      setEndTime(`${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`);
+      setEndTime(
+        `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`,
+      );
       setDirectHours('');
       setProjectId(initialProjectId ?? '');
       setDescription('');
       setBillable(null);
       setWorkCodeId('');
-      setIsIndot(projects.find((p) => p.id === initialProjectId)?.isIndot ?? false);
+      setIsIndot(
+        projects.find((p) => p.id === initialProjectId)?.isIndot ??
+          false,
+      );
       setServiceItemId('');
       setServiceItemSubtaskId('');
     }
-  }, [entry, open, initialHours, initialProjectId, initialDate, projects]);
+  }, [
+    entry,
+    open,
+    initialHours,
+    initialProjectId,
+    initialDate,
+    projects,
+  ]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Reset work code / service item / isIndot when project changes
@@ -378,7 +487,11 @@ export function TimeEntryDialog({
     setServiceItemSubtaskId('');
   };
 
-  const canSave = effectiveHours >= 0.25 && effectiveHours <= 24 && billable !== null && (!isEngineeringProject || !!workCodeId);
+  const canSave =
+    effectiveHours >= 0.25 &&
+    effectiveHours <= 24 &&
+    billable !== null &&
+    (!isEngineeringProject || !!workCodeId);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -419,11 +532,15 @@ export function TimeEntryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl flex flex-col max-h-[90dvh]">
         <DialogHeader>
-          <DialogTitle>{entry ? 'Edit Time Entry' : 'Log Time'}</DialogTitle>
+          <DialogTitle>
+            {entry ? 'Edit Time Entry' : 'Log Time'}
+          </DialogTitle>
           {targetUser && !entry && (
             <p className="text-sm text-muted-foreground mt-1">
               Logging on behalf of{' '}
-              <span className="font-medium text-foreground">{targetUser.name}</span>
+              <span className="font-medium text-foreground">
+                {targetUser.name}
+              </span>
             </p>
           )}
         </DialogHeader>
@@ -432,7 +549,11 @@ export function TimeEntryDialog({
           {/* Date */}
           <div className="space-y-1.5">
             <Label>Date</Label>
-            <DatePicker value={date} onChange={setDate} clearable={false} />
+            <DatePicker
+              value={date}
+              onChange={setDate}
+              clearable={false}
+            />
           </div>
 
           {/* Time input mode toggle */}
@@ -444,8 +565,7 @@ export function TimeEntryDialog({
                 inputMode === 'times'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
+              }`}>
               Start / End Time
             </button>
             <button
@@ -455,8 +575,7 @@ export function TimeEntryDialog({
                 inputMode === 'hours'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
+              }`}>
               Total Hours
             </button>
           </div>
@@ -467,17 +586,27 @@ export function TimeEntryDialog({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="mb-1.5 block">Start Time</Label>
-                  <TimePicker value={startTime} onChange={setStartTime} minuteStep={1} />
+                  <TimePicker
+                    value={startTime}
+                    onChange={setStartTime}
+                    minuteStep={1}
+                  />
                 </div>
                 <div>
                   <Label className="mb-1.5 block">End Time</Label>
-                  <TimePicker value={endTime} onChange={setEndTime} minuteStep={1} />
+                  <TimePicker
+                    value={endTime}
+                    onChange={setEndTime}
+                    minuteStep={1}
+                  />
                 </div>
               </div>
 
               {/* Duration display */}
               <div className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2">
-                <span className="text-xs text-muted-foreground">Duration:</span>
+                <span className="text-xs text-muted-foreground">
+                  Duration:
+                </span>
                 {computedHours > 0 ? (
                   <span className="text-sm font-medium tabular-nums">
                     {(() => {
@@ -488,7 +617,9 @@ export function TimeEntryDialog({
                     })()}
                   </span>
                 ) : (
-                  <span className="text-sm text-destructive">End time must be after start time</span>
+                  <span className="text-sm text-destructive">
+                    End time must be after start time
+                  </span>
                 )}
               </div>
             </>
@@ -508,9 +639,13 @@ export function TimeEntryDialog({
                 placeholder="e.g. 2.5"
                 className="w-36"
               />
-              {directHours && (parseFloat(directHours) < 0.25 || parseFloat(directHours) > 24) && (
-                <p className="text-xs text-destructive">Must be between 0.25 and 24 hours</p>
-              )}
+              {directHours &&
+                (parseFloat(directHours) < 0.25 ||
+                  parseFloat(directHours) > 24) && (
+                  <p className="text-xs text-destructive">
+                    Must be between 0.25 and 24 hours
+                  </p>
+                )}
             </div>
           )}
 
@@ -520,8 +655,7 @@ export function TimeEntryDialog({
             <RadioGroup
               value={isIndot ? 'yes' : 'no'}
               onValueChange={handleIsIndotChange}
-              className="flex gap-6"
-            >
+              className="flex gap-6">
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="yes" id="tt-indot-yes" />
                 <Label htmlFor="tt-indot-yes">Yes</Label>
@@ -545,10 +679,14 @@ export function TimeEntryDialog({
               options={[
                 { value: '__none__', label: 'None' },
                 ...projects
-                  .filter((p) => (isIndot ? p.isIndot === true : !p.isIndot))
+                  .filter((p) =>
+                    isIndot ? p.isIndot === true : !p.isIndot,
+                  )
                   .map((p) => ({
                     value: p.id,
-                    label: p.jobNumber ? `${p.jobNumber} · ${p.name}` : p.name,
+                    label: p.jobNumber
+                      ? `${p.jobNumber} · ${p.name}`
+                      : p.name,
                     keywords: p.jobNumber ?? undefined,
                   })),
               ]}
@@ -567,18 +705,26 @@ export function TimeEntryDialog({
                 placeholder="Select work code…"
                 searchPlaceholder="Search by code or name…"
                 emptyMessage="No work codes found."
-                options={workCodeGroups.flatMap(({ mainTask, subtasks }) =>
-                  subtasks.length > 0
-                    ? subtasks.map((st) => ({
-                        value: st.id,
-                        label: `${st.code} – ${st.name}`,
-                        keywords: String(mainTask.code),
-                      }))
-                    : [{ value: mainTask.id, label: `${mainTask.code} – ${mainTask.name}` }],
+                options={workCodeGroups.flatMap(
+                  ({ mainTask, subtasks }) =>
+                    subtasks.length > 0
+                      ? subtasks.map((st) => ({
+                          value: st.id,
+                          label: `${st.code} – ${st.name}`,
+                          keywords: String(mainTask.code),
+                        }))
+                      : [
+                          {
+                            value: mainTask.id,
+                            label: `${mainTask.code} – ${mainTask.name}`,
+                          },
+                        ],
                 )}
               />
               {!workCodeId && (
-                <p className="text-xs text-muted-foreground">Work code is required for engineering projects</p>
+                <p className="text-xs text-muted-foreground">
+                  Work code is required for engineering projects
+                </p>
               )}
             </div>
           )}
@@ -600,33 +746,56 @@ export function TimeEntryDialog({
             <div className="flex items-center gap-4 rounded-md border border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-xs">
               <div>
                 <span className="text-muted-foreground">Budget </span>
-                <span className="font-semibold tabular-nums">{subtaskBudget.budgetHours.toFixed(1)} hrs</span>
+                <span className="font-semibold tabular-nums">
+                  {subtaskBudget.budgetHours.toFixed(1)} hrs
+                </span>
               </div>
               <div>
                 <span className="text-muted-foreground">Logged </span>
-                <span className="font-semibold tabular-nums">{subtaskBudget.loggedHours.toFixed(1)} hrs</span>
+                <span className="font-semibold tabular-nums">
+                  {subtaskBudget.loggedHours.toFixed(1)} hrs
+                </span>
               </div>
               <div>
-                <span className="text-muted-foreground">Remaining </span>
-                <span className={cn('font-semibold tabular-nums', subtaskBudget.remainingHours < 0 ? 'text-red-600' : 'text-green-600')}>
-                  {subtaskBudget.remainingHours >= 0 ? '' : '−'}{Math.abs(subtaskBudget.remainingHours).toFixed(1)} hrs
+                <span className="text-muted-foreground">
+                  Remaining{' '}
+                </span>
+                <span
+                  className={cn(
+                    'font-semibold tabular-nums',
+                    subtaskBudget.remainingHours < 0
+                      ? 'text-red-600'
+                      : 'text-green-600',
+                  )}>
+                  {subtaskBudget.remainingHours >= 0 ? '' : '−'}
+                  {Math.abs(subtaskBudget.remainingHours).toFixed(
+                    1,
+                  )}{' '}
+                  hrs
                 </span>
               </div>
             </div>
           )}
 
           {/* Cost estimate — shown when a priced service item is selected and hours are valid */}
-          {selectedItem?.defaultPrice != null && effectiveHours >= 0.25 && (
-            <div className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2">
-              <span className="text-xs text-muted-foreground">Estimated cost:</span>
-              <span className="text-sm font-medium tabular-nums">
-                ${(selectedItem.defaultPrice * effectiveHours).toFixed(2)}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                (${selectedItem.defaultPrice.toFixed(2)}/hr × {effectiveHours.toFixed(2)} hrs)
-              </span>
-            </div>
-          )}
+          {selectedItem?.defaultPrice != null &&
+            effectiveHours >= 0.25 && (
+              <div className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2">
+                <span className="text-xs text-muted-foreground">
+                  Estimated cost:
+                </span>
+                <span className="text-sm font-medium tabular-nums">
+                  $
+                  {(
+                    selectedItem.defaultPrice * effectiveHours
+                  ).toFixed(2)}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  (${selectedItem.defaultPrice.toFixed(2)}/hr ×{' '}
+                  {effectiveHours.toFixed(2)} hrs)
+                </span>
+              </div>
+            )}
 
           {/* Description */}
           <div className="space-y-1.5">
@@ -650,8 +819,7 @@ export function TimeEntryDialog({
                 size="sm"
                 variant={billable === true ? 'default' : 'outline'}
                 className={`flex-1 sm:flex-none ${billable === true ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
-                onClick={() => setBillable(true)}
-              >
+                onClick={() => setBillable(true)}>
                 Billable
               </Button>
               <Button
@@ -659,23 +827,34 @@ export function TimeEntryDialog({
                 size="sm"
                 variant={billable === false ? 'default' : 'outline'}
                 className={`flex-1 sm:flex-none ${billable === false ? 'bg-slate-600 hover:bg-slate-700 text-white' : ''}`}
-                onClick={() => setBillable(false)}
-              >
+                onClick={() => setBillable(false)}>
                 Non-billable
               </Button>
             </div>
             {billable === null && (
-              <p className="text-xs text-muted-foreground">Please select whether this entry is billable</p>
+              <p className="text-xs text-muted-foreground">
+                Please select whether this entry is billable
+              </p>
             )}
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" className="h-11 sm:h-9" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            className="h-11 sm:h-9"
+            onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button className="h-11 sm:h-9" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !canSave}>
-            {saveMutation.isPending ? 'Saving…' : entry ? 'Update' : 'Log Time'}
+          <Button
+            className="h-11 sm:h-9"
+            onClick={() => saveMutation.mutate()}
+            disabled={saveMutation.isPending || !canSave}>
+            {saveMutation.isPending
+              ? 'Saving…'
+              : entry
+                ? 'Update'
+                : 'Log Time'}
           </Button>
         </DialogFooter>
       </DialogContent>
