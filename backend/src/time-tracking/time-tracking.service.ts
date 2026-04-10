@@ -26,7 +26,7 @@ export class TimeTrackingService {
       }
     }
 
-    const rate = await this.getActiveRate(dto.userId);
+    const rate = await this.resolveRate(dto.userId, dto.projectId);
     const hourlyRate = dto.hourlyRate ?? rate?.rate ?? 0;
     const totalCost = dto.hours * hourlyRate;
 
@@ -164,7 +164,41 @@ export class TimeTrackingService {
     });
   }
 
-  private async getActiveRate(userId: string) {
+  /**
+   * Resolves the effective hourly rate for a user on a given project.
+   * For INDOT projects: looks up the project's county → IndotPayZone → PayGrade → UserRate.
+   * Fallback: uses the user's default-grade rate.
+   */
+  private async resolveRate(userId: string, projectId?: string | null) {
+    if (projectId) {
+      const project = await this.prisma.project.findUnique({
+        where: { id: projectId },
+        select: { county: true, isIndot: true },
+      });
+
+      if (project?.isIndot && project.county?.length) {
+        // Find a zone that covers any of the project counties
+        const zone = await this.prisma.indotPayZone.findFirst({
+          where: { counties: { hasSome: project.county } },
+          select: { payGradeId: true },
+        });
+
+        if (zone) {
+          const indotRate = await this.prisma.userRate.findFirst({
+            where: {
+              userId,
+              payGradeId: zone.payGradeId,
+              effectiveFrom: { lte: new Date() },
+              OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
+            },
+            orderBy: { effectiveFrom: 'desc' },
+          });
+          if (indotRate) return indotRate;
+          // Fall through to default if no INDOT rate configured for this user
+        }
+      }
+    }
+
     return this.prisma.userRate.findFirst({
       where: {
         userId,

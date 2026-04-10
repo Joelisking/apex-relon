@@ -1061,9 +1061,25 @@ model PayGrade {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  userRates UserRate[]
+  userRates  UserRate[]
+  payZones   IndotPayZone[]
 
   @@map("pay_grades")
+}
+
+model IndotPayZone {
+  id         String   @id @default(uuid())
+  name       String
+  payGradeId String
+  counties   String[] // county name strings matching DropdownOption.label where category = 'county'
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  payGrade   PayGrade @relation(fields: [payGradeId], references: [id])
+
+  @@unique([name])
+  @@index([payGradeId])
+  @@map("indot_pay_zones")
 }
 
 model UserRate {

@@ -768,9 +768,57 @@ export class SettingsService implements OnModuleInit {
 
   async findAllPayGrades() {
     return this.prisma.payGrade.findMany({
-      where: { isActive: true },
       orderBy: { sortOrder: 'asc' },
     });
+  }
+
+  async createPayGrade(dto: { name: string; code: string; description?: string; sortOrder?: number; isDefault?: boolean }) {
+    return this.prisma.payGrade.create({
+      data: {
+        name: dto.name,
+        code: dto.code,
+        description: dto.description,
+        sortOrder: dto.sortOrder ?? 0,
+        isDefault: dto.isDefault ?? false,
+        isActive: true,
+      },
+    });
+  }
+
+  async updatePayGrade(id: string, dto: Partial<{ name: string; description: string; sortOrder: number; isDefault: boolean; isActive: boolean }>) {
+    return this.prisma.payGrade.update({ where: { id }, data: dto });
+  }
+
+  async deletePayGrade(id: string) {
+    await this.prisma.payGrade.delete({ where: { id } });
+  }
+
+  // ── INDOT Pay Zones ────────────────────────────────────────────────────────
+
+  async findAllIndotPayZones() {
+    return this.prisma.indotPayZone.findMany({
+      orderBy: { name: 'asc' },
+      include: { payGrade: { select: { id: true, name: true, code: true } } },
+    });
+  }
+
+  async createIndotPayZone(dto: { name: string; payGradeId: string; counties?: string[] }) {
+    return this.prisma.indotPayZone.create({
+      data: { name: dto.name, payGradeId: dto.payGradeId, counties: dto.counties ?? [] },
+      include: { payGrade: { select: { id: true, name: true, code: true } } },
+    });
+  }
+
+  async updateIndotPayZone(id: string, dto: Partial<{ name: string; payGradeId: string; counties: string[] }>) {
+    return this.prisma.indotPayZone.update({
+      where: { id },
+      data: dto,
+      include: { payGrade: { select: { id: true, name: true, code: true } } },
+    });
+  }
+
+  async deleteIndotPayZone(id: string) {
+    await this.prisma.indotPayZone.delete({ where: { id } });
   }
 
   private async seedPayGrades() {

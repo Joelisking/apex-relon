@@ -64,4 +64,37 @@ export const userRatesApi = {
 export const payGradesApi = {
   getAll: (): Promise<PayGrade[]> =>
     authFetch('/pay-grades', {}, 'settings'),
+
+  create: (dto: { name: string; code: string; description?: string; sortOrder?: number; isDefault?: boolean }): Promise<PayGrade> =>
+    authFetch('/pay-grades', { method: 'POST', body: JSON.stringify(dto) }, 'settings'),
+
+  update: (id: string, dto: Partial<{ name: string; description: string; sortOrder: number; isDefault: boolean; isActive: boolean }>): Promise<PayGrade> =>
+    authFetch(`/pay-grades/${id}`, { method: 'PATCH', body: JSON.stringify(dto) }, 'settings'),
+
+  delete: (id: string): Promise<void> =>
+    authFetch(`/pay-grades/${id}`, { method: 'DELETE' }, 'settings'),
+};
+
+export interface IndotPayZone {
+  id: string;
+  name: string;
+  payGradeId: string;
+  payGrade: PayGradeSummary;
+  counties: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const indotPayZonesApi = {
+  getAll: (): Promise<IndotPayZone[]> =>
+    authFetch('/indot-pay-zones', {}, 'settings'),
+
+  create: (dto: { name: string; payGradeId: string; counties?: string[] }): Promise<IndotPayZone> =>
+    authFetch('/indot-pay-zones', { method: 'POST', body: JSON.stringify(dto) }, 'settings'),
+
+  update: (id: string, dto: Partial<{ name: string; payGradeId: string; counties: string[] }>): Promise<IndotPayZone> =>
+    authFetch(`/indot-pay-zones/${id}`, { method: 'PATCH', body: JSON.stringify(dto) }, 'settings'),
+
+  delete: (id: string): Promise<void> =>
+    authFetch(`/indot-pay-zones/${id}`, { method: 'DELETE' }, 'settings'),
 };

@@ -115,6 +115,58 @@ export class SettingsController {
     return this.settingsService.findAllPayGrades();
   }
 
+  @Post('pay-grades')
+  @Permissions('settings:manage')
+  createPayGrade(@Body() dto: { name: string; code: string; description?: string; sortOrder?: number; isDefault?: boolean }) {
+    return this.settingsService.createPayGrade(dto);
+  }
+
+  @Patch('pay-grades/:id')
+  @Permissions('settings:manage')
+  updatePayGrade(
+    @Param('id') id: string,
+    @Body() dto: Partial<{ name: string; description: string; sortOrder: number; isDefault: boolean; isActive: boolean }>,
+  ) {
+    return this.settingsService.updatePayGrade(id, dto);
+  }
+
+  @Delete('pay-grades/:id')
+  @Permissions('settings:manage')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deletePayGrade(@Param('id') id: string) {
+    return this.settingsService.deletePayGrade(id);
+  }
+
+  // ── INDOT Pay Zones ────────────────────────────────────────────────────────
+
+  @Get('indot-pay-zones')
+  @Permissions('settings:manage')
+  findAllIndotPayZones() {
+    return this.settingsService.findAllIndotPayZones();
+  }
+
+  @Post('indot-pay-zones')
+  @Permissions('settings:manage')
+  createIndotPayZone(@Body() dto: { name: string; payGradeId: string; counties?: string[] }) {
+    return this.settingsService.createIndotPayZone(dto);
+  }
+
+  @Patch('indot-pay-zones/:id')
+  @Permissions('settings:manage')
+  updateIndotPayZone(
+    @Param('id') id: string,
+    @Body() dto: Partial<{ name: string; payGradeId: string; counties: string[] }>,
+  ) {
+    return this.settingsService.updateIndotPayZone(id, dto);
+  }
+
+  @Delete('indot-pay-zones/:id')
+  @Permissions('settings:manage')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteIndotPayZone(@Param('id') id: string) {
+    return this.settingsService.deleteIndotPayZone(id);
+  }
+
   // ── Dropdown Options ───────────────────────────────────────────────────────
 
   @Get('dropdown-options')
