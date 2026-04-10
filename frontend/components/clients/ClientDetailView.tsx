@@ -33,6 +33,7 @@ import { CustomerActivityTimeline } from './CustomerActivityTimeline';
 import { EditCustomerDialog } from './EditCustomerDialog';
 import { CustomerHealthSection } from './CustomerHealthSection';
 import { CustomerUpsellSection } from './CustomerUpsellSection';
+import { CustomerInfoPanel } from './CustomerInfoPanel';
 import { useAuth } from '@/contexts/auth-context';
 import { toast } from 'sonner';
 import { LinkedTasksSection } from '../tasks/LinkedTasksSection';
@@ -266,6 +267,8 @@ export function ClientDetailView({
         <div className="flex-1 overflow-auto min-h-0 pt-6 pb-4 md:pb-8 px-2 md:px-4">
 
         <TabsContent value="overview" className="mt-0 space-y-6">
+          <CustomerInfoPanel client={client} />
+
           {client.metrics && (
             <>
               <CustomerMetricsPanel
