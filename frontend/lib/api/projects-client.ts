@@ -129,6 +129,7 @@ export interface CreateProjectDto {
   leadId?: string;
   status: string;
   contractedValue: number;
+  invoicedValue?: number | null;
   endOfProjectValue?: number;
   startDate?: string;
   completedDate?: string;

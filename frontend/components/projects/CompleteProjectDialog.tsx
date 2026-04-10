@@ -28,7 +28,7 @@ import { toast } from 'sonner';
 import { projectsApi, type Project } from '@/lib/api/projects-client';
 
 const formSchema = z.object({
-  endOfProjectValue: z.coerce
+  invoicedValue: z.coerce
     .number()
     .min(0, 'Value must be positive'),
   completedDate: z.string().min(1, 'Completed date is required'),
@@ -52,7 +52,7 @@ export function CompleteProjectDialog({
   const form = useForm<FormValues, unknown, FormValues>({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
     defaultValues: {
-      endOfProjectValue: 0,
+      invoicedValue: 0,
       completedDate: '',
     },
   });
@@ -62,8 +62,7 @@ export function CompleteProjectDialog({
   useEffect(() => {
     if (open && project) {
       form.reset({
-        endOfProjectValue:
-          project.endOfProjectValue ?? project.contractedValue ?? 0,
+        invoicedValue: project.invoicedValue ?? project.contractedValue ?? 0,
         completedDate: new Date().toISOString().split('T')[0],
       });
     }
@@ -74,7 +73,7 @@ export function CompleteProjectDialog({
     try {
       const updated = await projectsApi.update(project.id, {
         status: 'Completed',
-        endOfProjectValue: values.endOfProjectValue,
+        invoicedValue: values.invoicedValue,
         completedDate: values.completedDate,
       });
       onOpenChange(false);
@@ -92,7 +91,7 @@ export function CompleteProjectDialog({
             <DialogTitle>Mark Project as Completed</DialogTitle>
           </div>
           <DialogDescription>
-            {project?.name} — confirm the final project value and
+            {project?.name} — confirm the final invoiced value and
             completion date.
           </DialogDescription>
         </DialogHeader>
@@ -103,10 +102,10 @@ export function CompleteProjectDialog({
             onSubmit={form.handleSubmit(handleSubmit)}>
             <FormField
               control={form.control}
-              name="endOfProjectValue"
+              name="invoicedValue"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>End of Project Value ($)</FormLabel>
+                  <FormLabel>Final Invoiced Value ($)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"

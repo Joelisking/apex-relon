@@ -22,6 +22,17 @@ import {
   Bot,
   Zap,
   CalendarDays,
+  Layers,
+  Wrench,
+  ListChecks,
+  Briefcase,
+  DollarSign,
+  MapPin,
+  ClipboardList,
+  ScrollText,
+  History,
+  Monitor,
+  SlidersHorizontal,
 } from 'lucide-react';
 import {
   Command,
@@ -62,15 +73,35 @@ const ALL_NAV_ITEMS = [
 ];
 
 const ALL_ADMIN_ITEMS = [
+  // People & Access
   { label: 'Admin — Users', href: '/admin/users', icon: UserCog, permission: 'users:view' },
+  { label: 'Admin — Teams', href: '/admin/teams', icon: Users, permission: 'users:view' },
   { label: 'Admin — Roles', href: '/admin/roles', icon: ShieldCheck, permission: 'roles:view' },
   { label: 'Admin — Permissions', href: '/admin/permissions', icon: Shield, permission: 'permissions:view' },
-  { label: 'Admin — Pipeline', href: '/admin/pipeline', icon: GitBranch, permission: 'pipeline:manage' },
-  { label: 'Admin — Proposal Templates', href: '/admin/proposal-templates', icon: FileText, permission: 'settings:manage' },
-  { label: 'Admin — AI Settings', href: '/admin/ai-settings', icon: Bot, permission: 'ai_settings:view' },
-  { label: 'Admin — Workflows', href: '/admin/workflows', icon: Zap, permission: 'workflows:view' },
+  // Project Configuration
+  { label: 'Admin — Divisions', href: '/admin/job-types', icon: Layers, permission: 'settings:manage' },
+  { label: 'Admin — Job Types', href: '/admin/job-types', icon: Briefcase, permission: 'settings:manage' },
+  { label: 'Admin — Service Items', href: '/admin/service-items', icon: Wrench, permission: 'settings:manage' },
+  { label: 'Admin — Task Types', href: '/admin/task-types', icon: ListChecks, permission: 'settings:manage' },
+  { label: 'Admin — Work Codes', href: '/admin/work-codes', icon: ClipboardList, permission: 'settings:manage' },
+  // Financial Configuration
+  { label: 'Admin — Pay Rates', href: '/admin/pay-rates', icon: DollarSign, permission: 'settings:manage' },
+  { label: 'Admin — INDOT Pay Zones', href: '/admin/indot-pay-zones', icon: MapPin, permission: 'settings:manage' },
   { label: 'Admin — Invoicing Settings', href: '/admin/quote-settings', icon: FileText, permission: 'settings:manage' },
+  // Pipeline & Automation
+  { label: 'Admin — Pipeline', href: '/admin/pipeline', icon: GitBranch, permission: 'pipeline:manage' },
+  { label: 'Admin — Workflows', href: '/admin/workflows', icon: Zap, permission: 'workflows:view' },
+  // Proposals & Documents
+  { label: 'Admin — Proposal Templates', href: '/admin/proposal-templates', icon: ScrollText, permission: 'settings:manage' },
+  { label: 'Admin — Intake Forms', href: '/admin/lead-forms', icon: FileText, permission: 'settings:manage' },
+  // Settings
   { label: 'Admin — General Settings', href: '/admin/general-settings', icon: Settings, permission: 'settings:manage' },
+  { label: 'Admin — AI Settings', href: '/admin/ai-settings', icon: Bot, permission: 'ai_settings:view' },
+  // System
+  { label: 'Admin — Custom Fields', href: '/admin/custom-fields', icon: SlidersHorizontal, permission: 'settings:manage' },
+  { label: 'Admin — Form Options', href: '/admin/dropdown-options', icon: ListChecks, permission: 'settings:manage' },
+  { label: 'Admin — Audit Logs', href: '/admin/audit-logs', icon: History, permission: 'settings:manage' },
+  { label: 'Admin — System', href: '/admin/system', icon: Monitor, permission: 'settings:manage' },
 ];
 
 export function CommandPalette() {

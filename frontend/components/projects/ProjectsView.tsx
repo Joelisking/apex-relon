@@ -472,7 +472,7 @@ export default function ProjectsView({
       'Status',
       'Risk',
       'Contracted Value',
-      'Est. Revenue',
+      'Invoiced Value',
       'Total Cost',
       'Project Manager',
       'Due Date',
@@ -483,7 +483,7 @@ export default function ProjectsView({
       p.status,
       p.riskStatus ?? 'On Track',
       p.contractedValue,
-      p.estimatedRevenue ?? '',
+      p.invoicedValue ?? '',
       p.totalCost ?? '',
       p.projectManager?.name ?? '',
       p.estimatedDueDate
