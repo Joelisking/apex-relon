@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { userRatesApi, type UserRate } from '@/lib/api/user-rates-client';
+import { userRatesApi, payGradesApi, type UserRate, type PayGrade } from '@/lib/api/user-rates-client';
 
 interface UserRatesSectionProps {
   userId: string;
@@ -22,21 +22,34 @@ interface UserRatesSectionProps {
 
 export function UserRatesSection({ userId }: UserRatesSectionProps) {
   const [rates, setRates] = useState<UserRate[]>([]);
+  const [payGrades, setPayGrades] = useState<PayGrade[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
   const [newRate, setNewRate] = useState({
     rate: '',
-    type: 'billing',
+    payGradeId: '',
     effectiveFrom: new Date().toISOString().split('T')[0],
   });
 
   useEffect(() => {
-    userRatesApi
-      .getForUser(userId)
-      .then(setRates)
-      .catch(() => setRates([]))
+    Promise.all([
+      userRatesApi.getForUser(userId),
+      payGradesApi.getAll(),
+    ])
+      .then(([fetchedRates, grades]) => {
+        setRates(fetchedRates);
+        setPayGrades(grades);
+        const defaultGrade = grades.find((g) => g.isDefault);
+        if (defaultGrade) {
+          setNewRate((p) => ({ ...p, payGradeId: defaultGrade.id }));
+        }
+      })
+      .catch(() => {
+        setRates([]);
+        setPayGrades([]);
+      })
       .finally(() => setLoading(false));
   }, [userId]);
 
@@ -46,16 +59,25 @@ export function UserRatesSection({ userId }: UserRatesSectionProps) {
       toast.error('Enter a valid rate');
       return;
     }
+    if (!newRate.payGradeId) {
+      toast.error('Select a pay grade');
+      return;
+    }
     setAdding(true);
     try {
       const created = await userRatesApi.create({
         userId,
         rate: rateNum,
-        type: newRate.type,
+        payGradeId: newRate.payGradeId,
         effectiveFrom: newRate.effectiveFrom,
       });
       setRates((prev) => [...prev, created]);
-      setNewRate({ rate: '', type: 'billing', effectiveFrom: new Date().toISOString().split('T')[0] });
+      const defaultGrade = payGrades.find((g) => g.isDefault);
+      setNewRate({
+        rate: '',
+        payGradeId: defaultGrade?.id ?? '',
+        effectiveFrom: new Date().toISOString().split('T')[0],
+      });
       setShowForm(false);
       toast.success('Rate added');
     } catch {
@@ -64,9 +86,6 @@ export function UserRatesSection({ userId }: UserRatesSectionProps) {
       setAdding(false);
     }
   }
-
-  const billingRates = rates.filter((r) => r.type === 'billing');
-  const internalRates = rates.filter((r) => r.type === 'internal');
 
   function RateTable({ items, label }: { items: UserRate[]; label: string }) {
     if (items.length === 0) return null;
@@ -90,10 +109,16 @@ export function UserRatesSection({ userId }: UserRatesSectionProps) {
     );
   }
 
+  // Group rates by pay grade name for display
+  const ratesByGrade = payGrades.map((grade) => ({
+    grade,
+    items: rates.filter((r) => r.payGradeId === grade.id),
+  })).filter(({ items }) => items.length > 0);
+
   return (
     <div className="space-y-3 pt-2 border-t border-border/40">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">Billing Rates</p>
+        <p className="text-sm font-semibold">Pay Rates</p>
         <Button
           type="button"
           variant="outline"
@@ -112,8 +137,9 @@ export function UserRatesSection({ userId }: UserRatesSectionProps) {
         </div>
       ) : (
         <>
-          <RateTable items={billingRates} label="Billable" />
-          <RateTable items={internalRates} label="Internal" />
+          {ratesByGrade.map(({ grade, items }) => (
+            <RateTable key={grade.id} items={items} label={grade.name} />
+          ))}
           {rates.length === 0 && !showForm && (
             <p className="text-sm text-muted-foreground">No rates set yet.</p>
           )}
@@ -136,16 +162,19 @@ export function UserRatesSection({ userId }: UserRatesSectionProps) {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Type</Label>
+              <Label className="text-xs">Pay Grade</Label>
               <Select
-                value={newRate.type}
-                onValueChange={(v) => setNewRate((p) => ({ ...p, type: v }))}>
+                value={newRate.payGradeId}
+                onValueChange={(v) => setNewRate((p) => ({ ...p, payGradeId: v }))}>
                 <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
+                  <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="billing">Billable</SelectItem>
-                  <SelectItem value="internal">Internal</SelectItem>
+                  {payGrades.map((grade) => (
+                    <SelectItem key={grade.id} value={grade.id}>
+                      {grade.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

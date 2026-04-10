@@ -1,10 +1,27 @@
 import { API_URL, getTokenFromClientCookies } from './client';
 
+export interface PayGrade {
+  id: string;
+  name: string;
+  code: string;
+  description?: string | null;
+  sortOrder: number;
+  isDefault: boolean;
+  isActive: boolean;
+}
+
+export interface PayGradeSummary {
+  id: string;
+  name: string;
+  code: string;
+}
+
 export interface UserRate {
   id: string;
   userId: string;
   rate: number;
-  type: string;
+  payGradeId: string;
+  payGrade?: PayGradeSummary;
   effectiveFrom: string;
   effectiveTo?: string | null;
   createdAt: string;
@@ -13,14 +30,14 @@ export interface UserRate {
 export interface CreateUserRateDto {
   userId: string;
   rate: number;
-  type: string;
+  payGradeId: string;
   effectiveFrom: string;
   effectiveTo?: string;
 }
 
-async function authFetch(path: string, init: RequestInit = {}) {
+async function authFetch(path: string, init: RequestInit = {}, base = 'time-tracking') {
   const token = getTokenFromClientCookies();
-  const res = await fetch(`${API_URL}/time-tracking${path}`, {
+  const res = await fetch(`${API_URL}/${base}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -42,4 +59,9 @@ export const userRatesApi = {
       method: 'POST',
       body: JSON.stringify(dto),
     }),
+};
+
+export const payGradesApi = {
+  getAll: (): Promise<PayGrade[]> =>
+    authFetch('/pay-grades', {}, 'settings'),
 };

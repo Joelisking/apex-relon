@@ -125,8 +125,9 @@ export class TimeTrackingService {
         rate: dto.rate,
         effectiveFrom: new Date(dto.effectiveFrom),
         effectiveTo: dto.effectiveTo ? new Date(dto.effectiveTo) : null,
-        type: dto.type ?? 'internal',
+        payGradeId: dto.payGradeId,
       },
+      include: { payGrade: { select: { id: true, name: true, code: true } } },
     });
   }
 
@@ -134,6 +135,7 @@ export class TimeTrackingService {
     return this.prisma.userRate.findMany({
       where: { userId },
       orderBy: { effectiveFrom: 'desc' },
+      include: { payGrade: { select: { id: true, name: true, code: true } } },
     });
   }
 
@@ -143,7 +145,7 @@ export class TimeTrackingService {
         userId,
         effectiveFrom: { lte: new Date() },
         OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
-        type: 'internal',
+        payGrade: { isDefault: true },
       },
       orderBy: { effectiveFrom: 'desc' },
     });

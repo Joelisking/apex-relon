@@ -31,6 +31,7 @@ export class SettingsService implements OnModuleInit {
       this.seedProjectRiskStatus(),
       this.seedServiceCategories(),
       this.seedCounties(),
+      this.seedPayGrades(),
     ]);
     // Run after categories/types are seeded (sequential, not parallel)
     await this.seedServiceItemPhases();
@@ -761,5 +762,46 @@ export class SettingsService implements OnModuleInit {
     }
 
     this.logger.log(`Service item phases seeded: ${itemsCreated} phases created.`);
+  }
+
+  // ── Pay Grades ─────────────────────────────────────────────────────────────
+
+  async findAllPayGrades() {
+    return this.prisma.payGrade.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
+  private async seedPayGrades() {
+    const PAY_GRADES = [
+      { code: 'base',    name: 'Base Rate',   description: 'Standard labor rate for all non-INDOT work', sortOrder: 0, isDefault: true },
+      { code: 'billing', name: 'Billing',      description: 'Billable rate charged to clients',           sortOrder: 1, isDefault: false },
+      { code: 'indot_1', name: 'INDOT Pay 1',  description: 'INDOT Pay Grade 1',                         sortOrder: 2, isDefault: false },
+      { code: 'indot_2', name: 'INDOT Pay 2',  description: 'INDOT Pay Grade 2',                         sortOrder: 3, isDefault: false },
+      { code: 'indot_3', name: 'INDOT Pay 3',  description: 'INDOT Pay Grade 3',                         sortOrder: 4, isDefault: false },
+    ];
+
+    const existingCount = await this.prisma.payGrade.count();
+    if (existingCount >= PAY_GRADES.length) {
+      this.logger.log(`Pay grades already seeded (${existingCount} entries). Skipping.`);
+      return;
+    }
+
+    for (const grade of PAY_GRADES) {
+      await this.prisma.payGrade.upsert({
+        where: { code: grade.code },
+        update: {},
+        create: {
+          name: grade.name,
+          code: grade.code,
+          description: grade.description,
+          sortOrder: grade.sortOrder,
+          isDefault: grade.isDefault,
+          isActive: true,
+        },
+      });
+    }
+    this.logger.log(`Pay grades seeded (${PAY_GRADES.length} entries).`);
   }
 }

@@ -8,6 +8,16 @@ export enum Role {
   QS = 'QS',
 }
 
+export interface PayGrade {
+  id: string;
+  name: string;
+  code: string;
+  description?: string | null;
+  sortOrder: number;
+  isDefault: boolean;
+  isActive: boolean;
+}
+
 export interface Division {
   id: string;
   name: string;

@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsDateString, IsUUID, Min } from 'class-validator';
+import { IsOptional, IsNumber, IsDateString, IsUUID, Min } from 'class-validator';
 
 export class CreateUserRateDto {
   @IsUUID()
@@ -15,7 +15,6 @@ export class CreateUserRateDto {
   @IsOptional()
   effectiveTo?: string;
 
-  @IsString()
-  @IsOptional()
-  type?: string;
+  @IsUUID()
+  payGradeId: string;
 }

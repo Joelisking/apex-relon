@@ -107,6 +107,14 @@ export class SettingsController {
     return this.settingsService.deleteTaskType(id);
   }
 
+  // ── Pay Grades ─────────────────────────────────────────────────────────────
+
+  @Get('pay-grades')
+  @Permissions('time_tracking:view')
+  findAllPayGrades() {
+    return this.settingsService.findAllPayGrades();
+  }
+
   // ── Dropdown Options ───────────────────────────────────────────────────────
 
   @Get('dropdown-options')

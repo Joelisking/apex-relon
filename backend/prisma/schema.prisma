@@ -1047,19 +1047,37 @@ model TimeEntry {
   @@map("time_entries")
 }
 
+model PayGrade {
+  id          String   @id @default(uuid())
+  name        String   // e.g. "Base Rate", "INDOT Pay 1"
+  code        String   @unique // e.g. "base", "indot_1" — internal key
+  description String?
+  sortOrder   Int      @default(0)
+  isDefault   Boolean  @default(false) // exactly one grade should be default
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userRates UserRate[]
+
+  @@map("pay_grades")
+}
+
 model UserRate {
   id            String    @id @default(uuid())
   userId        String
+  payGradeId    String
   rate          Float
   effectiveFrom DateTime
   effectiveTo   DateTime?
-  type          String    @default("internal") // "internal" | "billing"
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  user User @relation("UserRates", fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation("UserRates", fields: [userId], references: [id], onDelete: Cascade)
+  payGrade  PayGrade @relation(fields: [payGradeId], references: [id])
 
   @@index([userId])
+  @@index([payGradeId])
   @@map("user_rates")
 }
 

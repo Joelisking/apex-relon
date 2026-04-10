@@ -46,6 +46,8 @@ import {
   Package,
   Hash,
   Calculator,
+  DollarSign,
+  MapPin,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import {
@@ -269,6 +271,8 @@ const adminNavGroups: AdminNavGroup[] = [
     label: 'Financial Configuration',
     items: [
       { title: 'Invoicing', href: '/admin/quote-settings', icon: FileSignature, permission: 'settings:manage' },
+      { title: 'Pay Rates', href: '/admin/pay-rates', icon: DollarSign, permission: 'settings:manage' },
+      { title: 'INDOT Pay Zones', href: '/admin/indot-pay-zones', icon: MapPin, permission: 'settings:manage' },
     ],
   },
   {
