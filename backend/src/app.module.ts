@@ -43,6 +43,7 @@ import { BottleneckModule } from './bottleneck/bottleneck.module';
 import { ProposalTemplatesModule } from './proposal-templates/proposal-templates.module';
 import { WorkCodesModule } from './work-codes/work-codes.module';
 import { CostBreakdownModule } from './cost-breakdown/cost-breakdown.module';
+import { AddendaModule } from './addenda/addenda.module';
 
 @Module({
   imports: [
@@ -90,6 +91,7 @@ import { CostBreakdownModule } from './cost-breakdown/cost-breakdown.module';
     ProposalTemplatesModule,
     WorkCodesModule,
     CostBreakdownModule,
+    AddendaModule,
   ],
   providers: [
     {

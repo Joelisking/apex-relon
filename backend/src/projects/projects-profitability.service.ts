@@ -28,7 +28,7 @@ export class ProjectsProfitabilityService {
   constructor(private readonly prisma: PrismaService) {}
 
   async compute(projectId: string): Promise<ProjectProfitability> {
-    const [project, timeEntries, costLogs, costBreakdown] = await Promise.all([
+    const [project, timeEntries, costLogs, costBreakdown, addenda] = await Promise.all([
       this.prisma.project.findUnique({
         where: { id: projectId },
         select: { contractedValue: true, primaryCostBreakdownId: true },
@@ -53,9 +53,14 @@ export class ProjectsProfitabilityService {
         },
         orderBy: { createdAt: 'desc' },
       }),
+      this.prisma.projectAddendum.findMany({
+        where: { projectId, status: { in: ['APPROVED', 'INVOICED'] } },
+        select: { total: true },
+      }),
     ]);
 
-    const revenue = project?.contractedValue ?? 0;
+    const addendaTotal = addenda.reduce((s, a) => s + a.total, 0);
+    const revenue = (project?.contractedValue ?? 0) + addendaTotal;
     const directCost = costLogs._sum.amount ?? 0;
 
     // Labor cost and breakdown by user

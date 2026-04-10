@@ -39,6 +39,7 @@ import { ProjectServiceItemsPanel } from './ProjectServiceItemsPanel';
 import { ProjectDetailHeader } from './ProjectDetailHeader';
 import { ProjectOverviewPanel } from './ProjectOverviewPanel';
 import { ProjectVicinityMap } from './ProjectVicinityMap';
+import { AddendumTab } from './AddendumTab';
 import { PageBreadcrumbs } from '../layout/PageBreadcrumbs';
 import { ProjectSwitcher } from './ProjectSwitcher';
 import {
@@ -297,6 +298,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
     { value: 'crew', label: 'Crew' },
     { value: 'services', label: 'Services' },
     ...(isEngineeringProject ? [{ value: 'time', label: 'Time Tracking' }] : []),
+    { value: 'addenda', label: 'Addenda' },
     { value: 'documents', label: `Documents${files.length > 0 ? ` (${files.length})` : ''}` },
     { value: 'location', label: 'Location' },
   ];
@@ -515,6 +517,10 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
                 />
               </TabsContent>
             )}
+
+            <TabsContent value="addenda" className="mt-0">
+              <AddendumTab projectId={project.id} />
+            </TabsContent>
 
             <TabsContent value="documents" className="mt-0">
               <ProjectFileUploadSection
