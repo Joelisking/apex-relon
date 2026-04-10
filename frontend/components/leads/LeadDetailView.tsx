@@ -476,7 +476,7 @@ export function LeadDetailView({
 
           {/* Proposals */}
           <TabsContent value="proposals" className="mt-0">
-            <LinkedProposalsSection leadId={lead.id} />
+            <LinkedProposalsSection leadId={lead.id} lead={lead} />
           </TabsContent>
 
           {/* Invoices */}

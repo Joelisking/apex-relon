@@ -25,9 +25,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { ConvertLeadDialog } from '@/components/leads/ConvertLeadDialog';
+import type { Lead } from '@/lib/types';
 
 interface LinkedProposalsSectionProps {
   leadId: string;
+  lead?: Lead;
 }
 
 function formatBytes(bytes: number): string {
@@ -63,7 +66,7 @@ const CB_STATUS_STYLES: Record<string, string> = {
   APPROVED: 'bg-green-50 text-green-700 border-green-200/80',
 };
 
-export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) {
+export function LinkedProposalsSection({ leadId, lead }: LinkedProposalsSectionProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -78,6 +81,9 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
   const [editingTitle, setEditingTitle] = useState('');
   const [savingId, setSavingId] = useState<string | null>(null);
   const [acceptProposal, setAcceptProposal] = useState<Proposal | null>(null);
+  const [convertPromptOpen, setConvertPromptOpen] = useState(false);
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [acceptedContractedValue, setAcceptedContractedValue] = useState<number | undefined>(undefined);
 
   const { data: proposals = [], isLoading } = useQuery({
     queryKey: ['proposals', { leadId }],
@@ -146,8 +152,13 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
     try {
       await proposalTemplatesApi.acceptProposal(acceptProposal.id, contractedValue, invoicedValue);
       invalidate();
-      toast.success('Proposal accepted');
       setAcceptProposal(null);
+      if (lead) {
+        setAcceptedContractedValue(contractedValue);
+        setConvertPromptOpen(true);
+      } else {
+        toast.success('Proposal accepted');
+      }
     } catch {
       toast.error('Failed to accept proposal');
     } finally {
@@ -501,6 +512,41 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
       onClose={() => setAcceptProposal(null)}
       onConfirm={handleAcceptConfirm}
     />
+
+    {/* Post-acceptance: offer to convert the lead to an active project */}
+    <AlertDialog open={convertPromptOpen} onOpenChange={(open) => {
+      if (!open) { setConvertPromptOpen(false); toast.success('Proposal accepted'); }
+    }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Proposal Accepted</AlertDialogTitle>
+          <AlertDialogDescription>
+            Would you like to convert this prospective project to an active project now?
+            {acceptedContractedValue !== undefined && (
+              <> The contracted value has been set to <span className="font-medium text-foreground">${acceptedContractedValue.toLocaleString()}</span>.</>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => { setConvertPromptOpen(false); toast.success('Proposal accepted'); }}>
+            Not now
+          </AlertDialogCancel>
+          <AlertDialogAction onClick={() => { setConvertPromptOpen(false); setConvertDialogOpen(true); }}>
+            Convert to Project
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {lead && (
+      <ConvertLeadDialog
+        lead={acceptedContractedValue !== undefined
+          ? { ...lead, contractedValue: acceptedContractedValue }
+          : lead}
+        open={convertDialogOpen}
+        onOpenChange={setConvertDialogOpen}
+      />
+    )}
 
     <AlertDialog open={!!confirmDeleteCbId} onOpenChange={(open) => { if (!open) setConfirmDeleteCbId(null); }}>
       <AlertDialogContent>

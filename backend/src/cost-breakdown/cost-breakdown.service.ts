@@ -177,11 +177,14 @@ export class CostBreakdownService {
     if (!line) throw new NotFoundException('Cost breakdown line not found');
 
     const { subtaskId, role, estimatedHours, hourlyRate } = dto;
-    return this.prisma.costBreakdownRoleEstimate.upsert({
+    const result = await this.prisma.costBreakdownRoleEstimate.upsert({
       where: { lineId_subtaskId_role: { lineId, subtaskId, role } },
       update: { estimatedHours, hourlyRate },
       create: { lineId, subtaskId, role, estimatedHours, hourlyRate },
     });
+
+    await this.syncLeadExpectedValue(line.costBreakdownId);
+    return result;
   }
 
   async updateLine(lineId: string, dto: { excludedSubtaskIds?: string[] }, tenantId: string) {
@@ -201,7 +204,9 @@ export class CostBreakdownService {
       where: { id: lineId, costBreakdown: { tenantId } },
     });
     if (!line) throw new NotFoundException('Cost breakdown line not found');
-    return this.prisma.costBreakdownLine.delete({ where: { id: lineId } });
+    const result = await this.prisma.costBreakdownLine.delete({ where: { id: lineId } });
+    await this.syncLeadExpectedValue(line.costBreakdownId);
+    return result;
   }
 
   async deleteRoleEstimate(lineId: string, subtaskId: string, role: string, tenantId: string) {
@@ -210,9 +215,34 @@ export class CostBreakdownService {
     });
     if (!line) throw new NotFoundException('Cost breakdown line not found');
 
-    return this.prisma.costBreakdownRoleEstimate.delete({
+    const result = await this.prisma.costBreakdownRoleEstimate.delete({
       where: { lineId_subtaskId_role: { lineId, subtaskId, role } },
     });
+    await this.syncLeadExpectedValue(line.costBreakdownId);
+    return result;
+  }
+
+  private async syncLeadExpectedValue(costBreakdownId: string): Promise<void> {
+    const breakdown = await this.prisma.costBreakdown.findUnique({
+      where: { id: costBreakdownId },
+      select: {
+        leadId: true,
+        lines: { include: { roleEstimates: true } },
+      },
+    });
+
+    if (!breakdown?.leadId) return;
+
+    const total = breakdown.lines
+      .flatMap((l) => l.roleEstimates)
+      .reduce((s, r) => (r.hourlyRate != null ? s + r.estimatedHours * r.hourlyRate : s), 0);
+
+    if (total > 0) {
+      await this.prisma.lead.update({
+        where: { id: breakdown.leadId },
+        data: { expectedValue: total },
+      });
+    }
   }
 
   private withTotals(breakdown: any) {

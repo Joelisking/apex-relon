@@ -231,8 +231,16 @@ export class ProposalTemplatesService implements OnModuleInit {
     });
     if (!proposal) throw new NotFoundException('Proposal not found');
 
-    // Write contractedValue + invoicedValue to the linked project if present
+    // Write contractedValue + invoicedValue to the linked project and lead if present
     if ((contractedValue !== undefined || invoicedValue !== undefined) && proposal.leadId) {
+      // Update the lead's contractedValue so conversion dialogs pre-fill correctly
+      if (contractedValue !== undefined) {
+        await this.prisma.lead.update({
+          where: { id: proposal.leadId },
+          data: { contractedValue },
+        });
+      }
+
       const project = await this.prisma.project.findFirst({
         where: { leadId: proposal.leadId },
         select: { id: true },
