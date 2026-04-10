@@ -124,6 +124,10 @@ export class TasksService {
           ? new Date(dto.reminderAt)
           : undefined,
         taskTypeId: dto.taskTypeId,
+        estimatedHours: dto.estimatedHours,
+        costBreakdownLineId: dto.costBreakdownLineId,
+        serviceItemId: dto.serviceItemId,
+        serviceItemSubtaskId: dto.serviceItemSubtaskId,
       },
       include: {
         assignedTo: {

@@ -8,6 +8,7 @@ export interface RoleResponse {
   isBuiltIn: boolean;
   canAssignBuiltIn: boolean;
   color?: string | null;
+  showInCostBreakdown: boolean;
   userCount: number;
   createdAt: string;
   updatedAt: string;
@@ -24,6 +25,7 @@ export interface UpdateRoleRequest {
   label?: string;
   description?: string;
   color?: string;
+  showInCostBreakdown?: boolean;
 }
 
 export const rolesApi = {

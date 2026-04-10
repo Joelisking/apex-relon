@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsDateString,
   IsEnum,
+  IsNumber,
   IsUUID,
 } from 'class-validator';
 
@@ -65,4 +66,20 @@ export class CreateTaskDto {
   @IsOptional()
   @IsUUID()
   taskTypeId?: string;
+
+  @IsOptional()
+  @IsNumber()
+  estimatedHours?: number;
+
+  @IsOptional()
+  @IsString()
+  costBreakdownLineId?: string;
+
+  @IsOptional()
+  @IsString()
+  serviceItemId?: string;
+
+  @IsOptional()
+  @IsString()
+  serviceItemSubtaskId?: string;
 }

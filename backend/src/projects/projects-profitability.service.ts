@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 
+export interface ServiceItemPerformance {
+  serviceItemId: string;
+  serviceItemName: string;
+  proposedByRole: Record<string, number>;   // role → estimatedHours
+  actualByRole: Record<string, number>;     // role → logged hours
+}
+
 export interface ProjectProfitability {
   projectId: string;
   revenue: number;
@@ -13,6 +20,7 @@ export interface ProjectProfitability {
   actualHours: number;
   hoursVariance: number;
   laborByUser: { userId: string; userName: string; hours: number; cost: number }[];
+  serviceItemPerformance: ServiceItemPerformance[];
 }
 
 @Injectable()
@@ -27,7 +35,7 @@ export class ProjectsProfitabilityService {
       }),
       this.prisma.timeEntry.findMany({
         where: { projectId },
-        include: { user: { select: { id: true, name: true } } },
+        include: { user: { select: { id: true, name: true, role: true } } },
       }),
       this.prisma.costLog.aggregate({
         where: { projectId },
@@ -37,7 +45,10 @@ export class ProjectsProfitabilityService {
         where: { projectId },
         include: {
           lines: {
-            include: { roleEstimates: { select: { estimatedHours: true } } },
+            include: {
+              serviceItem: { select: { id: true, name: true } },
+              roleEstimates: { select: { estimatedHours: true, role: true, subtaskId: true } },
+            },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -70,18 +81,32 @@ export class ProjectsProfitabilityService {
       }
     }
 
-    // Proposed hours from the primary cost breakdown (or most recent)
-    const targetBreakdown =
-      project?.primaryCostBreakdownId
-        ? costBreakdown
-        : costBreakdown;
-
     const proposedHours =
-      targetBreakdown?.lines.reduce(
+      costBreakdown?.lines.reduce(
         (sum, line) =>
           sum + line.roleEstimates.reduce((s, re) => s + re.estimatedHours, 0),
         0,
       ) ?? 0;
+
+    // Service item performance: proposed vs actual hours per service item per role
+    const serviceItemMap = new Map<string, ServiceItemPerformance>();
+    for (const line of costBreakdown?.lines ?? []) {
+      const siId = line.serviceItem.id;
+      if (!serviceItemMap.has(siId)) {
+        serviceItemMap.set(siId, { serviceItemId: siId, serviceItemName: line.serviceItem.name, proposedByRole: {}, actualByRole: {} });
+      }
+      const perf = serviceItemMap.get(siId)!;
+      for (const re of line.roleEstimates) {
+        perf.proposedByRole[re.role] = (perf.proposedByRole[re.role] ?? 0) + re.estimatedHours;
+      }
+    }
+    for (const entry of timeEntries) {
+      if (!entry.serviceItemId) continue;
+      const role = entry.user.role;
+      if (!serviceItemMap.has(entry.serviceItemId)) continue; // skip entries outside CB scope
+      const perf = serviceItemMap.get(entry.serviceItemId)!;
+      perf.actualByRole[role] = (perf.actualByRole[role] ?? 0) + entry.hours;
+    }
 
     const totalCost = laborCost + directCost;
     const grossProfit = revenue - totalCost;
@@ -104,6 +129,7 @@ export class ProjectsProfitabilityService {
         hours: d.hours,
         cost: d.cost,
       })),
+      serviceItemPerformance: [...serviceItemMap.values()],
     };
   }
 

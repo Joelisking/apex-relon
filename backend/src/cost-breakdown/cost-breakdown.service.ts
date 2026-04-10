@@ -98,15 +98,71 @@ export class CostBreakdownService {
       }
     }
 
-    return this.findOne(breakdown.id, tenantId);
+    const result = await this.findOne(breakdown.id, tenantId);
+
+    // Auto-sync ProjectServiceItems if projectId is set
+    if (dto.projectId) {
+      await this.syncProjectServiceItems(breakdown.id, dto.projectId);
+    }
+
+    return result;
   }
 
   async update(id: string, dto: UpdateCostBreakdownDto, tenantId: string) {
     await this.findOne(id, tenantId);
-    return this.prisma.costBreakdown.update({
+    const updated = await this.prisma.costBreakdown.update({
       where: { id },
       data: dto,
     });
+    // If projectId is being set, sync ProjectServiceItems
+    if (dto.projectId) {
+      await this.syncProjectServiceItems(id, dto.projectId);
+    }
+    return updated;
+  }
+
+  async addLine(costBreakdownId: string, serviceItemId: string, tenantId: string) {
+    const breakdown = await this.findOne(costBreakdownId, tenantId);
+
+    // Check the service item isn't already a line
+    const existing = breakdown.lines.find((l: any) => l.serviceItemId === serviceItemId);
+    if (existing) return existing;
+
+    const sortOrder = breakdown.lines.length;
+    const line = await this.prisma.costBreakdownLine.create({
+      data: { costBreakdownId, serviceItemId, sortOrder },
+      include: LINE_INCLUDE,
+    });
+
+    // If the CB is linked to a project, sync the new service item
+    if (breakdown.projectId) {
+      await this.addProjectServiceItem(breakdown.projectId as string, serviceItemId);
+    }
+
+    return line;
+  }
+
+  /** Syncs ProjectServiceItem records from a cost breakdown's lines. */
+  async syncProjectServiceItems(costBreakdownId: string, projectId: string) {
+    const lines = await this.prisma.costBreakdownLine.findMany({
+      where: { costBreakdownId },
+      select: { serviceItemId: true },
+    });
+
+    for (const line of lines) {
+      await this.addProjectServiceItem(projectId, line.serviceItemId);
+    }
+  }
+
+  private async addProjectServiceItem(projectId: string, serviceItemId: string) {
+    const existing = await this.prisma.projectServiceItem.findFirst({
+      where: { projectId, serviceItemId },
+    });
+    if (!existing) {
+      await this.prisma.projectServiceItem.create({
+        data: { projectId, serviceItemId },
+      });
+    }
   }
 
   async remove(id: string, tenantId: string) {

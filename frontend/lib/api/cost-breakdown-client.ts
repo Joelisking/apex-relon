@@ -15,6 +15,7 @@ export interface UpdateCostBreakdownDto {
   title?: string;
   status?: string;
   notes?: string;
+  projectId?: string;
   mileageQty?: number | null;
   mileageRate?: number | null;
   lodgingQty?: number | null;
@@ -57,6 +58,11 @@ export const costBreakdownApi = {
       `/cost-breakdowns/lines/${lineId}/role-estimates/${encodeURIComponent(subtaskId)}/${encodeURIComponent(role)}`,
       { method: 'DELETE' },
     ),
+  addLine: (costBreakdownId: string, serviceItemId: string) =>
+    apiFetch<import('../types').CostBreakdownLine>(`/cost-breakdowns/${costBreakdownId}/lines`, {
+      method: 'POST',
+      body: JSON.stringify({ serviceItemId }),
+    }),
   downloadPdf: async (id: string): Promise<Blob> => {
     const token = getTokenFromClientCookies();
     const response = await fetch(`${API_URL}/cost-breakdowns/${id}/pdf`, {

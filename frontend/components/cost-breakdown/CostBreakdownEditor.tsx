@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, CheckCircle2, FileText, Download, FilePlus, Save } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle2, FileText, Download, FilePlus, Save, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -16,10 +16,10 @@ import {
 } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
-import { settingsApi, leadsApi } from '@/lib/api/client';
+import { settingsApi, leadsApi, serviceItemsApi } from '@/lib/api/client';
 import { rolesApi } from '@/lib/api/roles-client';
 import type { RoleResponse } from '@/lib/api/roles-client';
-import type { CostBreakdown, CostBreakdownLine, JobType, Lead } from '@/lib/types';
+import type { CostBreakdown, CostBreakdownLine, JobType, Lead, ServiceItem } from '@/lib/types';
 import CostBreakdownLineCard from './CostBreakdownLineCard';
 import { toast } from 'sonner';
 
@@ -67,6 +67,12 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
   const [roundedFee, setRoundedFee] = useState('');
   const [savingExpenses, setSavingExpenses] = useState(false);
   const expenseSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Add Line (edit mode)
+  const [showAddLine, setShowAddLine] = useState(false);
+  const [addLineServiceItemId, setAddLineServiceItemId] = useState('');
+  const [addLineLoading, setAddLineLoading] = useState(false);
+  const [addLineServiceItems, setAddLineServiceItems] = useState<ServiceItem[]>([]);
 
   // Auto-populate title from the selected lead's project/company name
   useEffect(() => {
@@ -116,6 +122,15 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [breakdown?.id]);
 
+  // Fetch service items filtered by job type for the "Add Line" picker
+  useEffect(() => {
+    if (!breakdown) return;
+    serviceItemsApi.getAll(breakdown.jobTypeId ?? undefined)
+      .then(setAddLineServiceItems)
+      .catch(() => setAddLineServiceItems([]));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [breakdown?.id, breakdown?.jobTypeId]);
+
   const saveExpenses = useCallback(async (fields: {
     mileageQty: string; mileageRate: string;
     lodgingQty: string; lodgingRate: string;
@@ -149,6 +164,21 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
       saveExpenses({ mileageQty, mileageRate, lodgingQty, lodgingRate, perDiemQty, perDiemRate, roundedFee });
     }, 800);
   }, [saveExpenses, mileageQty, mileageRate, lodgingQty, lodgingRate, perDiemQty, perDiemRate, roundedFee]);
+
+  const handleAddLine = useCallback(async () => {
+    if (!breakdown || !addLineServiceItemId) return;
+    setAddLineLoading(true);
+    try {
+      const line = await costBreakdownApi.addLine(breakdown.id, addLineServiceItemId);
+      setBreakdown((prev) => prev ? { ...prev, lines: [...prev.lines, line] } : null);
+      setAddLineServiceItemId('');
+      setShowAddLine(false);
+    } catch {
+      toast.error('Failed to add line');
+    } finally {
+      setAddLineLoading(false);
+    }
+  }, [breakdown, addLineServiceItemId]);
 
   const handleCreate = useCallback(async () => {
     if (!title.trim()) return;
@@ -316,6 +346,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
 
   const linkedLabel = breakdown.project?.name ?? breakdown.lead?.company ?? null;
   const hasRatedCost = breakdown.totalEstimatedCost > 0;
+  const cbRoles = roles.filter((r) => r.showInCostBreakdown !== false);
 
   const toN = (v: string) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
   const mileageTotal = toN(mileageQty) * toN(mileageRate);
@@ -393,29 +424,67 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
       </div>
 
       {/* Phase cards */}
-      {breakdown.lines.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border border-border/60">
-          <FileText className="h-10 w-10 text-muted-foreground mb-3" />
-          <p className="text-sm text-muted-foreground">No phases found for this breakdown.</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Ensure a job type with phases is configured in settings.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {breakdown.lines
-            .slice()
-            .sort((a, b) => a.sortOrder - b.sortOrder)
-            .map((line) => (
-              <CostBreakdownLineCard
-                key={line.id}
-                line={line}
-                roles={roles}
-                onChange={handleLineChange}
-              />
-            ))}
-        </div>
-      )}
+      <div className="space-y-4">
+        {breakdown.lines.length === 0 && !showAddLine && (
+          <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border border-border/60">
+            <FileText className="h-10 w-10 text-muted-foreground mb-3" />
+            <p className="text-sm text-muted-foreground">No service items yet. Add the first line below.</p>
+          </div>
+        )}
+
+        {breakdown.lines
+          .slice()
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((line) => (
+            <CostBreakdownLineCard
+              key={line.id}
+              line={line}
+              roles={cbRoles}
+              onChange={handleLineChange}
+            />
+          ))}
+
+        {/* Add Line inline picker */}
+        {showAddLine ? (
+          <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-3 flex items-center gap-3">
+            <div className="flex-1">
+              <Select value={addLineServiceItemId} onValueChange={setAddLineServiceItemId}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Select service item to add…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {addLineServiceItems
+                    .filter((si) => !breakdown.lines.some((l) => l.serviceItemId === si.id))
+                    .map((si) => (
+                      <SelectItem key={si.id} value={si.id}>{si.name}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleAddLine}
+              disabled={!addLineServiceItemId || addLineLoading}>
+              {addLineLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Add'}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => { setShowAddLine(false); setAddLineServiceItemId(''); }}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-muted-foreground hover:text-foreground"
+            onClick={() => setShowAddLine(true)}>
+            <Plus className="h-3.5 w-3.5" />
+            Add Service Item Line
+          </Button>
+        )}
+      </div>
 
       {/* Direct Expenses */}
       <div className="rounded-xl border border-border/60 bg-card px-5 py-5 space-y-4">

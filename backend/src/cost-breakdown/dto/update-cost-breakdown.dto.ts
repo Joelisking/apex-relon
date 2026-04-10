@@ -55,4 +55,8 @@ export class UpdateCostBreakdownDto {
   @IsOptional()
   @Type(() => Number)
   roundedFee?: number | null;
+
+  @IsString()
+  @IsOptional()
+  projectId?: string;
 }

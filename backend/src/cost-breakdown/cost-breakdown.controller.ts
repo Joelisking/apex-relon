@@ -67,6 +67,14 @@ export class CostBreakdownController {
     return this.service.remove(id, TENANT_ID);
   }
 
+  @Post(':id/lines')
+  addLine(
+    @Param('id') id: string,
+    @Body('serviceItemId') serviceItemId: string,
+  ) {
+    return this.service.addLine(id, serviceItemId, TENANT_ID);
+  }
+
   @Patch('lines/:lineId')
   updateLine(@Param('lineId') lineId: string, @Body() dto: UpdateCostBreakdownLineDto) {
     return this.service.updateLine(lineId, dto, TENANT_ID);

@@ -210,6 +210,50 @@ export class TimeTrackingService {
     });
   }
 
+  /**
+   * Returns budget vs. actual hours for a given user + project + subtask.
+   * Matches the user's role against the CB role estimate for the subtask.
+   */
+  async getSubtaskBudget(
+    userId: string,
+    projectId: string,
+    serviceItemSubtaskId: string,
+  ): Promise<{ budgetHours: number; loggedHours: number; remainingHours: number; role: string | null }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+    const userRole = user?.role ?? null;
+
+    const cb = await this.prisma.costBreakdown.findFirst({
+      where: { projectId },
+      include: {
+        lines: {
+          include: {
+            roleEstimates: {
+              where: {
+                subtaskId: serviceItemSubtaskId,
+                ...(userRole ? { role: userRole } : {}),
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const budgetHours =
+      cb?.lines.reduce(
+        (sum, line) => sum + line.roleEstimates.reduce((s, re) => s + re.estimatedHours, 0),
+        0,
+      ) ?? 0;
+
+    const agg = await this.prisma.timeEntry.aggregate({
+      where: { projectId, serviceItemSubtaskId, userId },
+      _sum: { hours: true },
+    });
+    const loggedHours = agg._sum.hours ?? 0;
+
+    return { budgetHours, loggedHours, remainingHours: budgetHours - loggedHours, role: userRole };
+  }
+
   // ─── Project Budget ───────────────────────────────────────────────────────
 
   async upsertBudget(dto: CreateProjectBudgetDto) {

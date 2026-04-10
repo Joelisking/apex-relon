@@ -152,6 +152,13 @@ export interface CreateProjectDto {
   costSegments?: { name: string; amount: number; sortOrder?: number }[];
 }
 
+export interface ServiceItemPerformance {
+  serviceItemId: string;
+  serviceItemName: string;
+  proposedByRole: Record<string, number>;
+  actualByRole: Record<string, number>;
+}
+
 export interface ProjectProfitability {
   projectId: string;
   revenue: number;
@@ -164,6 +171,7 @@ export interface ProjectProfitability {
   actualHours: number;
   hoursVariance: number;
   laborByUser: { userId: string; userName: string; hours: number; cost: number }[];
+  serviceItemPerformance: ServiceItemPerformance[];
 }
 
 // Client-side only - synchronous cookie reading

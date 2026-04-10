@@ -44,6 +44,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -136,6 +137,7 @@ const editRoleSchema = z.object({
   label: z.string().min(2, 'Label is required').max(100),
   description: z.string().max(255).optional(),
   color: z.string().optional(),
+  showInCostBreakdown: z.boolean().optional(),
 });
 
 type CreateRoleForm = z.infer<typeof createRoleSchema>;
@@ -250,6 +252,7 @@ export function RolesView() {
       label: role.label,
       description: role.description ?? '',
       color: role.color ?? 'blue',
+      showInCostBreakdown: role.showInCostBreakdown,
     });
   };
 
@@ -419,6 +422,9 @@ export function RolesView() {
                   <th className="py-2.5 px-4 text-left text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground hidden md:table-cell">
                     Description
                   </th>
+                  <th className="py-2.5 px-4 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground w-[100px] text-center hidden lg:table-cell">
+                    Cost Breakdown
+                  </th>
                   <th className="py-2.5 px-4 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground w-[80px] text-center">
                     Users
                   </th>
@@ -471,6 +477,30 @@ export function RolesView() {
                           No description
                         </span>
                       )}
+                    </td>
+                    <td className="py-3 px-4 text-center hidden lg:table-cell">
+                      <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Switch
+                              checked={role.showInCostBreakdown}
+                              disabled={!canEdit}
+                              onCheckedChange={async (checked) => {
+                                try {
+                                  await rolesApi.update(role.key, { showInCostBreakdown: checked });
+                                  invalidate();
+                                } catch {
+                                  toast.error('Failed to update role');
+                                }
+                              }}
+                              className="h-4 w-7"
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {role.showInCostBreakdown ? 'Shown in cost breakdown' : 'Hidden from cost breakdown'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex items-center justify-center gap-1 text-muted-foreground">
@@ -689,6 +719,26 @@ export function RolesView() {
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="showInCostBreakdown"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Show in Cost Breakdown</FormLabel>
+                      <FormDescription>
+                        When enabled, this role appears in the role estimate picker on cost breakdowns.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value ?? true}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />

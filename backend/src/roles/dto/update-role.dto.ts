@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsBoolean, IsOptional, MaxLength } from 'class-validator';
 
 export class UpdateRoleDto {
   @IsString()
@@ -14,4 +14,8 @@ export class UpdateRoleDto {
   @IsString()
   @IsOptional()
   color?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  showInCostBreakdown?: boolean;
 }

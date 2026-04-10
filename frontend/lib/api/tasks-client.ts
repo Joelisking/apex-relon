@@ -12,6 +12,10 @@ export interface CreateTaskDto {
   assignedToId?: string;
   taskTypeId?: string;
   reminderAt?: string;
+  estimatedHours?: number;
+  serviceItemId?: string;
+  serviceItemSubtaskId?: string;
+  costBreakdownLineId?: string;
 }
 
 export interface UpdateTaskDto extends Partial<CreateTaskDto> {

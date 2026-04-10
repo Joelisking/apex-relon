@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Calendar as CalendarIcon,
   X,
@@ -29,10 +30,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { tasksApi, type CreateTaskDto } from '@/lib/api/tasks-client';
-import { settingsApi } from '@/lib/api/client';
+import { settingsApi, API_URL, getTokenFromClientCookies } from '@/lib/api/client';
 import { toast } from 'sonner';
 import { type UserDirectoryItem } from '@/lib/api/users-client';
-import type { Task, TaskType } from '@/lib/types';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import type { Task, TaskType, CostBreakdownLine } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 interface TaskDialogProps {
@@ -151,6 +153,23 @@ export function TaskDialog({
   // Task types filtered by the linked entity's project type
   const [linkedJobTypeId, setLinkedJobTypeId] = useState<string | undefined>(undefined);
   const [taskTypes, setTaskTypes] = useState<TaskType[]>([]);
+
+  // Service item picker (project tasks with CB)
+  const isProjectTask = form.entityType === 'PROJECT' && !!form.entityId;
+  const { data: cbLines = [] } = useQuery<CostBreakdownLine[]>({
+    queryKey: ['project-cb-lines', form.entityId],
+    queryFn: async () => {
+      const token = getTokenFromClientCookies();
+      const res = await fetch(`${API_URL}/cost-breakdowns?projectId=${form.entityId}`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' },
+      });
+      if (!res.ok) return [];
+      const breakdowns = await res.json() as Array<{ lines: CostBreakdownLine[] }>;
+      return breakdowns[0]?.lines ?? [];
+    },
+    enabled: isProjectTask,
+    staleTime: 60_000,
+  });
 
   // Whether the current user is allowed to set DONE in this dialog
   const allowDone = canMarkDone(editingTask, currentUserId);
@@ -296,7 +315,7 @@ export function TaskDialog({
             entityType={form.entityType ?? ''}
             entityId={form.entityId ?? ''}
             onChange={(type, id, jobTypeId) => {
-              setForm({ ...form, entityType: type, entityId: id, taskTypeId: '' });
+              setForm({ ...form, entityType: type, entityId: id, taskTypeId: '', serviceItemId: undefined, costBreakdownLineId: undefined, estimatedHours: undefined });
               setLinkedJobTypeId(jobTypeId);
             }}
           />
@@ -368,6 +387,56 @@ export function TaskDialog({
                   </div>
                 </PopoverContent>
               </Popover>
+            </div>
+          )}
+
+          {/* Service Item — only shown when linked to a project that has CB lines */}
+          {isProjectTask && cbLines.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
+                Service Item
+                <span className="ml-1.5 normal-case text-muted-foreground tracking-normal font-normal">
+                  — from cost breakdown
+                </span>
+              </p>
+              <SearchableSelect
+                value={form.serviceItemId ?? ''}
+                onValueChange={(val) => {
+                  const line = cbLines.find((l) => l.serviceItemId === val);
+                  const autoHours = line
+                    ? line.roleEstimates.reduce((s, re) => s + re.estimatedHours, 0)
+                    : 0;
+                  setForm((prev) => ({
+                    ...prev,
+                    serviceItemId: val || undefined,
+                    costBreakdownLineId: line?.id || undefined,
+                    estimatedHours: autoHours > 0 ? autoHours : prev.estimatedHours,
+                  }));
+                }}
+                placeholder="Select service item (optional)"
+                searchPlaceholder="Search service items…"
+                emptyMessage="No service items found."
+                options={[
+                  { value: '', label: 'None' },
+                  ...cbLines.map((l) => ({ value: l.serviceItemId, label: l.serviceItem.name })),
+                ]}
+              />
+              {form.serviceItemId && (
+                <div className="space-y-1.5 pt-1">
+                  <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
+                    Estimated Hours
+                  </p>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.25}
+                    value={form.estimatedHours ?? ''}
+                    onChange={(e) => setForm((prev) => ({ ...prev, estimatedHours: e.target.value ? parseFloat(e.target.value) : undefined }))}
+                    placeholder="Auto-filled from cost breakdown"
+                    className="w-36 h-8 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </div>
+              )}
             </div>
           )}
 

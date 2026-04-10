@@ -655,38 +655,43 @@ model NotificationPreference {
 }
 
 model Role {
-  id               String   @id @default(uuid())
-  key              String   @unique
-  label            String
-  description      String?
-  isBuiltIn        Boolean  @default(false)
-  canAssignBuiltIn Boolean  @default(false)
-  color            String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  key                  String   @unique
+  label                String
+  description          String?
+  isBuiltIn            Boolean  @default(false)
+  canAssignBuiltIn     Boolean  @default(false)
+  color                String?
+  showInCostBreakdown  Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   @@map("roles")
 }
 
 model Task {
-  id               String    @id @default(uuid())
-  title            String
-  description      String?
-  dueDate          DateTime?
-  dueTime          String?
-  priority         String    @default("MEDIUM")
-  status           String    @default("OPEN")
-  entityType       String?
-  entityId         String?
-  assignedToId     String?
-  createdById      String
-  taskTypeId       String?
-  completedAt      DateTime?
-  reminderAt       DateTime?
-  completionNote   String?
-  uncompleteReason String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                   String    @id @default(uuid())
+  title                String
+  description          String?
+  dueDate              DateTime?
+  dueTime              String?
+  priority             String    @default("MEDIUM")
+  status               String    @default("OPEN")
+  entityType           String?
+  entityId             String?
+  assignedToId         String?
+  createdById          String
+  taskTypeId           String?
+  completedAt          DateTime?
+  reminderAt           DateTime?
+  completionNote       String?
+  uncompleteReason     String?
+  estimatedHours       Float?
+  costBreakdownLineId  String?
+  serviceItemId        String?
+  serviceItemSubtaskId String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
   assignedTo       User?     @relation("TaskAssignments", fields: [assignedToId], references: [id])
   createdBy        User      @relation("TaskCreation", fields: [createdById], references: [id])
   taskType         TaskType? @relation(fields: [taskTypeId], references: [id])

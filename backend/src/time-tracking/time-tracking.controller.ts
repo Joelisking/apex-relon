@@ -131,6 +131,24 @@ export class TimeTrackingController {
     return this.timeTrackingService.upsertBudget(dto);
   }
 
+  // ─── Subtask Budget ───────────────────────────────────────────────────────
+
+  @Get('subtask-budget')
+  @Permissions('time_tracking:view')
+  async getSubtaskBudget(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('projectId') projectId: string,
+    @Query('serviceItemSubtaskId') serviceItemSubtaskId: string,
+    @Query('targetUserId') targetUserId?: string,
+  ) {
+    const canEnterForOthers = await this.permissionsService.hasPermission(
+      user.role,
+      'time_tracking:enter_for_others',
+    );
+    const effectiveUserId = canEnterForOthers && targetUserId ? targetUserId : user.id;
+    return this.timeTrackingService.getSubtaskBudget(effectiveUserId, projectId, serviceItemSubtaskId);
+  }
+
   // ─── Summaries ────────────────────────────────────────────────────────────
 
   @Get('summary/project/:id')

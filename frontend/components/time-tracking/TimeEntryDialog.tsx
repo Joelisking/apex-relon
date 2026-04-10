@@ -20,6 +20,17 @@ import { API_URL, getTokenFromClientCookies, serviceItemsApi } from '@/lib/api/c
 import { workCodesApi, groupWorkCodes, type WorkCode } from '@/lib/api/work-codes-client';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ChevronsUpDown, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { ProjectServiceItem, ServiceItem } from '@/lib/types';
 
 function getToken() {
@@ -64,6 +75,110 @@ interface ProjectOption {
   jobNumber?: string | null;
   isIndot?: boolean;
   jobType?: { division?: { name: string } | null } | null;
+}
+
+interface ServiceSubtaskPickerProps {
+  visibleServiceItems: ServiceItem[];
+  projectLinkedCount: number | null;
+  serviceItemId: string;
+  serviceItemSubtaskId: string;
+  onSelect: (serviceItemId: string, serviceItemSubtaskId: string) => void;
+}
+
+function ServiceSubtaskPicker({
+  visibleServiceItems,
+  projectLinkedCount,
+  serviceItemId,
+  serviceItemSubtaskId,
+  onSelect,
+}: ServiceSubtaskPickerProps) {
+  const [open, setOpen] = useState(false);
+
+  const selectedItem = visibleServiceItems.find((si) => si.id === serviceItemId);
+  const selectedSubtask = selectedItem?.subtasks?.find((st) => st.id === serviceItemSubtaskId);
+
+  const displayLabel = selectedItem
+    ? selectedSubtask
+      ? `${selectedItem.name} · ${selectedSubtask.name}`
+      : selectedItem.name
+    : null;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <Label>Service Item / Subtask</Label>
+        {projectLinkedCount !== null && (
+          <span className="text-xs text-muted-foreground">
+            ({projectLinkedCount} linked to project)
+          </span>
+        )}
+      </div>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              'flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors hover:bg-muted/40',
+              !displayLabel && 'text-muted-foreground',
+            )}
+          >
+            <span className="line-clamp-1 text-left">{displayLabel ?? 'Select service item / subtask (optional)'}</span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" sideOffset={4}>
+          <Command>
+            <CommandInput placeholder="Search…" />
+            <CommandList>
+              <CommandEmpty>No items found.</CommandEmpty>
+              {/* None option */}
+              <CommandGroup>
+                <CommandItem
+                  value="__none__"
+                  onSelect={() => { onSelect('', ''); setOpen(false); }}
+                >
+                  <Check className={cn('mr-2 h-4 w-4 shrink-0', !serviceItemId ? 'opacity-100' : 'opacity-0')} />
+                  None
+                </CommandItem>
+              </CommandGroup>
+              {/* Grouped items */}
+              {visibleServiceItems.map((si) => {
+                const subs = si.subtasks ?? [];
+                if (subs.length === 0) {
+                  return (
+                    <CommandGroup key={si.id} heading={si.name}>
+                      <CommandItem
+                        value={`${si.name}`}
+                        onSelect={() => { onSelect(si.id, ''); setOpen(false); }}
+                      >
+                        <Check className={cn('mr-2 h-4 w-4 shrink-0', serviceItemId === si.id && !serviceItemSubtaskId ? 'opacity-100' : 'opacity-0')} />
+                        {si.name}
+                      </CommandItem>
+                    </CommandGroup>
+                  );
+                }
+                return (
+                  <CommandGroup key={si.id} heading={si.name}>
+                    {subs.map((st) => (
+                      <CommandItem
+                        key={st.id}
+                        value={`${si.name} ${st.name}`}
+                        onSelect={() => { onSelect(si.id, st.id); setOpen(false); }}
+                      >
+                        <Check className={cn('mr-2 h-4 w-4 shrink-0', serviceItemId === si.id && serviceItemSubtaskId === st.id ? 'opacity-100' : 'opacity-0')} />
+                        <span className="text-muted-foreground mr-1.5">↳</span>
+                        {st.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                );
+              })}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
 }
 
 interface TimeEntryDialogProps {
@@ -172,9 +287,29 @@ export function TimeEntryDialog({
     ? baseServiceItems.filter((si) => si.isIndot)
     : baseServiceItems;
 
-  // Subtasks for the currently selected service item
+  // The selected service item (used for estimated cost display)
   const selectedItem = serviceItems.find((si) => si.id === serviceItemId);
-  const subtasks = selectedItem?.subtasks ?? [];
+
+  // Subtask budget: budget/logged/remaining when a project + subtask are selected
+  const { data: subtaskBudget } = useQuery<{
+    budgetHours: number;
+    loggedHours: number;
+    remainingHours: number;
+    role: string | null;
+  } | null>({
+    queryKey: ['subtask-budget', projectId, serviceItemSubtaskId, targetUser?.id],
+    queryFn: async () => {
+      const params = new URLSearchParams({ projectId, serviceItemSubtaskId });
+      if (targetUser?.id) params.set('targetUserId', targetUser.id);
+      const res = await fetch(`${API_URL}/time-tracking/subtask-budget?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!projectId && !!serviceItemSubtaskId,
+    staleTime: 30_000,
+  });
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -240,12 +375,6 @@ export function TimeEntryDialog({
     setProjectId('');
     setWorkCodeId('');
     setServiceItemId('');
-    setServiceItemSubtaskId('');
-  };
-
-  // Reset subtask when service item changes
-  const handleServiceItemChange = (val: string) => {
-    setServiceItemId(val);
     setServiceItemSubtaskId('');
   };
 
@@ -454,44 +583,35 @@ export function TimeEntryDialog({
             </div>
           )}
 
-          {/* Service Item */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <Label>Service Item</Label>
-              {projectLinkedItems && (
-                <span className="text-xs text-muted-foreground">
-                  ({projectLinkedItems.length} linked to project)
-                </span>
-              )}
-            </div>
-            <SearchableSelect
-              value={serviceItemId}
-              onValueChange={handleServiceItemChange}
-              placeholder="Select service item (optional)"
-              searchPlaceholder="Search service items…"
-              emptyMessage="No service items found."
-              options={[
-                { value: '', label: 'None' },
-                ...visibleServiceItems.map((si) => ({ value: si.id, label: si.name })),
-              ]}
-            />
-          </div>
+          {/* Service Item + Subtask — grouped picker */}
+          <ServiceSubtaskPicker
+            visibleServiceItems={visibleServiceItems}
+            projectLinkedCount={projectLinkedItems?.length ?? null}
+            serviceItemId={serviceItemId}
+            serviceItemSubtaskId={serviceItemSubtaskId}
+            onSelect={(siId, stId) => {
+              setServiceItemId(siId);
+              setServiceItemSubtaskId(stId);
+            }}
+          />
 
-          {/* Subtask — only shown when a service item is selected and has subtasks */}
-          {serviceItemId && subtasks.length > 0 && (
-            <div className="space-y-1.5">
-              <Label>Subtask</Label>
-              <SearchableSelect
-                value={serviceItemSubtaskId}
-                onValueChange={setServiceItemSubtaskId}
-                placeholder="Select subtask (optional)"
-                searchPlaceholder="Search subtasks…"
-                emptyMessage="No subtasks found."
-                options={[
-                  { value: '', label: 'None' },
-                  ...subtasks.map((st) => ({ value: st.id, label: st.name })),
-                ]}
-              />
+          {/* Subtask budget callout */}
+          {subtaskBudget && subtaskBudget.budgetHours > 0 && (
+            <div className="flex items-center gap-4 rounded-md border border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-xs">
+              <div>
+                <span className="text-muted-foreground">Budget </span>
+                <span className="font-semibold tabular-nums">{subtaskBudget.budgetHours.toFixed(1)} hrs</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Logged </span>
+                <span className="font-semibold tabular-nums">{subtaskBudget.loggedHours.toFixed(1)} hrs</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Remaining </span>
+                <span className={cn('font-semibold tabular-nums', subtaskBudget.remainingHours < 0 ? 'text-red-600' : 'text-green-600')}>
+                  {subtaskBudget.remainingHours >= 0 ? '' : '−'}{Math.abs(subtaskBudget.remainingHours).toFixed(1)} hrs
+                </span>
+              </div>
             </div>
           )}
 

@@ -104,6 +104,12 @@ export class CustomerLeadConversionService {
       });
     }
 
+    // Link any cost breakdowns for this lead to the new project
+    await this.prisma.costBreakdown.updateMany({
+      where: { leadId },
+      data: { projectId: project.id },
+    });
+
     // Mark lead as converted
     await this.prisma.lead.update({
       where: { id: leadId },
