@@ -196,6 +196,14 @@ export class CostBreakdownService {
     });
   }
 
+  async deleteLine(lineId: string, tenantId: string) {
+    const line = await this.prisma.costBreakdownLine.findFirst({
+      where: { id: lineId, costBreakdown: { tenantId } },
+    });
+    if (!line) throw new NotFoundException('Cost breakdown line not found');
+    return this.prisma.costBreakdownLine.delete({ where: { id: lineId } });
+  }
+
   async deleteRoleEstimate(lineId: string, subtaskId: string, role: string, tenantId: string) {
     const line = await this.prisma.costBreakdownLine.findFirst({
       where: { id: lineId, costBreakdown: { tenantId } },

@@ -21,6 +21,7 @@ import { rolesApi } from '@/lib/api/roles-client';
 import type { RoleResponse } from '@/lib/api/roles-client';
 import type { CostBreakdown, CostBreakdownLine, JobType, Lead, ServiceItem } from '@/lib/types';
 import CostBreakdownLineCard from './CostBreakdownLineCard';
+import CostBreakdownConfigureStep, { type CbConfig } from './CostBreakdownConfigureStep';
 import { toast } from 'sonner';
 
 interface Props {
@@ -70,6 +71,12 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
   const [roundedFee, setRoundedFee] = useState('');
   const [savingExpenses, setSavingExpenses] = useState(false);
   const expenseSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Configure step (create mode)
+  const [step, setStep] = useState<'form' | 'configure'>('form');
+  const [allServiceItems, setAllServiceItems] = useState<ServiceItem[]>([]);
+  const [prePopulated, setPrePopulated] = useState<ServiceItem[]>([]);
+  const [fetchingItems, setFetchingItems] = useState(false);
 
   // Add Line (edit mode)
   const [showAddLine, setShowAddLine] = useState(false);
@@ -194,8 +201,25 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
     }
   }, [breakdown, addLineServiceItemId]);
 
-  const handleCreate = useCallback(async () => {
+  const handleNextConfigure = useCallback(async () => {
     if (!title.trim()) return;
+    setFetchingItems(true);
+    try {
+      const [all, filtered] = await Promise.all([
+        serviceItemsApi.getAll(),
+        jobTypeId ? serviceItemsApi.getAll(jobTypeId) : Promise.resolve([] as ServiceItem[]),
+      ]);
+      setAllServiceItems(all);
+      setPrePopulated(filtered);
+      setStep('configure');
+    } catch {
+      toast.error('Failed to load service items');
+    } finally {
+      setFetchingItems(false);
+    }
+  }, [title, jobTypeId]);
+
+  const handleConfirm = useCallback(async (config: CbConfig) => {
     setSaving(true);
     try {
       const created = await costBreakdownApi.create({
@@ -203,6 +227,40 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
         jobTypeId: jobTypeId || undefined,
         leadId: leadId || undefined,
       });
+
+      const lineByServiceItemId = new Map(created.lines.map((l) => [l.serviceItemId, l]));
+      const configByServiceItemId = new Map(config.items.map((ci) => [ci.serviceItem.id, ci]));
+
+      // Process auto-populated lines: delete removed items, exclude unchecked subtasks
+      const lineOps = created.lines.map(async (line) => {
+        const ci = configByServiceItemId.get(line.serviceItemId);
+        if (!ci) return costBreakdownApi.deleteLine(line.id);
+        const excluded = line.serviceItem.subtasks
+          .map((s) => s.id)
+          .filter((id) => !ci.includedSubtaskIds.includes(id));
+        if (excluded.length) return costBreakdownApi.updateLine(line.id, { excludedSubtaskIds: excluded });
+      });
+
+      // Add extra service items that weren't in the auto-populate set
+      const addOps = config.items
+        .filter((ci) => !lineByServiceItemId.has(ci.serviceItem.id))
+        .map(async (ci) => {
+          const newLine = await costBreakdownApi.addLine(created.id, ci.serviceItem.id);
+          const excluded = ci.serviceItem.subtasks
+            .map((s) => s.id)
+            .filter((id) => !ci.includedSubtaskIds.includes(id));
+          if (excluded.length) return costBreakdownApi.updateLine(newLine.id, { excludedSubtaskIds: excluded });
+        });
+
+      // Persist custom subtasks permanently to their service items
+      const customOps = config.items.flatMap((ci) =>
+        ci.customSubtasks.map((name) =>
+          serviceItemsApi.createSubtask(ci.serviceItem.id, { name }),
+        ),
+      );
+
+      await Promise.all([...lineOps, ...addOps, ...customOps]);
+
       const dest = returnTo
         ? `/cost-breakdown/${created.id}?returnTo=${encodeURIComponent(returnTo)}`
         : `/cost-breakdown/${created.id}`;
@@ -210,10 +268,9 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
     } catch (err) {
       console.error('Failed to create cost breakdown', err);
       toast.error('Failed to create cost breakdown');
-    } finally {
       setSaving(false);
     }
-  }, [title, jobTypeId, leadId, router]);
+  }, [title, jobTypeId, leadId, router, returnTo]);
 
   const handleStatusToggle = useCallback(async () => {
     if (!breakdown) return;
@@ -275,6 +332,18 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
 
   // ── Create mode ──────────────────────────────────────────────────────────────
   if (!breakdownId) {
+    if (step === 'configure') {
+      return (
+        <CostBreakdownConfigureStep
+          allServiceItems={allServiceItems}
+          prePopulated={prePopulated}
+          onBack={() => setStep('form')}
+          onConfirm={handleConfirm}
+          creating={saving}
+        />
+      );
+    }
+
     const leadOptions = leads.map((l) => ({
       value: l.id,
       label: l.company ? `${l.company} — ${l.contactName}` : l.contactName,
@@ -315,7 +384,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
               placeholder="e.g. Boundary Survey — Smith Property"
               value={title}
               onChange={(e) => { setTitle(e.target.value); setTitleManuallyEdited(true); }}
-              onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+              onKeyDown={(e) => e.key === 'Enter' && handleNextConfigure()}
             />
           </div>
 
@@ -339,10 +408,12 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
 
         <Button
           className="w-full"
-          onClick={handleCreate}
-          disabled={saving || !title.trim()}>
-          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Create Cost Breakdown
+          onClick={handleNextConfigure}
+          disabled={fetchingItems || !title.trim()}>
+          {fetchingItems
+            ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            : null}
+          {fetchingItems ? 'Loading items…' : 'Next: Configure Items'}
         </Button>
       </div>
     );

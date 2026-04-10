@@ -80,6 +80,11 @@ export class CostBreakdownController {
     return this.service.updateLine(lineId, dto, TENANT_ID);
   }
 
+  @Delete('lines/:lineId')
+  deleteLine(@Param('lineId') lineId: string) {
+    return this.service.deleteLine(lineId, TENANT_ID);
+  }
+
   @Put('lines/:lineId/role-estimates')
   upsertRoleEstimate(
     @Param('lineId') lineId: string,

@@ -58,6 +58,7 @@ export const costBreakdownApi = {
       `/cost-breakdowns/lines/${lineId}/role-estimates/${encodeURIComponent(subtaskId)}/${encodeURIComponent(role)}`,
       { method: 'DELETE' },
     ),
+  deleteLine: (lineId: string) => apiFetch<void>(`/cost-breakdowns/lines/${lineId}`, { method: 'DELETE' }),
   addLine: (costBreakdownId: string, serviceItemId: string) =>
     apiFetch<import('../types').CostBreakdownLine>(`/cost-breakdowns/${costBreakdownId}/lines`, {
       method: 'POST',
