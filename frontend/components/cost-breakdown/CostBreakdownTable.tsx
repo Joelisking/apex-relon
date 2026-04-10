@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MoreHorizontal, Pencil, Trash2, FileText, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import type { CostBreakdown } from '@/lib/types';
 
@@ -34,6 +45,7 @@ function formatCurrency(n: number) {
 
 export default function CostBreakdownTable({ breakdowns, onDelete }: Props) {
   const router = useRouter();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   if (breakdowns.length === 0) {
     return (
@@ -45,6 +57,25 @@ export default function CostBreakdownTable({ breakdowns, onDelete }: Props) {
   }
 
   return (
+    <>
+    <AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete cost breakdown?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently delete the cost breakdown and all its line items. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => { if (confirmDeleteId) { onDelete(confirmDeleteId); setConfirmDeleteId(null); } }}>
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <div className="rounded-xl border border-border/60 overflow-hidden">
       <table className="w-full">
         <thead>
@@ -123,7 +154,7 @@ export default function CostBreakdownTable({ breakdowns, onDelete }: Props) {
                       Edit
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive" onClick={() => onDelete(b.id)}>
+                    <DropdownMenuItem className="text-destructive" onClick={() => setConfirmDeleteId(b.id)}>
                       <Trash2 className="mr-2 h-3.5 w-3.5" />
                       Delete
                     </DropdownMenuItem>
@@ -135,5 +166,6 @@ export default function CostBreakdownTable({ breakdowns, onDelete }: Props) {
         </tbody>
       </table>
     </div>
+    </>
   );
 }

@@ -15,6 +15,16 @@ import { toast } from 'sonner';
 import { proposalTemplatesApi, type Proposal } from '@/lib/api/proposal-templates-client';
 import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
 import { AcceptProposalDialog } from './AcceptProposalDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface LinkedProposalsSectionProps {
   leadId: string;
@@ -62,6 +72,8 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
   const [combinedPdfId, setCombinedPdfId] = useState<string | null>(null);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingCbId, setDeletingCbId] = useState<string | null>(null);
+  const [confirmDeleteCbId, setConfirmDeleteCbId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -78,6 +90,20 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['proposals', { leadId }] });
+  const invalidateCbs = () => queryClient.invalidateQueries({ queryKey: ['cost-breakdowns', { leadId }] });
+
+  const handleDeleteCb = async (cbId: string) => {
+    setDeletingCbId(cbId);
+    try {
+      await costBreakdownApi.delete(cbId);
+      invalidateCbs();
+      toast.success('Cost breakdown deleted');
+    } catch {
+      toast.error('Failed to delete cost breakdown');
+    } finally {
+      setDeletingCbId(null);
+    }
+  };
 
   const handleDownload = async (proposal: Proposal) => {
     if (!proposal.fileId) return;
@@ -444,13 +470,26 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
                   {cb.jobType ? ` · ${cb.jobType.name}` : ''}
                 </p>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-6 text-[11px] shrink-0"
-                onClick={() => router.push(`/cost-breakdown/${cb.id}`)}>
-                View
-              </Button>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 text-[11px]"
+                  onClick={() => router.push(`/cost-breakdown/${cb.id}`)}>
+                  View
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                  title="Delete cost breakdown"
+                  disabled={deletingCbId === cb.id}
+                  onClick={() => setConfirmDeleteCbId(cb.id)}>
+                  {deletingCbId === cb.id
+                    ? <Loader2 className="h-3 w-3 animate-spin" />
+                    : <Trash2 className="h-3 w-3" />}
+                </Button>
+              </div>
             </div>
           ))}
         </div>
@@ -462,6 +501,25 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
       onClose={() => setAcceptProposal(null)}
       onConfirm={handleAcceptConfirm}
     />
+
+    <AlertDialog open={!!confirmDeleteCbId} onOpenChange={(open) => { if (!open) setConfirmDeleteCbId(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete cost breakdown?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently delete the cost breakdown and all its line items. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => { if (confirmDeleteCbId) { handleDeleteCb(confirmDeleteCbId); setConfirmDeleteCbId(null); } }}>
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </div>
   );
 }
