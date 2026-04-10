@@ -99,9 +99,12 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
         setLeads(fetchedLeads);
         setRoles(fetchedRoles);
 
-        // Pre-fill lead from URL param when creating a new breakdown
+        // Pre-fill lead + job type from URL param when creating a new breakdown
         if (!breakdownId && prefilledLeadId) {
           setLeadId(prefilledLeadId);
+          const lead = fetchedLeads.find((l) => l.id === prefilledLeadId);
+          const inferredJobTypeId = lead?.jobTypeId ?? lead?.jobType?.id;
+          if (inferredJobTypeId) setJobTypeId(inferredJobTypeId);
         }
 
         if (breakdownId) {
