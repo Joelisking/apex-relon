@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
 import { PDFDocument } from 'pdf-lib';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const libre = require('libreoffice-convert') as {
   convert: typeof import('libreoffice-convert').convert;
   convertWithOptions: (

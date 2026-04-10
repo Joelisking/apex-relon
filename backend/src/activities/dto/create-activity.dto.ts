@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsIn, Matches } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, Matches } from 'class-validator';
 
 export class CreateActivityDto {
   @IsString()

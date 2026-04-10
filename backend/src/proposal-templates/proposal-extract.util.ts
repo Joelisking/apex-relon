@@ -1,4 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const PizZip = require('pizzip') as typeof import('pizzip');
 import { mergeAdjacentHighlightedRuns, normalizeDocpropertyFields } from './proposal-fill.util';
 
