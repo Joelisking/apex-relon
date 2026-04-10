@@ -4,6 +4,13 @@ import { useState, useCallback } from 'react';
 import { Plus, Trash2, X, Pencil, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
@@ -128,7 +135,6 @@ export default function CostBreakdownSubtaskSection({
   }, [newRole, newHours, newRate, lineId, subtask.id, defaultRate, onAdd]);
 
   const subtaskTotal = estimates.reduce((s, e) => s + e.estimatedHours, 0);
-  const datalistId = `roles-${subtask.id}`;
 
   return (
     <div className="border-t border-border/30 first:border-t-0">
@@ -213,23 +219,18 @@ export default function CostBreakdownSubtaskSection({
         {/* Add form */}
         {adding ? (
           <div className="flex items-center gap-2 px-4 py-2 bg-muted/10">
-            <datalist id={datalistId}>
-              {availableRoles.map((r) => (
-                <option key={r.id} value={r.label} />
-              ))}
-            </datalist>
-            <Input
-              list={datalistId}
-              placeholder="Role..."
-              value={newRole}
-              onChange={(e) => setNewRole(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAdd();
-                if (e.key === 'Escape') setAdding(false);
-              }}
-              className="h-7 w-44 text-xs"
-              autoFocus
-            />
+            <Select value={newRole} onValueChange={setNewRole}>
+              <SelectTrigger className="h-7 w-44 text-xs">
+                <SelectValue placeholder="Role..." />
+              </SelectTrigger>
+              <SelectContent>
+                {availableRoles.map((r) => (
+                  <SelectItem key={r.id} value={r.label}>
+                    {r.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Input
               type="number"
               min="0"
