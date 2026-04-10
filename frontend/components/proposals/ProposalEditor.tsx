@@ -275,6 +275,7 @@ export default function ProposalEditor() {
   const buildGenerateDto = () => ({
     leadId: selectedLead?.id,
     costBreakdownId: selectedBreakdown?.id,
+    replaceProposalId: prefilledProposalId || undefined,
     salutation: salutation || undefined,
     firstName: firstName || undefined,
     lastName: lastName || undefined,

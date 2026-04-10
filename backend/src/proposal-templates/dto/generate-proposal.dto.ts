@@ -11,6 +11,10 @@ export class GenerateProposalDto {
 
   @IsString()
   @IsOptional()
+  replaceProposalId?: string;
+
+  @IsString()
+  @IsOptional()
   title?: string;
 
   @IsString()

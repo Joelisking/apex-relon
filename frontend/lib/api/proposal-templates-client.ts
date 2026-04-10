@@ -56,6 +56,7 @@ export interface TemplateContent {
 export interface GenerateProposalInput {
   leadId?: string;
   costBreakdownId?: string;
+  replaceProposalId?: string;
   title?: string;
   totalAmount?: string;
   salutation?: string;

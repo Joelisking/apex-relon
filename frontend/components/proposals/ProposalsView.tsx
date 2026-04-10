@@ -80,6 +80,7 @@ export default function ProposalsView() {
 
   const handleOpenEditor = (proposal: Proposal) => {
     const params = new URLSearchParams();
+    params.set('proposalId', proposal.id);
     if (proposal.leadId) params.set('leadId', proposal.leadId);
     if (proposal.costBreakdownId) params.set('costBreakdownId', proposal.costBreakdownId);
     if (proposal.proposalTemplateId) params.set('templateId', proposal.proposalTemplateId);
