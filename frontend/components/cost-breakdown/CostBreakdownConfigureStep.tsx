@@ -1,11 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowUp, ArrowDown, X, Plus, Loader2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, X, Plus, Loader2, Pencil, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { serviceItemsApi } from '@/lib/api/client';
+import { toast } from 'sonner';
 import type { ServiceItem } from '@/lib/types';
 
 // ── Transient UI types — not persisted to API, passed back via onConfirm ──────
@@ -31,6 +43,8 @@ interface CardProps {
   onAddCustomSubtask: (name: string) => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  onRenameServiceItem: (newName: string) => void;
+  onRenameSubtask: (subtaskId: string, newName: string) => void;
 }
 
 function ServiceItemConfigCard({
@@ -42,8 +56,64 @@ function ServiceItemConfigCard({
   onAddCustomSubtask,
   onMoveUp,
   onMoveDown,
+  onRenameServiceItem,
+  onRenameSubtask,
 }: CardProps) {
   const [customInput, setCustomInput] = useState('');
+
+  // Service item name inline editing
+  const [editingSiName, setEditingSiName] = useState(false);
+  const [siNameInput, setSiNameInput] = useState('');
+  const [pendingSiRename, setPendingSiRename] = useState<{ old: string; newName: string } | null>(null);
+  const [renamingSi, setRenamingSi] = useState(false);
+
+  const attemptSiRename = () => {
+    const trimmed = siNameInput.trim();
+    setEditingSiName(false);
+    if (!trimmed || trimmed === item.serviceItem.name) return;
+    setPendingSiRename({ old: item.serviceItem.name, newName: trimmed });
+  };
+
+  const confirmSiRename = async () => {
+    if (!pendingSiRename) return;
+    setRenamingSi(true);
+    try {
+      await serviceItemsApi.update(item.serviceItem.id, { name: pendingSiRename.newName });
+      onRenameServiceItem(pendingSiRename.newName);
+    } catch {
+      toast.error('Failed to rename service item');
+    } finally {
+      setPendingSiRename(null);
+      setRenamingSi(false);
+    }
+  };
+
+  // Subtask name inline editing
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [subtaskNameInput, setSubtaskNameInput] = useState('');
+  const [pendingSubtaskRename, setPendingSubtaskRename] = useState<{ subtaskId: string; old: string; newName: string } | null>(null);
+  const [renamingSubtask, setRenamingSubtask] = useState(false);
+
+  const attemptSubtaskRename = (subtaskId: string, oldName: string) => {
+    const trimmed = subtaskNameInput.trim();
+    setEditingSubtaskId(null);
+    if (!trimmed || trimmed === oldName) return;
+    setPendingSubtaskRename({ subtaskId, old: oldName, newName: trimmed });
+  };
+
+  const confirmSubtaskRename = async () => {
+    if (!pendingSubtaskRename) return;
+    setRenamingSubtask(true);
+    try {
+      await serviceItemsApi.updateSubtask(item.serviceItem.id, pendingSubtaskRename.subtaskId, { name: pendingSubtaskRename.newName });
+      onRenameSubtask(pendingSubtaskRename.subtaskId, pendingSubtaskRename.newName);
+    } catch {
+      toast.error('Failed to rename subtask');
+    } finally {
+      setPendingSubtaskRename(null);
+      setRenamingSubtask(false);
+    }
+  };
 
   const handleAddCustom = () => {
     const trimmed = customInput.trim();
@@ -56,7 +126,37 @@ function ServiceItemConfigCard({
     <div className="rounded-xl border border-border/60 bg-card px-4 py-4 space-y-3">
       {/* Card header */}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium text-foreground">{item.serviceItem.name}</span>
+        {editingSiName ? (
+          <div className="flex items-center gap-1.5 flex-1 mr-2">
+            <Input
+              autoFocus
+              value={siNameInput}
+              onChange={(e) => setSiNameInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') attemptSiRename();
+                if (e.key === 'Escape') setEditingSiName(false);
+              }}
+              className="h-7 text-sm py-0 flex-1"
+            />
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={attemptSiRename}>
+              <Check className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => setEditingSiName(false)}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 group/siname">
+            <span className="text-sm font-medium text-foreground">{item.serviceItem.name}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 text-muted-foreground opacity-0 group-hover/siname:opacity-100 transition-opacity"
+              onClick={() => { setSiNameInput(item.serviceItem.name); setEditingSiName(true); }}>
+              <Pencil className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
         <div className="flex items-center gap-0.5 shrink-0">
           <Button
             variant="ghost"
@@ -91,15 +191,43 @@ function ServiceItemConfigCard({
       {item.serviceItem.subtasks.length > 0 && (
         <div className="space-y-2 pl-1">
           {item.serviceItem.subtasks.map((st) => (
-            <label
-              key={st.id}
-              className="flex items-center gap-2.5 cursor-pointer group">
+            <div key={st.id} className="flex items-center gap-2.5 group/subtask">
               <Checkbox
                 checked={item.includedSubtaskIds.includes(st.id)}
                 onCheckedChange={() => onToggleSubtask(st.id)}
               />
-              <span className="text-sm text-foreground leading-none">{st.name}</span>
-            </label>
+              {editingSubtaskId === st.id ? (
+                <div className="flex items-center gap-1.5 flex-1">
+                  <Input
+                    autoFocus
+                    value={subtaskNameInput}
+                    onChange={(e) => setSubtaskNameInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') attemptSubtaskRename(st.id, st.name);
+                      if (e.key === 'Escape') setEditingSubtaskId(null);
+                    }}
+                    className="h-6 text-xs py-0 flex-1"
+                  />
+                  <Button variant="ghost" size="icon" className="h-5 w-5 text-green-600 hover:text-green-700" onClick={() => attemptSubtaskRename(st.id, st.name)}>
+                    <Check className="h-3 w-3" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground" onClick={() => setEditingSubtaskId(null)}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 flex-1">
+                  <span className="text-sm text-foreground leading-none">{st.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 text-muted-foreground opacity-0 group-hover/subtask:opacity-100 transition-opacity"
+                    onClick={() => { setSubtaskNameInput(st.name); setEditingSubtaskId(st.id); }}>
+                    <Pencil className="h-2.5 w-2.5" />
+                  </Button>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -135,6 +263,44 @@ function ServiceItemConfigCard({
           Add
         </Button>
       </div>
+
+      {/* Rename service item alert */}
+      <AlertDialog open={!!pendingSiRename} onOpenChange={(open) => { if (!open) setPendingSiRename(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rename service item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Renaming <strong>&ldquo;{pendingSiRename?.old}&rdquo;</strong> to <strong>&ldquo;{pendingSiRename?.newName}&rdquo;</strong> will permanently update this service item across all cost breakdowns, quotes, and templates.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSiRename} disabled={renamingSi}>
+              {renamingSi && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+              Rename
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Rename subtask alert */}
+      <AlertDialog open={!!pendingSubtaskRename} onOpenChange={(open) => { if (!open) setPendingSubtaskRename(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rename subtask?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Renaming <strong>&ldquo;{pendingSubtaskRename?.old}&rdquo;</strong> to <strong>&ldquo;{pendingSubtaskRename?.newName}&rdquo;</strong> will permanently update this subtask across all cost breakdowns and service item templates.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSubtaskRename} disabled={renamingSubtask}>
+              {renamingSubtask && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+              Rename
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -213,6 +379,32 @@ export default function CostBreakdownConfigureStep({
     setAddPickerValue('');
   };
 
+  const renameServiceItem = (serviceItemId: string, newName: string) =>
+    setItems((prev) =>
+      prev.map((i) =>
+        i.serviceItem.id !== serviceItemId
+          ? i
+          : { ...i, serviceItem: { ...i.serviceItem, name: newName } },
+      ),
+    );
+
+  const renameSubtask = (serviceItemId: string, subtaskId: string, newName: string) =>
+    setItems((prev) =>
+      prev.map((i) =>
+        i.serviceItem.id !== serviceItemId
+          ? i
+          : {
+              ...i,
+              serviceItem: {
+                ...i.serviceItem,
+                subtasks: i.serviceItem.subtasks.map((s) =>
+                  s.id !== subtaskId ? s : { ...s, name: newName },
+                ),
+              },
+            },
+      ),
+    );
+
   const moveItem = (index: number, direction: 'up' | 'down') => {
     const next = [...items];
     const swap = direction === 'up' ? index - 1 : index + 1;
@@ -266,6 +458,8 @@ export default function CostBreakdownConfigureStep({
               onAddCustomSubtask={(name) => addCustomSubtask(item.serviceItem.id, name)}
               onMoveUp={() => moveItem(index, 'up')}
               onMoveDown={() => moveItem(index, 'down')}
+              onRenameServiceItem={(newName) => renameServiceItem(item.serviceItem.id, newName)}
+              onRenameSubtask={(subtaskId, newName) => renameSubtask(item.serviceItem.id, subtaskId, newName)}
             />
           ))}
         </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import { Plus, Trash2, X, Pencil, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
+import { serviceItemsApi } from '@/lib/api/client';
 import type { RoleResponse } from '@/lib/api/roles-client';
 import type { ServiceItemSubtask, CostBreakdownRoleEstimate } from '@/lib/types';
 import { toast } from 'sonner';
@@ -40,6 +41,7 @@ interface Props {
   onUpdate: (estimate: CostBreakdownRoleEstimate, hours: number, rate?: number) => void;
   onDelete: (estimate: CostBreakdownRoleEstimate) => void;
   onRemove: () => void;
+  onRename?: (newName: string) => void;
 }
 
 export default function CostBreakdownSubtaskSection({
@@ -52,8 +54,41 @@ export default function CostBreakdownSubtaskSection({
   onUpdate,
   onDelete,
   onRemove,
+  onRename,
 }: Props) {
   const [adding, setAdding] = useState(false);
+
+  // Inline name editing
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [pendingRename, setPendingRename] = useState<{ old: string; newName: string } | null>(null);
+  const [renaming, setRenaming] = useState(false);
+
+  const startEditName = () => {
+    setNameInput(subtask.name);
+    setEditingName(true);
+  };
+
+  const attemptRename = () => {
+    const trimmed = nameInput.trim();
+    setEditingName(false);
+    if (!trimmed || trimmed === subtask.name) return;
+    setPendingRename({ old: subtask.name, newName: trimmed });
+  };
+
+  const confirmRename = async () => {
+    if (!pendingRename) return;
+    setRenaming(true);
+    try {
+      await serviceItemsApi.updateSubtask(subtask.serviceItemId, subtask.id, { name: pendingRename.newName });
+      onRename?.(pendingRename.newName);
+    } catch {
+      toast.error('Failed to rename subtask');
+    } finally {
+      setPendingRename(null);
+      setRenaming(false);
+    }
+  };
   const [newRole, setNewRole] = useState('');
   const [newHours, setNewHours] = useState('');
   const [newRate, setNewRate] = useState(defaultRate != null ? String(defaultRate) : '');
@@ -99,8 +134,38 @@ export default function CostBreakdownSubtaskSection({
     <div className="border-t border-border/30 first:border-t-0">
       {/* Subtask header */}
       <div className="flex items-center justify-between px-4 py-2 bg-muted/20 border-b border-border/25">
-        <span className="text-xs font-semibold text-foreground">{subtask.name}</span>
-        <div className="flex items-center gap-2">
+        {editingName ? (
+          <div className="flex items-center gap-1.5 flex-1 mr-2">
+            <Input
+              autoFocus
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') attemptRename();
+                if (e.key === 'Escape') setEditingName(false);
+              }}
+              className="h-6 text-xs py-0 flex-1"
+            />
+            <Button variant="ghost" size="icon" className="h-5 w-5 text-green-600 hover:text-green-700" onClick={attemptRename}>
+              <Check className="h-3 w-3" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground" onClick={() => setEditingName(false)}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 group/name">
+            <span className="text-xs font-semibold text-foreground">{subtask.name}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-4 w-4 text-muted-foreground opacity-0 group-hover/name:opacity-100 transition-opacity"
+              onClick={startEditName}>
+              <Pencil className="h-2.5 w-2.5" />
+            </Button>
+          </div>
+        )}
+        <div className="flex items-center gap-2 shrink-0">
           {subtaskTotal > 0 && (
             <span className="text-[11px] text-muted-foreground tabular-nums">
               {subtaskTotal.toFixed(1)} hrs
@@ -213,6 +278,24 @@ export default function CostBreakdownSubtaskSection({
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!pendingRename} onOpenChange={(open) => { if (!open) setPendingRename(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rename subtask?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Renaming <strong>&ldquo;{pendingRename?.old}&rdquo;</strong> to <strong>&ldquo;{pendingRename?.newName}&rdquo;</strong> will permanently update this subtask across all cost breakdowns and service item templates.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRename} disabled={renaming}>
+              {renaming && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+              Rename
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
         <AlertDialogContent>

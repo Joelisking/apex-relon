@@ -1,10 +1,20 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { Briefcase, Wrench, Plus } from 'lucide-react';
+import { Briefcase, Wrench, Plus, Pencil, Check, X, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
 import { serviceItemsApi } from '@/lib/api/client';
@@ -30,6 +40,38 @@ interface Props {
 export default function CostBreakdownLineCard({ line, roles, onChange }: Props) {
   const isField = line.serviceItem.description === 'Field';
   const [addingTask, setAddingTask] = useState(false);
+
+  // Service item name inline editing
+  const [editingSiName, setEditingSiName] = useState(false);
+  const [siNameInput, setSiNameInput] = useState('');
+  const [pendingSiRename, setPendingSiRename] = useState<{ old: string; newName: string } | null>(null);
+  const [renamingSi, setRenamingSi] = useState(false);
+
+  const startEditSiName = () => {
+    setSiNameInput(line.serviceItem.name);
+    setEditingSiName(true);
+  };
+
+  const attemptSiRename = () => {
+    const trimmed = siNameInput.trim();
+    setEditingSiName(false);
+    if (!trimmed || trimmed === line.serviceItem.name) return;
+    setPendingSiRename({ old: line.serviceItem.name, newName: trimmed });
+  };
+
+  const confirmSiRename = async () => {
+    if (!pendingSiRename) return;
+    setRenamingSi(true);
+    try {
+      await serviceItemsApi.update(line.serviceItemId, { name: pendingSiRename.newName });
+      onChange({ ...line, serviceItem: { ...line.serviceItem, name: pendingSiRename.newName } });
+    } catch {
+      toast.error('Failed to rename service item');
+    } finally {
+      setPendingSiRename(null);
+      setRenamingSi(false);
+    }
+  };
   const [newTaskName, setNewTaskName] = useState('');
   const [savingTask, setSavingTask] = useState(false);
   const taskInputRef = useRef<HTMLInputElement>(null);
@@ -134,7 +176,37 @@ export default function CostBreakdownLineCard({ line, roles, onChange }: Props) 
           ) : (
             <Briefcase className="h-4 w-4 text-blue-600" />
           )}
-          <span className="text-sm font-semibold">{line.serviceItem.name}</span>
+          {editingSiName ? (
+            <div className="flex items-center gap-1.5">
+              <Input
+                autoFocus
+                value={siNameInput}
+                onChange={(e) => setSiNameInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') attemptSiRename();
+                  if (e.key === 'Escape') setEditingSiName(false);
+                }}
+                className="h-7 text-sm py-0 w-48"
+              />
+              <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={attemptSiRename}>
+                <Check className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => setEditingSiName(false)}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 group/siname">
+              <span className="text-sm font-semibold">{line.serviceItem.name}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 text-muted-foreground opacity-0 group-hover/siname:opacity-100 transition-opacity"
+                onClick={startEditSiName}>
+                <Pencil className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
           <Badge
             variant="outline"
             className={cn(
@@ -170,6 +242,17 @@ export default function CostBreakdownLineCard({ line, roles, onChange }: Props) 
           onUpdate={handleUpdateEstimate}
           onDelete={handleDeleteEstimate}
           onRemove={() => handleRemoveSubtask(subtask.id)}
+          onRename={(newName) =>
+            onChange({
+              ...line,
+              serviceItem: {
+                ...line.serviceItem,
+                subtasks: line.serviceItem.subtasks.map((s) =>
+                  s.id === subtask.id ? { ...s, name: newName } : s,
+                ),
+              },
+            })
+          }
         />
       ))}
 
@@ -207,6 +290,24 @@ export default function CostBreakdownLineCard({ line, roles, onChange }: Props) 
           </Button>
         )}
       </div>
+
+      <AlertDialog open={!!pendingSiRename} onOpenChange={(open) => { if (!open) setPendingSiRename(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rename service item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Renaming <strong>&ldquo;{pendingSiRename?.old}&rdquo;</strong> to <strong>&ldquo;{pendingSiRename?.newName}&rdquo;</strong> will permanently update this service item across all cost breakdowns, quotes, and templates.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSiRename} disabled={renamingSi}>
+              {renamingSi && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+              Rename
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Loader2, CheckCircle2, FileText, Download, FilePlus, Save, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,7 @@ function formatDate(iso: string) {
 
 export default function CostBreakdownEditor({ breakdownId }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const prefilledLeadId = searchParams.get('leadId') ?? '';
   const returnTo = searchParams.get('returnTo') ?? '';
@@ -261,6 +263,10 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
 
       await Promise.all([...lineOps, ...addOps, ...customOps]);
 
+      if (customOps.length > 0) {
+        queryClient.invalidateQueries({ queryKey: ['service-items-active'] });
+      }
+
       const dest = returnTo
         ? `/cost-breakdown/${created.id}?returnTo=${encodeURIComponent(returnTo)}`
         : `/cost-breakdown/${created.id}`;
@@ -270,7 +276,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
       toast.error('Failed to create cost breakdown');
       setSaving(false);
     }
-  }, [title, jobTypeId, leadId, router, returnTo]);
+  }, [title, jobTypeId, leadId, router, returnTo, queryClient]);
 
   const handleStatusToggle = useCallback(async () => {
     if (!breakdown) return;
