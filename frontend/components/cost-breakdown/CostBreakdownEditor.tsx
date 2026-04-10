@@ -77,13 +77,16 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
   const [addLineLoading, setAddLineLoading] = useState(false);
   const [addLineServiceItems, setAddLineServiceItems] = useState<ServiceItem[]>([]);
 
-  // Auto-populate title from the selected lead's project/company name
+  // Auto-populate title + job type from the selected lead
   useEffect(() => {
-    if (!leadId || titleManuallyEdited) return;
+    if (!leadId) return;
     const lead = leads.find((l) => l.id === leadId);
-    if (lead) {
+    if (!lead) return;
+    if (!titleManuallyEdited) {
       setTitle(lead.projectName || lead.company || lead.contactName);
     }
+    const inferredJobTypeId = lead.jobTypeId ?? lead.jobType?.id;
+    if (inferredJobTypeId) setJobTypeId(inferredJobTypeId);
   }, [leadId, leads, titleManuallyEdited]);
 
   useEffect(() => {
