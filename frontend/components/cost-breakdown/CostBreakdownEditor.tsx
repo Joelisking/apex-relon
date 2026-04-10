@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Loader2, CheckCircle2, FileText, Download, FilePlus, Save, Plus, X } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -584,7 +585,24 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
       {/* Direct Expenses */}
       <div className="rounded-xl border border-border/60 bg-card px-5 py-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Direct Expenses</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm font-semibold">Direct Expenses</h2>
+            <Switch
+              checked={breakdown.showDirectExpenses !== false}
+              onCheckedChange={async (checked) => {
+                setBreakdown((prev) => prev ? { ...prev, showDirectExpenses: checked } : null);
+                try {
+                  await costBreakdownApi.update(breakdown.id, { showDirectExpenses: checked });
+                } catch {
+                  toast.error('Failed to save');
+                  setBreakdown((prev) => prev ? { ...prev, showDirectExpenses: !checked } : null);
+                }
+              }}
+            />
+            <span className="text-[11px] text-muted-foreground">
+              {breakdown.showDirectExpenses !== false ? 'Shown on PDF' : 'Hidden from PDF'}
+            </span>
+          </div>
           {savingExpenses && (
             <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
               <Save className="h-3 w-3 animate-pulse" />
@@ -592,6 +610,15 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             </span>
           )}
         </div>
+
+        {breakdown.showDirectExpenses === false && (
+          <p className="text-xs text-muted-foreground italic">
+            Direct expenses are hidden from the PDF output. Toggle on to include them.
+          </p>
+        )}
+
+        {/* Expense inputs — only shown when section is enabled */}
+        {breakdown.showDirectExpenses !== false && <>
 
         {/* Column headers */}
         <div className="grid grid-cols-[1fr_120px_120px_100px] gap-3 text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground px-1">
@@ -717,6 +744,8 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             Leave blank to use computed total fee
           </p>
         </div>
+
+        </>}
       </div>
 
       {/* Grand total footer */}

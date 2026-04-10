@@ -998,6 +998,7 @@ export interface CostBreakdown {
   perDiemRate?: number | null;
   roundedFee?: number | null;
   benchmarkLockedAt?: string | null;
+  showDirectExpenses?: boolean;
   jobType?: { id: string; name: string } | null;
   project?: { id: string; name: string } | null;
   lead?: { id: string; company: string; contactName: string } | null;

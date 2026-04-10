@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, ValidateIf } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean, ValidateIf } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class UpdateCostBreakdownDto {
@@ -59,4 +59,8 @@ export class UpdateCostBreakdownDto {
   @IsString()
   @IsOptional()
   projectId?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  showDirectExpenses?: boolean;
 }
