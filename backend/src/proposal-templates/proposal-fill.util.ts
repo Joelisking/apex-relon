@@ -46,6 +46,7 @@ const DOCPROPERTY_MAP: Record<string, keyof ProposalData> = {
 // the original symbol font (Wingdings, Symbol, etc.) to be installed.
 
 const WINGDINGS_MAP: Record<string, string> = {
+  'F020': ' ',  // space
   'F028': '✔',  // check mark
   'F04E': '✕',  // x mark
   'F050': '●',  // filled circle
@@ -63,6 +64,7 @@ const WINGDINGS_MAP: Record<string, string> = {
 };
 
 const SYMBOL_MAP: Record<string, string> = {
+  'F020': ' ',  // space
   'F0B7': '·',  // middle dot
   'F0A8': '»',  // double right arrow
   'F0B8': '÷',  // division sign
@@ -86,6 +88,58 @@ export function preprocessSymbolElements(xml: string): string {
       }
       if (!unicode) return _match; // keep original if unmapped
       return `<w:t>${escapeXml(unicode)}</w:t>`;
+    },
+  );
+}
+
+/**
+ * Convert Private Use Area characters that live inside `<w:t>` text runs whose
+ * `<w:rPr>` declares a Wingdings or Symbol font.
+ *
+ * Word stores e.g. a black diamond ornament as `<w:t>\uF076</w:t>` with a
+ * `<w:rFonts w:ascii="Wingdings" .../>` ancestor — relying on the font to map
+ * the PUA codepoint to the diamond glyph. Servers without Wingdings installed
+ * (Liberation/FreeFont/Noto, the LibreOffice defaults on Linux) substitute a
+ * font that has no PUA glyphs, so the chars render as tofu boxes — and tofu
+ * is often taller than the original glyph, contributing to page overflow.
+ *
+ * We rewrite each such run by mapping the PUA codepoints to real Unicode and
+ * stripping the symbol-font reference so the result renders in the inherited
+ * default font (which always has these Unicode glyphs).
+ */
+export function convertSymbolFontTextRuns(xml: string): string {
+  return xml.replace(
+    /(<w:r\b[^>]*>)(<w:rPr>[\s\S]*?<\/w:rPr>)([\s\S]*?)(<\/w:r>)/g,
+    (match, openTag: string, rPr: string, body: string, closeTag: string) => {
+      const fontMatch = rPr.match(/<w:rFonts\b[^>]*\bw:ascii="([^"]+)"/);
+      if (!fontMatch) return match;
+      const font = fontMatch[1].toLowerCase();
+      const isWingdings = font.includes('wingding');
+      const isSymbol = font === 'symbol';
+      if (!isWingdings && !isSymbol) return match;
+
+      let touched = false;
+      const newBody = body.replace(
+        /<w:t([^>]*)>([\s\S]*?)<\/w:t>/g,
+        (_m, attrs: string, text: string) => {
+          const newText = text.replace(/[\uE000-\uF8FF]/g, (ch: string) => {
+            const code = ch.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0');
+            const map = isWingdings ? WINGDINGS_MAP : SYMBOL_MAP;
+            const repl = map[code];
+            touched = true;
+            // Unmapped PUA char: drop it rather than leaving a tofu box.
+            return repl ?? '';
+          });
+          return `<w:t${attrs}>${newText}</w:t>`;
+        },
+      );
+
+      if (!touched) return match;
+
+      // Strip the symbol-font declaration so the converted Unicode renders in
+      // the surrounding default font (which has glyphs for these characters).
+      const newRPr = rPr.replace(/<w:rFonts\b[^/]*\/>/g, '');
+      return `${openTag}${newRPr}${newBody}${closeTag}`;
     },
   );
 }
@@ -475,8 +529,10 @@ export function fillDocx(
     let xml = xmlFile.asText();
     // 0. Strip known template garbage (e.g. stray "P" after Printed Name lines)
     xml = stripKnownTemplateGarbage(xml);
-    // 1. Pre-process <w:sym> elements → Unicode so symbol fonts aren't required
+    // 1a. Pre-process <w:sym> elements → Unicode so symbol fonts aren't required
     xml = preprocessSymbolElements(xml);
+    // 1b. Pre-process Wingdings/Symbol PUA chars stored in <w:t> runs (header ornaments)
+    xml = convertSymbolFontTextRuns(xml);
     // 1. Merge split highlighted runs so string patterns match
     xml = mergeAdjacentHighlightedRuns(xml);
     // 2. Paragraph overrides (document only — before DOCPROPERTY so brackets still fill)
@@ -525,9 +581,9 @@ export function patchDocxMarginsForLibreOffice(buffer: Buffer): Buffer {
   const docXml = zip.files['word/document.xml'];
   if (!docXml) return buffer;
 
-  const BOTTOM_REDUCTION = 720; // 0.5 inches
+  const BOTTOM_REDUCTION = 1080; // 0.75 inches
   const MIN_BOTTOM = 360; // floor: 0.25 inches
-  const TOP_REDUCTION = 288; // 0.2 inches
+  const TOP_REDUCTION = 432; // 0.3 inches
   const MIN_TOP = 720; // floor: 0.5 inches
 
   const shrinkAttr = (
