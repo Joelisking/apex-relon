@@ -373,7 +373,7 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
                           size="sm"
                           variant="outline"
                           className="h-6 text-[11px] gap-1"
-                          onClick={() => router.push(`/cost-breakdowns/${proposal.costBreakdown!.id}`)}>
+                          onClick={() => router.push(`/cost-breakdown/${proposal.costBreakdown!.id}`)}>
                           View
                         </Button>
                       </div>
@@ -448,7 +448,7 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
                 size="sm"
                 variant="outline"
                 className="h-6 text-[11px] shrink-0"
-                onClick={() => router.push(`/cost-breakdowns/${cb.id}`)}>
+                onClick={() => router.push(`/cost-breakdown/${cb.id}`)}>
                 View
               </Button>
             </div>
