@@ -14,8 +14,10 @@ import {
 } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { toast } from 'sonner';
+import { UmbrellaOff } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { usersApi } from '@/lib/api/users-client';
+import { ptoApi } from '@/lib/api/pto-client';
 import { API_URL, getTokenFromClientCookies } from '@/lib/api/client';
 import { WeeklySheetGrid } from './WeeklySheetGrid';
 import type { CellEntry } from './WeeklySheetCell';
@@ -140,6 +142,27 @@ export function WeeklySheetTab() {
     queryClient.invalidateQueries({ queryKey: ['timesheet-by-project'] });
   }, [queryClient]);
 
+  // PTO for the current week
+  const weekEnd = useMemo(() => {
+    const end = new Date(weekStart + 'T12:00:00');
+    end.setDate(end.getDate() + 6);
+    return localDateString(end);
+  }, [weekStart]);
+
+  const { data: ptoDays = [] } = useQuery({
+    queryKey: ['pto-my-week', weekStart, weekEnd],
+    queryFn: async () => {
+      const requests = await ptoApi.getMyRequests();
+      return requests.filter(
+        (r) =>
+          r.status === 'APPROVED' &&
+          r.startDate <= weekEnd + 'T23:59:59' &&
+          r.endDate >= weekStart + 'T00:00:00',
+      );
+    },
+    enabled: !!effectiveUserId,
+  });
+
   // Remove extra projects that now appear in fetched data (they got their first entry)
   const fetchedProjectIds = new Set(timesheetData?.rows.map((r) => r.project?.id) ?? []);
   const visibleExtraProjects = extraProjects.filter((p) => !fetchedProjectIds.has(p.id));
@@ -226,6 +249,17 @@ export function WeeklySheetTab() {
           </Button>
         </div>
       </div>
+
+      {/* PTO banner */}
+      {ptoDays.length > 0 && (
+        <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          <UmbrellaOff className="h-4 w-4 shrink-0 text-emerald-600" />
+          <span>
+            You have approved PTO this week:{' '}
+            {ptoDays.map((r) => `${r.hours}h ${r.type.charAt(0) + r.type.slice(1).toLowerCase()}`).join(', ')}
+          </span>
+        </div>
+      )}
 
       {/* Grid */}
       {isLoading ? (

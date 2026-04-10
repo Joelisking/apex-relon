@@ -44,6 +44,8 @@ import { ProposalTemplatesModule } from './proposal-templates/proposal-templates
 import { WorkCodesModule } from './work-codes/work-codes.module';
 import { CostBreakdownModule } from './cost-breakdown/cost-breakdown.module';
 import { AddendaModule } from './addenda/addenda.module';
+import { CommentsModule } from './comments/comments.module';
+import { PtoModule } from './pto/pto.module';
 
 @Module({
   imports: [
@@ -92,6 +94,8 @@ import { AddendaModule } from './addenda/addenda.module';
     WorkCodesModule,
     CostBreakdownModule,
     AddendaModule,
+    CommentsModule,
+    PtoModule,
   ],
   providers: [
     {

@@ -1,10 +1,12 @@
 import type { Task } from '@/lib/types';
 import type { Project } from '@/lib/api/projects-client';
+import type { PtoRequest } from '@/lib/api/pto-client';
 
 export type CalendarEventKind =
   | 'task'
   | 'project-milestone'
-  | 'project-due';
+  | 'project-due'
+  | 'pto';
 
 export interface CalendarEvent {
   id: string;
@@ -101,6 +103,26 @@ export function projectToEvents(project: Project): CalendarEvent[] {
   }
 
   return events;
+}
+
+// ── PTO → CalendarEvent ──────────────────────────────────────────────────────
+
+export function ptoToEvent(request: PtoRequest): CalendarEvent {
+  const start = toLocalDate(request.startDate);
+  const end = toLocalDate(request.endDate);
+  const label = request.user
+    ? `${request.user.name} – ${request.type.charAt(0) + request.type.slice(1).toLowerCase()} PTO`
+    : `PTO – ${request.type.charAt(0) + request.type.slice(1).toLowerCase()}`;
+  return {
+    id: `pto-${request.id}`,
+    title: label,
+    start,
+    end,
+    allDay: true,
+    kind: 'pto',
+    sourceId: request.id,
+    color: '#d1fae5', // emerald-100
+  };
 }
 
 // ── Visible date range helper ────────────────────────────────────────────────

@@ -42,6 +42,7 @@ import {
   Clock,
   TrendingUp,
   CalendarDays,
+  UmbrellaOff,
   Layers,
   Package,
   Hash,
@@ -232,6 +233,11 @@ const mainNavItems: NavItemDef[] = [
     icon: TrendingUp,
     permission: 'bottleneck:view',
   },
+  {
+    title: 'My PTO',
+    href: '/pto',
+    icon: UmbrellaOff,
+  },
 ];
 
 const adminNavGroups: AdminNavGroup[] = [
@@ -242,6 +248,7 @@ const adminNavGroups: AdminNavGroup[] = [
       { title: 'Teams', href: '/admin/teams', icon: UsersRound, permission: 'teams:view' },
       { title: 'Roles', href: '/admin/roles', icon: ShieldCheck, permission: 'roles:view' },
       { title: 'Permissions', href: '/admin/permissions', icon: Shield, permission: 'permissions:view' },
+      { title: 'PTO Approval', href: '/admin/pto', icon: UmbrellaOff, permission: 'users:view' },
     ],
   },
   {

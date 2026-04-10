@@ -686,13 +686,13 @@ Do before Phase 2 (financials) because Phase 2 depends on `payGradeId` replacing
 
 | # | Task | Status |
 |---|---|---|
-| 7.1 | Add `ProjectComment` model + `NotificationPreference.commentMention` + migration | ⬜ |
-| 7.2 | Backend: Comment CRUD + `@mention` parsing (extract `mentionedIds` from content on save) + notification creation | ⬜ |
-| 7.3 | Frontend: `CommentsSection` component on `ProjectDetailView` (new tab or section) | ⬜ |
-| 7.4 | Add `PtoPolicy` + `PtoRequest` models + migration | ⬜ |
-| 7.5 | Backend: PTO CRUD service + approval workflow + notification triggers | ⬜ |
-| 7.6 | Frontend: PTO request form (self-service) + approval inbox (manager) | ⬜ |
-| 7.7 | Show approved PTO on team calendar; PTO days in weekly timesheet view | ⬜ |
+| 7.1 | Add `ProjectComment` model + `NotificationPreference.commentMention` + migration | ✅ |
+| 7.2 | Backend: Comment CRUD + `@mention` parsing (extract `mentionedIds` from content on save) + notification creation | ✅ |
+| 7.3 | Frontend: `CommentsSection` component on `ProjectDetailView` (new tab or section) | ✅ |
+| 7.4 | Add `PtoPolicy` + `PtoRequest` models + migration | ✅ |
+| 7.5 | Backend: PTO CRUD service + approval workflow + notification triggers | ✅ |
+| 7.6 | Frontend: PTO request form (self-service) + approval inbox (manager) | ✅ |
+| 7.7 | Show approved PTO on team calendar; PTO days in weekly timesheet view | ✅ |
 
 ### Phase 8 — Map + Remaining UX Polish
 
@@ -728,8 +728,8 @@ Do before Phase 2 (financials) because Phase 2 depends on `payGradeId` replacing
 | 18 | Addendum tab on project detail | Phase 6 | ✅ |
 | 19 | Calendar popover: view project + edit due date only | Phase 0.13 | ⬜ |
 | 20 | Performance reporting: proposed vs. actual hours per subtask per role | Phase 5.8 | ⬜ |
-| 21 | PTO system | Phase 7.4–7.7 | ⬜ |
-| 22 | Comments with @mentions | Phase 7.1–7.3 | ⬜ |
+| 21 | PTO system | Phase 7.4–7.7 | ✅ |
+| 22 | Comments with @mentions | Phase 7.1–7.3 | ✅ |
 | 23 | Separate `roles:*` permissions | Phase 0.15–0.16 | ⬜ |
 | 24 | Rename ServiceCategory → Division, ServiceType → JobType (frontend + backend) | Phase 1 | ⬜ |
 | 25 | CB service items filtered by job type in edit-mode add-line picker | Phase 5.6 | ⬜ |

@@ -32,4 +32,12 @@ export class UpdateNotificationPreferencesDto {
   @IsOptional()
   @IsBoolean()
   emailDigest?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  commentMention?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  ptoUpdate?: boolean;
 }

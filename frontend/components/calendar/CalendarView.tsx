@@ -7,6 +7,7 @@ import { Info } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { tasksApi } from '@/lib/api/tasks-client';
 import { projectsApi } from '@/lib/api/projects-client';
+import { ptoApi } from '@/lib/api/pto-client';
 import { TaskDialog } from '@/components/tasks/TaskDialog';
 import { ProjectCalendarPopover } from './ProjectCalendarPopover';
 import { MonthTab } from './MonthTab';
@@ -15,6 +16,7 @@ import { AgendaTab } from './AgendaTab';
 import {
   taskToEvent,
   projectToEvents,
+  ptoToEvent,
   getVisibleRange,
   type CalendarEvent,
 } from './calendarUtils';
@@ -32,6 +34,7 @@ export function CalendarView() {
   const [activeView, setActiveView] = useState<CalView>('month');
   const [showTasks, setShowTasks] = useState(true);
   const [showProjects, setShowProjects] = useState(true);
+  const [showPto, setShowPto] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedProjectEvent, setSelectedProjectEvent] = useState<CalendarEvent | null>(null);
 
@@ -54,6 +57,11 @@ export function CalendarView() {
     queryFn: () => projectsApi.getAll(),
   });
 
+  const { data: ptoRequests = [] } = useQuery({
+    queryKey: ['calendar-pto', dueAfter, dueBefore],
+    queryFn: () => ptoApi.getCalendarRequests(dueAfter, dueBefore),
+  });
+
   const events = useMemo<CalendarEvent[]>(() => {
     const evts: CalendarEvent[] = [];
     if (showTasks) {
@@ -67,8 +75,13 @@ export function CalendarView() {
         evts.push(...projectToEvents(project as Project));
       }
     }
+    if (showPto) {
+      for (const req of ptoRequests) {
+        evts.push(ptoToEvent(req));
+      }
+    }
     return evts;
-  }, [tasks, projects, showTasks, showProjects]);
+  }, [tasks, projects, ptoRequests, showTasks, showProjects, showPto]);
 
   function handleEventClick(event: CalendarEvent) {
     if (event.kind === 'task') {
@@ -131,6 +144,17 @@ export function CalendarView() {
             )}>
             <span className="h-2 w-2 rounded-full bg-blue-400" />
             Projects
+          </button>
+          <button
+            onClick={() => setShowPto((v) => !v)}
+            className={cn(
+              'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+              showPto
+                ? 'border-emerald-300 bg-emerald-100 text-emerald-900'
+                : 'border-border bg-muted text-muted-foreground',
+            )}>
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            PTO
           </button>
         </div>
 

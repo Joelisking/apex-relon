@@ -343,6 +343,7 @@ model Project {
   costSegments        ProjectCostSegment[]
   projectServiceItems ProjectServiceItem[]
   addenda             ProjectAddendum[]
+  comments            ProjectComment[]   @relation("ProjectComments")
 
   @@index([clientId])
   @@index([leadId])
@@ -524,6 +525,9 @@ model User {
   createdCostBreakdowns   CostBreakdown[]         @relation("CostBreakdownCreation")
   createdProposals        Proposal[]              @relation("ProposalCreation")
   createdAddenda          ProjectAddendum[]       @relation("AddendaCreatedBy")
+  projectComments         ProjectComment[]        @relation("ProjectCommentAuthors")
+  ptoRequests             PtoRequest[]            @relation("UserPtoRequests")
+  approvedPtoRequests     PtoRequest[]            @relation("PtoApprovals")
 
   @@map("users")
 }
@@ -690,6 +694,8 @@ model NotificationPreference {
   projectAtRisk    Boolean @default(true)
   clientDormant    Boolean @default(true)
   emailDigest      Boolean @default(true)
+  commentMention   Boolean @default(true)
+  ptoUpdate        Boolean @default(true)
 
   @@map("notification_preferences")
 }
@@ -1331,4 +1337,63 @@ model CostBreakdownRoleEstimate {
   @@unique([lineId, subtaskId, role])
   @@index([lineId])
   @@map("cost_breakdown_role_estimates")
+}
+
+// ── Comments ──────────────────────────────────────────────────────────────────
+
+model ProjectComment {
+  id           String   @id @default(uuid())
+  projectId    String
+  authorId     String
+  content      String   @db.Text
+  mentionedIds String[] @default([])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project Project @relation("ProjectComments", fields: [projectId], references: [id], onDelete: Cascade)
+  author  User    @relation("ProjectCommentAuthors", fields: [authorId], references: [id])
+
+  @@index([projectId])
+  @@map("project_comments")
+}
+
+// ── PTO ───────────────────────────────────────────────────────────────────────
+
+model PtoPolicy {
+  id               String      @id @default(uuid())
+  name             String
+  maxDaysPerYear   Float
+  accrualType      String      @default("ANNUAL")
+  carryoverMax     Float?
+  requiresApproval Boolean     @default(true)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  requests         PtoRequest[]
+
+  @@map("pto_policies")
+}
+
+model PtoRequest {
+  id           String    @id @default(uuid())
+  userId       String
+  policyId     String?
+  type         String
+  startDate    DateTime
+  endDate      DateTime
+  hours        Float
+  status       String    @default("PENDING")
+  notes        String?   @db.Text
+  approvedById String?
+  approvedAt   DateTime?
+  deniedReason String?   @db.Text
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user       User       @relation("UserPtoRequests", fields: [userId], references: [id])
+  approvedBy User?      @relation("PtoApprovals", fields: [approvedById], references: [id])
+  policy     PtoPolicy? @relation(fields: [policyId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@map("pto_requests")
 }
