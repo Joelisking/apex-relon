@@ -29,7 +29,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libreoffice-writer libreoffice-calc libreoffice-common \
     default-jre-headless \
     fonts-liberation \
-    fonts-open-symbols \
     fonts-freefont-ttf \
     fonts-noto \
     fontconfig \
