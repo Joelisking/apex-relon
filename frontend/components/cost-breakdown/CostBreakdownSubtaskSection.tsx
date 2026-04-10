@@ -4,13 +4,7 @@ import { useState, useCallback } from 'react';
 import { Plus, Trash2, X, Pencil, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
@@ -219,18 +213,15 @@ export default function CostBreakdownSubtaskSection({
         {/* Add form */}
         {adding ? (
           <div className="flex items-center gap-2 px-4 py-2 bg-muted/10">
-            <Select value={newRole} onValueChange={setNewRole}>
-              <SelectTrigger className="h-7 w-44 text-xs">
-                <SelectValue placeholder="Role..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableRoles.map((r) => (
-                  <SelectItem key={r.id} value={r.label}>
-                    {r.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={newRole}
+              onValueChange={setNewRole}
+              options={availableRoles.map((r) => ({ value: r.label, label: r.label }))}
+              placeholder="Role..."
+              searchPlaceholder="Search roles..."
+              emptyMessage="No roles available."
+              className="h-7 w-44 text-xs"
+            />
             <Input
               type="number"
               min="0"
