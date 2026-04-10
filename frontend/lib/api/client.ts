@@ -87,7 +87,8 @@ export interface CreateLeadRepDto {
 }
 
 export interface CreateClientDto {
-  name: string;
+  clientType?: string;
+  name?: string;
   email?: string;
   phone?: string;
   address?: string;
@@ -104,6 +105,7 @@ export interface CreateClientDto {
 }
 
 export interface UpdateClientDto {
+  clientType?: string;
   name?: string;
   email?: string;
   phone?: string;

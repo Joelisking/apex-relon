@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { getClientDisplayName } from '../client-display.helper';
 import { AuditService } from '../../audit/audit.service';
 import { WorkflowsService } from '../../workflows/workflows.service';
 import { PermissionsService } from '../../permissions/permissions.service';
@@ -156,7 +157,7 @@ export class CustomerCrudService {
     await this.auditService.log({
       userId: userId || 'system',
       action: 'CREATE_CUSTOMER',
-      details: { customerId: customer.id, name: customer.name, segment: customer.segment, industry: customer.industry },
+      details: { customerId: customer.id, name: getClientDisplayName(customer), segment: customer.segment, industry: customer.industry },
     });
 
     this.workflowsService.triggerRules('CLIENT_CREATED', 'CLIENT', customer.id, customer as unknown as Record<string, unknown>);
@@ -231,7 +232,7 @@ export class CustomerCrudService {
     await this.auditService.log({
       userId: userId || 'system',
       action: 'ARCHIVE_CUSTOMER',
-      details: { customerId: id, name: customer.name, segment: customer.segment, industry: customer.industry },
+      details: { customerId: id, name: getClientDisplayName(customer), segment: customer.segment, industry: customer.industry },
     });
 
     return archived;

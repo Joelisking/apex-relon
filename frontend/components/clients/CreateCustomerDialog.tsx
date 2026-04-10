@@ -117,6 +117,7 @@ export function CreateCustomerDialog({
     setIsSubmitting(true);
     try {
       await clientsApi.create({
+        clientType: isIndividual ? 'INDIVIDUAL' : 'COMPANY',
         name: data.name,
         email: data.email || undefined,
         phone: data.phone || undefined,

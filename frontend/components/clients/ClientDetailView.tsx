@@ -349,7 +349,7 @@ export function ClientDetailView({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Customer</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{client?.name}</strong>? This action cannot be undone.
+              Are you sure you want to delete <strong>{clientDisplayName}</strong>? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

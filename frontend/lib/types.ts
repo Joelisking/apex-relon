@@ -413,6 +413,7 @@ export interface Project {
 // Client interface matching backend schema
 export interface Client {
   id: string;
+  clientType: string;  // "COMPANY" | "INDIVIDUAL"
   name: string;
 
   // Contact Information

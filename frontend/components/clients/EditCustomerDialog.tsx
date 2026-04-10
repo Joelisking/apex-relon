@@ -91,11 +91,8 @@ export function EditCustomerDialog({
       .catch(console.error);
   }, []);
 
-  // Derive individual mode from absence of company-specific fields — no clientType in schema (Phase 0)
-  const deriveIsIndividual = (c: Client) => !c.segment && !c.industry && !c.website;
-
   const buildDefaults = (c: Client): EditClientFormData => ({
-    isIndividual: deriveIsIndividual(c),
+    isIndividual: c.clientType === 'INDIVIDUAL',
     name: c.name || '',
     email: c.email || '',
     phone: c.phone || '',
@@ -124,6 +121,7 @@ export function EditCustomerDialog({
     setIsSubmitting(true);
     try {
       const updated = await clientsApi.update(client.id, {
+        clientType: isIndividual ? 'INDIVIDUAL' : 'COMPANY',
         name: data.name,
         email: data.email || undefined,
         phone: data.phone || undefined,

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { QbTokenService } from './qb-token.service';
+import { getClientDisplayName } from '../../clients/client-display.helper';
 
 @Injectable()
 export class QbCustomerSyncService {
@@ -124,7 +125,7 @@ export class QbCustomerSyncService {
     for (const crmClient of unsynced) {
       try {
         const res = await qbClient.post('/customer', {
-          DisplayName: crmClient.name,
+          DisplayName: getClientDisplayName(crmClient),
           ...(crmClient.email && { PrimaryEmailAddr: { Address: crmClient.email } }),
           ...(crmClient.phone && { PrimaryPhone: { FreeFormNumber: crmClient.phone } }),
         });

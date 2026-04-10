@@ -250,7 +250,8 @@ model StageHistory {
 
 model Client {
   id                   String     @id @default(uuid())
-  name                 String
+  clientType           String     @default("COMPANY")  // "COMPANY" | "INDIVIDUAL"
+  name                 String?    @default("")
   email                String?
   phone                String?
   address              String?
