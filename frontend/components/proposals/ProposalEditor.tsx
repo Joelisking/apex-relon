@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft, Download, UserRound, PenLine,
-  Search, FileText, Check, Loader2, ChevronDown, Trash2,
+  Search, FileText, Check, Loader2, ChevronDown, Trash2, FileDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -111,6 +111,7 @@ export default function ProposalEditor() {
   }, [address, city, stateVal, zip]);
 
   const [generating, setGenerating] = useState(false);
+  const [generatingCombined, setGeneratingCombined] = useState(false);
 
   // Data queries
   const { data: leads = [], isLoading: loadingLeads } = useQuery({
@@ -271,32 +272,34 @@ export default function ProposalEditor() {
   const companyName = selectedLead?.company ?? null;
   const addressFilled = !!(address || city || stateVal || zip);
 
+  const buildGenerateDto = () => ({
+    leadId: selectedLead?.id,
+    costBreakdownId: selectedBreakdown?.id,
+    salutation: salutation || undefined,
+    firstName: firstName || undefined,
+    lastName: lastName || undefined,
+    address: address || undefined,
+    city: city || undefined,
+    state: stateVal || undefined,
+    zip: zip || undefined,
+    timeline: timeline || undefined,
+    proposalDate: proposalDate || undefined,
+    projectName: projectName || undefined,
+    projectAddress: (sameAddress ? clientAddressFormatted : projectAddress) || undefined,
+    totalAmount: totalAmount || undefined,
+    saveAddressToClient: saveAddress && addressFilled ? true : undefined,
+    dynamicValues: Object.keys(dynamicValues).length > 0 ? dynamicValues : undefined,
+    tableCellValues: Object.keys(tableCellValues).length > 0 ? tableCellValues : undefined,
+    paragraphOverrides: Object.keys(paragraphOverrides).length > 0 ? paragraphOverrides : undefined,
+  });
+
   const handleGenerate = async () => {
     if (!selectedTemplateId) return;
     setGenerating(true);
     try {
-      const res = await proposalTemplatesApi.generate(selectedTemplateId, {
-        leadId: selectedLead?.id,
-        costBreakdownId: selectedBreakdown?.id,
-        salutation: salutation || undefined,
-        firstName: firstName || undefined,
-        lastName: lastName || undefined,
-        address: address || undefined,
-        city: city || undefined,
-        state: stateVal || undefined,
-        zip: zip || undefined,
-        timeline: timeline || undefined,
-        proposalDate: proposalDate || undefined,
-        projectName: projectName || undefined,
-        projectAddress: (sameAddress ? clientAddressFormatted : projectAddress) || undefined,
-        totalAmount: totalAmount || undefined,
-        saveAddressToClient: saveAddress && addressFilled ? true : undefined,
-        dynamicValues: Object.keys(dynamicValues).length > 0 ? dynamicValues : undefined,
-        tableCellValues: Object.keys(tableCellValues).length > 0 ? tableCellValues : undefined,
-        paragraphOverrides: Object.keys(paragraphOverrides).length > 0 ? paragraphOverrides : undefined,
-      });
+      const res = await proposalTemplatesApi.generate(selectedTemplateId, buildGenerateDto());
 
-      // Auto-download
+      // Auto-download .docx
       try {
         const blob = await proposalTemplatesApi.downloadProposal(res.proposalId);
         const url = URL.createObjectURL(blob);
@@ -313,6 +316,29 @@ export default function ProposalEditor() {
       toast.error(err instanceof Error ? err.message : 'Failed to generate proposal');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleGenerateCombined = async () => {
+    if (!selectedTemplateId || !selectedBreakdown) return;
+    setGeneratingCombined(true);
+    try {
+      const res = await proposalTemplatesApi.generate(selectedTemplateId, buildGenerateDto());
+
+      const { blob, fileName } = await proposalTemplatesApi.downloadCombinedPdf(res.proposalId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success('Combined PDF downloaded');
+      router.push(returnTo || '/proposals');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to generate combined PDF');
+    } finally {
+      setGeneratingCombined(false);
     }
   };
 
@@ -367,18 +393,35 @@ export default function ProposalEditor() {
           <span className="text-muted-foreground">|</span>
           <span className="text-sm font-semibold">New Proposal</span>
         </div>
-        <Button
-          size="sm"
-          onClick={handleGenerate}
-          disabled={generating || !selectedTemplateId}
-          className="gap-1.5">
-          {generating ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Download className="h-3.5 w-3.5" />
+        <div className="flex items-center gap-2">
+          {selectedBreakdown && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleGenerateCombined}
+              disabled={generatingCombined || generating || !selectedTemplateId}
+              className="gap-1.5">
+              {generatingCombined ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <FileDown className="h-3.5 w-3.5" />
+              )}
+              {generatingCombined ? 'Generating…' : 'Download Combined PDF'}
+            </Button>
           )}
-          {generating ? 'Generating…' : 'Generate & Download'}
-        </Button>
+          <Button
+            size="sm"
+            onClick={handleGenerate}
+            disabled={generating || generatingCombined || !selectedTemplateId}
+            className="gap-1.5">
+            {generating ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            {generating ? 'Generating…' : 'Generate & Download'}
+          </Button>
+        </div>
       </div>
 
       {/* Split pane */}

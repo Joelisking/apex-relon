@@ -23,6 +23,7 @@ import {
   formatProposalDate,
   monthName,
   formatCurrency,
+  patchDocxMarginsForLibreOffice,
   ProposalData,
 } from './proposal-fill.util';
 import { extractTemplateFields, TemplateFields } from './proposal-extract.util';
@@ -57,6 +58,31 @@ const SEED_TEMPLATES: SeedTemplate[] = [
   { file: 'Template - Proposal - Topo - For VS Engineering.docx',                     name: 'Topo (VS Engineering)',              serviceTypeName: 'Topographic' },
   { file: 'Template - COFW - Proj Name- TOPO-LCRS-RW Eng.docx',                       name: 'COFW – Topo/LCRS/RW Engineering',    serviceTypeName: 'ROW Engineering' },
 ];
+
+/**
+ * Build a human-readable filename for a generated proposal.
+ * Format: "Proposal - {Company} - {Project} - YYYY-MM-DD.{ext}"
+ * Falls back to template name when company/project are not available.
+ */
+function buildProposalFileName(
+  companyName: string,
+  projectName: string,
+  templateName: string,
+  date: Date,
+  ext: string,
+): string {
+  const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
+  const clean = (s: string, max: number) =>
+    s.replace(/[^\w\s&()\-,.]/g, '').replace(/\s+/g, ' ').trim().slice(0, max);
+  const parts: string[] = ['Proposal'];
+  const company = clean(companyName, 50);
+  const project = clean(projectName, 60);
+  if (company) parts.push(company);
+  if (project) parts.push(project);
+  if (!company && !project) parts.push(clean(templateName, 60));
+  parts.push(dateStr);
+  return `${parts.join(' - ')}.${ext}`;
+}
 
 @Injectable()
 export class ProposalTemplatesService implements OnModuleInit {
@@ -319,9 +345,12 @@ export class ProposalTemplatesService implements OnModuleInit {
     const docxBuffer = await streamToBuffer(docxStream);
 
     // 2. Convert .docx → PDF via LibreOffice
+    // Patch bottom margin first to compensate for LibreOffice's slightly different
+    // font metrics — without this, 1-page Word docs can overflow to 2 pages in LibreOffice.
+    const patchedDocxBuffer = patchDocxMarginsForLibreOffice(docxBuffer);
     let proposalPdfBuffer: Buffer;
     try {
-      proposalPdfBuffer = await libreConvertAsync(docxBuffer, '.pdf', undefined, { sofficeBinaryPaths });
+      proposalPdfBuffer = await libreConvertAsync(patchedDocxBuffer, '.pdf', undefined, { sofficeBinaryPaths });
     } catch (err) {
       this.logger.error('LibreOffice conversion failed', err instanceof Error ? err.stack : String(err));
       throw new Error(`PDF conversion failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -329,7 +358,7 @@ export class ProposalTemplatesService implements OnModuleInit {
 
     // 3. If no cost breakdown linked, just return the proposal PDF
     if (!proposal.costBreakdownId) {
-      const baseName = proposal.file.originalName.replace(/\.docx$/i, '');
+      const baseName = proposal.file.originalName.replace(/\.\w+$/i, '');
       return { buffer: proposalPdfBuffer, fileName: `${baseName}.pdf` };
     }
 
@@ -348,8 +377,8 @@ export class ProposalTemplatesService implements OnModuleInit {
     breakdownPages.forEach((p) => merged.addPage(p));
 
     const mergedBytes = await merged.save();
-    const baseName = proposal.file.originalName.replace(/\.docx$/i, '');
-    return { buffer: Buffer.from(mergedBytes), fileName: `${baseName}-with-breakdown.pdf` };
+    const baseName = proposal.file.originalName.replace(/\.\w+$/i, '');
+    return { buffer: Buffer.from(mergedBytes), fileName: `${baseName} (with Cost Breakdown).pdf` };
   }
 
   async generateProposal(
@@ -487,10 +516,13 @@ export class ProposalTemplatesService implements OnModuleInit {
     );
 
     // 6. Upload filled .docx to GCS
-    const slug = template.name
-      .replace(/[^a-z0-9]+/gi, '-')
-      .replace(/^-+|-+$/g, '');
-    const originalName = `${slug}-${Date.now()}.docx`;
+    const originalName = buildProposalFileName(
+      companyName,
+      dto.projectName ?? derivedProjectName,
+      template.name,
+      today,
+      'docx',
+    );
     const uploadPath = clientId
       ? `clients/${clientId}/proposals`
       : 'proposals/manual';

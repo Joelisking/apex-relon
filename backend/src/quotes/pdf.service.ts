@@ -508,11 +508,12 @@ export class PdfService {
 
     // ── Direct expenses ────────────────────────────────────────────────────────
     const bd = breakdown as any;
+    const showDirectExpenses: boolean = bd.showDirectExpenses !== false; // default true
     const mileageTotal = (bd.mileageQty ?? 0) * (bd.mileageRate ?? 0);
     const lodgingTotal = (bd.lodgingQty ?? 0) * (bd.lodgingRate ?? 0);
     const perDiemTotal = (bd.perDiemQty ?? 0) * (bd.perDiemRate ?? 0);
     const totalDirectExpenses = mileageTotal + lodgingTotal + perDiemTotal;
-    const totalFee = grandTotalLaborCost + totalDirectExpenses;
+    const totalFee = grandTotalLaborCost + (showDirectExpenses ? totalDirectExpenses : 0);
     const roundedFee: number | null = bd.roundedFee ?? null;
     const hasDirectExpenses =
       bd.mileageQty != null || bd.lodgingQty != null || bd.perDiemQty != null;
@@ -778,11 +779,13 @@ export class PdfService {
         },
       ];
 
-      matrixRows.push(...[
-        expenseRow(mileageLabel, COLORS.expenses, mileageTotal, 'DIRECT EXPENSES (MILEAGES)'),
-        expenseRow(lodgingLabel, COLORS.expenses, lodgingTotal, 'DIRECT EXPENSES (LODGING)'),
-        expenseRow(perDiemLabel, COLORS.expenses, perDiemTotal, 'DIRECT EXPENSES (PER DIEM)'),
-      ]);
+      if (showDirectExpenses) {
+        matrixRows.push(...[
+          expenseRow(mileageLabel, COLORS.expenses, mileageTotal, 'DIRECT EXPENSES (MILEAGES)'),
+          expenseRow(lodgingLabel, COLORS.expenses, lodgingTotal, 'DIRECT EXPENSES (LODGING)'),
+          expenseRow(perDiemLabel, COLORS.expenses, perDiemTotal, 'DIRECT EXPENSES (PER DIEM)'),
+        ]);
+      }
 
       // TOTAL FEE
       matrixRows.push([

@@ -184,12 +184,17 @@ function replaceDocpropertyFields(xml: string, data: ProposalData): string {
   return xml.replace(
     /(<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:fldChar[^>]*w:fldCharType="begin"[^>]*\/>[\s\S]*?<\/w:r>[\s\S]*?<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:fldChar[^>]*w:fldCharType="separate"[^>]*\/>[\s\S]*?<\/w:r>)([\s\S]*?)(<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:fldChar[^>]*w:fldCharType="end"[^>]*\/>[\s\S]*?<\/w:r>)/g,
     (match, beforeResult: string, resultContent: string, endPart: string) => {
-      const instrMatch = beforeResult.match(
-        /<w:instrText[^>]*>([\s\S]*?)<\/w:instrText>/,
-      );
-      if (!instrMatch) return match;
+      // Collect ALL instrText segments — Word splits field instructions across
+      // multiple runs, so a single .match() misses the rest of the field name.
+      const instrParts: string[] = [];
+      const instrPartsRe = /<w:instrText[^>]*>([\s\S]*?)<\/w:instrText>/g;
+      let instrPartM: RegExpExecArray | null;
+      while ((instrPartM = instrPartsRe.exec(beforeResult)) !== null) {
+        instrParts.push(instrPartM[1]);
+      }
+      if (instrParts.length === 0) return match;
 
-      const instrText = instrMatch[1].trim();
+      const instrText = instrParts.join('').trim();
 
       const docpropMatch = instrText.match(/DOCPROPERTY\s+"?([^"\\]+?)"?\s*\\/);
       if (docpropMatch) {
@@ -480,6 +485,37 @@ export function fillDocx(
   return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
 }
 
+// ─── LibreOffice conversion helpers ─────────────────────────────────────────
+
+/**
+ * Before converting a .docx to PDF via LibreOffice, slightly reduce the bottom
+ * page margin so that text reflow differences between Word and LibreOffice's
+ * layout engine (different line-break tables, kerning, etc.) don't push content
+ * that fits on N pages in Word onto N+1 pages in LibreOffice.
+ *
+ * 432 twips = 0.3 inches. The minimum bottom margin is clamped to 360 twips
+ * (0.25 inch) so the change is invisible in practice but eliminates the overflow.
+ */
+export function patchDocxMarginsForLibreOffice(buffer: Buffer): Buffer {
+  const zip = new PizZip(buffer);
+  const docXml = zip.files['word/document.xml'];
+  if (!docXml) return buffer;
+
+  const REDUCTION = 432; // 0.3 inches
+  const MIN_BOTTOM = 360; // floor: 0.25 inches
+
+  const patched = docXml.asText().replace(
+    /(<w:pgMar\b[^>]* w:bottom=")(\d+)(")/g,
+    (_match, before: string, value: string, after: string) => {
+      const reduced = Math.max(MIN_BOTTOM, parseInt(value, 10) - REDUCTION);
+      return `${before}${reduced}${after}`;
+    },
+  );
+
+  zip.file('word/document.xml', patched);
+  return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
+}
+
 // ─── Formatting helpers used by the service ──────────────────────────────────
 
 const MONTH_NAMES = [
@@ -576,9 +612,16 @@ export function normalizeDocpropertyFields(xml: string): string {
   return xml.replace(
     /(<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:fldChar[^>]*w:fldCharType="begin"[^>]*\/>[\s\S]*?<\/w:r>[\s\S]*?<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:fldChar[^>]*w:fldCharType="separate"[^>]*\/>[\s\S]*?<\/w:r>)([\s\S]*?)(<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:fldChar[^>]*w:fldCharType="end"[^>]*\/>[\s\S]*?<\/w:r>)/g,
     (match, beforeResult, _resultContent, endPart) => {
-      const instrMatch = beforeResult.match(/<w:instrText[^>]*>([\s\S]*?)<\/w:instrText>/);
-      if (!instrMatch) return match;
-      const instrText = instrMatch[1].trim();
+      // Collect ALL instrText segments — Word splits field instructions across
+      // multiple runs, so a single .match() misses the rest of the field name.
+      const instrParts: string[] = [];
+      const instrPartsRe = /<w:instrText[^>]*>([\s\S]*?)<\/w:instrText>/g;
+      let instrPartM: RegExpExecArray | null;
+      while ((instrPartM = instrPartsRe.exec(beforeResult)) !== null) {
+        instrParts.push(instrPartM[1]);
+      }
+      if (instrParts.length === 0) return match;
+      const instrText = instrParts.join('').trim();
 
       const docpropMatch = instrText.match(/DOCPROPERTY\s+"?([^"\\]+?)"?\s*\\/);
       if (docpropMatch) {
