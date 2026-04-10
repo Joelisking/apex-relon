@@ -37,10 +37,10 @@ export function JobTypeSelector({
 
   return (
     <div className={cn('space-y-4', className)}>
-      {/* Project Type — top-level categories */}
+      {/* Division — top-level categories */}
       <div className="space-y-2">
         <div className="flex items-baseline gap-2">
-          <span className="text-sm font-medium">Project Type</span>
+          <span className="text-sm font-medium">Division</span>
           <span className="text-xs text-muted-foreground">Select one or more</span>
         </div>
         <div className="flex flex-wrap gap-2">
