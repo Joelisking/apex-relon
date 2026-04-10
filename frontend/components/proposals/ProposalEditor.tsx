@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { leadsApi } from '@/lib/api/client';
 import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
 import { proposalTemplatesApi } from '@/lib/api/proposal-templates-client';
-import ProposalPreview from './ProposalPreview';
+import ProposalPreview, { applySubstitutions } from './ProposalPreview';
 import DynamicFieldsSection from './DynamicFieldsSection';
 import TableEditorSection from './TableEditorSection';
 import AdvancedEditSection from './AdvancedEditSection';
@@ -335,6 +335,21 @@ export default function ProposalEditor() {
     totalAmount, timeline, proposalDate,
     projectName, projectAddress: effectiveProjectAddress,
   };
+
+  // Compute filled text for each editable paragraph so the advanced editor
+  // shows live-substituted text for non-overridden paragraphs.
+  const filledParagraphTexts = useMemo(() => {
+    const result: Record<number, string> = {};
+    for (const para of (templateContent?.editableParagraphs ?? [])) {
+      let text = applySubstitutions(para.text, previewData);
+      for (const [name, value] of Object.entries(dynamicValues)) {
+        if (value) text = text.split(`[${name}]`).join(value);
+      }
+      result[para.index] = text;
+    }
+    return result;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateContent?.editableParagraphs, JSON.stringify(previewData), JSON.stringify(dynamicValues)]);
 
   return (
     <div className="flex flex-col bg-background" style={{ height: 'calc(100vh - 48px)' }}>
@@ -690,10 +705,10 @@ export default function ProposalEditor() {
                 {viewMode === 'advanced' && Object.keys(paragraphOverrides).length > 0 && (
                   <button
                     onClick={() => setParagraphOverrides({})}
-                    title="Discard all advanced edits"
+                    title="Unlock all paragraphs — form fields drive content again"
                     className="flex items-center gap-1 text-[11px] px-2 py-1 rounded text-destructive hover:bg-destructive/10 transition-colors">
                     <Trash2 className="h-3 w-3" />
-                    Discard all
+                    Unlock all
                   </button>
                 )}
                 <div className="flex gap-0.5">
@@ -747,6 +762,7 @@ export default function ProposalEditor() {
             <AdvancedEditSection
               paragraphs={templateContent?.editableParagraphs ?? []}
               overrides={paragraphOverrides}
+              filledTexts={filledParagraphTexts}
               onChange={(idx, val) =>
                 setParagraphOverrides((prev) => ({ ...prev, [String(idx)]: val }))
               }

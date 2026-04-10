@@ -8,6 +8,7 @@ import type { EditableParagraph } from '@/lib/api/proposal-templates-client';
 interface AdvancedEditSectionProps {
   paragraphs: EditableParagraph[];
   overrides: Record<string, string>;
+  filledTexts?: Record<number, string>;
   onChange: (index: number, value: string) => void;
   onReset: (index: number) => void;
 }
@@ -69,6 +70,7 @@ const ParagraphRow = memo(function ParagraphRow({
 export default function AdvancedEditSection({
   paragraphs,
   overrides,
+  filledTexts,
   onChange,
   onReset,
 }: AdvancedEditSectionProps) {
@@ -90,19 +92,23 @@ export default function AdvancedEditSection({
       <div className="max-w-[680px] mx-auto bg-white rounded-lg shadow-sm border border-border/30 px-10 py-12 min-h-[600px]">
         <div className="mb-6 pb-4 border-b border-border/30">
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Edit any paragraph below. Placeholders like{' '}
-            <span className="font-mono bg-amber-50 text-amber-600 border border-amber-200/80 rounded px-0.5">
-              [Company Name]
+            Paragraphs reflect your form fields live. Edit any paragraph to lock it — locked
+            paragraphs show a{' '}
+            <span className="font-mono bg-primary/5 border border-primary/30 rounded px-0.5 text-[0.85em]">
+              blue border
             </span>{' '}
-            still get filled when you generate. Click{' '}
-            <RotateCcw className="inline h-3 w-3" /> to reset a paragraph to the template original.
+            and won&apos;t update when you change the form. Click{' '}
+            <RotateCcw className="inline h-3 w-3" /> to unlock a paragraph and let the form drive
+            it again.
           </p>
         </div>
         <div className="space-y-0.5">
           {displayParagraphs.map((para) => {
             const key = String(para.index);
             const isOverridden = key in overrides;
-            const value = isOverridden ? overrides[key] : para.text;
+            const value = isOverridden
+              ? overrides[key]
+              : (filledTexts?.[para.index] ?? para.text);
             return (
               <ParagraphRow
                 key={para.index}

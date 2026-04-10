@@ -195,9 +195,9 @@ function replaceDocpropertyFields(xml: string, data: ProposalData): string {
       if (docpropMatch) {
         const propName = docpropMatch[1].trim();
         const dataKey = DOCPROPERTY_MAP[propName];
-        if (!dataKey) return match;
-
-        const value = data[dataKey] ?? '';
+        // Fill known fields with data; clear unknown fields (stale cached values
+        // left by Word when the template was last saved — e.g. stray "P" characters).
+        const value = dataKey ? (data[dataKey] ?? '') : '';
         const rPrMatch = resultContent.match(/<w:rPr>([\s\S]*?)<\/w:rPr>/);
         const rPr = rPrMatch ? `<w:rPr>${rPrMatch[1]}</w:rPr>` : '';
         const newResult = `<w:r>${rPr}<w:t xml:space="preserve">${escapeXml(value)}</w:t></w:r>`;
@@ -584,10 +584,11 @@ export function normalizeDocpropertyFields(xml: string): string {
       if (docpropMatch) {
         const propName = docpropMatch[1].trim();
         const bracket = DOCPROPERTY_BRACKETS[propName];
-        if (!bracket) return match;
+        // Known fields → show bracket placeholder; unknown fields → clear stale cache.
+        const display = bracket ?? '';
         return (
           beforeResult +
-          `<w:r><w:t xml:space="preserve">${escapeXml(bracket)}</w:t></w:r>` +
+          `<w:r><w:t xml:space="preserve">${escapeXml(display)}</w:t></w:r>` +
           endPart
         );
       }

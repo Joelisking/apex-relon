@@ -29,7 +29,7 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-function applySubstitutions(text: string, data: PreviewData): string {
+export function applySubstitutions(text: string, data: PreviewData): string {
   const d = data.proposalDate
     ? new Date(data.proposalDate + 'T12:00:00')
     : new Date();
