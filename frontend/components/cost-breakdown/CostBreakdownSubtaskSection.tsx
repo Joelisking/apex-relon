@@ -230,7 +230,7 @@ export default function CostBreakdownSubtaskSection({
               onCheckedChange={(v) => setDontShowAgain(v === true)}
             />
             <label htmlFor="dont-show-again" className="text-sm text-muted-foreground cursor-pointer select-none">
-              Don't show this again
+              Don&apos;t show this again
             </label>
           </div>
           <AlertDialogFooter>

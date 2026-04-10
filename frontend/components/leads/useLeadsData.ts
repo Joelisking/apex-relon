@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Lead } from '@/lib/types';
 import { api } from '@/lib/api/client';
@@ -16,12 +16,8 @@ interface Manager {
 
 export function useLeadsData() {
   const queryClient = useQueryClient();
-  const [mounted, setMounted] = useState(false);
-  const [leads, setLeads] = useState<Lead[]>([]);
 
-  useEffect(() => { setMounted(true); }, []);
-
-  const { data: queryLeads, isLoading, isFetching } = useQuery<Lead[]>({
+  const { data: queryLeads = [], isLoading, isFetching } = useQuery<Lead[]>({
     queryKey: ['leads'],
     queryFn: () => api.leads.getAll(),
     staleTime: 60 * 1000,
@@ -47,16 +43,20 @@ export function useLeadsData() {
     staleTime: 10 * 60 * 1000,
   });
 
-  useEffect(() => {
-    if (queryLeads) setLeads(queryLeads);
-  }, [queryLeads]);
+  // Optimistic update helper — same call signature as React.Dispatch<React.SetStateAction<Lead[]>>
+  const setLeads = useCallback((updater: Lead[] | ((prev: Lead[]) => Lead[])) => {
+    queryClient.setQueryData<Lead[]>(['leads'], (prev) => {
+      const prevLeads = prev ?? [];
+      return typeof updater === 'function' ? updater(prevLeads) : updater;
+    });
+  }, [queryClient]);
 
   const allUsersArr: Manager[] = Array.isArray(allUsers)
     ? allUsers
     : ((allUsers as { users?: Manager[] })?.users ?? []);
 
   return {
-    leads,
+    leads: queryLeads,
     setLeads,
     managers: allUsersArr,
     clients: clientList,
@@ -65,7 +65,7 @@ export function useLeadsData() {
     stagesLoading,
     isLoading,
     isFetching,
-    mounted,
+    mounted: true, // 'use client' — always mounted, no SSR hydration concern
     queryClient,
   };
 }

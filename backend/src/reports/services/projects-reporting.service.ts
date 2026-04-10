@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ReportFiltersDto } from '../dto/report-filters.dto';
+import { getClientDisplayName } from '../../clients/client-display.helper';
 
 interface ReportUser {
   id: string;
@@ -51,7 +52,7 @@ export class ProjectsReportingService {
     const projects = await this.getFilteredProjects(filters, user);
 
     const totalRevenue = projects.reduce(
-      (sum, p) => sum + (p.contractedValue || 0),
+      (sum, p) => sum + (p.contractedValue || 0) + this.addendaTotal(p),
       0,
     );
     const totalCost = projects.reduce(
@@ -131,6 +132,10 @@ export class ProjectsReportingService {
       where: this.buildWhereClause(filters, user),
       include: {
         client: true,
+        addenda: {
+          where: { status: { in: ['APPROVED', 'INVOICED'] } },
+          select: { total: true },
+        },
       },
       orderBy: {
         contractedValue: 'desc',
@@ -138,7 +143,7 @@ export class ProjectsReportingService {
     });
 
     return projects.map((project) => {
-      const revenue = project.contractedValue || 0;
+      const revenue = (project.contractedValue || 0) + this.addendaTotal(project);
       const cost = project.totalCost || 0;
       const profit = revenue - cost;
       const margin =
@@ -147,7 +152,7 @@ export class ProjectsReportingService {
       return {
         projectId: project.id,
         projectName: project.name,
-        clientName: project.client.name,
+        clientName: project.client ? getClientDisplayName(project.client) : 'Unknown',
         status: project.status,
         revenue,
         cost,
@@ -177,7 +182,7 @@ export class ProjectsReportingService {
         value: 0,
       };
       existing.count += 1;
-      existing.value += project.contractedValue || 0;
+      existing.value += (project.contractedValue || 0) + this.addendaTotal(project);
       riskMap.set(riskStatus, existing);
     });
 
@@ -218,8 +223,16 @@ export class ProjectsReportingService {
       include: {
         client: true,
         projectManager: true,
+        addenda: {
+          where: { status: { in: ['APPROVED', 'INVOICED'] } },
+          select: { total: true },
+        },
       },
     });
+  }
+
+  private addendaTotal(project: { addenda?: { total: number }[] }): number {
+    return (project.addenda ?? []).reduce((s, a) => s + a.total, 0);
   }
 
   private buildWhereClause(

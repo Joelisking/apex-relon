@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { AiService } from '../ai/ai.service';
+import { getClientDisplayName } from '../clients/client-display.helper';
 
 export interface DashboardMetrics {
   // Revenue metrics
@@ -171,8 +172,8 @@ export class DashboardService {
         orderBy: { updatedAt: 'asc' },
         take: 20,
       }),
-      // Revenue from projects completed this month
-      this.prisma.project.aggregate({
+      // Revenue from projects completed this month (including approved addenda)
+      this.prisma.project.findMany({
         where: {
           status: 'Completed',
           OR: [
@@ -181,10 +182,10 @@ export class DashboardService {
           ],
           ...pf,
         },
-        _sum: { contractedValue: true },
+        select: { contractedValue: true, addenda: { where: { status: { in: ['APPROVED', 'INVOICED'] } }, select: { total: true } } },
       }),
-      // Revenue from projects completed this quarter
-      this.prisma.project.aggregate({
+      // Revenue from projects completed this quarter (including approved addenda)
+      this.prisma.project.findMany({
         where: {
           status: 'Completed',
           OR: [
@@ -193,7 +194,7 @@ export class DashboardService {
           ],
           ...pf,
         },
-        _sum: { contractedValue: true },
+        select: { contractedValue: true, addenda: { where: { status: { in: ['APPROVED', 'INVOICED'] } }, select: { total: true } } },
       }),
       // Projects at risk (minimal fields)
       this.prisma.project.findMany({
@@ -231,9 +232,17 @@ export class DashboardService {
           ...lf,
         },
       }),
-      // Top 10 projects by value (for revenueByProject)
+      // Top 10 projects by value (for revenueByProject) — include addenda
       this.prisma.project.findMany({
-        select: { id: true, name: true, contractedValue: true },
+        select: {
+          id: true,
+          name: true,
+          contractedValue: true,
+          addenda: {
+            where: { status: { in: ['APPROVED', 'INVOICED'] } },
+            select: { total: true },
+          },
+        },
         where: pf,
         orderBy: { contractedValue: 'desc' },
         take: 10,
@@ -255,7 +264,11 @@ export class DashboardService {
         where: { status: 'Completed', ...pf },
         select: {
           contractedValue: true,
-          client: { select: { id: true, name: true, status: true } },
+          client: { select: { id: true, name: true, individualName: true, status: true } },
+          addenda: {
+            where: { status: { in: ['APPROVED', 'INVOICED'] } },
+            select: { total: true },
+          },
         },
       });
       const clientMap = new Map<
@@ -264,13 +277,14 @@ export class DashboardService {
       >();
       for (const proj of projectsWithClients) {
         if (!proj.client) continue;
-        const revenue = proj.contractedValue ?? 0;
+        const addendaTotal = (proj.addenda ?? []).reduce((s, a) => s + a.total, 0);
+        const revenue = (proj.contractedValue ?? 0) + addendaTotal;
         const entry = clientMap.get(proj.client.id);
         if (entry) {
           entry.revenue += revenue;
         } else {
           clientMap.set(proj.client.id, {
-            name: proj.client.name,
+            name: getClientDisplayName(proj.client),
             status: proj.client.status,
             revenue,
           });
@@ -313,10 +327,14 @@ export class DashboardService {
     );
 
     // ── Revenue ───────────────────────────────────────────────────────
-    const monthlyRevenue =
-      monthlyRevenueAgg._sum.contractedValue ?? 0;
-    const quarterlyRevenue =
-      quarterlyRevenueAgg._sum.contractedValue ?? 0;
+    const monthlyRevenue = monthlyRevenueAgg.reduce((sum, p) => {
+      const addendaTotal = (p.addenda ?? []).reduce((s, a) => s + a.total, 0);
+      return sum + (p.contractedValue ?? 0) + addendaTotal;
+    }, 0);
+    const quarterlyRevenue = quarterlyRevenueAgg.reduce((sum, p) => {
+      const addendaTotal = (p.addenda ?? []).reduce((s, a) => s + a.total, 0);
+      return sum + (p.contractedValue ?? 0) + addendaTotal;
+    }, 0);
 
     // ── Client metrics ────────────────────────────────────────────────
     const topClients = revenueByClient.slice(0, 5);
@@ -421,11 +439,16 @@ export class DashboardService {
     });
 
     // ── Project revenue ───────────────────────────────────────────────
-    const revenueByProject = leanProjects.map((p) => ({
-      projectId: p.id,
-      projectName: p.name,
-      revenue: p.contractedValue ?? 0,
-    }));
+    const revenueByProject = leanProjects
+      .map((p) => {
+        const addendaTotal = (p.addenda ?? []).reduce((s, a) => s + a.total, 0);
+        return {
+          projectId: p.id,
+          projectName: p.name,
+          revenue: (p.contractedValue ?? 0) + addendaTotal,
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue);
 
     return {
       totalRevenue,
@@ -466,7 +489,7 @@ export class DashboardService {
     // Helper: sum revenue for completed projects in a date range.
     // Falls back to updatedAt when completedDate is null (projects completed
     // via EditProjectDialog which does not set completedDate).
-    // Uses endOfProjectValue when set (actual final value), otherwise contractedValue.
+    // Revenue = contractedValue + approved/invoiced addenda.
     const bucketRevenue = async (start: Date, end: Date): Promise<number> => {
       const projects = await this.prisma.project.findMany({
         where: {
@@ -477,12 +500,18 @@ export class DashboardService {
           ],
           ...pf,
         },
-        select: { endOfProjectValue: true, contractedValue: true },
+        select: {
+          contractedValue: true,
+          addenda: {
+            where: { status: { in: ['APPROVED', 'INVOICED'] } },
+            select: { total: true },
+          },
+        },
       });
-      return projects.reduce(
-        (sum, p) => sum + (p.endOfProjectValue ?? p.contractedValue ?? 0),
-        0,
-      );
+      return projects.reduce((sum, p) => {
+        const addendaTotal = (p.addenda ?? []).reduce((s, a) => s + a.total, 0);
+        return sum + (p.contractedValue ?? 0) + addendaTotal;
+      }, 0);
     };
 
     if (period === 'week') {

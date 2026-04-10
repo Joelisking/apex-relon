@@ -603,13 +603,13 @@ Command palette fix: pull from `adminNavGroups` and filter by user permissions. 
 
 | # | Task | Status |
 |---|---|---|
-| 1.1 | Add `@@map()` directives to Prisma schema; rename model names | ⬜ |
-| 1.2 | Run `npx prisma migrate dev --name rename_service_category_to_division` (zero-change migration) | ⬜ |
-| 1.3 | Rename backend directories, classes, exports, route paths | ⬜ |
-| 1.4 | Update all backend service/controller/DTO references | ⬜ |
-| 1.5 | Update frontend types, API clients, components, admin routes | ⬜ |
-| 1.6 | Update sidebar label "Service Types" → "Job Types" | ⬜ |
-| 1.7 | Smoke test: service item creation, cost breakdown creation, time entry dialog, admin pages | ⬜ |
+| 1.1 | Add `@@map()` directives to Prisma schema; rename model names | ✅ |
+| 1.2 | Run `npx prisma migrate dev --name rename_service_category_to_division` (zero-change migration) | ✅ |
+| 1.3 | Rename backend directories, classes, exports, route paths | ✅ |
+| 1.4 | Update all backend service/controller/DTO references | ✅ |
+| 1.5 | Update frontend types, API clients, components, admin routes | ✅ |
+| 1.6 | Update sidebar label "Service Types" → "Job Types" | ✅ |
+| 1.7 | Smoke test: service item creation, cost breakdown creation, time entry dialog, admin pages | ✅ |
 
 ### Phase 1.5 — Interstitial: PayGrade Model + Admin Restructure (schema, no full UI)
 
@@ -617,48 +617,48 @@ Do before Phase 2 (financials) because Phase 2 depends on `payGradeId` replacing
 
 | # | Task | Status |
 |---|---|---|
-| I.1 | Add `PayGrade` model to schema (with `code`, `isDefault`, `isActive`, `sortOrder`) | ⬜ |
-| I.2 | Replace `UserRate.type String` with `UserRate.payGradeId FK` | ⬜ |
-| I.3 | Run migration; seed 4 initial grades: Base Rate (isDefault), INDOT Pay 1, INDOT Pay 2, INDOT Pay 3 | ⬜ |
-| I.4 | Migrate existing `UserRate` rows: `"internal"` → default PayGrade, `"billing"` → new "Billing" PayGrade | ⬜ |
-| I.5 | Extract `ProposalTemplatesSection` from `AdminQuoteSettingsView` → `/admin/proposal-templates` page | ⬜ |
-| I.6 | Implement admin nav restructure (Phase 0.17 groups) | ⬜ |
+| I.1 | Add `PayGrade` model to schema (with `code`, `isDefault`, `isActive`, `sortOrder`) | ✅ |
+| I.2 | Replace `UserRate.type String` with `UserRate.payGradeId FK` | ✅ |
+| I.3 | Run migration; seed 4 initial grades: Base Rate (isDefault), INDOT Pay 1, INDOT Pay 2, INDOT Pay 3 | ✅ |
+| I.4 | Migrate existing `UserRate` rows: `"internal"` → default PayGrade, `"billing"` → new "Billing" PayGrade | ✅ |
+| I.5 | Extract `ProposalTemplatesSection` from `AdminQuoteSettingsView` → `/admin/proposal-templates` page | ✅ |
+| I.6 | Implement admin nav restructure (Phase 0.17 groups) | ✅ |
 
 ### Phase 2 — Financial Source of Truth
 
 | # | Task | Status |
 |---|---|---|
-| 2.1 | Add `invoicedValue Float?` + `costBreakdownId String?` to `Project` + migration | ⬜ |
-| 2.2 | Soft-deprecate `Project.estimatedRevenue` and `Project.endOfProjectValue` — add DB comment, remove from all UI reads | ⬜ |
-| 2.3 | Add `CostBreakdown.benchmarkLockedAt DateTime?` + migration | ⬜ |
-| 2.4 | Create `ProjectProfitabilityService.compute(projectId)` — full formula (revenue + addenda − labor − direct costs) | ⬜ |
-| 2.5 | Update `TimeTrackingService` create/update/delete → call `recalculateProjectCost(projectId)` after each write | ⬜ |
-| 2.6 | Create `GET /projects/:id/profitability` endpoint | ⬜ |
-| 2.7 | Update `projects-reporting.service.ts` to use `ProjectProfitabilityService.compute()` | ⬜ |
-| 2.8 | Update `dashboard.service.ts` revenue aggregation | ⬜ |
-| 2.9 | Build `FinancialsTab` component: contracted value, invoiced value, labor cost by user/role, direct expenses, margin, proposed vs actual hours | ⬜ |
-| 2.10 | `acceptProposal()` — write `contractedValue` + `invoicedValue` + set `benchmarkLockedAt` on breakdown | ⬜ |
+| 2.1 | Add `invoicedValue Float?` + `costBreakdownId String?` to `Project` + migration | ✅ |
+| 2.2 | Soft-deprecate `Project.estimatedRevenue` and `Project.endOfProjectValue` — add DB comment, remove from all UI reads | ✅ |
+| 2.3 | Add `CostBreakdown.benchmarkLockedAt DateTime?` + migration | ✅ |
+| 2.4 | Create `ProjectProfitabilityService.compute(projectId)` — full formula (revenue + addenda − labor − direct costs) | ✅ |
+| 2.5 | Update `TimeTrackingService` create/update/delete → call `recalculateProjectCost(projectId)` after each write | ✅ |
+| 2.6 | Create `GET /projects/:id/profitability` endpoint | ✅ |
+| 2.7 | Update `projects-reporting.service.ts` — include approved addenda in revenue; use `getClientDisplayName` for client names | ✅ |
+| 2.8 | Update `dashboard.service.ts` revenue aggregation — include approved addenda in all revenue calculations; fix nullable client.name | ✅ |
+| 2.9 | Build `FinancialsTab` component: contracted value, invoiced value, labor cost by user/role, direct expenses, margin, proposed vs actual hours | ✅ |
+| 2.10 | `acceptProposal()` — write `contractedValue` + `invoicedValue` + set `benchmarkLockedAt` on breakdown | ✅ |
 
 ### Phase 3 — Pay Rates + INDOT Zones (Admin UI)
 
 | # | Task | Status |
 |---|---|---|
-| 3.1 | Add `IndotPayZone` model (with `name`, `counties String[]`, `payGradeId FK`) + migration | ⬜ |
-| 3.2 | Backend: `PayGradeModule` — CRUD endpoints; `IndotPayZoneModule` — CRUD endpoints | ⬜ |
-| 3.3 | Frontend: Pay Rates admin page — per-user rate grid with all PayGrades + effective date ranges | ⬜ |
-| 3.4 | Frontend: INDOT Pay Zones admin page — zone name, county multi-select, grade assignment | ⬜ |
-| 3.5 | Update `TimeTrackingService.createEntry()` — auto-select rate via pay grade lookup; store as `hourlyRate` snapshot; show source label in UI ("Filled from INDOT Pay 2") | ⬜ |
-| 3.6 | Frontend: User rate form — show rate rows per PayGrade with effective dates | ⬜ |
+| 3.1 | Add `IndotPayZone` model (with `name`, `counties String[]`, `payGradeId FK`) + migration | ✅ |
+| 3.2 | Backend: `PayGradeModule` — CRUD endpoints; `IndotPayZoneModule` — CRUD endpoints | ✅ |
+| 3.3 | Frontend: Pay Rates admin page — per-user rate grid with all PayGrades + effective date ranges | ✅ |
+| 3.4 | Frontend: INDOT Pay Zones admin page — zone name, county multi-select, grade assignment | ✅ |
+| 3.5 | Update `TimeTrackingService.createEntry()` — auto-select rate via pay grade lookup; store as `hourlyRate` snapshot; show source label in UI ("Filled from INDOT Pay 2") | ✅ |
+| 3.6 | Frontend: User rate form — show rate rows per PayGrade with effective dates | ✅ |
 
 ### Phase 4 — Client Model (Small Schema Change)
 
 | # | Task | Status |
 |---|---|---|
-| 4.1 | Add `Client.clientType String @default("COMPANY")` + make `Client.name String? @default("")` + migration | ⬜ |
-| 4.2 | Create `getClientDisplayName(client)` helper: returns `name \|\| individualName \|\| "Unknown"` | ⬜ |
-| 4.3 | Audit `qb-customer-sync.service.ts` — update all uses of `client.name` to use `getClientDisplayName()` | ⬜ |
-| 4.4 | Update `CreateCustomerDialog` + `EditCustomerDialog` with Company/Individual toggle and conditional fields; rename `individualType` field label to **"Contact Type"** (e.g., Property Owner, Developer, Agent) — visible for both individual and company, but especially relevant for individuals | ⬜ |
-| 4.5 | Update `ClientDetailView` display name and conditional field display | ⬜ |
+| 4.1 | Add `Client.clientType String @default("COMPANY")` + make `Client.name String? @default("")` + migration | ✅ |
+| 4.2 | Create `getClientDisplayName(client)` helper: returns `name \|\| individualName \|\| "Unknown"` | ✅ |
+| 4.3 | Audit `qb-customer-sync.service.ts` — update all uses of `client.name` to use `getClientDisplayName()` | ✅ |
+| 4.4 | Update `CreateCustomerDialog` + `EditCustomerDialog` with Company/Individual toggle and conditional fields; rename `individualType` field label to **"Contact Type"** (e.g., Property Owner, Developer, Agent) — visible for both individual and company, but especially relevant for individuals | ✅ |
+| 4.5 | Update `ClientDetailView` display name and conditional field display | ✅ |
 
 ### Phase 5 — Cost Breakdown as Work Authority
 
@@ -708,36 +708,36 @@ Do before Phase 2 (financials) because Phase 2 depends on `payGradeId` replacing
 
 | # | Meeting Note | Phase | Status |
 |---|---|---|---|
-| 1 | Add invoiced value to project (modal at proposal acceptance) | Phase 0.18 | ⬜ |
-| 2 | Long date format for proposals (January 15th, 2026) | Phase 0.1 | ⬜ |
-| 3 | Proposal generation fails from CB page | Phase 0.2, 0.3 | ⬜ |
-| 4 | Sort Job # column | Phase 0.4 | ⬜ |
-| 5 | Sort Client column | Phase 0.5 | ⬜ |
-| 6 | Remove cost segments from project creation | Phase 0.11 | ⬜ |
-| 7 | Remove service items from project create/edit | Phase 0.12 | ⬜ |
-| 8 | Labor cost affects profitability (time entries × user rates) | Phase 2.4–2.7 | ⬜ |
-| 9 | Pay rate config — base rate + INDOT Pay 1/2/3 (fully configurable PayGrade model) | Phase 1.5, Phase 3 | ⬜ |
-| 10 | County-INDOT rate linkage (IndotPayZone model) | Phase 3.1–3.4 | ⬜ |
-| 11 | Cost breakdown as single source of truth for tasks/hours/service items | Phase 5 | ⬜ |
-| 12 | Customer company name not required for individuals | Phase 4.1 | ⬜ |
-| 13 | Individual vs company toggle — hide company type + industry + website | Phase 4.4 | ⬜ |
-| 14 | Remove custom fields tab from ClientDetailView | Phase 0.9 | ⬜ |
-| 15 | Rename "Mailing Address" → "Project Address" on leads | Phase 0.8 | ⬜ |
-| 16 | Filter map by project status | Phase 8.1 | ⬜ |
-| 17 | Rename "Budget" → "Financials" tab on project detail | Phase 0.7 | ⬜ |
+| 1 | Add invoiced value to project (modal at proposal acceptance) | Phase 0.18 | ✅ |
+| 2 | Long date format for proposals (January 15th, 2026) | Phase 0.1 | ✅ |
+| 3 | Proposal generation fails from CB page | Phase 0.2, 0.3 | ✅ |
+| 4 | Sort Job # column | Phase 0.4 | ✅ |
+| 5 | Sort Client column | Phase 0.5 | ✅ |
+| 6 | Remove cost segments from project creation | Phase 0.11 | ✅ |
+| 7 | Remove service items from project create/edit | Phase 0.12 | ✅ |
+| 8 | Labor cost affects profitability (time entries × user rates) | Phase 2.4–2.7 | ✅ |
+| 9 | Pay rate config — base rate + INDOT Pay 1/2/3 (fully configurable PayGrade model) | Phase 1.5, Phase 3 | ✅ |
+| 10 | County-INDOT rate linkage (IndotPayZone model) | Phase 3.1–3.4 | ✅ |
+| 11 | Cost breakdown as single source of truth for tasks/hours/service items | Phase 5 | ✅ |
+| 12 | Customer company name not required for individuals | Phase 4.1 | ✅ |
+| 13 | Individual vs company toggle — hide company type + industry + website | Phase 4.4 | ✅ |
+| 14 | Remove custom fields tab from ClientDetailView | Phase 0.9 | ✅ |
+| 15 | Rename "Mailing Address" → "Project Address" on leads | Phase 0.8 | ✅ |
+| 16 | Filter map by project status | Phase 8.1 | ✅ |
+| 17 | Rename "Budget" → "Financials" tab on project detail | Phase 0.7 | ✅ |
 | 18 | Addendum tab on project detail | Phase 6 | ✅ |
-| 19 | Calendar popover: view project + edit due date only | Phase 0.13 | ⬜ |
-| 20 | Performance reporting: proposed vs. actual hours per subtask per role | Phase 5.8 | ⬜ |
+| 19 | Calendar popover: view project + edit due date only | Phase 0.13 | ✅ |
+| 20 | Performance reporting: proposed vs. actual hours per subtask per role | Phase 5.8 | ✅ |
 | 21 | PTO system | Phase 7.4–7.7 | ✅ |
 | 22 | Comments with @mentions | Phase 7.1–7.3 | ✅ |
-| 23 | Separate `roles:*` permissions | Phase 0.15–0.16 | ⬜ |
-| 24 | Rename ServiceCategory → Division, ServiceType → JobType (frontend + backend) | Phase 1 | ⬜ |
-| 25 | CB service items filtered by job type in edit-mode add-line picker | Phase 5.6 | ⬜ |
-| 26 | Configurable roles on cost breakdown role estimates (`Role.showInCostBreakdown`) | Phase 5.7 | ⬜ |
-| 27 | Direct expenses editable on CB page | Phase 0.10 | ⬜ |
+| 23 | Separate `roles:*` permissions | Phase 0.15–0.16 | ✅ |
+| 24 | Rename ServiceCategory → Division, ServiceType → JobType (frontend + backend) | Phase 1 | ✅ |
+| 25 | CB service items filtered by job type in edit-mode add-line picker | Phase 5.6 | ✅ |
+| 26 | Configurable roles on cost breakdown role estimates (`Role.showInCostBreakdown`) | Phase 5.7 | ✅ |
+| 27 | Direct expenses editable on CB page | Phase 0.10 | ✅ |
 | 28 | PDF export symbols missing (Wingdings/Symbol fonts) | Phase 8.2 | ✅ |
 | 29 | DOCX export overflows to 2 pages | Phase 8.3 | ✅ |
-| 30 | Admin navigation restructure + global search indexing | Phase 0.17 | ⬜ |
+| 30 | Admin navigation restructure + global search indexing | Phase 0.17 | ✅ |
 
 ---
 

@@ -205,7 +205,7 @@ export function AdminGeneralSettingsView() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-foreground">Stuck Project Threshold</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    A project is flagged as "stuck" if it has had no activity for this many days.
+                    A project is flagged as &quot;stuck&quot; if it has had no activity for this many days.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -225,7 +225,7 @@ export function AdminGeneralSettingsView() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-foreground">Critical Stage Threshold</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    A pipeline stage is flagged as "critical" if leads spend more than this many days in it on average.
+                    A pipeline stage is flagged as &quot;critical&quot; if leads spend more than this many days in it on average.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">

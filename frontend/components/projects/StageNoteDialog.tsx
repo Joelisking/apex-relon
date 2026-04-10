@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -29,13 +29,18 @@ export function StageNoteDialog({
 }: StageNoteDialogProps) {
   const [note, setNote] = useState('');
 
-  // Reset note each time the dialog opens
-  useEffect(() => {
-    if (open) setNote('');
-  }, [open]);
+  const handleCancel = () => {
+    setNote('');
+    onCancel();
+  };
+
+  const handleConfirm = () => {
+    onConfirm(note.trim() || undefined);
+    setNote('');
+  };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onCancel(); }}>
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) handleCancel(); }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Move to {targetStatus}</DialogTitle>
@@ -55,8 +60,8 @@ export function StageNoteDialog({
         />
 
         <DialogFooter>
-          <Button variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button onClick={() => onConfirm(note.trim() || undefined)}>
+          <Button variant="outline" onClick={handleCancel}>Cancel</Button>
+          <Button onClick={handleConfirm}>
             Confirm
           </Button>
         </DialogFooter>

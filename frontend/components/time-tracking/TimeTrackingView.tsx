@@ -211,7 +211,7 @@ export function TimeTrackingView() {
   const totalHours = myEntries.reduce((s, e) => s + e.hours, 0);
   const billableHours = myEntries.filter((e) => e.billable).reduce((s, e) => s + e.hours, 0);
 
-  const sortedMyEntries = useMemo(() => sortEntries(myEntries, mySort), [myEntries, mySort]);
+  const sortedMyEntries = sortEntries(myEntries, mySort);
   const sortedAllEntries = useMemo(() => sortEntries(allEntries, teamSort), [allEntries, teamSort]);
   const sortedTimesheetRows = useMemo(() => {
     if (!timesheet) return [];
