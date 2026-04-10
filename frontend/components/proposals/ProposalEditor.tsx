@@ -61,6 +61,7 @@ export default function ProposalEditor() {
   const prefilledBreakdownId = searchParams.get('costBreakdownId');
   const prefilledTemplateId = searchParams.get('templateId');
   const prefilledProposalId = searchParams.get('proposalId');
+  const returnTo = searchParams.get('returnTo') ?? '';
 
   const [source, setSource] = useState<Source>(prefilledLeadId ? 'lead' : 'manual');
   const [search, setSearch] = useState('');
@@ -307,7 +308,7 @@ export default function ProposalEditor() {
       } catch { /* silent — user can download from Proposals list */ }
 
       toast.success(companyName ? `Proposal saved to ${companyName}'s files` : 'Proposal generated');
-      router.push('/proposals');
+      router.push(returnTo || '/proposals');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to generate proposal');
     } finally {
@@ -343,10 +344,10 @@ export default function ProposalEditor() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push('/proposals')}
+            onClick={() => router.push(returnTo || '/proposals')}
             className="gap-1.5 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
-            Proposals
+            {returnTo ? 'Back' : 'Proposals'}
           </Button>
           <span className="text-muted-foreground">|</span>
           <span className="text-sm font-semibold">New Proposal</span>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Loader2, CheckCircle2, FileText, Download, FilePlus, Save, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +42,9 @@ function formatDate(iso: string) {
 
 export default function CostBreakdownEditor({ breakdownId }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefilledLeadId = searchParams.get('leadId') ?? '';
+  const returnTo = searchParams.get('returnTo') ?? '';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -95,6 +98,11 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
         setJobTypes(fetchedTypes);
         setLeads(fetchedLeads);
         setRoles(fetchedRoles);
+
+        // Pre-fill lead from URL param when creating a new breakdown
+        if (!breakdownId && prefilledLeadId) {
+          setLeadId(prefilledLeadId);
+        }
 
         if (breakdownId) {
           const bd = await costBreakdownApi.getOne(breakdownId);
@@ -189,7 +197,10 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
         jobTypeId: jobTypeId || undefined,
         leadId: leadId || undefined,
       });
-      router.push(`/cost-breakdown/${created.id}`);
+      const dest = returnTo
+        ? `/cost-breakdown/${created.id}?returnTo=${encodeURIComponent(returnTo)}`
+        : `/cost-breakdown/${created.id}`;
+      router.push(dest);
     } catch (err) {
       console.error('Failed to create cost breakdown', err);
       toast.error('Failed to create cost breakdown');
@@ -269,10 +280,10 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push('/cost-breakdown')}
+            onClick={() => router.push(returnTo || '/cost-breakdown')}
             className="gap-1.5 text-muted-foreground hover:text-foreground mb-4">
             <ArrowLeft className="h-4 w-4" />
-            Cost Breakdown
+            {returnTo ? 'Back' : 'Cost Breakdown'}
           </Button>
           <h1 className="text-2xl font-display tracking-tight">New Cost Breakdown</h1>
           <p className="text-sm text-muted-foreground">Set up an estimating document for a prospective project</p>
@@ -364,10 +375,10 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push('/cost-breakdown')}
+            onClick={() => router.push(returnTo || '/cost-breakdown')}
             className="gap-1.5 text-muted-foreground hover:text-foreground -ml-2 mb-1">
             <ArrowLeft className="h-4 w-4" />
-            Cost Breakdown
+            {returnTo ? 'Back' : 'Cost Breakdown'}
           </Button>
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-display tracking-tight">{breakdown.title}</h1>
@@ -415,6 +426,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             onClick={() => {
               const params = new URLSearchParams({ costBreakdownId: breakdown.id });
               if (breakdown.leadId) params.set('leadId', breakdown.leadId);
+              if (returnTo) params.set('returnTo', returnTo);
               router.push(`/proposals/new?${params.toString()}`);
             }}>
             <FilePlus className="mr-1.5 h-3.5 w-3.5" />
@@ -700,6 +712,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             onClick={() => {
               const params = new URLSearchParams({ costBreakdownId: breakdown.id });
               if (breakdown.leadId) params.set('leadId', breakdown.leadId);
+              if (returnTo) params.set('returnTo', returnTo);
               router.push(`/proposals/new?${params.toString()}`);
             }}>
             <FilePlus className="mr-1.5 h-3.5 w-3.5" />

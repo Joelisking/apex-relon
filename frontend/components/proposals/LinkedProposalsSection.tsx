@@ -393,6 +393,17 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
         <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
           Cost Breakdowns{costBreakdowns.length > 0 ? ` (${costBreakdowns.length})` : ''}
         </p>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-[12px] gap-1.5"
+          onClick={() => {
+            const returnTo = encodeURIComponent(`/leads/${leadId}?tab=proposals`);
+            router.push(`/cost-breakdown/new?leadId=${leadId}&returnTo=${returnTo}`);
+          }}>
+          <Plus className="h-3 w-3" />
+          Create CB + Proposal
+        </Button>
       </div>
 
       {loadingBreakdowns ? (
