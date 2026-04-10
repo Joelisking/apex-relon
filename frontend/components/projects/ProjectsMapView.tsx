@@ -35,16 +35,38 @@ interface ProjectsMapViewProps {
   projects: Project[];
 }
 
+const ALL_STATUSES = ['Planning', 'Active', 'On Hold', 'Completed', 'Cancelled'];
+
 export function ProjectsMapView({ projects }: ProjectsMapViewProps) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mapStyle, setMapStyle] = useState<MapStyle>('streets');
+  const [activeStatuses, setActiveStatuses] = useState<Set<string>>(
+    () => new Set(['Planning', 'Active', 'On Hold']),
+  );
+
+  const toggleStatus = useCallback((status: string) => {
+    setActiveStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) {
+        next.delete(status);
+      } else {
+        next.add(status);
+      }
+      return next;
+    });
+  }, []);
+
+  const filteredProjects = useMemo(
+    () => projects.filter((p) => activeStatuses.has(p.status)),
+    [projects, activeStatuses],
+  );
 
   const located = useMemo(
-    () => projects.filter((p) => p.latitude != null && p.longitude != null),
-    [projects],
+    () => filteredProjects.filter((p) => p.latitude != null && p.longitude != null),
+    [filteredProjects],
   );
-  const unlocated = projects.length - located.length;
+  const unlocated = filteredProjects.length - located.length;
 
   const selectedProject = located.find((p) => p.id === selectedId) ?? null;
 
@@ -70,6 +92,39 @@ export function ProjectsMapView({ projects }: ProjectsMapViewProps) {
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Status filter bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground font-medium">Filter:</span>
+        {ALL_STATUSES.map((status) => (
+          <button
+            key={status}
+            onClick={() => toggleStatus(status)}
+            className={cn(
+              'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+              activeStatuses.has(status)
+                ? 'border-transparent text-white'
+                : 'border-border bg-muted/50 text-muted-foreground hover:bg-muted',
+            )}
+            style={activeStatuses.has(status) ? { backgroundColor: getStatusColor(status) } : undefined}
+          >
+            {status}
+            {activeStatuses.has(status) && (
+              <span className="text-[10px] opacity-80 ml-0.5">
+                ({projects.filter((p) => p.status === status).length})
+              </span>
+            )}
+          </button>
+        ))}
+        {activeStatuses.size < ALL_STATUSES.length && (
+          <button
+            onClick={() => setActiveStatuses(new Set(ALL_STATUSES))}
+            className="text-xs text-muted-foreground hover:text-foreground underline"
+          >
+            Show all
+          </button>
+        )}
+      </div>
+
       {unlocated > 0 && (
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           <AlertCircle className="h-4 w-4 shrink-0" />

@@ -27,7 +27,14 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl ca-certificates dumb-init \
     libreoffice-writer libreoffice-calc libreoffice-common \
-    default-jre-headless fonts-liberation \
+    default-jre-headless \
+    fonts-liberation \
+    fonts-open-symbols \
+    fonts-symbola \
+    fonts-freefont-ttf \
+    fonts-noto \
+    fontconfig \
+    && fc-cache -fv \
     && rm -rf /var/lib/apt/lists/*
 
 # Non-root user

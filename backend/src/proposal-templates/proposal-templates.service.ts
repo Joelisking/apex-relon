@@ -438,22 +438,27 @@ export class ProposalTemplatesService implements OnModuleInit {
     const firstName = dto.firstName ?? crmFirstName;
     const lastName = dto.lastName ?? crmLastName;
 
+    // Guard against excessively long values that would push the signing block
+    // onto page 2 in the template (DOCX overflow bug).
+    const trunc = (s: string | undefined, max: number) =>
+      s && s.length > max ? `${s.slice(0, max - 1)}…` : (s ?? '');
+
     const data: ProposalData = {
       firstName,
       lastName,
-      fullName: `${firstName} ${lastName}`.trim(),
+      fullName: trunc(`${firstName} ${lastName}`.trim(), 60),
       salutation: dto.salutation ?? '',
-      companyName,
-      address: dto.address ?? derivedAddress,
-      suite: dto.suite ?? '',
-      city: dto.city ?? derivedCity,
+      companyName: trunc(companyName, 55),
+      address: trunc(dto.address ?? derivedAddress, 70),
+      suite: trunc(dto.suite ?? '', 20),
+      city: trunc(dto.city ?? derivedCity, 40),
       state: dto.state ?? derivedState,
       zip: dto.zip ?? derivedZip,
-      projectName: dto.projectName ?? derivedProjectName,
-      projectAddress: dto.projectAddress ?? '',
+      projectName: trunc(dto.projectName ?? derivedProjectName, 70),
+      projectAddress: trunc(dto.projectAddress ?? '', 70),
       projectDescription: '',
       totalAmount: dto.totalAmount ?? '',
-      timeline: dto.timeline ?? '',
+      timeline: trunc(dto.timeline ?? '', 80),
       proposalDate: formatProposalDate(today),
       month: monthName(today),
       day: String(today.getDate()),

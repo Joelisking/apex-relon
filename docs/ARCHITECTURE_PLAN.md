@@ -698,9 +698,9 @@ Do before Phase 2 (financials) because Phase 2 depends on `payGradeId` replacing
 
 | # | Task | Status |
 |---|---|---|
-| 8.1 | Map filter by project status (`ProjectsMapView.tsx` — client-side filter bar over fetched project list) | ⬜ |
-| 8.2 | Export bug: install symbol fonts in Docker container (Option A) or pre-process `<w:sym>` → Unicode (Option B) | ⬜ |
-| 8.3 | Export bug: DOCX two-page overflow — audit template last N paragraphs, verify `setParaText()` preserves `<w:spacing>` | ⬜ |
+| 8.1 | Map filter by project status (`ProjectsMapView.tsx` — client-side filter bar over fetched project list) | ✅ |
+| 8.2 | Export bug: install symbol fonts in Docker container (Option A) or pre-process `<w:sym>` → Unicode (Option B) | ✅ |
+| 8.3 | Export bug: DOCX two-page overflow — audit template last N paragraphs, verify `setParaText()` preserves `<w:spacing>` | ✅ |
 
 ---
 
@@ -735,8 +735,8 @@ Do before Phase 2 (financials) because Phase 2 depends on `payGradeId` replacing
 | 25 | CB service items filtered by job type in edit-mode add-line picker | Phase 5.6 | ⬜ |
 | 26 | Configurable roles on cost breakdown role estimates (`Role.showInCostBreakdown`) | Phase 5.7 | ⬜ |
 | 27 | Direct expenses editable on CB page | Phase 0.10 | ⬜ |
-| 28 | PDF export symbols missing (Wingdings/Symbol fonts) | Phase 8.2 | ⬜ |
-| 29 | DOCX export overflows to 2 pages | Phase 8.3 | ⬜ |
+| 28 | PDF export symbols missing (Wingdings/Symbol fonts) | Phase 8.2 | ✅ |
+| 29 | DOCX export overflows to 2 pages | Phase 8.3 | ✅ |
 | 30 | Admin navigation restructure + global search indexing | Phase 0.17 | ⬜ |
 
 ---

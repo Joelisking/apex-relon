@@ -40,6 +40,56 @@ const DOCPROPERTY_MAP: Record<string, keyof ProposalData> = {
   Timeline: 'timeline',
 };
 
+// ── Symbol font → Unicode mapping ─────────────────────────────────────────────
+// Maps common <w:sym> glyph codes (hex char codes in the Private Use Area) to
+// their Unicode equivalents so LibreOffice can render them without requiring
+// the original symbol font (Wingdings, Symbol, etc.) to be installed.
+
+const WINGDINGS_MAP: Record<string, string> = {
+  'F028': '✔',  // check mark
+  'F04E': '✕',  // x mark
+  'F050': '●',  // filled circle
+  'F0B7': '•',  // bullet
+  'F076': '◆',  // black diamond
+  'F0FC': '✓',  // check mark
+  'F0FE': '☑',  // ballot box with check
+  'F036': '★',  // star
+  'F025': '⊲',  // left-pointing triangle
+  'F027': '▸',  // right-pointing triangle
+  'F0D8': '➜',  // right arrow
+  'F0E0': '✉',  // envelope
+  'F06E': '⌚',  // watch / time
+  'F09F': '➤',  // filled right arrow
+};
+
+const SYMBOL_MAP: Record<string, string> = {
+  'F0B7': '·',  // middle dot
+  'F0A8': '»',  // double right arrow
+  'F0B8': '÷',  // division sign
+  'F0B4': '×',  // multiplication sign (Symbol font)
+};
+
+/**
+ * Convert `<w:sym w:font="..." w:char="..."/>` elements to plain Unicode text
+ * runs so they render correctly even when the symbol font is not installed.
+ */
+export function preprocessSymbolElements(xml: string): string {
+  return xml.replace(
+    /<w:sym\s+w:font="([^"]+)"\s+w:char="([0-9A-Fa-f]+)"[^>]*\/>/g,
+    (_match, font: string, charCode: string) => {
+      const code = charCode.toUpperCase();
+      let unicode: string | undefined;
+      if (font.toLowerCase().includes('wingdings')) {
+        unicode = WINGDINGS_MAP[code];
+      } else if (font.toLowerCase() === 'symbol') {
+        unicode = SYMBOL_MAP[code];
+      }
+      if (!unicode) return _match; // keep original if unmapped
+      return `<w:t>${escapeXml(unicode)}</w:t>`;
+    },
+  );
+}
+
 function escapeXml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -398,6 +448,8 @@ export function fillDocx(
     if (!xmlFile) continue;
 
     let xml = xmlFile.asText();
+    // 0. Pre-process <w:sym> elements → Unicode so symbol fonts aren't required
+    xml = preprocessSymbolElements(xml);
     // 1. Merge split highlighted runs so string patterns match
     xml = mergeAdjacentHighlightedRuns(xml);
     // 2. Paragraph overrides (document only — before DOCPROPERTY so brackets still fill)
