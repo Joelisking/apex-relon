@@ -699,6 +699,7 @@ export function extractParagraphs(templateBuffer: Buffer): string[] {
   if (!xmlFile) return [];
 
   let xml = xmlFile.asText();
+  xml = stripKnownTemplateGarbage(xml);
   xml = mergeAdjacentHighlightedRuns(xml);
   xml = normalizeDocpropertyFields(xml);
 
