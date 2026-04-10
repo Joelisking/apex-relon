@@ -427,6 +427,26 @@ const XML_FILES = [
 ];
 
 /**
+ * Remove known garbage left in the Apex proposal templates.
+ *
+ * Every template with a "Printed Name:" signature line ends that paragraph
+ * with a stray run of the form
+ *   <w:tab/><w:t>P</w:t></w:r></w:p>
+ * which surfaces as a stray "P" character at the end of the line. It is not
+ * a DOCPROPERTY field, so the stale-cache clearing in replaceDocpropertyFields()
+ * can't remove it. We anchor on the unique "tab+P at the very end of a
+ * paragraph" pattern — no legitimate paragraph in any template ends with a
+ * literal single "P" preceded by a tab — and strip the <w:t>P</w:t> while
+ * leaving the trailing tab in place so paragraph metrics don't shift.
+ */
+function stripKnownTemplateGarbage(xml: string): string {
+  return xml.replace(
+    /(<w:tab\/>)<w:t[^>]*>P<\/w:t>(<\/w:r>\s*<\/w:p>)/g,
+    '$1$2',
+  );
+}
+
+/**
  * Fill a .docx template buffer with proposal data.
  * Handles DOCPROPERTY fields, plain bracket placeholders, dynamic custom
  * brackets, positional table-cell overrides, and full paragraph overrides.
@@ -453,7 +473,9 @@ export function fillDocx(
     if (!xmlFile) continue;
 
     let xml = xmlFile.asText();
-    // 0. Pre-process <w:sym> elements → Unicode so symbol fonts aren't required
+    // 0. Strip known template garbage (e.g. stray "P" after Printed Name lines)
+    xml = stripKnownTemplateGarbage(xml);
+    // 1. Pre-process <w:sym> elements → Unicode so symbol fonts aren't required
     xml = preprocessSymbolElements(xml);
     // 1. Merge split highlighted runs so string patterns match
     xml = mergeAdjacentHighlightedRuns(xml);
@@ -488,27 +510,46 @@ export function fillDocx(
 // ─── LibreOffice conversion helpers ─────────────────────────────────────────
 
 /**
- * Before converting a .docx to PDF via LibreOffice, slightly reduce the bottom
- * page margin so that text reflow differences between Word and LibreOffice's
- * layout engine (different line-break tables, kerning, etc.) don't push content
- * that fits on N pages in Word onto N+1 pages in LibreOffice.
+ * Before converting a .docx to PDF via LibreOffice, reduce the page margins
+ * so that text-reflow differences between Word and LibreOffice's layout engine
+ * (different line-break tables, kerning, font fallback, etc.) don't push
+ * content that fits on N pages in Word onto N+1 pages in LibreOffice.
  *
- * 432 twips = 0.3 inches. The minimum bottom margin is clamped to 360 twips
- * (0.25 inch) so the change is invisible in practice but eliminates the overflow.
+ * Bottom: -720 twips (0.5"), floor 360 twips (0.25"). Most templates leave
+ *   plenty of bottom whitespace, so a half-inch reclaim is invisible.
+ * Top:    -288 twips (0.2"), floor 720 twips (0.5"). Smaller because the
+ *   header watermark/letterhead sits closer to the top edge.
  */
 export function patchDocxMarginsForLibreOffice(buffer: Buffer): Buffer {
   const zip = new PizZip(buffer);
   const docXml = zip.files['word/document.xml'];
   if (!docXml) return buffer;
 
-  const REDUCTION = 432; // 0.3 inches
+  const BOTTOM_REDUCTION = 720; // 0.5 inches
   const MIN_BOTTOM = 360; // floor: 0.25 inches
+  const TOP_REDUCTION = 288; // 0.2 inches
+  const MIN_TOP = 720; // floor: 0.5 inches
+
+  const shrinkAttr = (
+    pgMarTag: string,
+    attr: string,
+    reduction: number,
+    floor: number,
+  ): string =>
+    pgMarTag.replace(
+      new RegExp(`(\\s${attr}=")(\\d+)(")`),
+      (_m, open: string, value: string, close: string) => {
+        const reduced = Math.max(floor, parseInt(value, 10) - reduction);
+        return `${open}${reduced}${close}`;
+      },
+    );
 
   const patched = docXml.asText().replace(
-    /(<w:pgMar\b[^>]* w:bottom=")(\d+)(")/g,
-    (_match, before: string, value: string, after: string) => {
-      const reduced = Math.max(MIN_BOTTOM, parseInt(value, 10) - REDUCTION);
-      return `${before}${reduced}${after}`;
+    /<w:pgMar\b[^/]*\/>/g,
+    (pgMarTag) => {
+      let updated = shrinkAttr(pgMarTag, 'w:bottom', BOTTOM_REDUCTION, MIN_BOTTOM);
+      updated = shrinkAttr(updated, 'w:top', TOP_REDUCTION, MIN_TOP);
+      return updated;
     },
   );
 

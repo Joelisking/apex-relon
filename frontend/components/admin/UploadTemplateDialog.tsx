@@ -92,15 +92,15 @@ export default function UploadTemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-xl overflow-hidden">
         <DialogHeader>
           <DialogTitle>Upload Proposal Template</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 py-2 min-w-0">
           {/* File picker */}
           <div>
-            <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold block mb-1.5">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-1.5">
               Template File (.docx)
             </Label>
             <input
@@ -141,7 +141,7 @@ export default function UploadTemplateDialog({
 
           {/* Name */}
           <div>
-            <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold block mb-1.5">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-1.5">
               Template Name
             </Label>
             <Input
@@ -154,7 +154,7 @@ export default function UploadTemplateDialog({
 
           {/* Description */}
           <div>
-            <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold block mb-1.5">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-1.5">
               Description{' '}
               <span className="normal-case font-normal text-muted-foreground">(optional)</span>
             </Label>
@@ -168,7 +168,7 @@ export default function UploadTemplateDialog({
 
           {/* Service Type */}
           <div>
-            <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold block mb-1.5">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-1.5">
               Service Type{' '}
               <span className="normal-case font-normal text-muted-foreground">(optional)</span>
             </Label>
