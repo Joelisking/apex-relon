@@ -106,14 +106,16 @@ export function CreatableSelect({
   }
 
   // If the current value doesn't match any loaded option, show placeholder instead
-  const resolvedValue = options.find((o) => o.label === value) ? value : undefined;
+  const resolvedValue = options.find((o) => o.label === value)
+    ? value
+    : undefined;
 
   return (
     <Select onValueChange={handleValueChange} value={resolvedValue}>
       <SelectTrigger>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent className="max-h-60">
+      <SelectContent className="max-h-80">
         <SelectItem value={ADD_NEW_SENTINEL}>
           <span className="flex items-center gap-2 text-primary font-medium">
             <Plus className="h-3.5 w-3.5" />
