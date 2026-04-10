@@ -221,15 +221,18 @@ export class ProposalTemplatesService implements OnModuleInit {
     });
   }
 
-  async acceptProposal(proposalId: string, contractedValue?: number) {
+  async acceptProposal(proposalId: string, contractedValue?: number, invoicedValue?: number) {
     const proposal = await this.prisma.proposal.findUnique({
       where: { id: proposalId },
-      include: { lead: { select: { id: true } } },
+      include: {
+        lead: { select: { id: true } },
+        costBreakdown: { select: { id: true } },
+      },
     });
     if (!proposal) throw new NotFoundException('Proposal not found');
 
-    // If a contracted value was supplied and the proposal has a lead, write it to the linked project
-    if (contractedValue !== undefined && proposal.leadId) {
+    // Write contractedValue + invoicedValue to the linked project if present
+    if ((contractedValue !== undefined || invoicedValue !== undefined) && proposal.leadId) {
       const project = await this.prisma.project.findFirst({
         where: { leadId: proposal.leadId },
         select: { id: true },
@@ -237,9 +240,20 @@ export class ProposalTemplatesService implements OnModuleInit {
       if (project) {
         await this.prisma.project.update({
           where: { id: project.id },
-          data: { contractedValue },
+          data: {
+            ...(contractedValue !== undefined && { contractedValue }),
+            ...(invoicedValue !== undefined && { invoicedValue }),
+          },
         });
       }
+    }
+
+    // Lock the cost breakdown so it can't be edited after acceptance
+    if (proposal.costBreakdownId) {
+      await this.prisma.costBreakdown.update({
+        where: { id: proposal.costBreakdownId },
+        data: { benchmarkLockedAt: new Date() },
+      });
     }
 
     return this.prisma.proposal.update({

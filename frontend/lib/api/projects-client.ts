@@ -37,6 +37,7 @@ export interface Project {
     company: string;
   };
   contractedValue: number;
+  invoicedValue?: number | null;
   status: string;
   statusNote?: string | null;
   endOfProjectValue?: number;
@@ -48,6 +49,7 @@ export interface Project {
   riskStatus?: string;
   estimatedRevenue?: number;
   totalCost?: number;
+  primaryCostBreakdownId?: string | null;
   jobTypeId?: string | null;
   jobType?: { id: string; name: string; division?: { id: string; name: string } | null } | null;
   categoryIds?: string[];
@@ -148,6 +150,20 @@ export interface CreateProjectDto {
   activeOptionalStages?: string[];
   statusNote?: string | null;
   costSegments?: { name: string; amount: number; sortOrder?: number }[];
+}
+
+export interface ProjectProfitability {
+  projectId: string;
+  revenue: number;
+  laborCost: number;
+  directCost: number;
+  totalCost: number;
+  grossProfit: number;
+  margin: number;
+  proposedHours: number;
+  actualHours: number;
+  hoursVariance: number;
+  laborByUser: { userId: string; userName: string; hours: number; cost: number }[];
 }
 
 // Client-side only - synchronous cookie reading
@@ -586,5 +602,14 @@ export const projectsApi = {
       { method: 'DELETE', headers: authHeaders() },
     );
     if (!response.ok) throw new Error('Failed to remove service item');
+  },
+
+  async getProfitability(projectId: string): Promise<ProjectProfitability> {
+    const response = await fetch(
+      `${API_BASE}/projects/${projectId}/profitability`,
+      { headers: authHeaders() },
+    );
+    if (!response.ok) throw new Error('Failed to fetch profitability');
+    return response.json();
   },
 };

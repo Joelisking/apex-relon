@@ -26,6 +26,7 @@ import {
 import { format, differenceInDays } from 'date-fns';
 import { CostLogsSection } from './CostLogsSection';
 import { ProjectCostSegmentsSection } from './ProjectCostSegmentsSection';
+import { ProjectFinancialsSummary } from './ProjectFinancialsSummary';
 import { ProjectTimeTrackingSection } from './ProjectTimeTrackingSection';
 import { LinkedTasksSection } from '../tasks/LinkedTasksSection';
 import { LinkedQuotesSection } from '../quotes/LinkedQuotesSection';
@@ -261,14 +262,9 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
 
   // ── financials ───────────────────────────────────────────────────────────
   const contractedValue = project.contractedValue ?? 0;
-  const rawEndOfProjectValue = project.endOfProjectValue ?? null;
-  const endOfProjectValue = rawEndOfProjectValue ?? contractedValue;
   const cost = project.totalCost ?? 0;
-  const variance = rawEndOfProjectValue != null ? rawEndOfProjectValue - contractedValue : null;
-  const variancePercent = variance != null && contractedValue > 0 ? (variance / contractedValue) * 100 : null;
-  const profit = endOfProjectValue - cost;
-  const margin = endOfProjectValue > 0 ? (profit / endOfProjectValue) * 100 : 0;
-  const revenue = project.estimatedRevenue ?? project.contractedValue;
+  const profit = contractedValue - cost;
+  const margin = contractedValue > 0 ? (profit / contractedValue) * 100 : 0;
 
   const lastStatusEntry = project.statusHistory && project.statusHistory.length > 0
     ? project.statusHistory[project.statusHistory.length - 1]
@@ -331,7 +327,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
         riskClasses={risk.classes}
         RiskIcon={RiskIcon}
         contractedValue={contractedValue}
-        rawEndOfProjectValue={rawEndOfProjectValue}
+        rawEndOfProjectValue={null}
         margin={margin}
         cost={cost}
         profit={profit}
@@ -452,6 +448,11 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
 
             <TabsContent value="financials" className="mt-0">
               <div className="space-y-6">
+                <ProjectFinancialsSummary
+                  projectId={project.id}
+                  contractedValue={contractedValue}
+                  invoicedValue={project.invoicedValue}
+                />
                 {(project.costSegments?.length ?? 0) > 0 && (
                   <ProjectCostSegmentsSection
                     segments={project.costSegments!}
@@ -461,7 +462,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
                 <CostLogsSection
                   projectId={project.id}
                   costLogs={costLogs}
-                  estimatedRevenue={revenue}
+                  estimatedRevenue={contractedValue}
                   totalCost={project.totalCost ?? 0}
                   onUpdated={refreshProject}
                   canEditCosts={canEditCosts}

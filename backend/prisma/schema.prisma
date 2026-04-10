@@ -304,6 +304,7 @@ model Project {
   county            String[]
   status            String
   contractedValue   Float
+  invoicedValue     Float?
   endOfProjectValue Float?
   startDate         DateTime?
   completedDate     DateTime?
@@ -321,6 +322,7 @@ model Project {
   estimatedRevenue     Float?
   totalCost         Float                  @default(0)
   projectManagerId  String?
+  primaryCostBreakdownId String?            @unique
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
   activities        Activity[]
@@ -335,7 +337,8 @@ model Project {
   budget            ProjectBudget?         @relation("ProjectBudget")
   quotes            Quote[]                @relation("ProjectQuotes")
   assignments       ProjectAssignment[]
-  costBreakdowns    CostBreakdown[]
+  costBreakdowns    CostBreakdown[]        @relation("ProjectBreakdowns")
+  primaryCostBreakdown CostBreakdown?      @relation("PrimaryBreakdown", fields: [primaryCostBreakdownId], references: [id], onDelete: SetNull)
   costSegments        ProjectCostSegment[]
   projectServiceItems ProjectServiceItem[]
 
@@ -1217,8 +1220,10 @@ model CostBreakdown {
   perDiemQty    Float?
   perDiemRate   Float?
   roundedFee    Float?
+  benchmarkLockedAt DateTime?
 
-  project     Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  project     Project?     @relation("ProjectBreakdowns", fields: [projectId], references: [id], onDelete: SetNull)
+  primaryOf   Project?     @relation("PrimaryBreakdown")
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
   jobType     JobType?     @relation(fields: [jobTypeId], references: [id], onDelete: SetNull)
   createdBy   User         @relation("CostBreakdownCreation", fields: [createdById], references: [id])

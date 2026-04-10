@@ -114,11 +114,11 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
     }
   };
 
-  const handleAcceptConfirm = async (contractedValue: number | undefined) => {
+  const handleAcceptConfirm = async (contractedValue: number | undefined, invoicedValue: number | undefined) => {
     if (!acceptProposal) return;
     setAcceptingId(acceptProposal.id);
     try {
-      await proposalTemplatesApi.acceptProposal(acceptProposal.id, contractedValue);
+      await proposalTemplatesApi.acceptProposal(acceptProposal.id, contractedValue, invoicedValue);
       invalidate();
       toast.success('Proposal accepted');
       setAcceptProposal(null);

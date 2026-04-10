@@ -17,7 +17,7 @@ import type { Proposal } from '@/lib/api/proposal-templates-client';
 interface AcceptProposalDialogProps {
   proposal: Proposal | null;
   onClose: () => void;
-  onConfirm: (contractedValue: number | undefined) => Promise<void>;
+  onConfirm: (contractedValue: number | undefined, invoicedValue: number | undefined) => Promise<void>;
 }
 
 function parseAmount(raw: string | null | undefined): number | undefined {
@@ -40,21 +40,25 @@ export function AcceptProposalDialog({
   onClose,
   onConfirm,
 }: AcceptProposalDialogProps) {
-  const [value, setValue] = useState('');
+  const [contractedValue, setContractedValue] = useState('');
+  const [invoicedValue, setInvoicedValue] = useState('');
   const [saving, setSaving] = useState(false);
 
   const proposalTotal = parseAmount(proposal?.formSnapshot?.totalAmount);
 
   useEffect(() => {
     if (!proposal) return;
-    setValue(proposalTotal !== undefined ? String(proposalTotal) : '');
+    const defaultVal = proposalTotal !== undefined ? String(proposalTotal) : '';
+    setContractedValue(defaultVal);
+    setInvoicedValue(defaultVal);
   }, [proposal?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleConfirm = async () => {
     setSaving(true);
     try {
-      const numeric = parseFloat(value.replace(/[^0-9.]/g, ''));
-      await onConfirm(isNaN(numeric) ? undefined : numeric);
+      const cv = parseFloat(contractedValue.replace(/[^0-9.]/g, ''));
+      const iv = parseFloat(invoicedValue.replace(/[^0-9.]/g, ''));
+      await onConfirm(isNaN(cv) ? undefined : cv, isNaN(iv) ? undefined : iv);
     } finally {
       setSaving(false);
     }
@@ -70,7 +74,7 @@ export function AcceptProposalDialog({
         <div className="space-y-4 py-1">
           <p className="text-sm text-muted-foreground">
             Mark <span className="font-medium text-foreground">{proposal?.title}</span> as accepted
-            and set the contracted value on the linked project.
+            and set the financial values on the linked project.
           </p>
 
           {proposalTotal !== undefined && (
@@ -87,14 +91,33 @@ export function AcceptProposalDialog({
                 type="number"
                 min={0}
                 step={0.01}
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
+                value={contractedValue}
+                onChange={(e) => setContractedValue(e.target.value)}
                 placeholder={proposalTotal !== undefined ? String(proposalTotal) : '0'}
                 className="pl-7"
               />
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Sets the project&apos;s contracted value. Leave blank to skip.
+              Locked value at proposal acceptance. Leave blank to skip.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Invoiced Value</Label>
+            <div className="relative">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground text-sm">$</span>
+              <Input
+                type="number"
+                min={0}
+                step={0.01}
+                value={invoicedValue}
+                onChange={(e) => setInvoicedValue(e.target.value)}
+                placeholder={proposalTotal !== undefined ? String(proposalTotal) : '0'}
+                className="pl-7"
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Amount to be invoiced. Can be updated later. Leave blank to skip.
             </p>
           </div>
         </div>

@@ -181,7 +181,7 @@ export class DashboardService {
           ],
           ...pf,
         },
-        _sum: { endOfProjectValue: true },
+        _sum: { contractedValue: true },
       }),
       // Revenue from projects completed this quarter
       this.prisma.project.aggregate({
@@ -193,7 +193,7 @@ export class DashboardService {
           ],
           ...pf,
         },
-        _sum: { endOfProjectValue: true },
+        _sum: { contractedValue: true },
       }),
       // Projects at risk (minimal fields)
       this.prisma.project.findMany({
@@ -254,7 +254,6 @@ export class DashboardService {
       const projectsWithClients = await this.prisma.project.findMany({
         where: { status: 'Completed', ...pf },
         select: {
-          endOfProjectValue: true,
           contractedValue: true,
           client: { select: { id: true, name: true, status: true } },
         },
@@ -265,8 +264,7 @@ export class DashboardService {
       >();
       for (const proj of projectsWithClients) {
         if (!proj.client) continue;
-        const revenue =
-          proj.endOfProjectValue ?? proj.contractedValue ?? 0;
+        const revenue = proj.contractedValue ?? 0;
         const entry = clientMap.get(proj.client.id);
         if (entry) {
           entry.revenue += revenue;
@@ -316,9 +314,9 @@ export class DashboardService {
 
     // ── Revenue ───────────────────────────────────────────────────────
     const monthlyRevenue =
-      monthlyRevenueAgg._sum.endOfProjectValue ?? 0;
+      monthlyRevenueAgg._sum.contractedValue ?? 0;
     const quarterlyRevenue =
-      quarterlyRevenueAgg._sum.endOfProjectValue ?? 0;
+      quarterlyRevenueAgg._sum.contractedValue ?? 0;
 
     // ── Client metrics ────────────────────────────────────────────────
     const topClients = revenueByClient.slice(0, 5);

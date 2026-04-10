@@ -110,8 +110,9 @@ export class ProposalTemplatesController {
   acceptProposal(
     @Param('id') id: string,
     @Body('contractedValue') contractedValue?: number,
+    @Body('invoicedValue') invoicedValue?: number,
   ) {
-    return this.service.acceptProposal(id, contractedValue);
+    return this.service.acceptProposal(id, contractedValue, invoicedValue);
   }
 
   @Delete('proposals/:id')

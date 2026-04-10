@@ -3,10 +3,14 @@ import { PrismaService } from '../database/prisma.service';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { CreateUserRateDto } from './dto/create-user-rate.dto';
 import { CreateProjectBudgetDto } from './dto/create-project-budget.dto';
+import { ProjectsProfitabilityService } from '../projects/projects-profitability.service';
 
 @Injectable()
 export class TimeTrackingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly profitabilityService: ProjectsProfitabilityService,
+  ) {}
 
   // ─── Time Entries ─────────────────────────────────────────────────────────
 
@@ -26,7 +30,7 @@ export class TimeTrackingService {
     const hourlyRate = dto.hourlyRate ?? rate?.rate ?? 0;
     const totalCost = dto.hours * hourlyRate;
 
-    return this.prisma.timeEntry.create({
+    const entry = await this.prisma.timeEntry.create({
       data: {
         userId: dto.userId,
         submittedById: dto.submittedById ?? null,
@@ -50,6 +54,12 @@ export class TimeTrackingService {
         workCode: { select: { id: true, code: true, name: true, parentCode: true, isMainTask: true } },
       },
     });
+
+    if (dto.projectId) {
+      await this.profitabilityService.recalculateProjectCost(dto.projectId);
+    }
+
+    return entry;
   }
 
   async getEntryById(id: string) {
@@ -95,7 +105,7 @@ export class TimeTrackingService {
     const hours = data.hours ?? entry.hours;
     const hourlyRate = data.hourlyRate ?? entry.hourlyRate ?? 0;
 
-    return this.prisma.timeEntry.update({
+    const updated = await this.prisma.timeEntry.update({
       where: { id },
       data: {
         ...(data.date && { date: new Date(`${data.date.split('T')[0]}T12:00:00.000Z`) }),
@@ -110,10 +120,25 @@ export class TimeTrackingService {
         totalCost: hours * hourlyRate,
       },
     });
+
+    // Recalculate cost for old project (if projectId changed) and new project
+    const affectedProjectId = data.projectId ?? entry.projectId;
+    if (affectedProjectId) {
+      await this.profitabilityService.recalculateProjectCost(affectedProjectId);
+    }
+    if (data.projectId && data.projectId !== entry.projectId && entry.projectId) {
+      await this.profitabilityService.recalculateProjectCost(entry.projectId);
+    }
+
+    return updated;
   }
 
   async deleteEntry(id: string) {
+    const entry = await this.prisma.timeEntry.findUnique({ where: { id }, select: { projectId: true } });
     await this.prisma.timeEntry.delete({ where: { id } });
+    if (entry?.projectId) {
+      await this.profitabilityService.recalculateProjectCost(entry.projectId);
+    }
   }
 
   // ─── User Rates ───────────────────────────────────────────────────────────

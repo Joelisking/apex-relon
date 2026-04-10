@@ -22,6 +22,7 @@ import { ProjectsCostService } from './projects-cost.service';
 import { ProjectsAssignmentService } from './projects-assignment.service';
 import { ProjectsBulkService } from './projects-bulk.service';
 import { ProjectsServiceItemsService } from './projects-service-items.service';
+import { ProjectsProfitabilityService } from './projects-profitability.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { CreateCostLogDto } from './dto/create-cost-log.dto';
@@ -37,6 +38,7 @@ export class ProjectsController {
     private readonly projectsAssignmentService: ProjectsAssignmentService,
     private readonly projectsBulkService: ProjectsBulkService,
     private readonly projectsServiceItemsService: ProjectsServiceItemsService,
+    private readonly profitabilityService: ProjectsProfitabilityService,
   ) {}
 
   @Get()
@@ -140,6 +142,14 @@ export class ProjectsController {
     @Param('costId') costId: string,
   ) {
     return this.projectsCostService.removeCostLog(id, costId);
+  }
+
+  // --- Profitability ---
+
+  @Get(':id/profitability')
+  @Permissions('projects:view')
+  getProfitability(@Param('id') id: string) {
+    return this.profitabilityService.compute(id);
   }
 
   // --- Crew Assignments ---

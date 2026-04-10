@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateCostLogDto } from './dto/create-cost-log.dto';
+import { ProjectsProfitabilityService } from './projects-profitability.service';
 
 @Injectable()
 export class ProjectsCostService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly profitabilityService: ProjectsProfitabilityService,
+  ) {}
 
   async getCostLogs(projectId: string) {
     const project = await this.prisma.project.findUnique({
@@ -45,7 +49,7 @@ export class ProjectsCostService {
       },
     });
 
-    await this.recalculateTotalCost(projectId);
+    await this.profitabilityService.recalculateProjectCost(projectId);
 
     return costLog;
   }
@@ -61,20 +65,8 @@ export class ProjectsCostService {
 
     await this.prisma.costLog.delete({ where: { id: costId } });
 
-    await this.recalculateTotalCost(projectId);
+    await this.profitabilityService.recalculateProjectCost(projectId);
 
     return { message: 'Cost log deleted successfully' };
-  }
-
-  private async recalculateTotalCost(projectId: string) {
-    const result = await this.prisma.costLog.aggregate({
-      where: { projectId },
-      _sum: { amount: true },
-    });
-
-    await this.prisma.project.update({
-      where: { id: projectId },
-      data: { totalCost: result._sum.amount || 0 },
-    });
   }
 }

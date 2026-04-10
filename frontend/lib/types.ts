@@ -378,6 +378,7 @@ export interface Project {
   lead?: { id: string; contactName: string; company: string };
   status: string;
   contractedValue: number;
+  invoicedValue?: number | null;
   endOfProjectValue?: number;
   startDate?: string;
   completedDate?: string;
@@ -388,6 +389,7 @@ export interface Project {
   folderPath?: string | null;
   estimatedRevenue?: number;
   totalCost?: number;
+  primaryCostBreakdownId?: string | null;
   jobTypeId?: string | null;
   jobType?: { id: string; name: string; division?: { id: string; name: string } | null } | null;
   jobTypeIds?: string[];
@@ -994,6 +996,7 @@ export interface CostBreakdown {
   perDiemQty?: number | null;
   perDiemRate?: number | null;
   roundedFee?: number | null;
+  benchmarkLockedAt?: string | null;
   jobType?: { id: string; name: string } | null;
   project?: { id: string; name: string } | null;
   lead?: { id: string; company: string; contactName: string } | null;

@@ -191,10 +191,10 @@ export const proposalTemplatesApi = {
     });
   },
 
-  acceptProposal(id: string, contractedValue?: number): Promise<Proposal> {
+  acceptProposal(id: string, contractedValue?: number, invoicedValue?: number): Promise<Proposal> {
     return apiFetch<Proposal>(`/proposal-templates/proposals/${id}/accept`, {
       method: 'PATCH',
-      body: JSON.stringify({ contractedValue }),
+      body: JSON.stringify({ contractedValue, invoicedValue }),
     });
   },
 
