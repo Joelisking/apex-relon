@@ -32,6 +32,8 @@ export class SettingsService implements OnModuleInit {
       this.seedServiceCategories(),
       this.seedCounties(),
       this.seedPayGrades(),
+      this.seedActivityTypes(),
+      this.seedMeetingTypes(),
     ]);
     // Run after categories/types are seeded (sequential, not parallel)
     await this.seedServiceItemPhases();
@@ -851,5 +853,100 @@ export class SettingsService implements OnModuleInit {
       });
     }
     this.logger.log(`Pay grades seeded (${PAY_GRADES.length} entries).`);
+  }
+
+  private async seedActivityTypes() {
+    const OPTIONS = [
+      {
+        value: 'call',
+        label: 'Call',
+        sortOrder: 0,
+        metadata: {
+          icon: 'Phone',
+          chipClasses: 'text-blue-700 bg-blue-50 border-blue-200',
+          nodeClass: 'bg-blue-400',
+          hasMeetingType: false,
+        },
+      },
+      {
+        value: 'email',
+        label: 'Email',
+        sortOrder: 1,
+        metadata: {
+          icon: 'Mail',
+          chipClasses: 'text-purple-700 bg-purple-50 border-purple-200',
+          nodeClass: 'bg-purple-400',
+          hasMeetingType: false,
+        },
+      },
+      {
+        value: 'meeting',
+        label: 'Meeting',
+        sortOrder: 2,
+        metadata: {
+          icon: 'Users',
+          chipClasses: 'text-green-700 bg-green-50 border-green-200',
+          nodeClass: 'bg-green-400',
+          hasMeetingType: true,
+        },
+      },
+      {
+        value: 'site_visit',
+        label: 'Site Visit',
+        sortOrder: 3,
+        metadata: {
+          icon: 'Globe',
+          chipClasses: 'text-orange-700 bg-orange-50 border-orange-200',
+          nodeClass: 'bg-orange-400',
+          hasMeetingType: false,
+        },
+      },
+      {
+        value: 'note',
+        label: 'Note',
+        sortOrder: 4,
+        metadata: {
+          icon: 'MessageCircle',
+          chipClasses: 'text-yellow-700 bg-yellow-50 border-yellow-200',
+          nodeClass: 'bg-yellow-400',
+          hasMeetingType: false,
+        },
+      },
+    ];
+
+    const existingCount = await this.prisma.dropdownOption.count({
+      where: { category: 'activity_type' },
+    });
+    if (existingCount >= OPTIONS.length) return;
+
+    for (const opt of OPTIONS) {
+      await this.prisma.dropdownOption.upsert({
+        where: { category_value: { category: 'activity_type', value: opt.value } },
+        update: {},
+        create: { category: 'activity_type', ...opt, isSystem: true, isActive: true },
+      });
+    }
+    this.logger.log(`Activity types seeded (${OPTIONS.length} entries).`);
+  }
+
+  private async seedMeetingTypes() {
+    const OPTIONS = [
+      { value: 'virtual', label: 'Virtual', sortOrder: 0 },
+      { value: 'in-person', label: 'In-Person', sortOrder: 1 },
+    ];
+
+    const existingCount = await this.prisma.dropdownOption.count({
+      where: { category: 'meeting_type' },
+    });
+    if (existingCount >= OPTIONS.length) return;
+
+    for (const opt of OPTIONS) {
+      await this.prisma.dropdownOption.upsert({
+        where: { category_value: { category: 'meeting_type', value: opt.value } },
+        update: {},
+        create: { category: 'meeting_type', ...opt, isSystem: true, isActive: true },
+      });
+    }
+    this.logger.log(`Meeting types seeded (${OPTIONS.length} entries).`);
   }
 }

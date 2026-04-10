@@ -2,9 +2,8 @@ import { IsString, IsNotEmpty, IsOptional, IsIn, Matches } from 'class-validator
 
 export class CreateActivityDto {
   @IsString()
-  @IsIn(['call', 'meeting'])
   @IsNotEmpty()
-  type: 'call' | 'meeting';
+  type: string;
 
   @IsString()
   @IsNotEmpty()
@@ -26,7 +25,6 @@ export class CreateActivityDto {
   notes?: string;
 
   @IsString()
-  @IsIn(['in-person', 'virtual'])
   @IsOptional()
-  meetingType?: 'in-person' | 'virtual'; // Required for meetings
+  meetingType?: string;
 }

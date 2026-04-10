@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CreatableSelect } from '@/components/ui/creatable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,7 +65,7 @@ export function CustomerActivityTimeline({
   const [meetingTypes, setMeetingTypes] = useState<DropdownOption[]>(
     [],
   );
-  const [activityType, setActivityType] = useState('call');
+  const [activityType, setActivityType] = useState('');
   const [activityDate, setActivityDate] = useState(
     new Date().toISOString().split('T')[0],
   );
@@ -89,9 +90,9 @@ export function CustomerActivityTimeline({
   useEffect(() => {
     if (
       activityTypes.length > 0 &&
-      !activityTypes.find((t) => t.value === activityType)
+      !activityTypes.find((t) => t.label === activityType)
     ) {
-      setActivityType(activityTypes[0].value);
+      setActivityType(activityTypes[0].label);
     }
   }, [activityTypes]);
 
@@ -105,14 +106,14 @@ export function CustomerActivityTimeline({
   }, [meetingTypes]);
 
   const selectedTypeOpt = activityTypes.find(
-    (t) => t.value === activityType,
+    (t) => t.label === activityType,
   );
   const hasMeetingSubtype =
     selectedTypeOpt?.metadata?.hasMeetingType ??
-    activityType === 'meeting';
+    activityType.toLowerCase() === 'meeting';
 
   const getChipClasses = (type: string) => {
-    const opt = activityTypes.find((t) => t.value === type);
+    const opt = activityTypes.find((t) => t.label === type);
     return (
       opt?.metadata?.chipClasses ??
       'text-gray-700 bg-gray-50 border-gray-200'
@@ -120,12 +121,12 @@ export function CustomerActivityTimeline({
   };
 
   const getNodeClass = (type: string) => {
-    const opt = activityTypes.find((t) => t.value === type);
+    const opt = activityTypes.find((t) => t.label === type);
     return opt?.metadata?.nodeClass ?? 'bg-gray-400';
   };
 
   const getTypeIcon = (type: string) => {
-    const opt = activityTypes.find((t) => t.value === type);
+    const opt = activityTypes.find((t) => t.label === type);
     return getActivityIcon(opt?.metadata?.icon as string | undefined);
   };
 
@@ -137,7 +138,7 @@ export function CustomerActivityTimeline({
     setIsSubmitting(true);
     try {
       const data: CreateActivityDto = {
-        type: activityType as CreateActivityDto['type'],
+        type: activityType,
         activityDate,
         activityTime,
         reason: reason.trim(),
@@ -152,7 +153,7 @@ export function CustomerActivityTimeline({
       toast.success('Activity added');
       setReason('');
       setNotes('');
-      setActivityType(activityTypes[0]?.value ?? 'call');
+      setActivityType(activityTypes[0]?.label ?? '');
       setActivityDate(new Date().toISOString().split('T')[0]);
       setActivityTime(new Date().toTimeString().slice(0, 5));
       setMeetingType(meetingTypes[0]?.value ?? 'virtual');
@@ -212,7 +213,7 @@ export function CustomerActivityTimeline({
             const nodeColor = getNodeClass(activity.type);
             const ChipIcon = getTypeIcon(activity.type);
             const typeLabel =
-              activityTypes.find((t) => t.value === activity.type)
+              activityTypes.find((t) => t.label === activity.type)
                 ?.label ?? activity.type;
 
             return (
@@ -327,30 +328,21 @@ export function CustomerActivityTimeline({
               <Label className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground font-semibold">
                 Activity Type
               </Label>
-              <Select
+              <CreatableSelect
+                options={activityTypes}
                 value={activityType}
-                onValueChange={(v) =>
-                  setActivityType(v as CreateActivityDto['type'])
-                }>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {activityTypes.map((t) => {
-                    const Icon = getActivityIcon(
-                      t.metadata?.icon as string | undefined,
-                    );
-                    return (
-                      <SelectItem key={t.value} value={t.value}>
-                        <span className="flex items-center gap-2">
-                          <Icon className="h-3.5 w-3.5" />
-                          {t.label}
-                        </span>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+                onChange={setActivityType}
+                placeholder="Select type..."
+                onOptionCreated={async (label) => {
+                  const created = await settingsApi.createDropdownOption({
+                    category: 'activity_type',
+                    value: label.toLowerCase().replace(/\s+/g, '_'),
+                    label,
+                  });
+                  return created;
+                }}
+                onOptionsChange={setActivityTypes}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

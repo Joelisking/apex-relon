@@ -5,12 +5,12 @@ export interface Activity {
   clientId?: string;
   leadId?: string;
   projectId?: string;
-  type: 'call' | 'meeting';
+  type: string;
   activityDate: string;
   activityTime: string;
   reason: string;
   notes?: string;
-  meetingType?: 'in-person' | 'virtual';
+  meetingType?: string;
   userId: string;
   user: {
     id: string;
@@ -21,12 +21,12 @@ export interface Activity {
 }
 
 export interface CreateActivityDto {
-  type: 'call' | 'meeting';
+  type: string;
   activityDate: string; // ISO date string
   activityTime: string; // HH:MM format
   reason: string;
   notes?: string;
-  meetingType?: 'in-person' | 'virtual'; // Required for meetings
+  meetingType?: string;
 }
 
 // Client-side only - synchronous cookie reading
