@@ -8,11 +8,10 @@ import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import { projectsApi } from '@/lib/api/projects-client';
 import { usersApi, type UserDirectoryItem } from '@/lib/api/users-client';
-import { clientsApi, leadsApi, settingsApi, serviceItemsApi } from '@/lib/api/client';
+import { clientsApi, leadsApi, settingsApi } from '@/lib/api/client';
 import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
-import { usePrimaryServiceTypeName } from './usePrimaryServiceTypeName';
-import type { DropdownOption, ServiceCategory } from '@/lib/types';
-import type { LinkedServiceItem } from '@/components/projects/ProjectServiceItemsField';
+import { usePrimaryJobTypeName } from './usePrimaryJobTypeName';
+import type { DropdownOption, Division } from '@/lib/types';
 import type { TeamMember } from '@/components/projects/ProjectTeamMembersSection';
 
 export const createProjectSchema = z.object({
@@ -60,24 +59,16 @@ export function useCreateProjectForm({
   const [riskOptions, setRiskOptions] = useState<DropdownOption[]>([]);
   const [countyOptions, setCountyOptions] = useState<DropdownOption[]>([]);
   const [pendingTeamMemberIds, setPendingTeamMemberIds] = useState<string[]>([]);
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
-  const [selectedServiceTypeIds, setSelectedServiceTypeIds] = useState<string[]>([]);
+  const [selectedDivisionIds, setSelectedDivisionIds] = useState<string[]>([]);
+  const [selectedJobTypeIds, setSelectedJobTypeIds] = useState<string[]>([]);
   const [activeOptionalStages, setActiveOptionalStages] = useState<string[]>([]);
   const [geocodedLat, setGeocodedLat] = useState<number | null>(null);
   const [geocodedLng, setGeocodedLng] = useState<number | null>(null);
-  const [selectedServiceItemIds, setSelectedServiceItemIds] = useState<string[]>([]);
 
-  const { data: serviceCategories = [] } = useQuery<ServiceCategory[]>({
-    queryKey: ['service-categories'],
-    queryFn: () => settingsApi.getServiceCategories(),
+  const { data: divisions = [] } = useQuery<Division[]>({
+    queryKey: ['divisions'],
+    queryFn: () => settingsApi.getDivisions(),
     staleTime: 10 * 60 * 1000,
-  });
-
-  const { data: allServiceItems = [] } = useQuery({
-    queryKey: ['service-items'],
-    queryFn: () => serviceItemsApi.getAll(),
-    staleTime: 10 * 60 * 1000,
-    enabled: open,
   });
 
   const form = useForm<CreateProjectFormValues, unknown, CreateProjectFormValues>({
@@ -92,8 +83,7 @@ export function useCreateProjectForm({
     },
   });
 
-  const primaryServiceTypeName = usePrimaryServiceTypeName(selectedServiceTypeIds, serviceCategories);
-  const watchedIsIndot = form.watch('isIndot');
+  const primaryJobTypeName = usePrimaryJobTypeName(selectedJobTypeIds, divisions);
 
   useEffect(() => {
     if (!open) return;
@@ -130,7 +120,7 @@ export function useCreateProjectForm({
     if (!open) return;
     setIsLoadingStages(true);
     pipelineApi
-      .getStages('project', primaryServiceTypeName)
+      .getStages('project', primaryJobTypeName)
       .then((stages) => {
         setProjectStages(stages);
         const cur = form.getValues('status');
@@ -141,27 +131,7 @@ export function useCreateProjectForm({
       .catch(console.error)
       .finally(() => setIsLoadingStages(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, primaryServiceTypeName]);
-
-  const filteredServiceItems = useMemo(
-    () =>
-      allServiceItems
-        .filter((si) => si.isActive && !selectedServiceItemIds.includes(si.id))
-        .filter((si) => !watchedIsIndot || si.isIndot)
-        .filter((si) => {
-          if (selectedServiceTypeIds.length === 0) return true;
-          return si.serviceTypeIds.some((id) => selectedServiceTypeIds.includes(id));
-        }),
-    [allServiceItems, selectedServiceItemIds, selectedServiceTypeIds, watchedIsIndot],
-  );
-
-  const linkedServiceItems = useMemo<LinkedServiceItem[]>(
-    () =>
-      allServiceItems
-        .filter((si) => selectedServiceItemIds.includes(si.id))
-        .map((si) => ({ removeKey: si.id, name: si.name, unit: si.unit })),
-    [allServiceItems, selectedServiceItemIds],
-  );
+  }, [open, primaryJobTypeName]);
 
   const availableUsers = users.filter((u) => !pendingTeamMemberIds.includes(u.id));
   const teamMembers = useMemo<TeamMember[]>(
@@ -172,26 +142,16 @@ export function useCreateProjectForm({
     [users, pendingTeamMemberIds],
   );
 
-  function toggleCategory(id: string) {
-    setSelectedCategoryIds((prev) =>
+  function toggleDivision(id: string) {
+    setSelectedDivisionIds((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
     );
   }
 
-  function toggleServiceType(id: string) {
-    setSelectedServiceTypeIds((prev) =>
+  function toggleJobType(id: string) {
+    setSelectedJobTypeIds((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
     );
-  }
-
-  function addServiceItem(id: string) {
-    if (id && !selectedServiceItemIds.includes(id)) {
-      setSelectedServiceItemIds((prev) => [...prev, id]);
-    }
-  }
-
-  function removeServiceItem(id: string) {
-    setSelectedServiceItemIds((prev) => prev.filter((i) => i !== id));
   }
 
   function addTeamMember(userId: string) {
@@ -218,9 +178,8 @@ export function useCreateProjectForm({
   function reset() {
     form.reset();
     setPendingTeamMemberIds([]);
-    setSelectedCategoryIds([]);
-    setSelectedServiceTypeIds([]);
-    setSelectedServiceItemIds([]);
+    setSelectedDivisionIds([]);
+    setSelectedJobTypeIds([]);
     setActiveOptionalStages([]);
     setGeocodedLat(null);
     setGeocodedLng(null);
@@ -229,7 +188,7 @@ export function useCreateProjectForm({
   const onSubmit = async (values: CreateProjectFormValues) => {
     try {
       setLoading(true);
-      const project = await projectsApi.create({
+      await projectsApi.create({
         ...values,
         contractedValue: Number(values.contractedValue),
         endOfProjectValue: values.endOfProjectValue ? Number(values.endOfProjectValue) : undefined,
@@ -239,20 +198,13 @@ export function useCreateProjectForm({
           : undefined,
         closedDate: values.closedDate ? new Date(values.closedDate).toISOString() : undefined,
         teamMemberIds: pendingTeamMemberIds.length > 0 ? pendingTeamMemberIds : undefined,
-        categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
-        serviceTypeIds: selectedServiceTypeIds.length > 0 ? selectedServiceTypeIds : undefined,
+        categoryIds: selectedDivisionIds.length > 0 ? selectedDivisionIds : undefined,
+        jobTypeIds: selectedJobTypeIds.length > 0 ? selectedJobTypeIds : undefined,
         activeOptionalStages,
         address: values.address || undefined,
         latitude: geocodedLat ?? (values.latitude ? Number(values.latitude) : undefined),
         longitude: geocodedLng ?? (values.longitude ? Number(values.longitude) : undefined),
       });
-      if (selectedServiceItemIds.length > 0) {
-        await Promise.all(
-          selectedServiceItemIds.map((serviceItemId) =>
-            projectsApi.addServiceItem(project.id, { serviceItemId }),
-          ),
-        );
-      }
       toast.success('Project created successfully');
       onProjectCreated();
       onOpenChange(false);
@@ -273,33 +225,26 @@ export function useCreateProjectForm({
     leads,
     users,
     projectStages,
-    primaryServiceTypeName,
+    primaryJobTypeName,
     riskOptions,
     setRiskOptions,
     countyOptions,
     setCountyOptions,
-    serviceCategories,
-    selectedCategoryIds,
-    selectedServiceTypeIds,
+    divisions,
+    selectedDivisionIds,
+    selectedJobTypeIds,
     activeOptionalStages,
     setActiveOptionalStages,
-    // service items
-    allServiceItems,
-    linkedServiceItems,
-    filteredServiceItems,
-    addServiceItem,
-    removeServiceItem,
     // team members
     teamMembers,
     availableUsers,
     addTeamMember,
     removeTeamMember,
     // handlers
-    toggleCategory,
-    toggleServiceType,
+    toggleDivision,
+    toggleJobType,
     handleClientChange,
     handleGeocode,
-    watchedContractedValue: form.watch('contractedValue'),
     onSubmit,
   };
 }

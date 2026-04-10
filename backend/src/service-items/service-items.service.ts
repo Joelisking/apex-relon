@@ -18,9 +18,9 @@ export class ServiceItemsService {
     _count: { select: { quoteLineItems: true, timeEntries: true } },
   };
 
-  async findAll(serviceTypeId?: string) {
+  async findAll(jobTypeId?: string) {
     return this.prisma.serviceItem.findMany({
-      where: serviceTypeId ? { serviceTypeIds: { has: serviceTypeId } } : undefined,
+      where: jobTypeId ? { jobTypeIds: { has: jobTypeId } } : undefined,
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: this.itemInclude,
     });

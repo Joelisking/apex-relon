@@ -37,8 +37,8 @@ export class ProposalTemplatesController {
 
   @Get()
   @Permissions('quotes:view')
-  listTemplates(@Query('serviceTypeId') serviceTypeId?: string) {
-    return this.service.listTemplates(serviceTypeId);
+  listTemplates(@Query('jobTypeId') jobTypeId?: string) {
+    return this.service.listTemplates(jobTypeId);
   }
 
   @Post()
@@ -52,10 +52,10 @@ export class ProposalTemplatesController {
     @UploadedFile() file: Express.Multer.File,
     @Body('name') name: string,
     @Body('description') description?: string,
-    @Body('serviceTypeId') serviceTypeId?: string,
+    @Body('jobTypeId') jobTypeId?: string,
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
-    const dto: CreateProposalTemplateDto = { name, description, serviceTypeId };
+    const dto: CreateProposalTemplateDto = { name, description, jobTypeId };
     return this.service.uploadTemplate(file, dto);
   }
 
@@ -107,8 +107,11 @@ export class ProposalTemplatesController {
 
   @Patch('proposals/:id/accept')
   @Permissions('quotes:create')
-  acceptProposal(@Param('id') id: string) {
-    return this.service.acceptProposal(id);
+  acceptProposal(
+    @Param('id') id: string,
+    @Body('contractedValue') contractedValue?: number,
+  ) {
+    return this.service.acceptProposal(id, contractedValue);
   }
 
   @Delete('proposals/:id')

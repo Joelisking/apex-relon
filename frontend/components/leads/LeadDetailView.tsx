@@ -26,7 +26,7 @@ import {
   CheckCircle,
   ArrowRight,
 } from 'lucide-react';
-import type { Lead, ServiceCategory } from '@/lib/types';
+import type { Lead, Division } from '@/lib/types';
 import { api, apiFetch, settingsApi } from '@/lib/api/client';
 import {
   activitiesApi,
@@ -82,8 +82,8 @@ export function LeadDetailView({
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [closeWonDialogOpen, setCloseWonDialogOpen] = useState(false);
   const [leadStages, setLeadStages] = useState<PipelineStage[]>([]);
-  const [serviceCategories, setServiceCategories] = useState<
-    ServiceCategory[]
+  const [divisions, setDivisions] = useState<
+    Division[]
   >([]);
   const [isUpdatingStage, setIsUpdatingStage] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -123,8 +123,8 @@ export function LeadDetailView({
       .then(setLeadStages)
       .catch(console.error);
     settingsApi
-      .getServiceCategories()
-      .then(setServiceCategories)
+      .getDivisions()
+      .then(setDivisions)
       .catch(console.error);
   }, []);
 
@@ -442,7 +442,7 @@ export function LeadDetailView({
             <LeadDetailsPanel
               lead={lead}
               isOverdue={!!isOverdue}
-              serviceCategories={serviceCategories}
+              divisions={divisions}
             />
 
             <hr className="border-border/40" />

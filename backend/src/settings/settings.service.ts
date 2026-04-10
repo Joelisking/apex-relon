@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { Prisma } from '@prisma/client';
-import { CreateServiceTypeDto, CreateServiceCategoryDto } from './dto/create-service-type.dto';
+import { CreateJobTypeDto, CreateDivisionDto } from './dto/create-service-type.dto';
 import { CreateTaskTypeDto } from './dto/create-task-type.dto';
 import {
   CreateDropdownOptionDto,
@@ -252,36 +252,36 @@ export class SettingsService implements OnModuleInit {
       ],
     };
 
-    const existingCount = await this.prisma.serviceCategory.count();
+    const existingCount = await this.prisma.division.count();
     if (existingCount >= CATEGORIES.length) {
-      this.logger.log(`Service categories already seeded (${existingCount} entries). Skipping.`);
+      this.logger.log(`Divisions already seeded (${existingCount} entries). Skipping.`);
       return;
     }
 
     for (const cat of CATEGORIES) {
-      const category = await this.prisma.serviceCategory.upsert({
+      const division = await this.prisma.division.upsert({
         where: { name: cat.name },
         update: {},
         create: { name: cat.name, description: cat.description, sortOrder: cat.sortOrder, isActive: true },
       });
 
       for (const st of SERVICE_TYPES_BY_CATEGORY[cat.name] ?? []) {
-        await this.prisma.serviceType.upsert({
+        await this.prisma.jobType.upsert({
           where: { name: st.name },
-          update: { categoryId: category.id },
-          create: { name: st.name, description: st.description, sortOrder: st.sortOrder, isActive: true, categoryId: category.id },
+          update: { divisionId: division.id },
+          create: { name: st.name, description: st.description, sortOrder: st.sortOrder, isActive: true, divisionId: division.id },
         });
       }
     }
-    this.logger.log('Service categories and typed service types seeded.');
+    this.logger.log('Divisions and job types seeded.');
   }
 
-  async findAllServiceCategories() {
-    return this.prisma.serviceCategory.findMany({
+  async findAllDivisions() {
+    return this.prisma.division.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: {
-        serviceTypes: {
+        jobTypes: {
           where: { isActive: true },
           orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
         },
@@ -289,91 +289,91 @@ export class SettingsService implements OnModuleInit {
     });
   }
 
-  async createServiceCategory(dto: CreateServiceCategoryDto) {
-    return this.prisma.serviceCategory.create({ data: dto });
+  async createDivision(dto: CreateDivisionDto) {
+    return this.prisma.division.create({ data: dto });
   }
 
-  async updateServiceCategory(id: string, dto: Partial<CreateServiceCategoryDto>) {
-    const existing = await this.prisma.serviceCategory.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException(`Service category with ID ${id} not found`);
-    return this.prisma.serviceCategory.update({ where: { id }, data: dto });
+  async updateDivision(id: string, dto: Partial<CreateDivisionDto>) {
+    const existing = await this.prisma.division.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`Division with ID ${id} not found`);
+    return this.prisma.division.update({ where: { id }, data: dto });
   }
 
-  async deleteServiceCategory(id: string) {
-    const existing = await this.prisma.serviceCategory.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException(`Service category with ID ${id} not found`);
-    const typeCount = await this.prisma.serviceType.count({ where: { categoryId: id } });
+  async deleteDivision(id: string) {
+    const existing = await this.prisma.division.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`Division with ID ${id} not found`);
+    const typeCount = await this.prisma.jobType.count({ where: { divisionId: id } });
     if (typeCount > 0) {
       throw new BadRequestException(
-        `Cannot delete category "${existing.name}" because it has ${typeCount} service type(s) assigned to it.`,
+        `Cannot delete division "${existing.name}" because it has ${typeCount} job type(s) assigned to it.`,
       );
     }
-    return this.prisma.serviceCategory.delete({ where: { id } });
+    return this.prisma.division.delete({ where: { id } });
   }
 
-  // ── Service Types ──────────────────────────────────────────────────────────
+  // ── Job Types ──────────────────────────────────────────────────────────────
 
-  async findAllServiceTypes() {
-    return this.prisma.serviceType.findMany({
+  async findAllJobTypes() {
+    return this.prisma.jobType.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: {
-        category: { select: { id: true, name: true } },
+        division: { select: { id: true, name: true } },
         _count: { select: { leads: true, projects: true } },
       },
     });
   }
 
-  async createServiceType(dto: CreateServiceTypeDto) {
-    return this.prisma.serviceType.create({ data: dto });
+  async createJobType(dto: CreateJobTypeDto) {
+    return this.prisma.jobType.create({ data: dto });
   }
 
-  async updateServiceType(
+  async updateJobType(
     id: string,
-    dto: Partial<CreateServiceTypeDto>,
+    dto: Partial<CreateJobTypeDto>,
   ) {
-    const existing = await this.prisma.serviceType.findUnique({
+    const existing = await this.prisma.jobType.findUnique({
       where: { id },
     });
     if (!existing) {
       throw new NotFoundException(
-        `Service type with ID ${id} not found`,
+        `Job type with ID ${id} not found`,
       );
     }
-    return this.prisma.serviceType.update({
+    return this.prisma.jobType.update({
       where: { id },
       data: dto,
     });
   }
 
-  async deleteServiceType(id: string) {
-    const existing = await this.prisma.serviceType.findUnique({
+  async deleteJobType(id: string) {
+    const existing = await this.prisma.jobType.findUnique({
       where: { id },
     });
     if (!existing) {
       throw new NotFoundException(
-        `Service type with ID ${id} not found`,
+        `Job type with ID ${id} not found`,
       );
     }
     const [leadCount, projectCount] = await Promise.all([
-      this.prisma.lead.count({ where: { serviceTypeId: id } }),
-      this.prisma.project.count({ where: { serviceTypeId: id } }),
+      this.prisma.lead.count({ where: { jobTypeId: id } }),
+      this.prisma.project.count({ where: { jobTypeId: id } }),
     ]);
     if (leadCount > 0 || projectCount > 0) {
       throw new BadRequestException(
-        `Cannot delete service type "${existing.name}" because it is assigned to ${leadCount} lead(s) and ${projectCount} project(s).`,
+        `Cannot delete job type "${existing.name}" because it is assigned to ${leadCount} lead(s) and ${projectCount} project(s).`,
       );
     }
-    return this.prisma.serviceType.delete({ where: { id } });
+    return this.prisma.jobType.delete({ where: { id } });
   }
 
   // ── Task Types ─────────────────────────────────────────────────────────────
 
-  async findAllTaskTypes(serviceTypeId?: string) {
+  async findAllTaskTypes(jobTypeId?: string) {
     return this.prisma.taskType.findMany({
-      where: serviceTypeId ? { serviceTypeId } : undefined,
+      where: jobTypeId ? { jobTypeId } : undefined,
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: {
-        serviceType: { select: { id: true, name: true } },
+        jobType: { select: { id: true, name: true } },
         _count: { select: { tasks: true } },
       },
     });
@@ -714,11 +714,11 @@ export class SettingsService implements OnModuleInit {
     let itemsCreated = 0;
 
     for (const template of TEMPLATES) {
-      const serviceType = await this.prisma.serviceType.findFirst({
+      const jobType = await this.prisma.jobType.findFirst({
         where: { name: template.serviceTypeName },
       });
-      if (!serviceType) {
-        this.logger.warn(`ServiceType not found: "${template.serviceTypeName}" — skipping its phases.`);
+      if (!jobType) {
+        this.logger.warn(`JobType not found: "${template.serviceTypeName}" — skipping its phases.`);
         continue;
       }
 
@@ -726,7 +726,7 @@ export class SettingsService implements OnModuleInit {
         const existing = await this.prisma.serviceItem.findFirst({
           where: {
             name: phase.name,
-            serviceTypeIds: { has: serviceType.id },
+            jobTypeIds: { has: jobType.id },
           },
         });
 
@@ -739,7 +739,7 @@ export class SettingsService implements OnModuleInit {
             data: {
               name: phase.name,
               description: phase.officeField,
-              serviceTypeIds: [serviceType.id],
+              jobTypeIds: [jobType.id],
               isActive: true,
               sortOrder: phase.sortOrder,
             },

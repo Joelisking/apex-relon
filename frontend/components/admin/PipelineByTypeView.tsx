@@ -44,7 +44,7 @@ import {
 } from 'lucide-react';
 import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
 import { settingsApi } from '@/lib/api/client';
-import type { ServiceCategory } from '@/lib/types';
+import type { Division } from '@/lib/types';
 import { toast } from 'sonner';
 
 const COLOR_PRESETS = [
@@ -61,14 +61,14 @@ const COLOR_PRESETS = [
 ];
 
 interface PipelineByTypeTableProps {
-  serviceTypeName: string;
+  jobTypeName: string;
 }
 
-function PipelineByTypeTable({ serviceTypeName }: PipelineByTypeTableProps) {
+function PipelineByTypeTable({ jobTypeName }: PipelineByTypeTableProps) {
   const queryClient = useQueryClient();
   const { data: stages = [], isLoading } = useQuery<PipelineStage[]>({
-    queryKey: ['pipeline-stages-by-type', serviceTypeName],
-    queryFn: () => pipelineApi.getStagesByServiceType(serviceTypeName),
+    queryKey: ['pipeline-stages-by-type', jobTypeName],
+    queryFn: () => pipelineApi.getStagesByJobType(jobTypeName),
     staleTime: 2 * 60 * 1000,
   });
 
@@ -85,7 +85,7 @@ function PipelineByTypeTable({ serviceTypeName }: PipelineByTypeTableProps) {
   const [editColorIdx, setEditColorIdx] = useState(0);
 
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ['pipeline-stages-by-type', serviceTypeName] });
+    queryClient.invalidateQueries({ queryKey: ['pipeline-stages-by-type', jobTypeName] });
 
   const handleAddStage = async () => {
     if (!newStageName.trim()) {
@@ -98,7 +98,7 @@ function PipelineByTypeTable({ serviceTypeName }: PipelineByTypeTableProps) {
       await pipelineApi.createStage({
         name: newStageName.trim(),
         pipelineType: 'project',
-        serviceType: serviceTypeName,
+        jobType: jobTypeName,
         probability: newStageProbability,
         sortOrder: newStageSortOrder,
         color: preset.color,
@@ -186,7 +186,7 @@ function PipelineByTypeTable({ serviceTypeName }: PipelineByTypeTableProps) {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            Stages for <span className="text-primary">{serviceTypeName}</span>
+            Stages for <span className="text-primary">{jobTypeName}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -279,7 +279,7 @@ function PipelineByTypeTable({ serviceTypeName }: PipelineByTypeTableProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Plus className="h-4 w-4" />
-            Add Stage for {serviceTypeName}
+            Add Stage for {jobTypeName}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -337,15 +337,15 @@ function PipelineByTypeTable({ serviceTypeName }: PipelineByTypeTableProps) {
 }
 
 export function PipelineByTypeView() {
-  const [selectedServiceTypeName, setSelectedServiceTypeName] = useState<string>('');
+  const [selectedJobTypeName, setSelectedJobTypeName] = useState<string>('');
 
-  const { data: serviceCategories = [], isLoading } = useQuery<ServiceCategory[]>({
-    queryKey: ['service-categories'],
-    queryFn: () => settingsApi.getServiceCategories(),
+  const { data: divisions = [], isLoading } = useQuery<Division[]>({
+    queryKey: ['divisions'],
+    queryFn: () => settingsApi.getDivisions(),
     staleTime: 10 * 60 * 1000,
   });
 
-  const allServiceTypes = serviceCategories.flatMap((cat) => cat.serviceTypes ?? []);
+  const allJobTypes = divisions.flatMap((cat) => cat.jobTypes ?? []);
 
   return (
     <div className="space-y-6">
@@ -356,17 +356,17 @@ export function PipelineByTypeView() {
         <CardContent>
           {isLoading ? (
             <Skeleton className="h-9 w-64" />
-          ) : allServiceTypes.length === 0 ? (
+          ) : allJobTypes.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No service types configured. Add service types in Settings → Services first.
+              No job types configured. Add job types in Settings → Services first.
             </p>
           ) : (
-            <Select value={selectedServiceTypeName} onValueChange={setSelectedServiceTypeName}>
+            <Select value={selectedJobTypeName} onValueChange={setSelectedJobTypeName}>
               <SelectTrigger className="w-64">
                 <SelectValue placeholder="Choose a project type…" />
               </SelectTrigger>
               <SelectContent>
-                {allServiceTypes.map((st) => (
+                {allJobTypes.map((st) => (
                   <SelectItem key={st.id} value={st.name}>{st.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -375,8 +375,8 @@ export function PipelineByTypeView() {
         </CardContent>
       </Card>
 
-      {selectedServiceTypeName && (
-        <PipelineByTypeTable serviceTypeName={selectedServiceTypeName} />
+      {selectedJobTypeName && (
+        <PipelineByTypeTable jobTypeName={selectedJobTypeName} />
       )}
     </div>
   );

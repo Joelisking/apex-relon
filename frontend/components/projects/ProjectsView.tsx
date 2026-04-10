@@ -210,11 +210,11 @@ export default function ProjectsView({
   });
 
   // The selected service type (not category) drives stage fetching in kanban view
-  const kanbanServiceType = view === 'kanban' ? selectedKanbanType ?? undefined : undefined;
+  const kanbanJobType = view === 'kanban' ? selectedKanbanType ?? undefined : undefined;
 
   const { data: projectStages = [], isLoading: stagesLoading } = useQuery<PipelineStage[]>({
-    queryKey: ['pipeline-stages', 'project', kanbanServiceType],
-    queryFn: () => pipelineApi.getStages('project', kanbanServiceType),
+    queryKey: ['pipeline-stages', 'project', kanbanJobType],
+    queryFn: () => pipelineApi.getStages('project', kanbanJobType),
     staleTime: 10 * 60 * 1000,
   });
 
@@ -266,22 +266,22 @@ export default function ProjectsView({
 
   // Narrow by selected category and/or service type (applies to both kanban and list)
   const filteredByType = filteredProjects.filter((p) => {
-    if (selectedKanbanCategory && p.serviceType?.category?.name !== selectedKanbanCategory) return false;
-    if (selectedKanbanType && p.serviceType?.name !== selectedKanbanType) return false;
+    if (selectedKanbanCategory && p.jobType?.division?.name !== selectedKanbanCategory) return false;
+    if (selectedKanbanType && p.jobType?.name !== selectedKanbanType) return false;
     return true;
   });
 
   // Unique parent categories present in the project list (for row 1 of tab strip)
   const kanbanCategories = [...new Set(
-    projects.map((p) => p.serviceType?.category?.name).filter(Boolean)
+    projects.map((p) => p.jobType?.division?.name).filter(Boolean)
   )] as string[];
 
   // Service types within the selected category (for row 2 of tab strip)
-  const kanbanServiceTypesForCategory = selectedKanbanCategory
+  const kanbanJobTypesForCategory = selectedKanbanCategory
     ? [...new Set(
         projects
-          .filter((p) => p.serviceType?.category?.name === selectedKanbanCategory)
-          .map((p) => p.serviceType?.name)
+          .filter((p) => p.jobType?.division?.name === selectedKanbanCategory)
+          .map((p) => p.jobType?.name)
           .filter(Boolean)
       )] as string[]
     : [];
@@ -660,7 +660,7 @@ export default function ProjectsView({
               <span className="ml-1.5 opacity-70 tabular-nums">{filteredProjects.length}</span>
             </button>
             {kanbanCategories.map((cat) => {
-              const count = filteredProjects.filter((p) => p.serviceType?.category?.name === cat).length;
+              const count = filteredProjects.filter((p) => p.jobType?.division?.name === cat).length;
               const active = selectedKanbanCategory === cat;
               return (
                 <button
@@ -680,7 +680,7 @@ export default function ProjectsView({
           </div>
 
           {/* Row 2 — service types within selected category */}
-          {selectedKanbanCategory && kanbanServiceTypesForCategory.length > 0 && (
+          {selectedKanbanCategory && kanbanJobTypesForCategory.length > 0 && (
             <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 pl-2">
               <div className="h-4 w-px bg-border/50 shrink-0 mx-0.5" />
               <button
@@ -693,11 +693,11 @@ export default function ProjectsView({
                 ].join(' ')}>
                 All {selectedKanbanCategory}
                 <span className="ml-1.5 opacity-70 tabular-nums">
-                  {filteredProjects.filter((p) => p.serviceType?.category?.name === selectedKanbanCategory).length}
+                  {filteredProjects.filter((p) => p.jobType?.division?.name === selectedKanbanCategory).length}
                 </span>
               </button>
-              {kanbanServiceTypesForCategory.map((st) => {
-                const count = filteredProjects.filter((p) => p.serviceType?.name === st).length;
+              {kanbanJobTypesForCategory.map((st) => {
+                const count = filteredProjects.filter((p) => p.jobType?.name === st).length;
                 const active = selectedKanbanType === st;
                 return (
                   <button

@@ -16,7 +16,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Trash2, Plus, Loader2, ChevronRight, ChevronDown, Pencil, X, Check } from 'lucide-react';
 import { serviceItemsApi, settingsApi, API_URL, getTokenFromClientCookies } from '@/lib/api/client';
 import { MultiSelect } from '@/components/ui/multi-select';
-import type { ServiceItem, ServiceType } from '@/lib/types';
+import type { ServiceItem, JobType } from '@/lib/types';
 import { toast } from 'sonner';
 
 interface SystemRole {
@@ -26,7 +26,7 @@ interface SystemRole {
 
 export function ServiceItemsView() {
   const [items, setItems] = useState<ServiceItem[]>([]);
-  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
+  const [jobTypes, setJobTypes] = useState<JobType[]>([]);
   const [roles, setRoles] = useState<SystemRole[]>([]);
   const [loading, setLoading] = useState(true);
   // expandedGroup tracks which name-group is open
@@ -34,12 +34,12 @@ export function ServiceItemsView() {
   // selectedVariant maps group name → active item ID within that group
   const [selectedVariant, setSelectedVariant] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<ServiceItem | null>(null);
-  const [newItem, setNewItem] = useState({ name: '', description: '', serviceTypeIds: [] as string[], unit: '', defaultPrice: '', isActive: true, isIndot: false });
+  const [newItem, setNewItem] = useState({ name: '', description: '', jobTypeIds: [] as string[], unit: '', defaultPrice: '', isActive: true, isIndot: false });
   const [adding, setAdding] = useState(false);
   const [newSubtask, setNewSubtask] = useState<Record<string, string>>({});
   const [newRoleRow, setNewRoleRow] = useState<Record<string, { role: string; hours: string }>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', description: '', serviceTypeIds: [] as string[], unit: '', defaultPrice: '', isActive: true, isIndot: false });
+  const [editForm, setEditForm] = useState({ name: '', description: '', jobTypeIds: [] as string[], unit: '', defaultPrice: '', isActive: true, isIndot: false });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { loadAll(); }, []);
@@ -49,13 +49,13 @@ export function ServiceItemsView() {
       const token = getTokenFromClientCookies() ?? '';
       const [si, st, rolesRes] = await Promise.all([
         serviceItemsApi.getAll(),
-        settingsApi.getServiceTypes(),
+        settingsApi.getJobTypes(),
         fetch(`${API_URL}/admin/roles`, {
           headers: { Authorization: `Bearer ${token}` },
         }).then((r) => r.json()),
       ]);
       setItems(si);
-      setServiceTypes(st.filter((s) => s.isActive));
+      setJobTypes(st.filter((s) => s.isActive));
       setRoles(Array.isArray(rolesRes) ? rolesRes : []);
     } catch {
       toast.error('Failed to load service items');
@@ -71,13 +71,13 @@ export function ServiceItemsView() {
       await serviceItemsApi.create({
         name: newItem.name.trim(),
         description: newItem.description.trim() || undefined,
-        serviceTypeIds: newItem.serviceTypeIds.length > 0 ? newItem.serviceTypeIds : undefined,
+        jobTypeIds: newItem.jobTypeIds.length > 0 ? newItem.jobTypeIds : undefined,
         unit: newItem.unit.trim() || undefined,
         defaultPrice: newItem.defaultPrice ? parseFloat(newItem.defaultPrice) : undefined,
         isActive: newItem.isActive,
         isIndot: newItem.isIndot,
       });
-      setNewItem({ name: '', description: '', serviceTypeIds: [], unit: '', defaultPrice: '', isActive: true, isIndot: false });
+      setNewItem({ name: '', description: '', jobTypeIds: [], unit: '', defaultPrice: '', isActive: true, isIndot: false });
       toast.success('Service item created');
       await loadAll();
     } catch (e) {
@@ -103,7 +103,7 @@ export function ServiceItemsView() {
     setEditForm({
       name: item.name,
       description: item.description ?? '',
-      serviceTypeIds: item.serviceTypeIds ?? [],
+      jobTypeIds: item.jobTypeIds ?? [],
       unit: item.unit ?? '',
       defaultPrice: item.defaultPrice != null ? String(item.defaultPrice) : '',
       isActive: item.isActive,
@@ -120,7 +120,7 @@ export function ServiceItemsView() {
       await serviceItemsApi.update(itemId, {
         name: editForm.name.trim(),
         description: editForm.description.trim() || undefined,
-        serviceTypeIds: editForm.serviceTypeIds.length > 0 ? editForm.serviceTypeIds : [],
+        jobTypeIds: editForm.jobTypeIds.length > 0 ? editForm.jobTypeIds : [],
         unit: editForm.unit.trim() || undefined,
         defaultPrice: editForm.defaultPrice ? parseFloat(editForm.defaultPrice) : undefined,
         isActive: editForm.isActive,
@@ -246,7 +246,7 @@ export function ServiceItemsView() {
                             <Badge variant="secondary" className="text-xs">{group.length} project types</Badge>
                           ) : (
                             <>
-                              {serviceTypes.filter((st) => group[0].serviceTypeIds?.includes(st.id)).map((st) => (
+                              {jobTypes.filter((st) => group[0].jobTypeIds?.includes(st.id)).map((st) => (
                                 <Badge key={st.id} variant="secondary" className="text-xs">{st.name}</Badge>
                               ))}
                               {group[0].unit && <Badge variant="outline" className="text-xs">{group[0].unit}</Badge>}
@@ -291,8 +291,8 @@ export function ServiceItemsView() {
                       {isGrouped && (
                         <div className="flex flex-wrap gap-1.5 mb-4">
                           {group.map((item) => {
-                            const label = serviceTypes
-                              .filter((st) => item.serviceTypeIds?.includes(st.id))
+                            const label = jobTypes
+                              .filter((st) => item.jobTypeIds?.includes(st.id))
                               .map((st) => st.name).join(' / ') || 'General';
                             const isActive = activeId === item.id;
                             return (
@@ -355,11 +355,11 @@ export function ServiceItemsView() {
                             <div className="space-y-1.5">
                               <Label>Project Types</Label>
                               <MultiSelect
-                                value={editForm.serviceTypeIds}
-                                onValueChange={(v) => setEditForm((d) => ({ ...d, serviceTypeIds: v }))}
+                                value={editForm.jobTypeIds}
+                                onValueChange={(v) => setEditForm((d) => ({ ...d, jobTypeIds: v }))}
                                 placeholder="Select project types…"
                                 searchPlaceholder="Search project types…"
-                                options={serviceTypes.map((st) => ({ value: st.id, label: st.name }))}
+                                options={jobTypes.map((st) => ({ value: st.id, label: st.name }))}
                               />
                             </div>
                             <div className="space-y-1.5">
@@ -569,11 +569,11 @@ export function ServiceItemsView() {
             <div className="space-y-1.5">
               <Label>Project Types</Label>
               <MultiSelect
-                value={newItem.serviceTypeIds}
-                onValueChange={(v) => setNewItem((d) => ({ ...d, serviceTypeIds: v }))}
+                value={newItem.jobTypeIds}
+                onValueChange={(v) => setNewItem((d) => ({ ...d, jobTypeIds: v }))}
                 placeholder="Select project types…"
                 searchPlaceholder="Search project types…"
-                options={serviceTypes.map((st) => ({ value: st.id, label: st.name }))}
+                options={jobTypes.map((st) => ({ value: st.id, label: st.name }))}
               />
             </div>
             <div className="space-y-1.5">

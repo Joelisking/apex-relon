@@ -43,8 +43,8 @@ export class LeadsQueryService {
         assignedTo: {
           select: { id: true, name: true, email: true, role: true },
         },
-        serviceType: {
-          select: { id: true, name: true, category: { select: { id: true, name: true } } },
+        jobType: {
+          select: { id: true, name: true, division: { select: { id: true, name: true } } },
         },
         client: {
           select: { id: true, name: true },
@@ -98,8 +98,8 @@ export class LeadsQueryService {
         assignedTo: {
           select: { id: true, name: true, email: true, role: true },
         },
-        serviceType: {
-          select: { id: true, name: true, category: { select: { id: true, name: true } } },
+        jobType: {
+          select: { id: true, name: true, division: { select: { id: true, name: true } } },
         },
         client: {
           select: { id: true, name: true },

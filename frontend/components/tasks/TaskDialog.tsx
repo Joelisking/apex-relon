@@ -149,7 +149,7 @@ export function TaskDialog({
   const [dueDateOpen, setDueDateOpen] = useState(false);
 
   // Task types filtered by the linked entity's project type
-  const [linkedServiceTypeId, setLinkedServiceTypeId] = useState<string | undefined>(undefined);
+  const [linkedJobTypeId, setLinkedJobTypeId] = useState<string | undefined>(undefined);
   const [taskTypes, setTaskTypes] = useState<TaskType[]>([]);
 
   // Whether the current user is allowed to set DONE in this dialog
@@ -158,7 +158,7 @@ export function TaskDialog({
   // Reset form when dialog opens/closes
   useEffect(() => {
     if (!open) {
-      setLinkedServiceTypeId(undefined);
+      setLinkedJobTypeId(undefined);
       return;
     }
     setAssignOpen(false);
@@ -204,10 +204,10 @@ export function TaskDialog({
   // Fetch task types, filtered by linked entity's project type when available
   useEffect(() => {
     settingsApi
-      .getTaskTypes(linkedServiceTypeId)
+      .getTaskTypes(linkedJobTypeId)
       .then((data) => setTaskTypes(data.filter((tt) => tt.isActive)))
       .catch(() => setTaskTypes([]));
-  }, [linkedServiceTypeId]);
+  }, [linkedJobTypeId]);
 
   const filteredAssignees = useMemo(() => {
     if (!assignQuery.trim()) return assignableUsers;
@@ -295,9 +295,9 @@ export function TaskDialog({
           <EntityLinkPicker
             entityType={form.entityType ?? ''}
             entityId={form.entityId ?? ''}
-            onChange={(type, id, serviceTypeId) => {
+            onChange={(type, id, jobTypeId) => {
               setForm({ ...form, entityType: type, entityId: id, taskTypeId: '' });
-              setLinkedServiceTypeId(serviceTypeId);
+              setLinkedJobTypeId(jobTypeId);
             }}
           />
 
@@ -306,7 +306,7 @@ export function TaskDialog({
             <div className="space-y-1.5">
               <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
                 Task Type
-                {linkedServiceTypeId && (
+                {linkedJobTypeId && (
                   <span className="ml-1.5 normal-case text-muted-foreground tracking-normal font-normal">
                     — filtered by project type
                   </span>

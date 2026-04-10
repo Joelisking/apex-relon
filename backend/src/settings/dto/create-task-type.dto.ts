@@ -10,7 +10,7 @@ export class CreateTaskTypeDto {
 
   @IsOptional()
   @IsUUID()
-  serviceTypeId?: string;
+  jobTypeId?: string;
 
   @IsOptional()
   @IsBoolean()

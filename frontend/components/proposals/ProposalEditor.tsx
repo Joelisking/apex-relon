@@ -132,16 +132,20 @@ export default function ProposalEditor() {
     enabled: !!selectedLead,
   });
 
-  // Pre-fill from URL param lead
-  const { data: prefilledLead } = useQuery({
-    queryKey: ['lead', prefilledLeadId],
-    queryFn: () => leadsApi.getById(prefilledLeadId!),
-    enabled: !!prefilledLeadId,
-  });
+  // Fetch prefilled breakdown first so we can derive its leadId if no leadId URL param
   const { data: prefilledBreakdown } = useQuery({
     queryKey: ['cost-breakdown', prefilledBreakdownId],
     queryFn: () => costBreakdownApi.getOne(prefilledBreakdownId!),
     enabled: !!prefilledBreakdownId,
+  });
+
+  // 0.2: if no leadId in URL, fall back to the breakdown's linked lead
+  const derivedLeadId = prefilledLeadId ?? prefilledBreakdown?.leadId ?? null;
+
+  const { data: prefilledLead } = useQuery({
+    queryKey: ['lead', derivedLeadId],
+    queryFn: () => leadsApi.getById(derivedLeadId!),
+    enabled: !!derivedLeadId,
   });
 
   const { data: prefilledProposal } = useQuery({
@@ -163,11 +167,15 @@ export default function ProposalEditor() {
     setParagraphOverrides(snap?.paragraphOverrides ?? {});
   }, [templateContent, formSnapshot]);
 
-  // Apply URL param pre-fills
+  // Apply URL param pre-fills (or lead derived from prefilled breakdown)
   useEffect(() => {
     if (!prefilledLead) return;
     setSelectedLead(prefilledLead as unknown as Lead);
-  }, [prefilledLead]);
+    // 0.2: came from CB page with no leadId in URL — switch to lead source so picker shows
+    if (!prefilledLeadId && prefilledBreakdown?.leadId) {
+      setSource('lead');
+    }
+  }, [prefilledLead]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!prefilledBreakdown) return;
@@ -512,8 +520,8 @@ export default function ProposalEditor() {
                       <FileText className={cn('h-4 w-4 shrink-0', sel ? 'text-primary' : 'text-muted-foreground')} />
                       <div className="flex-1 min-w-0">
                         <span className="text-[13px] font-medium text-foreground block truncate">{t.name}</span>
-                        {t.serviceType && (
-                          <Badge variant="secondary" className="text-[10px] mt-0.5">{t.serviceType.name}</Badge>
+                        {t.jobType && (
+                          <Badge variant="secondary" className="text-[10px] mt-0.5">{t.jobType.name}</Badge>
                         )}
                       </div>
                       {sel && <Check className="h-4 w-4 text-primary shrink-0" />}

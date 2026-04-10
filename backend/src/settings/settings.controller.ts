@@ -11,7 +11,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { SettingsService } from './settings.service';
-import { CreateServiceTypeDto, CreateServiceCategoryDto } from './dto/create-service-type.dto';
+import { CreateJobTypeDto, CreateDivisionDto } from './dto/create-service-type.dto';
 import { CreateTaskTypeDto } from './dto/create-task-type.dto';
 import { CreateDropdownOptionDto, UpdateDropdownOptionDto } from './dto/dropdown-option.dto';
 import { Permissions } from '../permissions/permissions.decorator';
@@ -20,72 +20,72 @@ import { Permissions } from '../permissions/permissions.decorator';
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
 
-  // ── Service Categories ─────────────────────────────────────────────────────
+  // ── Divisions ──────────────────────────────────────────────────────────────
 
-  @Get('service-categories')
+  @Get('divisions')
   @Permissions('leads:view')
-  findAllServiceCategories() {
-    return this.settingsService.findAllServiceCategories();
+  findAllDivisions() {
+    return this.settingsService.findAllDivisions();
   }
 
-  @Post('service-categories')
+  @Post('divisions')
   @Permissions('settings:manage')
-  createServiceCategory(@Body() dto: CreateServiceCategoryDto) {
-    return this.settingsService.createServiceCategory(dto);
+  createDivision(@Body() dto: CreateDivisionDto) {
+    return this.settingsService.createDivision(dto);
   }
 
-  @Patch('service-categories/:id')
+  @Patch('divisions/:id')
   @Permissions('settings:manage')
-  updateServiceCategory(
+  updateDivision(
     @Param('id') id: string,
-    @Body() dto: Partial<CreateServiceCategoryDto>,
+    @Body() dto: Partial<CreateDivisionDto>,
   ) {
-    return this.settingsService.updateServiceCategory(id, dto);
+    return this.settingsService.updateDivision(id, dto);
   }
 
-  @Delete('service-categories/:id')
+  @Delete('divisions/:id')
   @Permissions('settings:manage')
   @HttpCode(HttpStatus.NO_CONTENT)
-  deleteServiceCategory(@Param('id') id: string) {
-    return this.settingsService.deleteServiceCategory(id);
+  deleteDivision(@Param('id') id: string) {
+    return this.settingsService.deleteDivision(id);
   }
 
-  // ── Service Types ──────────────────────────────────────────────────────────
+  // ── Job Types ──────────────────────────────────────────────────────────────
 
-  @Get('service-types')
+  @Get('job-types')
   @Permissions('leads:view')
-  findAllServiceTypes() {
-    return this.settingsService.findAllServiceTypes();
+  findAllJobTypes() {
+    return this.settingsService.findAllJobTypes();
   }
 
-  @Post('service-types')
+  @Post('job-types')
   @Permissions('settings:manage')
-  createServiceType(@Body() dto: CreateServiceTypeDto) {
-    return this.settingsService.createServiceType(dto);
+  createJobType(@Body() dto: CreateJobTypeDto) {
+    return this.settingsService.createJobType(dto);
   }
 
-  @Patch('service-types/:id')
+  @Patch('job-types/:id')
   @Permissions('settings:manage')
-  updateServiceType(
+  updateJobType(
     @Param('id') id: string,
-    @Body() dto: Partial<CreateServiceTypeDto>,
+    @Body() dto: Partial<CreateJobTypeDto>,
   ) {
-    return this.settingsService.updateServiceType(id, dto);
+    return this.settingsService.updateJobType(id, dto);
   }
 
-  @Delete('service-types/:id')
+  @Delete('job-types/:id')
   @Permissions('settings:manage')
   @HttpCode(HttpStatus.NO_CONTENT)
-  deleteServiceType(@Param('id') id: string) {
-    return this.settingsService.deleteServiceType(id);
+  deleteJobType(@Param('id') id: string) {
+    return this.settingsService.deleteJobType(id);
   }
 
   // ── Task Types ─────────────────────────────────────────────────────────────
 
   @Get('task-types')
   @Permissions('leads:view')
-  findAllTaskTypes(@Query('serviceTypeId') serviceTypeId?: string) {
-    return this.settingsService.findAllTaskTypes(serviceTypeId);
+  findAllTaskTypes(@Query('jobTypeId') jobTypeId?: string) {
+    return this.settingsService.findAllTaskTypes(jobTypeId);
   }
 
   @Post('task-types')

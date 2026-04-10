@@ -769,13 +769,13 @@ function toSlug(label: string): string {
     .replace(/[\s-]+/g, '_');
 }
 
-// ── Service Types Panel ────────────────────────────────────────────────────────
+// ── Job Types Panel ────────────────────────────────────────────────────────────
 
-function ServiceTypesPanel() {
+function JobTypesPanel() {
   const queryClient = useQueryClient();
-  const { data: serviceTypes = [], isLoading: loading } = useQuery({
-    queryKey: ['service-types'],
-    queryFn: () => settingsApi.getServiceTypes(),
+  const { data: jobTypes = [], isLoading: loading } = useQuery({
+    queryKey: ['job-types'],
+    queryFn: () => settingsApi.getJobTypes(),
     staleTime: 2 * 60 * 1000,
   });
   const [newName, setNewName] = useState('');
@@ -792,10 +792,10 @@ function ServiceTypesPanel() {
     if (!newName.trim()) return;
     setAdding(true);
     try {
-      await settingsApi.createServiceType({ name: newName.trim() });
+      await settingsApi.createJobType({ name: newName.trim() });
       setNewName('');
-      toast.success('Service type created');
-      queryClient.invalidateQueries({ queryKey: ['service-types'] });
+      toast.success('Job type created');
+      queryClient.invalidateQueries({ queryKey: ['job-types'] });
     } catch (e) {
       toast.error(
         e instanceof Error ? e.message : 'Failed to create',
@@ -809,12 +809,12 @@ function ServiceTypesPanel() {
     if (!editingId || !editName.trim()) return;
     setSaving(true);
     try {
-      await settingsApi.updateServiceType(editingId, {
+      await settingsApi.updateJobType(editingId, {
         name: editName.trim(),
       });
       setEditingId(null);
-      toast.success('Service type updated');
-      queryClient.invalidateQueries({ queryKey: ['service-types'] });
+      toast.success('Job type updated');
+      queryClient.invalidateQueries({ queryKey: ['job-types'] });
     } catch (e) {
       toast.error(
         e instanceof Error ? e.message : 'Failed to update',
@@ -827,10 +827,10 @@ function ServiceTypesPanel() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await settingsApi.deleteServiceType(deleteTarget.id);
+      await settingsApi.deleteJobType(deleteTarget.id);
       toast.success(`"${deleteTarget.name}" deleted`);
       setDeleteTarget(null);
-      queryClient.invalidateQueries({ queryKey: ['service-types'] });
+      queryClient.invalidateQueries({ queryKey: ['job-types'] });
     } catch (e) {
       toast.error(
         e instanceof Error ? e.message : 'Failed to delete',
@@ -852,7 +852,7 @@ function ServiceTypesPanel() {
     <>
       <Card>
         <CardContent className="p-0">
-          {serviceTypes.length === 0 ? (
+          {jobTypes.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               No project types yet. Add one below.
             </p>
@@ -867,7 +867,7 @@ function ServiceTypesPanel() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {serviceTypes.map((st) => (
+                {jobTypes.map((st) => (
                   <TableRow key={st.id}>
                     <TableCell>
                       {editingId === st.id ? (

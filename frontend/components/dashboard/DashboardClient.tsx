@@ -130,7 +130,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({
     );
     const serviceRevenueMap: { [key: string]: number } = {};
     wonLeads.forEach((l) => {
-      const type = l.serviceType?.name || 'Other';
+      const type = l.jobType?.name || 'Other';
       serviceRevenueMap[type] =
         (serviceRevenueMap[type] || 0) + (l.expectedValue || 0);
     });

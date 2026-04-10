@@ -59,7 +59,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import type { Lead, ServiceType } from '@/lib/types';
+import type { Lead, JobType } from '@/lib/types';
 import type { Activity as ActivityType } from '@/lib/api/activities-client';
 import type { FileUpload } from '@/lib/api/files-client';
 import { leadsApi } from '@/lib/api/client';
@@ -106,7 +106,7 @@ interface LeadDetailsDialogProps {
   onActivitiesChanged: () => void;
   // Edit support
   managers?: UserOption[];
-  serviceTypes?: ServiceType[];
+  jobTypes?: JobType[];
   allUsers?: UserOption[];
   clients?: ClientOption[];
   leads?: Lead[];
@@ -198,7 +198,7 @@ export function LeadDetailsDialog({
   hasPermission,
   onActivitiesChanged,
   managers = [],
-  serviceTypes = [],
+  jobTypes = [],
   allUsers = [],
   clients = [],
   leads = [],
@@ -417,10 +417,10 @@ export function LeadDetailsDialog({
                     {selectedLead.source}
                   </span>
                 </StatRow>
-                {selectedLead.serviceType && (
+                {selectedLead.jobType && (
                   <StatRow label="Service">
                     <span className="text-xs">
-                      {selectedLead.serviceType.name}
+                      {selectedLead.jobType.name}
                     </span>
                   </StatRow>
                 )}

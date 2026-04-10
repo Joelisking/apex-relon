@@ -149,7 +149,7 @@ export class LeadsAiService {
   async draftEmail(id: string, emailType: string) {
     const lead = await this.prisma.lead.findUnique({
       where: { id },
-      include: { serviceType: true, assignedTo: true },
+      include: { jobType: true, assignedTo: true },
     });
     if (!lead) throw new NotFoundException('Lead not found');
     return this.aiService.draftEmail(lead, emailType);

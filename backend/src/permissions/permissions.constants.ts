@@ -118,6 +118,12 @@ export const ALL_PERMISSIONS: PermissionDefinition[] = [
   { key: 'users:edit', label: 'Edit Users', module: 'Users' },
   { key: 'users:delete', label: 'Delete Users', module: 'Users' },
 
+  // Roles
+  { key: 'roles:view', label: 'View Roles', module: 'Roles' },
+  { key: 'roles:create', label: 'Create Roles', module: 'Roles' },
+  { key: 'roles:edit', label: 'Edit Roles', module: 'Roles' },
+  { key: 'roles:delete', label: 'Delete Roles', module: 'Roles' },
+
   // AI Settings
   {
     key: 'ai_settings:view',
@@ -300,6 +306,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'users:create',
     'users:edit',
     'users:delete',
+    'roles:view',
+    'roles:create',
+    'roles:edit',
+    'roles:delete',
     'ai_settings:view',
     'ai_settings:edit',
     'audit_logs:view',
@@ -379,6 +389,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'notifications:view',
     'users:list_basic',
     'users:view',
+    'roles:view',
     'teams:view',
     'teams:manage_members',
     'teams:be_manager',
@@ -400,6 +411,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
 // Used by the admin layout to gate the entire admin area.
 export const ADMIN_PANEL_PERMISSIONS = [
   'users:view',
+  'roles:view',
   'settings:view',
   'settings:manage',
   'permissions:view',

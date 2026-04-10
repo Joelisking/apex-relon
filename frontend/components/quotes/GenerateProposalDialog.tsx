@@ -224,9 +224,9 @@ export default function GenerateProposalDialog({
                           <span className="text-[13px] font-medium text-foreground truncate">
                             {t.name}
                           </span>
-                          {t.serviceType && (
+                          {t.jobType && (
                             <Badge variant="secondary" className="text-[10px] shrink-0">
-                              {t.serviceType.name}
+                              {t.jobType.name}
                             </Badge>
                           )}
                         </div>

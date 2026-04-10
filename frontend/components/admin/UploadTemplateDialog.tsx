@@ -21,25 +21,25 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { proposalTemplatesApi, ProposalTemplate } from '@/lib/api/proposal-templates-client';
-import type { ServiceType } from '@/lib/types';
+import type { JobType } from '@/lib/types';
 
 interface UploadTemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  serviceTypes: ServiceType[];
+  jobTypes: JobType[];
   onUploaded: (template: ProposalTemplate) => void;
 }
 
 export default function UploadTemplateDialog({
   open,
   onOpenChange,
-  serviceTypes,
+  jobTypes,
   onUploaded,
 }: UploadTemplateDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [serviceTypeId, setServiceTypeId] = useState('');
+  const [jobTypeId, setJobTypeId] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -57,7 +57,7 @@ export default function UploadTemplateDialog({
   const handleClose = () => {
     setName('');
     setDescription('');
-    setServiceTypeId('');
+    setJobTypeId('');
     setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     onOpenChange(false);
@@ -78,7 +78,7 @@ export default function UploadTemplateDialog({
         selectedFile,
         name.trim(),
         description.trim() || undefined,
-        serviceTypeId || undefined,
+        jobTypeId || undefined,
       );
       toast.success(`Template "${template.name}" uploaded`);
       onUploaded(template);
@@ -172,13 +172,13 @@ export default function UploadTemplateDialog({
               Service Type{' '}
               <span className="normal-case font-normal text-muted-foreground">(optional)</span>
             </Label>
-            <Select value={serviceTypeId || 'none'} onValueChange={(v) => setServiceTypeId(v === 'none' ? '' : v)}>
+            <Select value={jobTypeId || 'none'} onValueChange={(v) => setJobTypeId(v === 'none' ? '' : v)}>
               <SelectTrigger className="text-sm">
-                <SelectValue placeholder="All service types" />
+                <SelectValue placeholder="All job types" />
               </SelectTrigger>
               <SelectContent className="max-h-56 overflow-y-auto">
-                <SelectItem value="none">All service types</SelectItem>
-                {serviceTypes.map((st) => (
+                <SelectItem value="none">All job types</SelectItem>
+                {jobTypes.map((st) => (
                   <SelectItem key={st.id} value={st.id}>
                     {st.name}
                   </SelectItem>

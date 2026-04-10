@@ -71,7 +71,7 @@ export default function CostBreakdownView() {
     if (q) {
       result = result.filter((b) => {
         const title = b.title.toLowerCase();
-        const type = (b.serviceType?.name ?? '').toLowerCase();
+        const type = (b.jobType?.name ?? '').toLowerCase();
         const linked = (b.project?.name ?? b.lead?.company ?? '').toLowerCase();
         return title.includes(q) || type.includes(q) || linked.includes(q);
       });

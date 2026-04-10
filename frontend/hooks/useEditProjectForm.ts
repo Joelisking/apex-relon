@@ -9,12 +9,10 @@ import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import { projectsApi, type Project, type ProjectAssignment } from '@/lib/api/projects-client';
 import { usersApi, type UserDirectoryItem } from '@/lib/api/users-client';
-import { clientsApi, leadsApi, settingsApi, serviceItemsApi } from '@/lib/api/client';
+import { clientsApi, leadsApi, settingsApi } from '@/lib/api/client';
 import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
-import { usePrimaryServiceTypeName } from './usePrimaryServiceTypeName';
-import type { DropdownOption, ServiceCategory, ProjectServiceItem } from '@/lib/types';
-import type { CostSegmentInput } from '@/components/projects/ProjectCostSegments';
-import type { LinkedServiceItem } from '@/components/projects/ProjectServiceItemsField';
+import { usePrimaryJobTypeName } from './usePrimaryJobTypeName';
+import type { DropdownOption, Division } from '@/lib/types';
 import type { TeamMember } from '@/components/projects/ProjectTeamMembersSection';
 
 export const editProjectSchema = z.object({
@@ -68,31 +66,20 @@ export function useEditProjectForm({ project, open, onOpenChange, onProjectUpdat
   const [assignments, setAssignments] = useState<ProjectAssignment[]>(
     project.assignments ?? [],
   );
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(
+  const [selectedDivisionIds, setSelectedDivisionIds] = useState<string[]>(
     project.categoryIds ?? [],
   );
-  const [selectedServiceTypeIds, setSelectedServiceTypeIds] = useState<string[]>(
-    project.serviceTypeIds ?? [],
-  );
-  const [costSegments, setCostSegments] = useState<CostSegmentInput[]>(
-    project.costSegments?.map((s) => ({ name: s.name, amount: s.amount, sortOrder: s.sortOrder })) ?? [],
+  const [selectedJobTypeIds, setSelectedJobTypeIds] = useState<string[]>(
+    project.jobTypeIds ?? [],
   );
   const [activeOptionalStages, setActiveOptionalStages] = useState<string[]>(
     project.activeOptionalStages ?? [],
   );
   const [geocodedLat, setGeocodedLat] = useState<number | null>(project.latitude ?? null);
   const [geocodedLng, setGeocodedLng] = useState<number | null>(project.longitude ?? null);
-  const [projectServiceItems, setProjectServiceItems] = useState<ProjectServiceItem[]>([]);
-
-  const { data: serviceCategories = [] } = useQuery<ServiceCategory[]>({
-    queryKey: ['service-categories'],
-    queryFn: () => settingsApi.getServiceCategories(),
-    staleTime: 10 * 60 * 1000,
-  });
-
-  const { data: allServiceItems = [] } = useQuery({
-    queryKey: ['service-items'],
-    queryFn: () => serviceItemsApi.getAll(),
+  const { data: divisions = [] } = useQuery<Division[]>({
+    queryKey: ['divisions'],
+    queryFn: () => settingsApi.getDivisions(),
     staleTime: 10 * 60 * 1000,
   });
 
@@ -120,7 +107,7 @@ export function useEditProjectForm({ project, open, onOpenChange, onProjectUpdat
     },
   });
 
-  const primaryServiceTypeName = usePrimaryServiceTypeName(selectedServiceTypeIds, serviceCategories);
+  const primaryJobTypeName = usePrimaryJobTypeName(selectedJobTypeIds, divisions);
 
   // Sync form + state when project changes
   useEffect(() => {
@@ -147,34 +134,24 @@ export function useEditProjectForm({ project, open, onOpenChange, onProjectUpdat
     setGeocodedLat(project.latitude ?? null);
     setGeocodedLng(project.longitude ?? null);
     setAssignments(project.assignments ?? []);
-    setSelectedCategoryIds(project.categoryIds ?? []);
-    setSelectedServiceTypeIds(project.serviceTypeIds ?? []);
-    setCostSegments(
-      project.costSegments?.map((s) => ({
-        name: s.name,
-        amount: s.amount,
-        sortOrder: s.sortOrder,
-      })) ?? [],
-    );
+    setSelectedDivisionIds(project.categoryIds ?? []);
+    setSelectedJobTypeIds(project.jobTypeIds ?? []);
     setActiveOptionalStages(project.activeOptionalStages ?? []);
-    setProjectServiceItems([]);
   }, [project.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch reference data + project service items when dialog opens
+  // Fetch reference data when dialog opens
   useEffect(() => {
     if (!open) return;
     const fetchData = async () => {
       try {
-        const [clientsData, leadsData, usersRes, serviceItemLinks] = await Promise.all([
+        const [clientsData, leadsData, usersRes] = await Promise.all([
           clientsApi.getAll(),
           leadsApi.getAll(),
           usersApi.getUsersDirectory(),
-          projectsApi.getServiceItems(project.id),
         ]);
         setClients(clientsData.map((c) => ({ ...c, individualName: c.individualName ?? undefined })));
         setLeads(Array.isArray(leadsData) ? leadsData : []);
         setUsers(usersRes.users || []);
-        setProjectServiceItems(serviceItemLinks);
       } catch (error) {
         console.error('Failed to load form data', error);
       }
@@ -182,40 +159,14 @@ export function useEditProjectForm({ project, open, onOpenChange, onProjectUpdat
     fetchData();
     settingsApi.getDropdownOptions('project_risk_status').then(setRiskOptions).catch(console.error);
     settingsApi.getDropdownOptions('county').then(setCountyOptions).catch(console.error);
-  }, [open, project.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, project.id]);
 
   useEffect(() => {
     pipelineApi
-      .getStages('project', primaryServiceTypeName)
+      .getStages('project', primaryJobTypeName)
       .then(setProjectStages)
       .catch(console.error);
-  }, [primaryServiceTypeName]);
-
-  const linkedServiceItemIds = useMemo(
-    () => new Set(projectServiceItems.map((l) => l.serviceItemId)),
-    [projectServiceItems],
-  );
-
-  const filteredServiceItems = useMemo(
-    () =>
-      allServiceItems
-        .filter((si) => si.isActive && !linkedServiceItemIds.has(si.id))
-        .filter((si) => {
-          if (selectedServiceTypeIds.length === 0) return true;
-          return si.serviceTypeIds.some((id) => selectedServiceTypeIds.includes(id));
-        }),
-    [allServiceItems, linkedServiceItemIds, selectedServiceTypeIds],
-  );
-
-  const linkedServiceItems = useMemo<LinkedServiceItem[]>(
-    () =>
-      projectServiceItems.map((link) => ({
-        removeKey: link.id,
-        name: link.serviceItem.name,
-        unit: link.serviceItem.unit,
-      })),
-    [projectServiceItems],
-  );
+  }, [primaryJobTypeName]);
 
   const availableUsers = users.filter((u) => !assignments.some((a) => a.userId === u.id));
   const teamMembers = useMemo<TeamMember[]>(
@@ -228,35 +179,16 @@ export function useEditProjectForm({ project, open, onOpenChange, onProjectUpdat
     [assignments],
   );
 
-  function toggleCategory(id: string) {
-    setSelectedCategoryIds((prev) =>
+  function toggleDivision(id: string) {
+    setSelectedDivisionIds((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
     );
   }
 
-  function toggleServiceType(id: string) {
-    setSelectedServiceTypeIds((prev) =>
+  function toggleJobType(id: string) {
+    setSelectedJobTypeIds((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
     );
-  }
-
-  async function addServiceItem(serviceItemId: string) {
-    if (!serviceItemId) return;
-    try {
-      const link = await projectsApi.addServiceItem(project.id, { serviceItemId });
-      setProjectServiceItems((prev) => [...prev, link]);
-    } catch {
-      toast.error('Failed to add service item');
-    }
-  }
-
-  async function removeServiceItem(linkId: string) {
-    try {
-      await projectsApi.removeServiceItem(project.id, linkId);
-      setProjectServiceItems((prev) => prev.filter((l) => l.id !== linkId));
-    } catch {
-      toast.error('Failed to remove service item');
-    }
   }
 
   async function addTeamMember(userId: string) {
@@ -281,10 +213,6 @@ export function useEditProjectForm({ project, open, onOpenChange, onProjectUpdat
     }
   }
 
-  function handleUseSegmentTotal(total: number) {
-    form.setValue('contractedValue', total, { shouldValidate: true });
-  }
-
   function handleGeocode(lat: number | null, lng: number | null) {
     setGeocodedLat(lat);
     setGeocodedLng(lng);
@@ -304,9 +232,8 @@ export function useEditProjectForm({ project, open, onOpenChange, onProjectUpdat
           ? new Date(values.estimatedDueDate).toISOString()
           : undefined,
         closedDate: values.closedDate ? new Date(values.closedDate).toISOString() : undefined,
-        categoryIds: selectedCategoryIds,
-        serviceTypeIds: selectedServiceTypeIds,
-        costSegments,
+        categoryIds: selectedDivisionIds,
+        jobTypeIds: selectedJobTypeIds,
         activeOptionalStages,
         address: values.address || undefined,
         folderPath: values.folderPath || undefined,
@@ -331,35 +258,25 @@ export function useEditProjectForm({ project, open, onOpenChange, onProjectUpdat
     leads,
     users,
     projectStages,
-    primaryServiceTypeName,
+    primaryJobTypeName,
     riskOptions,
     setRiskOptions,
     countyOptions,
     setCountyOptions,
-    serviceCategories,
-    selectedCategoryIds,
-    selectedServiceTypeIds,
-    costSegments,
-    setCostSegments,
+    divisions,
+    selectedDivisionIds,
+    selectedJobTypeIds,
     activeOptionalStages,
     setActiveOptionalStages,
-    // service items
-    allServiceItems,
-    linkedServiceItems,
-    filteredServiceItems,
-    addServiceItem,
-    removeServiceItem,
     // team members
     teamMembers,
     availableUsers,
     addTeamMember,
     removeTeamMember,
     // handlers
-    toggleCategory,
-    toggleServiceType,
-    handleUseSegmentTotal,
+    toggleDivision,
+    toggleJobType,
     handleGeocode,
-    watchedContractedValue: form.watch('contractedValue'),
     onSubmit,
   };
 }

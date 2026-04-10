@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { proposalTemplatesApi, type Proposal } from '@/lib/api/proposal-templates-client';
 import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
+import { AcceptProposalDialog } from './AcceptProposalDialog';
 
 interface LinkedProposalsSectionProps {
   leadId: string;
@@ -64,6 +65,7 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [acceptProposal, setAcceptProposal] = useState<Proposal | null>(null);
 
   const { data: proposals = [], isLoading } = useQuery({
     queryKey: ['proposals', { leadId }],
@@ -112,12 +114,14 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
     }
   };
 
-  const handleAccept = async (proposal: Proposal) => {
-    setAcceptingId(proposal.id);
+  const handleAcceptConfirm = async (contractedValue: number | undefined) => {
+    if (!acceptProposal) return;
+    setAcceptingId(acceptProposal.id);
     try {
-      await proposalTemplatesApi.acceptProposal(proposal.id);
+      await proposalTemplatesApi.acceptProposal(acceptProposal.id, contractedValue);
       invalidate();
-      toast.success('Proposal marked as accepted');
+      toast.success('Proposal accepted');
+      setAcceptProposal(null);
     } catch {
       toast.error('Failed to accept proposal');
     } finally {
@@ -296,8 +300,8 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
                     <div className="flex items-center gap-0.5 shrink-0">
                       {!isAccepted && (
                         <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-green-600"
-                          title="Mark as accepted" disabled={acceptingId === proposal.id}
-                          onClick={() => handleAccept(proposal)}>
+                          title="Accept proposal" disabled={acceptingId === proposal.id}
+                          onClick={() => setAcceptProposal(proposal)}>
                           {acceptingId === proposal.id
                             ? <Loader2 className="h-3 w-3 animate-spin" />
                             : <CheckCircle2 className="h-3 w-3" />}
@@ -426,7 +430,7 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   {formatDate(cb.createdAt)}
                   {cb.totalEstimatedCost > 0 ? ` · ${formatCurrency(cb.totalEstimatedCost)}` : ''}
-                  {cb.serviceType ? ` · ${cb.serviceType.name}` : ''}
+                  {cb.jobType ? ` · ${cb.jobType.name}` : ''}
                 </p>
               </div>
               <Button
@@ -441,6 +445,12 @@ export function LinkedProposalsSection({ leadId }: LinkedProposalsSectionProps) 
         </div>
       )}
     </div>
+
+    <AcceptProposalDialog
+      proposal={acceptProposal}
+      onClose={() => setAcceptProposal(null)}
+      onConfirm={handleAcceptConfirm}
+    />
     </div>
   );
 }

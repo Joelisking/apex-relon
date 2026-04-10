@@ -36,16 +36,14 @@ export function CreateProjectDialog({
   const {
     form, loading, isLoadingStages,
     clients, leads, users,
-    projectStages, primaryServiceTypeName,
+    projectStages, primaryJobTypeName,
     riskOptions, setRiskOptions,
     countyOptions, setCountyOptions,
-    serviceCategories,
-    selectedCategoryIds, selectedServiceTypeIds,
+    divisions,
+    selectedDivisionIds, selectedJobTypeIds,
     activeOptionalStages, setActiveOptionalStages,
-    linkedServiceItems, filteredServiceItems,
-    addServiceItem, removeServiceItem,
     teamMembers, availableUsers, addTeamMember, removeTeamMember,
-    toggleCategory, toggleServiceType,
+    toggleDivision, toggleJobType,
     handleClientChange, handleGeocode,
     onSubmit,
   } = useCreateProjectForm({ open, onOpenChange, onProjectCreated, initialClientId });
@@ -120,20 +118,16 @@ export function CreateProjectDialog({
                 onClientChange={handleClientChangeWithReset}
                 hideClient={!!initialClientId}
                 projectStages={projectStages}
-                primaryServiceTypeName={primaryServiceTypeName}
+                primaryJobTypeName={primaryJobTypeName}
                 isLoadingStages={isLoadingStages}
                 activeOptionalStages={activeOptionalStages}
                 onOptionalStageChange={setActiveOptionalStages}
                 stageIdPrefix="create"
-                serviceCategories={serviceCategories}
-                selectedCategoryIds={selectedCategoryIds}
-                selectedServiceTypeIds={selectedServiceTypeIds}
-                onCategoryToggle={toggleCategory}
-                onServiceTypeToggle={toggleServiceType}
-                linkedServiceItems={linkedServiceItems}
-                availableServiceItems={filteredServiceItems.map((si) => ({ id: si.id, name: si.name, unit: si.unit }))}
-                onAddServiceItem={addServiceItem}
-                onRemoveServiceItem={removeServiceItem}
+                divisions={divisions}
+                selectedDivisionIds={selectedDivisionIds}
+                selectedJobTypeIds={selectedJobTypeIds}
+                onDivisionToggle={toggleDivision}
+                onJobTypeToggle={toggleJobType}
                 riskOptions={riskOptions}
                 onRiskOptionsChange={setRiskOptions}
                 countyOptions={countyOptions}

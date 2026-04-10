@@ -38,7 +38,7 @@ export class CreateLeadDto {
 
   @IsString()
   @IsOptional()
-  serviceTypeId?: string;
+  jobTypeId?: string;
 
   @IsArray()
   @IsString({ each: true })
@@ -48,7 +48,7 @@ export class CreateLeadDto {
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
-  serviceTypeIds?: string[];
+  jobTypeIds?: string[];
 
   @IsString()
   @IsNotEmpty()

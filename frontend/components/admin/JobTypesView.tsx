@@ -26,7 +26,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import { settingsApi } from '@/lib/api/client';
-import type { ServiceCategory, ServiceType } from '@/lib/types';
+import type { Division, JobType } from '@/lib/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -36,8 +36,8 @@ interface DeleteTarget {
   name: string;
 }
 
-export function ServiceTypesView() {
-  const [categories, setCategories] = useState<ServiceCategory[]>([]);
+export function JobTypesView() {
+  const [categories, setCategories] = useState<Division[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -69,12 +69,12 @@ export function ServiceTypesView() {
 
   const loadData = async () => {
     try {
-      const data = await settingsApi.getServiceCategories();
+      const data = await settingsApi.getDivisions();
       setCategories(data);
       // Auto-expand all categories on first load
       setExpanded(new Set(data.map((c) => c.id)));
     } catch {
-      toast.error('Failed to load service categories');
+      toast.error('Failed to load divisions');
     } finally {
       setLoading(false);
     }
@@ -94,7 +94,7 @@ export function ServiceTypesView() {
     if (!newCatName.trim()) return;
     setAddingCat(true);
     try {
-      await settingsApi.createServiceCategory({ name: newCatName.trim() });
+      await settingsApi.createDivision({ name: newCatName.trim() });
       setNewCatName('');
       toast.success('Category created');
       await loadData();
@@ -109,7 +109,7 @@ export function ServiceTypesView() {
     if (!editingCatId || !editCatName.trim()) return;
     setSavingCat(true);
     try {
-      await settingsApi.updateServiceCategory(editingCatId, { name: editCatName.trim() });
+      await settingsApi.updateDivision(editingCatId, { name: editCatName.trim() });
       setEditingCatId(null);
       toast.success('Category updated');
       await loadData();
@@ -125,13 +125,13 @@ export function ServiceTypesView() {
     if (!newTypeName.trim()) return;
     setAddingType(true);
     try {
-      await settingsApi.createServiceType({ name: newTypeName.trim(), categoryId });
+      await settingsApi.createJobType({ name: newTypeName.trim(), divisionId: categoryId });
       setNewTypeName('');
       setAddingTypeFor(null);
-      toast.success('Service type created');
+      toast.success('Job type created');
       await loadData();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create service type');
+      toast.error(err instanceof Error ? err.message : 'Failed to create job type');
     } finally {
       setAddingType(false);
     }
@@ -141,12 +141,12 @@ export function ServiceTypesView() {
     if (!editingTypeId || !editTypeName.trim()) return;
     setSavingType(true);
     try {
-      await settingsApi.updateServiceType(editingTypeId, { name: editTypeName.trim() });
+      await settingsApi.updateJobType(editingTypeId, { name: editTypeName.trim() });
       setEditingTypeId(null);
-      toast.success('Service type updated');
+      toast.success('Job type updated');
       await loadData();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update service type');
+      toast.error(err instanceof Error ? err.message : 'Failed to update job type');
     } finally {
       setSavingType(false);
     }
@@ -156,9 +156,9 @@ export function ServiceTypesView() {
     if (!deleteTarget) return;
     try {
       if (deleteTarget.type === 'category') {
-        await settingsApi.deleteServiceCategory(deleteTarget.id);
+        await settingsApi.deleteDivision(deleteTarget.id);
       } else {
-        await settingsApi.deleteServiceType(deleteTarget.id);
+        await settingsApi.deleteJobType(deleteTarget.id);
       }
       toast.success(`"${deleteTarget.name}" deleted`);
       setDeleteTarget(null);
@@ -199,7 +199,7 @@ export function ServiceTypesView() {
 
         {categories.map((cat) => {
           const isOpen = expanded.has(cat.id);
-          const types = cat.serviceTypes ?? [];
+          const types = (cat.jobTypes ?? []) as JobType[];
 
           return (
             <div

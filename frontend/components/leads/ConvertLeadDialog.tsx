@@ -83,7 +83,7 @@ export function ConvertLeadDialog({
   const form = useForm<FormValues, unknown, FormValues>({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
     defaultValues: {
-      projectName: lead?.projectName || (lead ? `${lead.company} - ${lead.serviceType?.name || 'Project'}` : ''),
+      projectName: lead?.projectName || (lead ? `${lead.company} - ${lead.jobType?.name || 'Project'}` : ''),
       status: '',
       contractedValue: lead?.contractedValue ?? lead?.expectedValue ?? 0,
       endOfProjectValue: undefined,
@@ -102,7 +102,7 @@ export function ConvertLeadDialog({
       form.reset({
         projectName:
           lead.projectName ||
-          `${lead.company} - ${lead.serviceType?.name || 'Project'}`,
+          `${lead.company} - ${lead.jobType?.name || 'Project'}`,
         status: '',
         contractedValue:
           lead.contractedValue ?? lead.expectedValue ?? 0,

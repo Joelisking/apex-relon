@@ -85,7 +85,7 @@ export class CreateProjectDto {
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
-  serviceTypeIds?: string[];
+  jobTypeIds?: string[];
 
   @IsArray()
   @IsString({ each: true })

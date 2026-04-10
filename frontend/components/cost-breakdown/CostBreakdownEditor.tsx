@@ -19,7 +19,7 @@ import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
 import { settingsApi, leadsApi } from '@/lib/api/client';
 import { rolesApi } from '@/lib/api/roles-client';
 import type { RoleResponse } from '@/lib/api/roles-client';
-import type { CostBreakdown, CostBreakdownLine, ServiceType, Lead } from '@/lib/types';
+import type { CostBreakdown, CostBreakdownLine, JobType, Lead } from '@/lib/types';
 import CostBreakdownLineCard from './CostBreakdownLineCard';
 import { toast } from 'sonner';
 
@@ -47,13 +47,13 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
   const [downloading, setDownloading] = useState(false);
 
   const [breakdown, setBreakdown] = useState<CostBreakdown | null>(null);
-  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
+  const [jobTypes, setJobTypes] = useState<JobType[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [roles, setRoles] = useState<RoleResponse[]>([]);
 
   // Create-mode form
   const [title, setTitle] = useState('');
-  const [serviceTypeId, setServiceTypeId] = useState('');
+  const [jobTypeId, setJobTypeId] = useState('');
   const [leadId, setLeadId] = useState('');
   const [titleManuallyEdited, setTitleManuallyEdited] = useState(false);
 
@@ -82,11 +82,11 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
       setLoading(true);
       try {
         const [fetchedTypes, fetchedLeads, fetchedRoles] = await Promise.all([
-          settingsApi.getServiceTypes(),
+          settingsApi.getJobTypes(),
           leadsApi.getAll(),
           rolesApi.getAll(),
         ]);
-        setServiceTypes(fetchedTypes);
+        setJobTypes(fetchedTypes);
         setLeads(fetchedLeads);
         setRoles(fetchedRoles);
 
@@ -156,7 +156,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
     try {
       const created = await costBreakdownApi.create({
         title: title.trim(),
-        serviceTypeId: serviceTypeId || undefined,
+        jobTypeId: jobTypeId || undefined,
         leadId: leadId || undefined,
       });
       router.push(`/cost-breakdown/${created.id}`);
@@ -166,7 +166,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
     } finally {
       setSaving(false);
     }
-  }, [title, serviceTypeId, leadId, router]);
+  }, [title, jobTypeId, leadId, router]);
 
   const handleStatusToggle = useCallback(async () => {
     if (!breakdown) return;
@@ -274,12 +274,12 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
 
           <div className="space-y-1.5">
             <Label>Job Type</Label>
-            <Select value={serviceTypeId} onValueChange={setServiceTypeId}>
+            <Select value={jobTypeId} onValueChange={setJobTypeId}>
               <SelectTrigger>
                 <SelectValue placeholder="Select job type..." />
               </SelectTrigger>
               <SelectContent>
-                {serviceTypes.map((st) => (
+                {jobTypes.map((st) => (
                   <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -346,9 +346,9 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
           </div>
           <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
             {linkedLabel && <span>{linkedLabel}</span>}
-            {linkedLabel && breakdown.serviceType && <span className="text-border">·</span>}
-            {breakdown.serviceType && <span>{breakdown.serviceType.name}</span>}
-            {(linkedLabel || breakdown.serviceType) && <span className="text-border">·</span>}
+            {linkedLabel && breakdown.jobType && <span className="text-border">·</span>}
+            {breakdown.jobType && <span>{breakdown.jobType.name}</span>}
+            {(linkedLabel || breakdown.jobType) && <span className="text-border">·</span>}
             <span>{formatDate(breakdown.createdAt)}</span>
           </div>
         </div>
@@ -381,9 +381,11 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
           </Button>
           <Button
             size="sm"
-            onClick={() => router.push(`/proposals/new?leadId=${breakdown.leadId}&costBreakdownId=${breakdown.id}`)}
-            disabled={!breakdown.leadId}
-            title={!breakdown.leadId ? 'Link this breakdown to a prospective project first' : undefined}>
+            onClick={() => {
+              const params = new URLSearchParams({ costBreakdownId: breakdown.id });
+              if (breakdown.leadId) params.set('leadId', breakdown.leadId);
+              router.push(`/proposals/new?${params.toString()}`);
+            }}>
             <FilePlus className="mr-1.5 h-3.5 w-3.5" />
             Create Proposal
           </Button>
@@ -626,9 +628,11 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
           </Button>
           <Button
             size="sm"
-            onClick={() => router.push(`/proposals/new?leadId=${breakdown.leadId}&costBreakdownId=${breakdown.id}`)}
-            disabled={!breakdown.leadId}
-            title={!breakdown.leadId ? 'Link this breakdown to a prospective project first' : undefined}>
+            onClick={() => {
+              const params = new URLSearchParams({ costBreakdownId: breakdown.id });
+              if (breakdown.leadId) params.set('leadId', breakdown.leadId);
+              router.push(`/proposals/new?${params.toString()}`);
+            }}>
             <FilePlus className="mr-1.5 h-3.5 w-3.5" />
             Create Proposal
           </Button>

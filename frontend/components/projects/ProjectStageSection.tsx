@@ -23,7 +23,7 @@ import type { PipelineStage } from '@/lib/api/pipeline-client';
 
 interface ProjectStageSectionProps {
   projectStages: PipelineStage[];
-  primaryServiceTypeName?: string;
+  primaryJobTypeName?: string;
   isLoadingStages?: boolean;
   activeOptionalStages: string[];
   onOptionalStageChange: (stages: string[]) => void;
@@ -34,7 +34,7 @@ interface ProjectStageSectionProps {
 
 export function ProjectStageSection({
   projectStages,
-  primaryServiceTypeName,
+  primaryJobTypeName,
   isLoadingStages = false,
   activeOptionalStages,
   onOptionalStageChange,
@@ -64,23 +64,23 @@ export function ProjectStageSection({
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                {primaryServiceTypeName ? (
+                {primaryJobTypeName ? (
                   <>
                     <SelectGroup>
                       <SelectLabel>General</SelectLabel>
                       {projectStages
-                        .filter((s) => s.serviceType === '__all__')
+                        .filter((s) => s.jobType === '__all__')
                         .map((s) => (
                           <SelectItem key={s.id} value={s.name}>
                             {s.name}
                           </SelectItem>
                         ))}
                     </SelectGroup>
-                    {projectStages.some((s) => s.serviceType !== '__all__') && (
+                    {projectStages.some((s) => s.jobType !== '__all__') && (
                       <SelectGroup>
-                        <SelectLabel>{primaryServiceTypeName}</SelectLabel>
+                        <SelectLabel>{primaryJobTypeName}</SelectLabel>
                         {projectStages
-                          .filter((s) => s.serviceType !== '__all__')
+                          .filter((s) => s.jobType !== '__all__')
                           .map((s) => (
                             <SelectItem key={s.id} value={s.name}>
                               {s.name}

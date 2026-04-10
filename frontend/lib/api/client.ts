@@ -1,8 +1,8 @@
 import type {
   Lead,
   LeadRep,
-  ServiceCategory,
-  ServiceType,
+  Division,
+  JobType,
   TaskType,
   ServiceItem,
   ServiceItemSubtask,
@@ -38,9 +38,9 @@ export interface CreateLeadDto {
   state?: string;
   zip?: string;
   stage: string;
-  serviceTypeId?: string;
+  jobTypeId?: string;
   categoryIds?: string[];
-  serviceTypeIds?: string[];
+  jobTypeIds?: string[];
   county?: string[];
   urgency: string;
   source?: string;
@@ -64,9 +64,9 @@ export interface UpdateLeadDto {
   state?: string;
   zip?: string;
   stage?: string;
-  serviceTypeId?: string;
+  jobTypeId?: string;
   categoryIds?: string[];
-  serviceTypeIds?: string[];
+  jobTypeIds?: string[];
   county?: string[];
   urgency?: string;
   source?: string;
@@ -645,93 +645,77 @@ export const adminApi = {
     ),
 };
 
-// Settings API (Service Categories + Service Types + Dropdown Options)
+// Settings API (Divisions + Job Types + Dropdown Options)
 export const settingsApi = {
-  getServiceCategories: (serverToken?: string) =>
-    apiFetch<ServiceCategory[]>('/settings/service-categories', {}, serverToken),
+  getDivisions: (serverToken?: string) =>
+    apiFetch<Division[]>('/settings/divisions', {}, serverToken),
 
-  createServiceCategory: (
+  createDivision: (
     data: { name: string; description?: string; isActive?: boolean; sortOrder?: number },
     serverToken?: string,
   ) =>
-    apiFetch<ServiceCategory>(
-      '/settings/service-categories',
+    apiFetch<Division>(
+      '/settings/divisions',
       { method: 'POST', body: JSON.stringify(data) },
       serverToken,
     ),
 
-  updateServiceCategory: (
+  updateDivision: (
     id: string,
     data: { name: string; description?: string; isActive?: boolean; sortOrder?: number },
     serverToken?: string,
   ) =>
-    apiFetch<ServiceCategory>(
-      `/settings/service-categories/${id}`,
+    apiFetch<Division>(
+      `/settings/divisions/${id}`,
       { method: 'PATCH', body: JSON.stringify(data) },
       serverToken,
     ),
 
-  deleteServiceCategory: (id: string, serverToken?: string) =>
-    apiFetch<void>(`/settings/service-categories/${id}`, { method: 'DELETE' }, serverToken),
+  deleteDivision: (id: string, serverToken?: string) =>
+    apiFetch<void>(`/settings/divisions/${id}`, { method: 'DELETE' }, serverToken),
 
-  getServiceTypes: (serverToken?: string) =>
-    apiFetch<ServiceType[]>(
-      '/settings/service-types',
-      {},
-      serverToken,
-    ),
+  getJobTypes: (serverToken?: string) =>
+    apiFetch<JobType[]>('/settings/job-types', {}, serverToken),
 
-  createServiceType: (
-    data: { name: string; categoryId?: string; description?: string; isActive?: boolean; sortOrder?: number },
+  createJobType: (
+    data: { name: string; divisionId?: string; description?: string; isActive?: boolean; sortOrder?: number },
     serverToken?: string,
   ) =>
-    apiFetch<ServiceType>(
-      '/settings/service-types',
-      {
-        method: 'POST',
-        body: JSON.stringify(data),
-      },
+    apiFetch<JobType>(
+      '/settings/job-types',
+      { method: 'POST', body: JSON.stringify(data) },
       serverToken,
     ),
 
-  updateServiceType: (
+  updateJobType: (
     id: string,
     data: { name: string; description?: string; isActive?: boolean; sortOrder?: number },
     serverToken?: string,
   ) =>
-    apiFetch<ServiceType>(
-      `/settings/service-types/${id}`,
-      {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      },
+    apiFetch<JobType>(
+      `/settings/job-types/${id}`,
+      { method: 'PATCH', body: JSON.stringify(data) },
       serverToken,
     ),
 
-  deleteServiceType: (id: string, serverToken?: string) =>
-    apiFetch<void>(
-      `/settings/service-types/${id}`,
-      {
-        method: 'DELETE',
-      },
-      serverToken,
-    ),
+  deleteJobType: (id: string, serverToken?: string) =>
+    apiFetch<void>(`/settings/job-types/${id}`, { method: 'DELETE' }, serverToken),
 
   // Task Types
-  getTaskTypes: (serviceTypeId?: string, serverToken?: string) => {
-    const query = serviceTypeId ? `?serviceTypeId=${encodeURIComponent(serviceTypeId)}` : '';
+  getTaskTypes: (jobTypeId?: string, serverToken?: string) => {
+    const query = jobTypeId ? `?jobTypeId=${encodeURIComponent(jobTypeId)}` : '';
     return apiFetch<TaskType[]>(`/settings/task-types${query}`, {}, serverToken);
   },
 
   createTaskType: (
-    data: { name: string; description?: string; serviceTypeId?: string; isActive?: boolean; sortOrder?: number },
+    data: { name: string; description?: string; jobTypeId?: string; isActive?: boolean; sortOrder?: number },
     serverToken?: string,
   ) =>
     apiFetch<TaskType>('/settings/task-types', { method: 'POST', body: JSON.stringify(data) }, serverToken),
 
   updateTaskType: (
     id: string,
-    data: { name?: string; description?: string; serviceTypeId?: string; isActive?: boolean; sortOrder?: number },
+    data: { name?: string; description?: string; jobTypeId?: string; isActive?: boolean; sortOrder?: number },
     serverToken?: string,
   ) =>
     apiFetch<TaskType>(`/settings/task-types/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, serverToken),
@@ -822,8 +806,8 @@ export const settingsApi = {
 
 // Service Items API
 export const serviceItemsApi = {
-  getAll: (serviceTypeId?: string, serverToken?: string) => {
-    const query = serviceTypeId ? `?serviceTypeId=${encodeURIComponent(serviceTypeId)}` : '';
+  getAll: (jobTypeId?: string, serverToken?: string) => {
+    const query = jobTypeId ? `?jobTypeId=${encodeURIComponent(jobTypeId)}` : '';
     return apiFetch<ServiceItem[]>(`/service-items${query}`, {}, serverToken);
   },
 
@@ -831,14 +815,14 @@ export const serviceItemsApi = {
     apiFetch<ServiceItem>(`/service-items/${id}`, {}, serverToken),
 
   create: (
-    data: { name: string; description?: string; serviceTypeIds?: string[]; unit?: string; defaultPrice?: number; isActive?: boolean; isIndot?: boolean; sortOrder?: number },
+    data: { name: string; description?: string; jobTypeIds?: string[]; unit?: string; defaultPrice?: number; isActive?: boolean; isIndot?: boolean; sortOrder?: number },
     serverToken?: string,
   ) =>
     apiFetch<ServiceItem>('/service-items', { method: 'POST', body: JSON.stringify(data) }, serverToken),
 
   update: (
     id: string,
-    data: { name?: string; description?: string; serviceTypeIds?: string[]; unit?: string; defaultPrice?: number; isActive?: boolean; isIndot?: boolean; sortOrder?: number },
+    data: { name?: string; description?: string; jobTypeIds?: string[]; unit?: string; defaultPrice?: number; isActive?: boolean; isIndot?: boolean; sortOrder?: number },
     serverToken?: string,
   ) =>
     apiFetch<ServiceItem>(`/service-items/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, serverToken),

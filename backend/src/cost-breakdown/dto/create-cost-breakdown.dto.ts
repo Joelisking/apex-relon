@@ -6,7 +6,7 @@ export class CreateCostBreakdownDto {
 
   @IsUUID()
   @IsOptional()
-  serviceTypeId?: string;
+  jobTypeId?: string;
 
   @IsUUID()
   @IsOptional()

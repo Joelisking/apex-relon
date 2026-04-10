@@ -24,7 +24,7 @@ export class CostBreakdownService {
       where,
       orderBy: { createdAt: 'desc' },
       include: {
-        serviceType: { select: { id: true, name: true } },
+        jobType: { select: { id: true, name: true } },
         project: { select: { id: true, name: true } },
         lead: { select: { id: true, company: true, contactName: true } },
         lines: {
@@ -48,7 +48,7 @@ export class CostBreakdownService {
     const breakdown = await this.prisma.costBreakdown.findFirst({
       where: { id, tenantId },
       include: {
-        serviceType: { select: { id: true, name: true } },
+        jobType: { select: { id: true, name: true } },
         project: { select: { id: true, name: true } },
         lead: { select: { id: true, company: true, contactName: true } },
         createdBy: { select: { id: true, name: true } },
@@ -69,7 +69,7 @@ export class CostBreakdownService {
         tenantId,
         createdById: userId,
         title: dto.title,
-        serviceTypeId: dto.serviceTypeId,
+        jobTypeId: dto.jobTypeId,
         projectId: dto.projectId,
         leadId: dto.leadId,
         notes: dto.notes,
@@ -77,11 +77,11 @@ export class CostBreakdownService {
       },
     });
 
-    // Auto-populate lines from ServiceItems linked to this ServiceType
-    if (dto.serviceTypeId) {
+    // Auto-populate lines from ServiceItems linked to this JobType
+    if (dto.jobTypeId) {
       const serviceItems = await this.prisma.serviceItem.findMany({
         where: {
-          serviceTypeIds: { has: dto.serviceTypeId },
+          jobTypeIds: { has: dto.jobTypeId },
           isActive: true,
         },
         orderBy: { sortOrder: 'asc' },

@@ -15,10 +15,9 @@ import { MultiCreatableSelect } from '@/components/ui/multi-creatable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { UserPicker } from '@/components/ui/user-picker';
 import { settingsApi } from '@/lib/api/client';
-import { ServiceTypeSelector } from '@/components/settings/ServiceTypeSelector';
+import { JobTypeSelector } from '@/components/settings/JobTypeSelector';
 import { ProjectStageSection } from './ProjectStageSection';
-import { ProjectServiceItemsField, type LinkedServiceItem } from './ProjectServiceItemsField';
-import type { DropdownOption, ServiceCategory, ServiceItem } from '@/lib/types';
+import type { DropdownOption, Division } from '@/lib/types';
 import type { PipelineStage } from '@/lib/api/pipeline-client';
 
 interface Client {
@@ -49,25 +48,19 @@ export interface ProjectCoreFieldsProps {
 
   // Stage
   projectStages: PipelineStage[];
-  primaryServiceTypeName?: string;
+  primaryJobTypeName?: string;
   isLoadingStages?: boolean;
   activeOptionalStages: string[];
   onOptionalStageChange: (stages: string[]) => void;
   stageIdPrefix: string;
   statusLabel?: string;
 
-  // Service types
-  serviceCategories: ServiceCategory[];
-  selectedCategoryIds: string[];
-  selectedServiceTypeIds: string[];
-  onCategoryToggle: (id: string) => void;
-  onServiceTypeToggle: (id: string) => void;
-
-  // Service items
-  linkedServiceItems: LinkedServiceItem[];
-  availableServiceItems: Array<{ id: string; name: string; unit?: string | null }>;
-  onAddServiceItem: (id: string) => void;
-  onRemoveServiceItem: (key: string) => void;
+  // Divisions / job types
+  divisions: Division[];
+  selectedDivisionIds: string[];
+  selectedJobTypeIds: string[];
+  onDivisionToggle: (id: string) => void;
+  onJobTypeToggle: (id: string) => void;
 
   // Risk / dropdown options
   riskOptions: DropdownOption[];
@@ -86,21 +79,17 @@ export function ProjectCoreFields({
   onClientChange,
   hideClient = false,
   projectStages,
-  primaryServiceTypeName,
+  primaryJobTypeName,
   isLoadingStages,
   activeOptionalStages,
   onOptionalStageChange,
   stageIdPrefix,
   statusLabel,
-  serviceCategories,
-  selectedCategoryIds,
-  selectedServiceTypeIds,
-  onCategoryToggle,
-  onServiceTypeToggle,
-  linkedServiceItems,
-  availableServiceItems,
-  onAddServiceItem,
-  onRemoveServiceItem,
+  divisions,
+  selectedDivisionIds,
+  selectedJobTypeIds,
+  onDivisionToggle,
+  onJobTypeToggle,
   riskOptions,
   onRiskOptionsChange,
   countyOptions,
@@ -176,7 +165,7 @@ export function ProjectCoreFields({
       {/* Stage + optional stages */}
       <ProjectStageSection
         projectStages={projectStages}
-        primaryServiceTypeName={primaryServiceTypeName}
+        primaryJobTypeName={primaryJobTypeName}
         isLoadingStages={isLoadingStages}
         activeOptionalStages={activeOptionalStages}
         onOptionalStageChange={onOptionalStageChange}
@@ -283,16 +272,15 @@ export function ProjectCoreFields({
         <p className="text-sm font-medium leading-none mb-2">
           Service Categories &amp; Types
         </p>
-        <ServiceTypeSelector
-          categories={serviceCategories}
-          selectedCategoryIds={selectedCategoryIds}
-          selectedServiceTypeIds={selectedServiceTypeIds}
-          onCategoryToggle={onCategoryToggle}
-          onServiceTypeToggle={onServiceTypeToggle}
+        <JobTypeSelector
+          categories={divisions}
+          selectedCategoryIds={selectedDivisionIds}
+          selectedJobTypeIds={selectedJobTypeIds}
+          onCategoryToggle={onDivisionToggle}
+          onJobTypeToggle={onJobTypeToggle}
         />
       </div>
 
-      {/* Risk Status + Service Items — same row */}
       <FormField
         control={form.control}
         name="riskStatus"
@@ -318,14 +306,6 @@ export function ProjectCoreFields({
             <FormMessage />
           </FormItem>
         )}
-      />
-
-      <ProjectServiceItemsField
-        linkedItems={linkedServiceItems}
-        availableItems={availableServiceItems}
-        onAdd={onAddServiceItem}
-        onRemove={onRemoveServiceItem}
-        serviceTypeFilterActive={selectedServiceTypeIds.length > 0}
       />
 
       {/* County */}

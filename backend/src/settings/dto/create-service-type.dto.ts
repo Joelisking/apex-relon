@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsString, IsOptional, IsBoolean, IsNumber } from 'class-validator';
 
-export class CreateServiceTypeDto {
+export class CreateJobTypeDto {
   @IsString()
   @IsNotEmpty()
   name: string;
@@ -19,10 +19,10 @@ export class CreateServiceTypeDto {
 
   @IsOptional()
   @IsString()
-  categoryId?: string;
+  divisionId?: string;
 }
 
-export class CreateServiceCategoryDto {
+export class CreateDivisionDto {
   @IsString()
   @IsNotEmpty()
   name: string;

@@ -13,18 +13,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Plus, Loader2, Save, Pencil } from 'lucide-react';
 import { settingsApi } from '@/lib/api/client';
-import type { TaskType, ServiceType } from '@/lib/types';
+import type { TaskType, JobType } from '@/lib/types';
 import { toast } from 'sonner';
 
 export function TaskTypesView() {
   const [taskTypes, setTaskTypes] = useState<TaskType[]>([]);
-  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
+  const [jobTypes, setJobTypes] = useState<JobType[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editData, setEditData] = useState<{ name: string; serviceTypeId: string; isActive: boolean }>({ name: '', serviceTypeId: '', isActive: true });
+  const [editData, setEditData] = useState<{ name: string; jobTypeId: string; isActive: boolean }>({ name: '', jobTypeId: '', isActive: true });
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TaskType | null>(null);
-  const [newData, setNewData] = useState({ name: '', description: '', serviceTypeId: '', isActive: true });
+  const [newData, setNewData] = useState({ name: '', description: '', jobTypeId: '', isActive: true });
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
@@ -33,9 +33,9 @@ export function TaskTypesView() {
 
   const loadAll = async () => {
     try {
-      const [tt, st] = await Promise.all([settingsApi.getTaskTypes(), settingsApi.getServiceTypes()]);
+      const [tt, st] = await Promise.all([settingsApi.getTaskTypes(), settingsApi.getJobTypes()]);
       setTaskTypes(tt);
-      setServiceTypes(st.filter((s) => s.isActive));
+      setJobTypes(st.filter((s) => s.isActive));
     } catch {
       toast.error('Failed to load task types');
     } finally {
@@ -50,10 +50,10 @@ export function TaskTypesView() {
       await settingsApi.createTaskType({
         name: newData.name.trim(),
         description: newData.description.trim() || undefined,
-        serviceTypeId: newData.serviceTypeId || undefined,
+        jobTypeId: newData.jobTypeId || undefined,
         isActive: newData.isActive,
       });
-      setNewData({ name: '', description: '', serviceTypeId: '', isActive: true });
+      setNewData({ name: '', description: '', jobTypeId: '', isActive: true });
       toast.success('Task type created');
       await loadAll();
     } catch (e) {
@@ -65,7 +65,7 @@ export function TaskTypesView() {
 
   const startEdit = (tt: TaskType) => {
     setEditingId(tt.id);
-    setEditData({ name: tt.name, serviceTypeId: tt.serviceTypeId ?? '', isActive: tt.isActive });
+    setEditData({ name: tt.name, jobTypeId: tt.jobTypeId ?? '', isActive: tt.isActive });
   };
 
   const handleSaveEdit = async () => {
@@ -74,7 +74,7 @@ export function TaskTypesView() {
     try {
       await settingsApi.updateTaskType(editingId, {
         name: editData.name.trim(),
-        serviceTypeId: editData.serviceTypeId || undefined,
+        jobTypeId: editData.jobTypeId || undefined,
         isActive: editData.isActive,
       });
       setEditingId(null);
@@ -151,17 +151,17 @@ export function TaskTypesView() {
                     <TableCell>
                       {editingId === tt.id ? (
                         <Select
-                          value={editData.serviceTypeId}
-                          onValueChange={(v) => setEditData((d) => ({ ...d, serviceTypeId: v === '__none__' ? '' : v }))}>
+                          value={editData.jobTypeId}
+                          onValueChange={(v) => setEditData((d) => ({ ...d, jobTypeId: v === '__none__' ? '' : v }))}>
                           <SelectTrigger className="h-8 w-40"><SelectValue placeholder="None" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">None</SelectItem>
-                            {serviceTypes.map((st) => <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>)}
+                            {jobTypes.map((st) => <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       ) : (
-                        tt.serviceType
-                          ? <Badge variant="secondary">{tt.serviceType.name}</Badge>
+                        tt.jobType
+                          ? <Badge variant="secondary">{tt.jobType.name}</Badge>
                           : <span className="text-muted-foreground text-sm">—</span>
                       )}
                     </TableCell>
@@ -228,12 +228,12 @@ export function TaskTypesView() {
             <div className="space-y-1.5">
               <Label>Project Type</Label>
               <Select
-                value={newData.serviceTypeId}
-                onValueChange={(v) => setNewData((d) => ({ ...d, serviceTypeId: v === '__none__' ? '' : v }))}>
+                value={newData.jobTypeId}
+                onValueChange={(v) => setNewData((d) => ({ ...d, jobTypeId: v === '__none__' ? '' : v }))}>
                 <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">None</SelectItem>
-                  {serviceTypes.map((st) => <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>)}
+                  {jobTypes.map((st) => <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

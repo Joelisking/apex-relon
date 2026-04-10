@@ -84,7 +84,7 @@ export default function CostBreakdownTable({ breakdowns, onDelete }: Props) {
                 <p className="text-xs text-muted-foreground">{b.lines.length} phase{b.lines.length !== 1 ? 's' : ''}</p>
               </td>
               <td className="px-3 py-2.5 hidden md:table-cell">
-                <span className="text-sm text-muted-foreground">{b.serviceType?.name ?? '—'}</span>
+                <span className="text-sm text-muted-foreground">{b.jobType?.name ?? '—'}</span>
               </td>
               <td className="px-3 py-2.5 hidden md:table-cell">
                 <span className="text-sm text-muted-foreground">

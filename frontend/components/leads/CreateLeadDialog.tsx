@@ -17,10 +17,10 @@ import {
 } from '@/lib/api/pipeline-client';
 import type {
   DropdownOption,
-  ServiceCategory,
+  Division,
   Lead,
 } from '@/lib/types';
-import { ServiceTypeSelector } from '@/components/settings/ServiceTypeSelector';
+import { JobTypeSelector } from '@/components/settings/JobTypeSelector';
 import {
   Dialog,
   DialogContent,
@@ -126,7 +126,7 @@ const createLeadSchema = z.object({
   state: z.string().optional(),
   zip: z.string().optional(),
   stage: z.string().min(1, 'Stage is required'),
-  serviceTypeId: z.string().optional(),
+  jobTypeId: z.string().optional(),
   urgency: z.string().min(1, 'Urgency is required'),
   source: z.string().optional(),
   likelyStartDate: z.string().optional(),
@@ -150,31 +150,31 @@ export function CreateLeadDialog({
   const { hasPermission } = useAuth();
   const canViewAllLeads = hasPermission('leads:view_all');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<
+  const [selectedDivisionIds, setSelectedDivisionIds] = useState<
     string[]
   >([]);
-  const [selectedServiceTypeIds, setSelectedServiceTypeIds] =
+  const [selectedJobTypeIds, setSelectedJobTypeIds] =
     useState<string[]>([]);
   const queryClient = useQueryClient();
 
-  const { data: serviceCategories = [] } = useQuery<
-    ServiceCategory[]
+  const { data: divisions = [] } = useQuery<
+    Division[]
   >({
-    queryKey: ['service-categories'],
-    queryFn: () => settingsApi.getServiceCategories(),
+    queryKey: ['divisions'],
+    queryFn: () => settingsApi.getDivisions(),
     staleTime: 10 * 60 * 1000,
   });
 
-  function toggleCategory(id: string) {
-    setSelectedCategoryIds((prev) =>
+  function toggleDivision(id: string) {
+    setSelectedDivisionIds((prev) =>
       prev.includes(id)
         ? prev.filter((c) => c !== id)
         : [...prev, id],
     );
   }
 
-  function toggleServiceType(id: string) {
-    setSelectedServiceTypeIds((prev) =>
+  function toggleJobType(id: string) {
+    setSelectedJobTypeIds((prev) =>
       prev.includes(id)
         ? prev.filter((s) => s !== id)
         : [...prev, id],
@@ -238,7 +238,7 @@ export function CreateLeadDialog({
       state: '',
       zip: '',
       stage: '',
-      serviceTypeId: '',
+      jobTypeId: '',
       urgency: '',
       source: '',
       likelyStartDate: '',
@@ -389,14 +389,14 @@ export function CreateLeadDialog({
         state: data.state || undefined,
         zip: data.zip || undefined,
         stage: data.stage,
-        serviceTypeId: selectedServiceTypeIds[0] || undefined,
+        jobTypeId: selectedJobTypeIds[0] || undefined,
         categoryIds:
-          selectedCategoryIds.length > 0
-            ? selectedCategoryIds
+          selectedDivisionIds.length > 0
+            ? selectedDivisionIds
             : undefined,
-        serviceTypeIds:
-          selectedServiceTypeIds.length > 0
-            ? selectedServiceTypeIds
+        jobTypeIds:
+          selectedJobTypeIds.length > 0
+            ? selectedJobTypeIds
             : undefined,
         urgency: data.urgency,
         source: data.source || undefined,
@@ -429,8 +429,8 @@ export function CreateLeadDialog({
       form.reset();
       setAutoLinkedContactId(null);
       setPendingTeamMemberIds([]);
-      setSelectedCategoryIds([]);
-      setSelectedServiceTypeIds([]);
+      setSelectedDivisionIds([]);
+      setSelectedJobTypeIds([]);
       onOpenChange(false);
     } catch (error: unknown) {
       const errorMessage =
@@ -449,8 +449,8 @@ export function CreateLeadDialog({
     form.reset();
     setAutoLinkedContactId(null);
     setPendingTeamMemberIds([]);
-    setSelectedCategoryIds([]);
-    setSelectedServiceTypeIds([]);
+    setSelectedDivisionIds([]);
+    setSelectedJobTypeIds([]);
     setUseClientAddress(false);
     onOpenChange(false);
   };
@@ -862,13 +862,13 @@ export function CreateLeadDialog({
                 />
               )}
 
-              {/* Project Type & Service Categories — full width */}
-              <ServiceTypeSelector
-                categories={serviceCategories}
-                selectedCategoryIds={selectedCategoryIds}
-                selectedServiceTypeIds={selectedServiceTypeIds}
-                onCategoryToggle={toggleCategory}
-                onServiceTypeToggle={toggleServiceType}
+              {/* Project Type & Job Types — full width */}
+              <JobTypeSelector
+                categories={divisions}
+                selectedCategoryIds={selectedDivisionIds}
+                selectedJobTypeIds={selectedJobTypeIds}
+                onCategoryToggle={toggleDivision}
+                onJobTypeToggle={toggleJobType}
               />
             </div>
 

@@ -11,7 +11,7 @@ import {
   type Project,
   type CostLog,
 } from '@/lib/api/projects-client';
-import type { ServiceCategory } from '@/lib/types';
+import type { Division } from '@/lib/types';
 
 interface Activity {
   id: string;
@@ -42,7 +42,7 @@ interface Props {
   activities: Activity[];
   files: FileUpload[];
   costLogs: CostLog[];
-  serviceCategories?: ServiceCategory[];
+  divisions?: Division[];
 }
 
 function avatarInitials(name: string): string {
@@ -94,7 +94,7 @@ export function ProjectOverviewPanel({
   activities,
   files,
   costLogs,
-  serviceCategories = [],
+  divisions = [],
 }: Props) {
   const pm = project.projectManager;
   const team = project.assignments ?? [];
@@ -104,14 +104,14 @@ export function ProjectOverviewPanel({
     queryFn: () => projectsApi.getServiceItems(project.id),
     staleTime: 5 * 60 * 1000,
   });
-  const allServiceTypes = serviceCategories.flatMap(
-    (c) => c.serviceTypes ?? [],
+  const allJobTypes = divisions.flatMap(
+    (c) => c.jobTypes ?? [],
   );
-  const resolvedProjectTypes = serviceCategories
+  const resolvedProjectTypes = divisions
     .filter((c) => project.categoryIds?.includes(c.id))
     .map((c) => c.name);
-  const resolvedServiceTypes = allServiceTypes
-    .filter((st) => project.serviceTypeIds?.includes(st.id))
+  const resolvedJobTypes = allJobTypes
+    .filter((st) => project.jobTypeIds?.includes(st.id))
     .map((st) => st.name);
 
   return (
@@ -236,7 +236,7 @@ export function ProjectOverviewPanel({
 
       {/* Service info */}
       {(resolvedProjectTypes.length > 0 ||
-        resolvedServiceTypes.length > 0 ||
+        resolvedJobTypes.length > 0 ||
         project.county ||
         project.folderPath) && (
         <div className="grid grid-cols-2 gap-6">
@@ -255,13 +255,13 @@ export function ProjectOverviewPanel({
                   </span>
                 </div>
               )}
-              {resolvedServiceTypes.length > 0 && (
+              {resolvedJobTypes.length > 0 && (
                 <div className="flex items-start justify-between px-4 py-3 gap-4">
                   <span className="text-sm text-muted-foreground shrink-0">
-                    Service Categories
+                    Job Types
                   </span>
                   <span className="text-sm font-medium text-right">
-                    {resolvedServiceTypes.join(', ')}
+                    {resolvedJobTypes.join(', ')}
                   </span>
                 </div>
               )}

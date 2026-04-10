@@ -15,8 +15,8 @@ export class ServiceItemsController {
 
   @Get()
   @Permissions('projects:view')
-  findAll(@Query('serviceTypeId') serviceTypeId?: string) {
-    return this.serviceItemsService.findAll(serviceTypeId);
+  findAll(@Query('jobTypeId') jobTypeId?: string) {
+    return this.serviceItemsService.findAll(jobTypeId);
   }
 
   @Get(':id')

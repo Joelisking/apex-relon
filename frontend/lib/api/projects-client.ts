@@ -48,10 +48,10 @@ export interface Project {
   riskStatus?: string;
   estimatedRevenue?: number;
   totalCost?: number;
-  serviceTypeId?: string | null;
-  serviceType?: { id: string; name: string; category?: { id: string; name: string } | null } | null;
+  jobTypeId?: string | null;
+  jobType?: { id: string; name: string; division?: { id: string; name: string } | null } | null;
   categoryIds?: string[];
-  serviceTypeIds?: string[];
+  jobTypeIds?: string[];
   county?: string[];
   address?: string | null;
   folderPath?: string | null;
@@ -138,7 +138,7 @@ export interface CreateProjectDto {
   projectManagerId?: string;
   teamMemberIds?: string[];
   categoryIds?: string[];
-  serviceTypeIds?: string[];
+  jobTypeIds?: string[];
   county?: string[];
   address?: string;
   folderPath?: string;

@@ -21,7 +21,7 @@ interface ProjectServiceItemsFieldProps {
   availableItems: Array<{ id: string; name: string; unit?: string | null }>;
   onAdd: (id: string) => void;
   onRemove: (key: string) => void;
-  serviceTypeFilterActive?: boolean;
+  jobTypeFilterActive?: boolean;
 }
 
 export function ProjectServiceItemsField({
@@ -29,7 +29,7 @@ export function ProjectServiceItemsField({
   availableItems,
   onAdd,
   onRemove,
-  serviceTypeFilterActive = false,
+  jobTypeFilterActive = false,
 }: ProjectServiceItemsFieldProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -43,12 +43,12 @@ export function ProjectServiceItemsField({
   const hasContent = linkedItems.length > 0 || availableItems.length > 0;
   if (!hasContent) return null;
 
-  const placeholder = serviceTypeFilterActive
+  const placeholder = jobTypeFilterActive
     ? 'Add a service item for this type…'
     : 'Add a service item…';
 
-  const emptyMessage = serviceTypeFilterActive
-    ? 'No service items match the selected service types.'
+  const emptyMessage = jobTypeFilterActive
+    ? 'No service items match the selected job types.'
     : 'No active service items available.';
 
   return (

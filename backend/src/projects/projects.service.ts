@@ -24,11 +24,11 @@ export class ProjectsService {
     client: { select: { id: true, name: true } },
     lead: { select: { id: true, contactName: true, company: true } },
     projectManager: { select: { id: true, name: true, email: true } },
-    serviceType: {
+    jobType: {
       select: {
         id: true,
         name: true,
-        category: { select: { id: true, name: true } },
+        division: { select: { id: true, name: true } },
       },
     },
     assignments: {

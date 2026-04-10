@@ -14,8 +14,8 @@ import {
   pipelineApi,
   type PipelineStage,
 } from '@/lib/api/pipeline-client';
-import type { DropdownOption, ServiceCategory, Lead } from '@/lib/types';
-import { ServiceTypeSelector } from '@/components/settings/ServiceTypeSelector';
+import type { DropdownOption, Division, Lead } from '@/lib/types';
+import { JobTypeSelector } from '@/components/settings/JobTypeSelector';
 import {
   Dialog,
   DialogContent,
@@ -104,7 +104,7 @@ const editLeadSchema = z.object({
   state: z.string().optional(),
   zip: z.string().optional(),
   stage: z.string().min(1, 'Stage is required'),
-  serviceTypeId: z.string().optional(),
+  jobTypeId: z.string().optional(),
   urgency: z.string().min(1, 'Urgency is required'),
   source: z.string().optional(),
   likelyStartDate: z.string().optional(),
@@ -140,23 +140,23 @@ export function EditLeadDialog({
   const { hasPermission } = useAuth();
   const canViewAllLeads = hasPermission('leads:view_all');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(lead.categoryIds ?? []);
-  const [selectedServiceTypeIds, setSelectedServiceTypeIds] = useState<string[]>(lead.serviceTypeIds ?? []);
+  const [selectedDivisionIds, setSelectedDivisionIds] = useState<string[]>(lead.categoryIds ?? []);
+  const [selectedJobTypeIds, setSelectedJobTypeIds] = useState<string[]>(lead.jobTypeIds ?? []);
 
-  const { data: serviceCategories = [] } = useQuery<ServiceCategory[]>({
-    queryKey: ['service-categories'],
-    queryFn: () => settingsApi.getServiceCategories(),
+  const { data: divisions = [] } = useQuery<Division[]>({
+    queryKey: ['divisions'],
+    queryFn: () => settingsApi.getDivisions(),
     staleTime: 10 * 60 * 1000,
   });
 
-  function toggleCategory(id: string) {
-    setSelectedCategoryIds((prev) =>
+  function toggleDivision(id: string) {
+    setSelectedDivisionIds((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
     );
   }
 
-  function toggleServiceType(id: string) {
-    setSelectedServiceTypeIds((prev) =>
+  function toggleJobType(id: string) {
+    setSelectedJobTypeIds((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
     );
   }
@@ -206,7 +206,7 @@ export function EditLeadDialog({
     state: l.state || '',
     zip: l.zip || '',
     stage: l.stage || 'New',
-    serviceTypeId: l.serviceTypeId || '',
+    jobTypeId: l.jobTypeId || '',
     urgency: l.urgency || 'Medium',
     source: l.source || '',
     likelyStartDate: toDateString(l.likelyStartDate),
@@ -229,8 +229,8 @@ export function EditLeadDialog({
     setTeamMemberIds(
       (lead.teamMembers ?? []).map((tm) => tm.userId),
     );
-    setSelectedCategoryIds(lead.categoryIds ?? []);
-    setSelectedServiceTypeIds(lead.serviceTypeIds ?? []);
+    setSelectedDivisionIds(lead.categoryIds ?? []);
+    setSelectedJobTypeIds(lead.jobTypeIds ?? []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, lead.id]);
 
@@ -316,9 +316,9 @@ export function EditLeadDialog({
         state: data.state || undefined,
         zip: data.zip || undefined,
         stage: data.stage,
-        serviceTypeId: selectedServiceTypeIds[0] || undefined,
-        categoryIds: selectedCategoryIds,
-        serviceTypeIds: selectedServiceTypeIds,
+        jobTypeId: selectedJobTypeIds[0] || undefined,
+        categoryIds: selectedDivisionIds,
+        jobTypeIds: selectedJobTypeIds,
         urgency: data.urgency,
         source: data.source || undefined,
         likelyStartDate: data.likelyStartDate
@@ -351,8 +351,8 @@ export function EditLeadDialog({
   const handleClose = () => {
     form.reset(buildDefaults(lead));
     setTeamMemberIds((lead.teamMembers ?? []).map((tm) => tm.userId));
-    setSelectedCategoryIds(lead.categoryIds ?? []);
-    setSelectedServiceTypeIds(lead.serviceTypeIds ?? []);
+    setSelectedDivisionIds(lead.categoryIds ?? []);
+    setSelectedJobTypeIds(lead.jobTypeIds ?? []);
     onOpenChange(false);
   };
 
@@ -702,12 +702,12 @@ export function EditLeadDialog({
                 )}
               />
 
-              <ServiceTypeSelector
-                categories={serviceCategories}
-                selectedCategoryIds={selectedCategoryIds}
-                selectedServiceTypeIds={selectedServiceTypeIds}
-                onCategoryToggle={toggleCategory}
-                onServiceTypeToggle={toggleServiceType}
+              <JobTypeSelector
+                categories={divisions}
+                selectedCategoryIds={selectedDivisionIds}
+                selectedJobTypeIds={selectedJobTypeIds}
+                onCategoryToggle={toggleDivision}
+                onJobTypeToggle={toggleJobType}
               />
 
               <FormField

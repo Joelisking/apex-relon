@@ -85,11 +85,11 @@ export class ProposalTemplatesService implements OnModuleInit {
       return;
     }
 
-    // Build serviceType name → id map
-    const serviceTypes = await this.prisma.serviceType.findMany({
+    // Build jobType name → id map
+    const jobTypes = await this.prisma.jobType.findMany({
       select: { id: true, name: true },
     });
-    const serviceTypeMap = new Map(serviceTypes.map((s) => [s.name, s.id]));
+    const jobTypeMap = new Map(jobTypes.map((s) => [s.name, s.id]));
 
     let seeded = 0;
     for (const tpl of SEED_TEMPLATES) {
@@ -107,12 +107,12 @@ export class ProposalTemplatesService implements OnModuleInit {
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       );
 
-      const serviceTypeId = tpl.serviceTypeName
-        ? (serviceTypeMap.get(tpl.serviceTypeName) ?? null)
+      const jobTypeId = tpl.serviceTypeName
+        ? (jobTypeMap.get(tpl.serviceTypeName) ?? null)
         : null;
 
       await this.prisma.proposalTemplate.create({
-        data: { name: tpl.name, serviceTypeId, gcpPath, fileName },
+        data: { name: tpl.name, jobTypeId, gcpPath, fileName },
       });
       seeded++;
     }
@@ -150,11 +150,11 @@ export class ProposalTemplatesService implements OnModuleInit {
     return proposal;
   }
 
-  listTemplates(serviceTypeId?: string) {
+  listTemplates(jobTypeId?: string) {
     return this.prisma.proposalTemplate.findMany({
-      where: serviceTypeId ? { serviceTypeId } : undefined,
+      where: jobTypeId ? { jobTypeId } : undefined,
       include: {
-        serviceType: { select: { id: true, name: true } },
+        jobType: { select: { id: true, name: true } },
       },
       orderBy: { name: 'asc' },
     });
@@ -172,12 +172,12 @@ export class ProposalTemplatesService implements OnModuleInit {
       data: {
         name: dto.name,
         description: dto.description,
-        serviceTypeId: dto.serviceTypeId || null,
+        jobTypeId: dto.jobTypeId || null,
         gcpPath,
         fileName,
       },
       include: {
-        serviceType: { select: { id: true, name: true } },
+        jobType: { select: { id: true, name: true } },
       },
     });
   }
@@ -221,11 +221,27 @@ export class ProposalTemplatesService implements OnModuleInit {
     });
   }
 
-  async acceptProposal(proposalId: string) {
+  async acceptProposal(proposalId: string, contractedValue?: number) {
     const proposal = await this.prisma.proposal.findUnique({
       where: { id: proposalId },
+      include: { lead: { select: { id: true } } },
     });
     if (!proposal) throw new NotFoundException('Proposal not found');
+
+    // If a contracted value was supplied and the proposal has a lead, write it to the linked project
+    if (contractedValue !== undefined && proposal.leadId) {
+      const project = await this.prisma.project.findFirst({
+        where: { leadId: proposal.leadId },
+        select: { id: true },
+      });
+      if (project) {
+        await this.prisma.project.update({
+          where: { id: project.id },
+          data: { contractedValue },
+        });
+      }
+    }
+
     return this.prisma.proposal.update({
       where: { id: proposalId },
       data: { status: 'ACCEPTED', acceptedAt: new Date() },
@@ -371,6 +387,35 @@ export class ProposalTemplatesService implements OnModuleInit {
           where: { id: clientId },
           data: { address: dto.address },
         });
+      }
+    } else if (dto.costBreakdownId) {
+      // 0.3: no leadId provided — derive header fields from the breakdown's linked lead or project
+      const breakdown = await this.prisma.costBreakdown.findUnique({
+        where: { id: dto.costBreakdownId },
+        include: {
+          lead: true,
+          project: { include: { client: true } },
+        },
+      });
+      if (breakdown?.lead) {
+        const lead = breakdown.lead as any;
+        if (lead.contactName) {
+          const parts = String(lead.contactName).trim().split(/\s+/);
+          crmFirstName = parts[0] ?? '';
+          crmLastName = parts.slice(1).join(' ');
+        }
+        companyName = lead.company ?? '';
+        derivedProjectName = lead.projectName ?? '';
+        derivedAddress = lead.address ?? '';
+        derivedCity = lead.city ?? '';
+        derivedState = lead.state ?? '';
+        derivedZip = lead.zip ?? '';
+        clientId = lead.clientId ?? null;
+      } else if (breakdown?.project) {
+        const project = breakdown.project as any;
+        companyName = project.client?.name ?? '';
+        derivedProjectName = project.name ?? '';
+        clientId = project.clientId ?? null;
       }
     }
 

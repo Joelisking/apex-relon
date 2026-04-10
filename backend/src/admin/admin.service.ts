@@ -595,7 +595,7 @@ Lead Details:
 - Company: ${'{{company}}'}
 - Value: $${'{{value}}'}
 - Stage: ${'{{stage}}'}
-- Service Type: ${'{{serviceType}}'}
+- Job Type: ${'{{jobType}}'}
 - Urgency: ${'{{urgency}}'}
 - Source: ${'{{source}}'}
 - Channel: ${'{{channel}}'}

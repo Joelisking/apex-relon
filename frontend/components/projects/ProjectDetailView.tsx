@@ -46,7 +46,7 @@ import {
   type CostLog,
 } from '@/lib/api/projects-client';
 import { settingsApi } from '@/lib/api/client';
-import type { ServiceCategory } from '@/lib/types';
+import type { Division } from '@/lib/types';
 import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -149,7 +149,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
   const [files, setFiles] = useState<FileUpload[]>([]);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [projectStages, setProjectStages] = useState<PipelineStage[]>([]);
-  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
+  const [divisions, setDivisions] = useState<Division[]>([]);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [noteInput, setNoteInput] = useState('');
@@ -185,7 +185,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
 
   useEffect(() => {
     pipelineApi.getStages('project').then(setProjectStages).catch(console.error);
-    settingsApi.getServiceCategories().then(setServiceCategories).catch(console.error);
+    settingsApi.getDivisions().then(setDivisions).catch(console.error);
   }, []);
 
   const handleStatusChange = async (newStatus: string) => {
@@ -290,7 +290,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
     ? `${project.jobNumber} - ${project.name}`
     : project.name;
 
-  const isEngineeringProject = project.serviceType?.category?.name === 'Engineering';
+  const isEngineeringProject = project.jobType?.division?.name === 'Engineering';
 
   const TABS = [
     { value: 'overview', label: 'Overview' },
@@ -428,7 +428,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
                 activities={activities}
                 files={files}
                 costLogs={costLogs}
-                serviceCategories={serviceCategories}
+                divisions={divisions}
               />
 
               {project.description && (
@@ -501,7 +501,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
                 </h3>
                 <ProjectServiceItemsPanel
                   projectId={project.id}
-                  serviceTypeIds={project.serviceTypeIds ?? []}
+                  jobTypeIds={project.jobTypeIds ?? []}
                 />
               </div>
             </TabsContent>

@@ -2,21 +2,21 @@
 
 import { User } from 'lucide-react';
 import { StageTimeline } from './StageTimeline';
-import type { Lead, ServiceCategory } from '@/lib/types';
+import type { Lead, Division } from '@/lib/types';
 
 interface Props {
   lead: Lead;
   isOverdue: boolean;
-  serviceCategories?: ServiceCategory[];
+  divisions?: Division[];
 }
 
-export function LeadDetailsPanel({ lead, isOverdue, serviceCategories = [] }: Props) {
-  const allServiceTypes = serviceCategories.flatMap((c) => c.serviceTypes ?? []);
-  const resolvedProjectTypes = serviceCategories
+export function LeadDetailsPanel({ lead, isOverdue, divisions = [] }: Props) {
+  const allJobTypes = divisions.flatMap((c) => c.jobTypes ?? []);
+  const resolvedProjectTypes = divisions
     .filter((c) => lead.categoryIds?.includes(c.id))
     .map((c) => c.name);
-  const resolvedServiceTypes = allServiceTypes
-    .filter((st) => lead.serviceTypeIds?.includes(st.id))
+  const resolvedJobTypes = allJobTypes
+    .filter((st) => lead.jobTypeIds?.includes(st.id))
     .map((st) => st.name);
 
   return (
@@ -40,10 +40,10 @@ export function LeadDetailsPanel({ lead, isOverdue, serviceCategories = [] }: Pr
               <span className="text-sm font-medium text-right">{resolvedProjectTypes.join(', ')}</span>
             </div>
           )}
-          {resolvedServiceTypes.length > 0 && (
+          {resolvedJobTypes.length > 0 && (
             <div className="flex items-start justify-between px-4 py-3 gap-4">
-              <span className="text-sm text-muted-foreground shrink-0">Service Categories</span>
-              <span className="text-sm font-medium text-right">{resolvedServiceTypes.join(', ')}</span>
+              <span className="text-sm text-muted-foreground shrink-0">Job Types</span>
+              <span className="text-sm font-medium text-right">{resolvedJobTypes.join(', ')}</span>
             </div>
           )}
           <div className="flex items-center justify-between px-4 py-3">

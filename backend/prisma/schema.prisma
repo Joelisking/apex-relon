@@ -36,9 +36,9 @@ model Lead {
   designerId          String?
   qsId                String?
   clientId            String?
-  serviceTypeId       String?
+  jobTypeId           String?   @map("service_type_id")
   categoryIds         String[]
-  serviceTypeIds      String[]
+  jobTypeIds          String[]  @map("service_type_ids")
   county              String[]
   convertedToClientId String?
   createdAt           DateTime            @default(now())
@@ -53,7 +53,7 @@ model Lead {
   convertedToClient   Client?             @relation("LeadConversion", fields: [convertedToClientId], references: [id])
   designer            User?               @relation("LeadDesignerAssignments", fields: [designerId], references: [id])
   qs                  User?               @relation("LeadQSAssignments", fields: [qsId], references: [id])
-  serviceType         ServiceType?        @relation(fields: [serviceTypeId], references: [id])
+  jobType             JobType?            @relation(fields: [jobTypeId], references: [id])
   project             Project?
   stageHistory        StageHistory[]
   quotes              Quote[]
@@ -65,7 +65,7 @@ model Lead {
   @@index([designerId])
   @@index([qsId])
   @@index([clientId])
-  @@index([serviceTypeId])
+  @@index([jobTypeId])
   @@index([stage])
   @@index([updatedAt])
   @@index([likelyStartDate])
@@ -102,36 +102,36 @@ model LeadTeamMember {
   @@map("lead_team_members")
 }
 
-model ServiceCategory {
-  id           String        @id @default(uuid())
-  name         String        @unique
-  description  String?       @db.Text
-  isActive     Boolean       @default(true)
-  sortOrder    Int           @default(0)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  serviceTypes ServiceType[]
+model Division {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?   @db.Text
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  jobTypes    JobType[]
 
   @@map("service_categories")
 }
 
-model ServiceType {
-  id           String           @id @default(uuid())
-  name         String           @unique
-  description  String?          @db.Text
-  isActive     Boolean          @default(true)
-  sortOrder    Int              @default(0)
-  categoryId   String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  category     ServiceCategory? @relation(fields: [categoryId], references: [id])
+model JobType {
+  id           String    @id @default(uuid())
+  name         String    @unique
+  description  String?   @db.Text
+  isActive     Boolean   @default(true)
+  sortOrder    Int       @default(0)
+  divisionId   String?   @map("category_id")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  division     Division? @relation(fields: [divisionId], references: [id])
   leads             Lead[]
   projects          Project[]
   taskTypes         TaskType[]
   proposalTemplates ProposalTemplate[]
   costBreakdowns    CostBreakdown[]
 
-  @@index([categoryId])
+  @@index([divisionId])
   @@map("service_types")
 }
 
@@ -218,16 +218,16 @@ model Proposal {
 }
 
 model ProposalTemplate {
-  id            String       @id @default(uuid())
-  name          String
-  description   String?
-  serviceTypeId String?
-  gcpPath       String
-  fileName      String
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  serviceType   ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
-  proposals     Proposal[]   @relation("TemplateProposals")
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  jobTypeId   String?   @map("service_type_id")
+  gcpPath     String
+  fileName    String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  jobType     JobType?  @relation(fields: [jobTypeId], references: [id], onDelete: SetNull)
+  proposals   Proposal[] @relation("TemplateProposals")
 
   @@map("proposal_templates")
 }
@@ -298,9 +298,9 @@ model Project {
   jobNumber         String?                @unique
   clientId          String
   leadId            String?                @unique
-  serviceTypeId     String?
+  jobTypeId         String?   @map("service_type_id")
   categoryIds       String[]
-  serviceTypeIds    String[]
+  jobTypeIds        String[]  @map("service_type_ids")
   county            String[]
   status            String
   contractedValue   Float
@@ -330,7 +330,7 @@ model Project {
   client            Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
   lead              Lead?                  @relation(fields: [leadId], references: [id])
   projectManager    User?                  @relation("ProjectManagerAssignments", fields: [projectManagerId], references: [id])
-  serviceType       ServiceType?           @relation(fields: [serviceTypeId], references: [id])
+  jobType           JobType?               @relation(fields: [jobTypeId], references: [id])
   timeEntries       TimeEntry[]            @relation("ProjectTimeEntries")
   budget            ProjectBudget?         @relation("ProjectBudget")
   quotes            Quote[]                @relation("ProjectQuotes")
@@ -342,7 +342,7 @@ model Project {
   @@index([clientId])
   @@index([leadId])
   @@index([projectManagerId])
-  @@index([serviceTypeId])
+  @@index([jobTypeId])
   @@index([status])
   @@index([status, completedDate])
   @@index([contractedValue])
@@ -580,7 +580,7 @@ model PipelineStage {
   id           String   @id @default(uuid())
   name         String
   pipelineType String   @default("prospective_project")
-  serviceType  String   @default("__all__")
+  jobType      String   @default("__all__") @map("service_type")
   color        String   @default("bg-gray-500")
   lightColor   String   @default("bg-gray-50")
   border       String   @default("border-gray-200")
@@ -591,9 +591,9 @@ model PipelineStage {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  @@unique([name, pipelineType, serviceType])
+  @@unique([name, pipelineType, jobType])
   @@index([pipelineType])
-  @@index([pipelineType, serviceType])
+  @@index([pipelineType, jobType])
   @@map("pipeline_stages")
 }
 
@@ -1082,15 +1082,15 @@ model TaskType {
   id            String       @id @default(uuid())
   name          String       @unique
   description   String?      @db.Text
-  serviceTypeId String?
-  isActive      Boolean      @default(true)
-  sortOrder     Int          @default(0)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  serviceType   ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
-  tasks         Task[]
+  jobTypeId   String?   @map("service_type_id")
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  jobType     JobType?  @relation(fields: [jobTypeId], references: [id], onDelete: SetNull)
+  tasks       Task[]
 
-  @@index([serviceTypeId])
+  @@index([jobTypeId])
   @@map("task_types")
 }
 
@@ -1098,7 +1098,7 @@ model ServiceItem {
   id            String               @id @default(uuid())
   name          String
   description    String?              @db.Text
-  serviceTypeIds String[]             @default([])
+  jobTypeIds     String[]             @default([]) @map("service_type_ids")
   unit           String?
   defaultPrice  Float?
   qbItemId      String?
@@ -1183,7 +1183,7 @@ model CostBreakdown {
   tenantId      String
   projectId     String?
   leadId        String?
-  serviceTypeId String?
+  jobTypeId     String?  @map("service_type_id")
   title         String
   status        String   @default("DRAFT")
   notes         String?  @db.Text
@@ -1202,7 +1202,7 @@ model CostBreakdown {
 
   project     Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  serviceType ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
+  jobType     JobType?     @relation(fields: [jobTypeId], references: [id], onDelete: SetNull)
   createdBy   User         @relation("CostBreakdownCreation", fields: [createdById], references: [id])
   lines       CostBreakdownLine[]
   proposal    Proposal?          @relation("ProposalCostBreakdown")

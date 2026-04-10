@@ -8,6 +8,7 @@ import {
   useEffect,
 } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -237,28 +238,43 @@ const adminNavGroups: AdminNavGroup[] = [
     items: [
       { title: 'Users', href: '/admin/users', icon: UserCog, permission: 'users:view' },
       { title: 'Teams', href: '/admin/teams', icon: UsersRound, permission: 'teams:view' },
-      { title: 'Roles', href: '/admin/roles', icon: ShieldCheck, permission: 'permissions:view' },
+      { title: 'Roles', href: '/admin/roles', icon: ShieldCheck, permission: 'roles:view' },
       { title: 'Permissions', href: '/admin/permissions', icon: Shield, permission: 'permissions:view' },
     ],
   },
   {
-    label: 'Configuration',
+    label: 'Project Configuration',
     items: [
-      { title: 'Pipeline', href: '/admin/pipeline', icon: GitBranch, permission: 'pipeline:manage' },
-      { title: 'Custom Fields', href: '/admin/custom-fields', icon: Settings2, permission: 'settings:manage' },
-      { title: 'Form Options', href: '/admin/dropdown-options', icon: ListFilter, permission: 'settings:manage' },
-      { title: 'Service Types', href: '/admin/service-types', icon: Layers, permission: 'settings:manage' },
+      { title: 'Job Types', href: '/admin/job-types', icon: Layers, permission: 'settings:manage' },
       { title: 'Service Items', href: '/admin/service-items', icon: Package, permission: 'settings:manage' },
       { title: 'Task Types', href: '/admin/task-types', icon: CheckSquare, permission: 'settings:manage' },
       { title: 'Work Codes', href: '/admin/work-codes', icon: Hash, permission: 'settings:manage' },
+    ],
+  },
+  {
+    label: 'Pipeline & Automation',
+    items: [
+      { title: 'Pipeline', href: '/admin/pipeline', icon: GitBranch, permission: 'pipeline:manage' },
+      { title: 'Automation', href: '/admin/workflows', icon: Zap, permission: 'workflows:view' },
+    ],
+  },
+  {
+    label: 'Proposals & Documents',
+    items: [
+      { title: 'Proposal Templates', href: '/admin/proposal-templates', icon: FileText, permission: 'settings:manage' },
       { title: 'Intake Forms', href: '/admin/lead-forms', icon: FormInput, permission: 'settings:manage' },
+    ],
+  },
+  {
+    label: 'Financial Configuration',
+    items: [
+      { title: 'Invoicing', href: '/admin/quote-settings', icon: FileSignature, permission: 'settings:manage' },
     ],
   },
   {
     label: 'Settings',
     items: [
       { title: 'General', href: '/admin/general-settings', icon: SlidersHorizontal, permission: 'settings:manage' },
-      { title: 'Invoicing', href: '/admin/quote-settings', icon: FileSignature, permission: 'settings:manage' },
       { title: 'AI', href: '/admin/ai-settings', icon: Bot, permission: 'ai_settings:view' },
     ],
   },
@@ -266,12 +282,13 @@ const adminNavGroups: AdminNavGroup[] = [
     label: 'Integrations',
     items: [
       { title: 'QuickBooks', href: '/admin/quickbooks', icon: BookOpen, permission: 'settings:manage' },
-      { title: 'Automation', href: '/admin/workflows', icon: Zap, permission: 'workflows:view' },
     ],
   },
   {
     label: 'System',
     items: [
+      { title: 'Custom Fields', href: '/admin/custom-fields', icon: Settings2, permission: 'settings:manage' },
+      { title: 'Form Options', href: '/admin/dropdown-options', icon: ListFilter, permission: 'settings:manage' },
       { title: 'Audit Logs', href: '/admin/audit-logs', icon: FileText, permission: 'audit_logs:view' },
       { title: 'System', href: '/admin/system', icon: Monitor, permission: 'settings:manage' },
     ],
@@ -372,9 +389,11 @@ function SidebarNav({
           'flex items-center gap-2.5 border-b border-border px-4 py-4',
           collapsed && 'justify-center px-2',
         )}>
-        <img
+        <Image
           src="/logo-black-transparent.svg"
           alt="Apex Field OS"
+          width={120}
+          height={28}
           className={cn(
             'h-7 w-auto',
             collapsed ? 'max-w-[32px] object-left object-cover' : '',

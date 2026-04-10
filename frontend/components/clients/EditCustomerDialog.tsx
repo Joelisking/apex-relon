@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { AddressAutocompleteWithParts } from '@/components/ui/address-autocomplete-parts';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface EditCustomerDialogProps {
   client: Client;
@@ -35,21 +36,32 @@ interface EditCustomerDialogProps {
   onClientUpdated?: (client: Client) => void;
 }
 
-const editClientSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z
-    .string()
-    .email('Invalid email')
-    .optional()
-    .or(z.literal('')),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  website: z.string().url('Invalid URL').optional().or(z.literal('')),
-  individualName: z.string().optional(),
-  individualType: z.string().optional(),
-  segment: z.string().optional(),
-  industry: z.string().optional(),
-});
+const editClientSchema = z
+  .object({
+    isIndividual: z.boolean(),
+    name: z.string(),
+    email: z
+      .string()
+      .email('Invalid email')
+      .optional()
+      .or(z.literal('')),
+    phone: z.string().optional(),
+    address: z.string().optional(),
+    website: z.string().url('Invalid URL').optional().or(z.literal('')),
+    individualName: z.string().optional(),
+    individualType: z.string().optional(),
+    segment: z.string().optional(),
+    industry: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.isIndividual && (!data.name || data.name.trim().length < 2)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Company name must be at least 2 characters',
+        path: ['name'],
+      });
+    }
+  });
 
 type EditClientFormData = z.infer<typeof editClientSchema>;
 
@@ -79,7 +91,11 @@ export function EditCustomerDialog({
       .catch(console.error);
   }, []);
 
+  // Derive individual mode from absence of company-specific fields — no clientType in schema (Phase 0)
+  const deriveIsIndividual = (c: Client) => !c.segment && !c.industry && !c.website;
+
   const buildDefaults = (c: Client): EditClientFormData => ({
+    isIndividual: deriveIsIndividual(c),
     name: c.name || '',
     email: c.email || '',
     phone: c.phone || '',
@@ -95,6 +111,8 @@ export function EditCustomerDialog({
     resolver: zodResolver(editClientSchema),
     defaultValues: buildDefaults(client),
   });
+
+  const isIndividual = form.watch('isIndividual');
 
   // Re-populate when client prop changes
   useEffect(() => {
@@ -155,47 +173,31 @@ export function EditCustomerDialog({
           <form
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="individualName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Primary Contact Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Jane Smith" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
-              <FormField
-                control={form.control}
-                name="individualType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contact Role</FormLabel>
-                    <FormControl>
-                      <CreatableSelect
-                        options={individualTypeOptions}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select role"
-                        onOptionsChange={setIndividualTypeOptions}
-                        onOptionCreated={(label) =>
-                          settingsApi.createDropdownOption({
-                            category: 'individual_type',
-                            value: label.toLowerCase().replace(/\s+/g, '_'),
-                            label,
-                          })
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Client type toggle */}
+            <div className="flex rounded-md border overflow-hidden w-fit">
+              <button
+                type="button"
+                onClick={() => form.setValue('isIndividual', false)}
+                className={cn(
+                  'px-4 py-1.5 text-sm font-medium transition-colors',
+                  !isIndividual
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-background text-muted-foreground hover:bg-muted',
+                )}>
+                Company
+              </button>
+              <button
+                type="button"
+                onClick={() => form.setValue('isIndividual', true)}
+                className={cn(
+                  'px-4 py-1.5 text-sm font-medium transition-colors border-l',
+                  isIndividual
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-background text-muted-foreground hover:bg-muted',
+                )}>
+                Individual
+              </button>
             </div>
 
             <FormField
@@ -203,10 +205,10 @@ export function EditCustomerDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Company Name</FormLabel>
+                  <FormLabel>{isIndividual ? 'Full Name' : 'Company Name'}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Acme Corporation"
+                      placeholder={isIndividual ? 'Jane Smith' : 'Acme Corporation'}
                       {...field}
                     />
                   </FormControl>
@@ -214,6 +216,51 @@ export function EditCustomerDialog({
                 </FormItem>
               )}
             />
+
+            {!isIndividual && (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="individualName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Primary Contact Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Jane Smith" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="individualType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Role</FormLabel>
+                      <FormControl>
+                        <CreatableSelect
+                          options={individualTypeOptions}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Select role"
+                          onOptionsChange={setIndividualTypeOptions}
+                          onOptionCreated={(label) =>
+                            settingsApi.createDropdownOption({
+                              category: 'individual_type',
+                              value: label.toLowerCase().replace(/\s+/g, '_'),
+                              label,
+                            })
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -279,78 +326,82 @@ export function EditCustomerDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="website"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Website</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="https://acme.com"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
+            {!isIndividual && (
               <FormField
                 control={form.control}
-                name="segment"
+                name="website"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Customer Company Type</FormLabel>
+                    <FormLabel>Website</FormLabel>
                     <FormControl>
-                      <CreatableSelect
-                        options={segmentOptions}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select company type"
-                        onOptionsChange={setSegmentOptions}
-                        onOptionCreated={(label) =>
-                          settingsApi.createDropdownOption({
-                            category: 'client_segment',
-                            value: label.toLowerCase().replace(/\s+/g, '_'),
-                            label,
-                          })
-                        }
+                      <Input
+                        placeholder="https://acme.com"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+            )}
 
-              <FormField
-                control={form.control}
-                name="industry"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Industry</FormLabel>
-                    <FormControl>
-                      <CreatableSelect
-                        options={industryOptions}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select industry"
-                        onOptionsChange={setIndustryOptions}
-                        onOptionCreated={(label) =>
-                          settingsApi.createDropdownOption({
-                            category: 'client_industry',
-                            value: label.toLowerCase().replace(/\s+/g, '_'),
-                            label,
-                          })
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {!isIndividual && (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="segment"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Customer Company Type</FormLabel>
+                      <FormControl>
+                        <CreatableSelect
+                          options={segmentOptions}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Select company type"
+                          onOptionsChange={setSegmentOptions}
+                          onOptionCreated={(label) =>
+                            settingsApi.createDropdownOption({
+                              category: 'client_segment',
+                              value: label.toLowerCase().replace(/\s+/g, '_'),
+                              label,
+                            })
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="industry"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Industry</FormLabel>
+                      <FormControl>
+                        <CreatableSelect
+                          options={industryOptions}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Select industry"
+                          onOptionsChange={setIndustryOptions}
+                          onOptionCreated={(label) =>
+                            settingsApi.createDropdownOption({
+                              category: 'client_industry',
+                              value: label.toLowerCase().replace(/\s+/g, '_'),
+                              label,
+                            })
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 pt-4">
               <Button

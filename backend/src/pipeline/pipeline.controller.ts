@@ -21,15 +21,15 @@ export class PipelineController {
   @Get('stages')
   findAll(
     @Query('type') type?: string,
-    @Query('serviceType') serviceType?: string,
+    @Query('jobType') jobType?: string,
   ) {
-    return this.pipelineService.findAll(type, serviceType);
+    return this.pipelineService.findAll(type, jobType);
   }
 
-  @Get('stages/by-service-type')
+  @Get('stages/by-job-type')
   @Permissions('pipeline:manage')
-  findByServiceType(@Query('serviceType') serviceType: string) {
-    return this.pipelineService.findByServiceType(serviceType);
+  findByJobType(@Query('jobType') jobType: string) {
+    return this.pipelineService.findByJobType(jobType);
   }
 
   @Post('stages')

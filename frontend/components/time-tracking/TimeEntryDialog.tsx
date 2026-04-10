@@ -63,7 +63,7 @@ interface ProjectOption {
   name: string;
   jobNumber?: string | null;
   isIndot?: boolean;
-  serviceType?: { category?: { name: string } | null } | null;
+  jobType?: { division?: { name: string } | null } | null;
 }
 
 interface TimeEntryDialogProps {
@@ -133,7 +133,7 @@ export function TimeEntryDialog({
   });
 
   const selectedProject = projects.find((p) => p.id === projectId);
-  const isEngineeringProject = selectedProject?.serviceType?.category?.name === 'Engineering';
+  const isEngineeringProject = selectedProject?.jobType?.division?.name === 'Engineering';
 
   // Fetch work codes — only when an engineering project is selected
   const { data: workCodes = [] } = useQuery<WorkCode[]>({
@@ -223,7 +223,7 @@ export function TimeEntryDialog({
     const newProjectId = val === '__none__' ? '' : val;
     setProjectId(newProjectId);
     const newProject = projects.find((p) => p.id === newProjectId);
-    if (newProject?.serviceType?.category?.name !== 'Engineering') {
+    if (newProject?.jobType?.division?.name !== 'Engineering') {
       setWorkCodeId('');
     }
     const newIsIndot = newProject?.isIndot ?? false;

@@ -19,31 +19,31 @@ export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Get()
-  @Permissions('users:view')
+  @Permissions('roles:view')
   getAll() {
     return this.rolesService.getAll();
   }
 
   @Get('assignable')
-  @Permissions('users:create')
+  @Permissions('users:list_basic')
   getAssignable(@CurrentUser() user: AuthenticatedUser) {
     return this.rolesService.getAssignable(user.role);
   }
 
   @Post()
-  @Permissions('permissions:edit')
+  @Permissions('roles:create')
   create(@Body() dto: CreateRoleDto) {
     return this.rolesService.create(dto);
   }
 
   @Patch(':key')
-  @Permissions('permissions:edit')
+  @Permissions('roles:edit')
   update(@Param('key') key: string, @Body() dto: UpdateRoleDto) {
     return this.rolesService.update(key, dto);
   }
 
   @Delete(':key')
-  @Permissions('permissions:edit')
+  @Permissions('roles:delete')
   delete(@Param('key') key: string) {
     return this.rolesService.delete(key);
   }

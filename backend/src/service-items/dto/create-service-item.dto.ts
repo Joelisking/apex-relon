@@ -11,7 +11,7 @@ export class CreateServiceItemDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  serviceTypeIds?: string[];
+  jobTypeIds?: string[];
 
   @IsOptional()
   @IsString()

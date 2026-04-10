@@ -48,7 +48,7 @@ export function useLeadFilters(leads: Lead[]) {
     if (!passesFilter(l.urgency, facets.urgency ?? [])) return false;
     if (!passesFilter(l.source, facets.source ?? [])) return false;
     if ((facets.county ?? []).length > 0 && !(l.county ?? []).some((c) => (facets.county ?? []).includes(c))) return false;
-    if (!passesFilter(l.serviceType?.name, facets.serviceType ?? [])) return false;
+    if (!passesFilter(l.jobType?.name, facets.jobType ?? [])) return false;
     if (!passesFilter(l.aiRiskLevel, facets.aiRiskLevel ?? [])) return false;
     const owner = (l as unknown as { assignedTo?: { name?: string } }).assignedTo?.name || 'Unassigned';
     if (!passesFilter(owner, facets.owner ?? [])) return false;
@@ -95,11 +95,11 @@ export function useLeadFilters(leads: Lead[]) {
       })),
     },
     {
-      id: 'serviceType',
-      title: 'Service Type',
-      options: [...new Set(leads.map((l) => l.serviceType?.name).filter(Boolean))].map((v) => ({
+      id: 'jobType',
+      title: 'Job Type',
+      options: [...new Set(leads.map((l) => l.jobType?.name).filter(Boolean))].map((v) => ({
         label: v!, value: v!,
-        count: leads.filter((l) => l.serviceType?.name === v).length,
+        count: leads.filter((l) => l.jobType?.name === v).length,
       })),
     },
     {

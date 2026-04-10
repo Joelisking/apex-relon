@@ -20,9 +20,9 @@ export default function ProposalTemplatesSection() {
     queryFn: () => proposalTemplatesApi.getAll(),
   });
 
-  const { data: serviceTypes = [] } = useQuery({
-    queryKey: ['service-types'],
-    queryFn: () => settingsApi.getServiceTypes(),
+  const { data: jobTypes = [] } = useQuery({
+    queryKey: ['job-types'],
+    queryFn: () => settingsApi.getJobTypes(),
   });
 
   const handleDelete = async (template: ProposalTemplate) => {
@@ -94,9 +94,9 @@ export default function ProposalTemplatesSection() {
                     <p className="text-[13px] font-medium text-foreground truncate">
                       {template.name}
                     </p>
-                    {template.serviceType && (
+                    {template.jobType && (
                       <Badge variant="secondary" className="text-[10px] shrink-0">
-                        {template.serviceType.name}
+                        {template.jobType.name}
                       </Badge>
                     )}
                   </div>
@@ -131,7 +131,7 @@ export default function ProposalTemplatesSection() {
       <UploadTemplateDialog
         open={uploadOpen}
         onOpenChange={setUploadOpen}
-        serviceTypes={serviceTypes}
+        jobTypes={jobTypes}
         onUploaded={handleUploaded}
       />
     </>

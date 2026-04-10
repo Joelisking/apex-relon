@@ -144,11 +144,11 @@ export const projectColumns: ColumnDef<Project>[] = [
     cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.client?.name || '—'}</span>,
   },
   {
-    id: 'serviceType',
-    accessorFn: (row) => row.serviceType?.name || '',
-    header: 'Service Type',
+    id: 'jobType',
+    accessorFn: (row) => row.jobType?.name || '',
+    header: 'Job Type',
     filterFn: (row, id, value) => value.includes(row.getValue(id)),
-    cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.serviceType?.name || '—'}</span>,
+    cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.jobType?.name || '—'}</span>,
   },
   {
     id: 'county',

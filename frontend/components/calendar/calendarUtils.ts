@@ -17,6 +17,7 @@ export interface CalendarEvent {
   color: string;
   priority?: string;
   status?: string;
+  estimatedDueDate?: string;
   resource?: Task | Project;
 }
 
@@ -79,6 +80,7 @@ export function projectToEvents(project: Project): CalendarEvent[] {
       kind: 'project-due',
       sourceId: project.id,
       color: '#fed7aa', // orange-200
+      estimatedDueDate: project.estimatedDueDate,
       resource: project,
     });
   }

@@ -22,7 +22,7 @@ import type { ProjectServiceItem } from '@/lib/types';
 
 interface ProjectServiceItemsPanelProps {
   projectId: string;
-  serviceTypeIds?: string[];
+  jobTypeIds?: string[];
 }
 
 function formatCurrency(n: number) {
@@ -35,7 +35,7 @@ function formatCurrency(n: number) {
 
 export function ProjectServiceItemsPanel({
   projectId,
-  serviceTypeIds = [],
+  jobTypeIds = [],
 }: ProjectServiceItemsPanelProps) {
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
@@ -64,8 +64,8 @@ export function ProjectServiceItemsPanel({
   const availableItems = allServiceItems
     .filter((si) => si.isActive && !linkedIds.has(si.id))
     .filter((si) => {
-      if (serviceTypeIds.length === 0) return true;
-      return si.serviceTypeIds.some((id) => serviceTypeIds.includes(id));
+      if (jobTypeIds.length === 0) return true;
+      return si.jobTypeIds.some((id) => jobTypeIds.includes(id));
     });
 
   const selectOptions = availableItems.map((si) => ({
@@ -274,7 +274,7 @@ export function ProjectServiceItemsPanel({
               placeholder="Add service item…"
               searchPlaceholder="Search service items…"
               emptyMessage={
-                serviceTypeIds.length > 0
+                jobTypeIds.length > 0
                   ? 'No matching service items for this project type.'
                   : 'No service items available.'
               }

@@ -8,38 +8,38 @@ import { ReorderStagesDto } from './dto/reorder-stages.dto';
 export class PipelineService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(type?: string, serviceType?: string) {
-    if (type === 'project' && serviceType) {
+  async findAll(type?: string, jobType?: string) {
+    if (type === 'project' && jobType) {
       // Return general stages merged with type-specific stages, ordered by sortOrder
       return this.prisma.pipelineStage.findMany({
         where: {
           pipelineType: 'project',
-          serviceType: { in: ['__all__', serviceType] },
+          jobType: { in: ['__all__', jobType] },
         },
         orderBy: { sortOrder: 'asc' },
       });
     }
 
     return this.prisma.pipelineStage.findMany({
-      where: type ? { pipelineType: type, serviceType: '__all__' } : undefined,
+      where: type ? { pipelineType: type, jobType: '__all__' } : undefined,
       orderBy: { sortOrder: 'asc' },
     });
   }
 
-  async findByServiceType(serviceType: string) {
+  async findByJobType(jobType: string) {
     return this.prisma.pipelineStage.findMany({
-      where: { pipelineType: 'project', serviceType },
+      where: { pipelineType: 'project', jobType },
       orderBy: { sortOrder: 'asc' },
     });
   }
 
   async create(dto: CreateStageDto) {
     const pipelineType = dto.pipelineType || 'prospective_project';
-    const serviceType = dto.serviceType || '__all__';
+    const jobType = dto.jobType || '__all__';
 
     if (dto.sortOrder === undefined) {
       const maxOrder = await this.prisma.pipelineStage.aggregate({
-        where: { pipelineType, serviceType },
+        where: { pipelineType, jobType },
         _max: { sortOrder: true },
       });
       dto.sortOrder = (maxOrder._max.sortOrder ?? -1) + 1;
@@ -49,7 +49,7 @@ export class PipelineService {
       data: {
         name: dto.name,
         pipelineType,
-        serviceType,
+        jobType,
         color: dto.color,
         lightColor: dto.lightColor,
         border: dto.border,

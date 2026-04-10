@@ -8,7 +8,7 @@ export enum Role {
   QS = 'QS',
 }
 
-export interface ServiceCategory {
+export interface Division {
   id: string;
   name: string;
   description?: string | null;
@@ -16,17 +16,17 @@ export interface ServiceCategory {
   sortOrder: number;
   createdAt?: string;
   updatedAt?: string;
-  serviceTypes?: ServiceType[];
+  jobTypes?: JobType[];
 }
 
-export interface ServiceType {
+export interface JobType {
   id: string;
   name: string;
   description?: string | null;
   isActive: boolean;
   sortOrder: number;
-  categoryId?: string | null;
-  category?: { id: string; name: string } | null;
+  divisionId?: string | null;
+  division?: { id: string; name: string } | null;
   createdAt?: string;
   updatedAt?: string;
   _count?: { leads: number; projects: number };
@@ -36,8 +36,8 @@ export interface TaskType {
   id: string;
   name: string;
   description?: string | null;
-  serviceTypeId?: string | null;
-  serviceType?: { id: string; name: string } | null;
+  jobTypeId?: string | null;
+  jobType?: { id: string; name: string } | null;
   isActive: boolean;
   sortOrder: number;
   createdAt?: string;
@@ -69,7 +69,7 @@ export interface ServiceItem {
   id: string;
   name: string;
   description?: string | null;
-  serviceTypeIds: string[];
+  jobTypeIds: string[];
   unit?: string | null;
   defaultPrice?: number | null;
   qbItemId?: string | null;
@@ -234,10 +234,10 @@ export interface Lead {
   state?: string | null;
   zip?: string | null;
   stage: string;
-  serviceTypeId?: string | null;
-  serviceType?: ServiceType | null;
+  jobTypeId?: string | null;
+  jobType?: JobType | null;
   categoryIds?: string[];
-  serviceTypeIds?: string[];
+  jobTypeIds?: string[];
   county?: string[];
   urgency: string;
   source: string;
@@ -378,8 +378,10 @@ export interface Project {
   folderPath?: string | null;
   estimatedRevenue?: number;
   totalCost?: number;
-  serviceTypeId?: string | null;
-  serviceType?: { id: string; name: string } | null;
+  jobTypeId?: string | null;
+  jobType?: { id: string; name: string; division?: { id: string; name: string } | null } | null;
+  jobTypeIds?: string[];
+  categoryIds?: string[];
   county?: string[];
   projectManagerId?: string;
   projectManager?: {
@@ -967,7 +969,7 @@ export interface CostBreakdown {
   tenantId: string;
   projectId?: string | null;
   leadId?: string | null;
-  serviceTypeId?: string | null;
+  jobTypeId?: string | null;
   title: string;
   status: string;
   notes?: string | null;
@@ -982,7 +984,7 @@ export interface CostBreakdown {
   perDiemQty?: number | null;
   perDiemRate?: number | null;
   roundedFee?: number | null;
-  serviceType?: { id: string; name: string } | null;
+  jobType?: { id: string; name: string } | null;
   project?: { id: string; name: string } | null;
   lead?: { id: string; company: string; contactName: string } | null;
   createdBy?: { id: string; name: string } | null;

@@ -59,7 +59,7 @@ Lead Details:
 - Company: ${lead.company}
 - Expected Value: $${lead.expectedValue?.toLocaleString() || '0'}
 - Current Stage: ${lead.stage}
-- Service Type: ${(lead.serviceType as Record<string, unknown>)?.name || 'Not specified'}
+- Job Type: ${(lead.jobType as Record<string, unknown>)?.name || 'Not specified'}
 - Urgency: ${lead.urgency}
 - Source: ${lead.source}
 - Channel: ${lead.channel}
@@ -346,7 +346,7 @@ export function buildEmailDraftPrompt(lead: Record<string, unknown>, emailType: 
 Lead context:
 - Expected project value: $${lead.expectedValue?.toLocaleString() || '0'}
 - Current stage: ${lead.stage}
-- Service: ${(lead.serviceType as Record<string, unknown>)?.name || 'N/A'}
+- Service: ${(lead.jobType as Record<string, unknown>)?.name || 'N/A'}
 - Assigned PM: ${(lead.assignedTo as Record<string, unknown>)?.name || 'N/A'}
 - Notes: ${lead.notes || 'None'}
 

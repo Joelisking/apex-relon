@@ -15,6 +15,13 @@ import {
   FileText,
   Clock,
   BarChart3,
+  UserCog,
+  Shield,
+  ShieldCheck,
+  GitBranch,
+  Bot,
+  Zap,
+  CalendarDays,
 } from 'lucide-react';
 import {
   Command,
@@ -49,8 +56,21 @@ const ALL_NAV_ITEMS = [
   { label: 'Invoicing', href: '/invoicing', icon: FileText, permission: 'quotes:view' },
   { label: 'Cost Breakdown', href: '/cost-breakdown', icon: FileText, permission: 'quotes:view' },
   { label: 'Time Tracking', href: '/time-tracking', icon: Clock, permission: 'time_tracking:view' },
+  { label: 'Calendar', href: '/calendar', icon: CalendarDays, permission: undefined },
   { label: 'Reports', href: '/reports', icon: BarChart3, permission: 'reports:view' },
   { label: 'Settings', href: '/settings', icon: Settings, permission: undefined },
+];
+
+const ALL_ADMIN_ITEMS = [
+  { label: 'Admin — Users', href: '/admin/users', icon: UserCog, permission: 'users:view' },
+  { label: 'Admin — Roles', href: '/admin/roles', icon: ShieldCheck, permission: 'roles:view' },
+  { label: 'Admin — Permissions', href: '/admin/permissions', icon: Shield, permission: 'permissions:view' },
+  { label: 'Admin — Pipeline', href: '/admin/pipeline', icon: GitBranch, permission: 'pipeline:manage' },
+  { label: 'Admin — Proposal Templates', href: '/admin/proposal-templates', icon: FileText, permission: 'settings:manage' },
+  { label: 'Admin — AI Settings', href: '/admin/ai-settings', icon: Bot, permission: 'ai_settings:view' },
+  { label: 'Admin — Workflows', href: '/admin/workflows', icon: Zap, permission: 'workflows:view' },
+  { label: 'Admin — Invoicing Settings', href: '/admin/quote-settings', icon: FileText, permission: 'settings:manage' },
+  { label: 'Admin — General Settings', href: '/admin/general-settings', icon: Settings, permission: 'settings:manage' },
 ];
 
 export function CommandPalette() {
@@ -60,6 +80,10 @@ export function CommandPalette() {
   const { hasPermission } = useAuth();
 
   const NAV_ITEMS = ALL_NAV_ITEMS.filter(
+    (item) => !item.permission || hasPermission(item.permission),
+  );
+
+  const ADMIN_ITEMS = ALL_ADMIN_ITEMS.filter(
     (item) => !item.permission || hasPermission(item.permission),
   );
 
@@ -158,8 +182,13 @@ export function CommandPalette() {
     ? NAV_ITEMS.filter((n) => n.label.toLowerCase().includes(q))
     : NAV_ITEMS;
 
+  const filteredAdmin = ADMIN_ITEMS.filter((n) =>
+    !q || n.label.toLowerCase().includes(q),
+  );
+
   const hasResults =
     filteredNav.length > 0 ||
+    filteredAdmin.length > 0 ||
     filteredClients.length > 0 ||
     filteredLeads.length > 0 ||
     filteredProjects.length > 0;
@@ -208,6 +237,24 @@ export function CommandPalette() {
                   </CommandItem>
                 ))}
               </CommandGroup>
+            )}
+
+            {filteredAdmin.length > 0 && (
+              <>
+                <CommandSeparator />
+                <CommandGroup heading="Admin">
+                  {filteredAdmin.map((item) => (
+                    <CommandItem
+                      key={item.href}
+                      value={item.href}
+                      onSelect={() => navigate(item.href)}
+                      className="flex items-center gap-2">
+                      <item.icon className="h-4 w-4 text-muted-foreground" />
+                      {item.label}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
             )}
 
             {filteredClients.length > 0 && (

@@ -447,7 +447,7 @@ export class PdfService {
     const breakdown = await this.prisma.costBreakdown.findUniqueOrThrow({
       where: { id },
       include: {
-        serviceType: true,
+        jobType: true,
         lead: true,
         project: true,
         lines: {
@@ -802,7 +802,7 @@ export class PdfService {
     // ── Document metadata ──────────────────────────────────────────────────────
     const clientName = (breakdown.lead as any)?.company || (breakdown.project as any)?.name || null;
     const projectName = (breakdown.lead as any)?.projectName || null;
-    const jobType = (breakdown.serviceType as any)?.name || null;
+    const jobType = (breakdown.jobType as any)?.name || null;
     const dateStr = new Date(breakdown.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     const companyName = settings.companyName || 'Apex Consulting & Surveying';
 

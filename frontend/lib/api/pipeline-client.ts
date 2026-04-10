@@ -4,7 +4,7 @@ export interface PipelineStage {
   id: string;
   name: string;
   pipelineType: string; // 'prospective_project' | 'project'
-  serviceType: string;  // '__all__' for general, or a ServiceType.name for type-specific
+  jobType: string;      // '__all__' for general, or a JobType.name for type-specific
   color: string;
   lightColor: string;
   border: string;
@@ -19,7 +19,7 @@ export interface PipelineStage {
 export interface CreateStageDto {
   name: string;
   pipelineType?: string;
-  serviceType?: string;
+  jobType?: string;
   color?: string;
   lightColor?: string;
   border?: string;
@@ -40,17 +40,17 @@ export interface ReorderStagesDto {
 }
 
 export const pipelineApi = {
-  getStages: (type?: string, serviceType?: string, serverToken?: string) => {
+  getStages: (type?: string, jobType?: string, serverToken?: string) => {
     const params = new URLSearchParams();
     if (type) params.set('type', type);
-    if (serviceType) params.set('serviceType', serviceType);
+    if (jobType) params.set('jobType', jobType);
     const query = params.size > 0 ? `?${params.toString()}` : '';
     return apiFetch<PipelineStage[]>(`/pipeline/stages${query}`, {}, serverToken);
   },
 
-  getStagesByServiceType: (serviceTypeName: string, serverToken?: string) =>
+  getStagesByJobType: (jobTypeName: string, serverToken?: string) =>
     apiFetch<PipelineStage[]>(
-      `/pipeline/stages/by-service-type?serviceType=${encodeURIComponent(serviceTypeName)}`,
+      `/pipeline/stages/by-job-type?jobType=${encodeURIComponent(jobTypeName)}`,
       {},
       serverToken,
     ),

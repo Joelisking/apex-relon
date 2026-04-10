@@ -16,8 +16,8 @@ export interface ProposalTemplate {
   id: string;
   name: string;
   description?: string | null;
-  serviceTypeId?: string | null;
-  serviceType?: { id: string; name: string } | null;
+  jobTypeId?: string | null;
+  jobType?: { id: string; name: string } | null;
   gcpPath: string;
   fileName: string;
   createdAt: string;
@@ -125,8 +125,8 @@ export interface Proposal {
 export const proposalTemplatesApi = {
   // ── Templates ──────────────────────────────────────────────────────────────
 
-  getAll(serviceTypeId?: string): Promise<ProposalTemplate[]> {
-    const q = serviceTypeId ? `?serviceTypeId=${encodeURIComponent(serviceTypeId)}` : '';
+  getAll(jobTypeId?: string): Promise<ProposalTemplate[]> {
+    const q = jobTypeId ? `?jobTypeId=${encodeURIComponent(jobTypeId)}` : '';
     return apiFetch<ProposalTemplate[]>(`/proposal-templates${q}`);
   },
 
@@ -134,14 +134,14 @@ export const proposalTemplatesApi = {
     file: File,
     name: string,
     description?: string,
-    serviceTypeId?: string,
+    jobTypeId?: string,
   ): Promise<ProposalTemplate> {
     const token = getTokenFromClientCookies();
     const formData = new FormData();
     formData.append('file', file);
     formData.append('name', name);
     if (description) formData.append('description', description);
-    if (serviceTypeId) formData.append('serviceTypeId', serviceTypeId);
+    if (jobTypeId) formData.append('jobTypeId', jobTypeId);
 
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -191,9 +191,10 @@ export const proposalTemplatesApi = {
     });
   },
 
-  acceptProposal(id: string): Promise<Proposal> {
+  acceptProposal(id: string, contractedValue?: number): Promise<Proposal> {
     return apiFetch<Proposal>(`/proposal-templates/proposals/${id}/accept`, {
       method: 'PATCH',
+      body: JSON.stringify({ contractedValue }),
     });
   },
 

@@ -33,7 +33,7 @@ export class CustomerLeadConversionService {
       include: {
         assignedTo: true,
         client: true,
-        serviceType: { select: { id: true, name: true } },
+        jobType: { select: { id: true, name: true } },
       },
     });
 
@@ -52,16 +52,16 @@ export class CustomerLeadConversionService {
     // Prefer stages scoped to the lead's service type; fall back to __all__.
     let resolvedStatus = projectData?.status;
     if (!resolvedStatus) {
-      const serviceTypeName = lead.serviceType?.name;
+      const jobTypeName = lead.jobType?.name;
       const firstStage =
-        (serviceTypeName
+        (jobTypeName
           ? await this.prisma.pipelineStage.findFirst({
-              where: { pipelineType: 'project', serviceType: serviceTypeName },
+              where: { pipelineType: 'project', jobType: jobTypeName },
               orderBy: { sortOrder: 'asc' },
             })
           : null) ??
         (await this.prisma.pipelineStage.findFirst({
-          where: { pipelineType: 'project', serviceType: '__all__' },
+          where: { pipelineType: 'project', jobType: '__all__' },
           orderBy: { sortOrder: 'asc' },
         }));
       resolvedStatus = firstStage?.name ?? 'Planning';
@@ -71,7 +71,7 @@ export class CustomerLeadConversionService {
 
     const project = await this.prisma.project.create({
       data: {
-        name: projectData?.name || `${lead.company} - ${lead.serviceType?.name || lead.projectName || 'Project'}`,
+        name: projectData?.name || `${lead.company} - ${lead.jobType?.name || lead.projectName || 'Project'}`,
         jobNumber,
         clientId: customer.id,
         leadId: lead.id,
@@ -83,9 +83,9 @@ export class CustomerLeadConversionService {
         estimatedDueDate: projectData?.estimatedDueDate ? new Date(projectData.estimatedDueDate) : undefined,
         closedDate: projectData?.closedDate ? new Date(projectData.closedDate) : undefined,
         description: projectData?.description ?? lead.notes ?? undefined,
-        serviceTypeId: lead.serviceTypeId || undefined,
+        jobTypeId: lead.jobTypeId || undefined,
         categoryIds: lead.categoryIds ?? [],
-        serviceTypeIds: lead.serviceTypeIds ?? [],
+        jobTypeIds: lead.jobTypeIds ?? [],
         county: lead.county ?? undefined,
       },
     });

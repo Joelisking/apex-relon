@@ -12,7 +12,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, FolderOpen } from 'lucide-react';
-import { ProjectCostSegments } from './ProjectCostSegments';
 import { ProjectLocationSection } from './ProjectLocationSection';
 import { ProjectTeamMembersSection } from './ProjectTeamMembersSection';
 import { ProjectCoreFields } from './ProjectCoreFields';
@@ -35,19 +34,15 @@ export function EditProjectDialog({
   const {
     form, loading,
     clients, leads, users,
-    projectStages, primaryServiceTypeName,
+    projectStages, primaryJobTypeName,
     riskOptions, setRiskOptions,
     countyOptions, setCountyOptions,
-    serviceCategories,
-    selectedCategoryIds, selectedServiceTypeIds,
-    costSegments, setCostSegments,
+    divisions,
+    selectedDivisionIds, selectedJobTypeIds,
     activeOptionalStages, setActiveOptionalStages,
-    linkedServiceItems, filteredServiceItems,
-    addServiceItem, removeServiceItem,
     teamMembers, availableUsers, addTeamMember, removeTeamMember,
-    toggleCategory, toggleServiceType,
-    handleUseSegmentTotal, handleGeocode,
-    watchedContractedValue, onSubmit,
+    toggleDivision, toggleJobType,
+    handleGeocode, onSubmit,
   } = useEditProjectForm({ project, open, onOpenChange, onProjectUpdated });
 
   return (
@@ -65,33 +60,22 @@ export function EditProjectDialog({
                 leads={leads}
                 users={users}
                 projectStages={projectStages}
-                primaryServiceTypeName={primaryServiceTypeName}
+                primaryJobTypeName={primaryJobTypeName}
                 activeOptionalStages={activeOptionalStages}
                 onOptionalStageChange={setActiveOptionalStages}
                 stageIdPrefix="edit"
                 statusLabel="Status"
-                serviceCategories={serviceCategories}
-                selectedCategoryIds={selectedCategoryIds}
-                selectedServiceTypeIds={selectedServiceTypeIds}
-                onCategoryToggle={toggleCategory}
-                onServiceTypeToggle={toggleServiceType}
-                linkedServiceItems={linkedServiceItems}
-                availableServiceItems={filteredServiceItems.map((si) => ({ id: si.id, name: si.name, unit: si.unit }))}
-                onAddServiceItem={addServiceItem}
-                onRemoveServiceItem={removeServiceItem}
+                divisions={divisions}
+                selectedDivisionIds={selectedDivisionIds}
+                selectedJobTypeIds={selectedJobTypeIds}
+                onDivisionToggle={toggleDivision}
+                onJobTypeToggle={toggleJobType}
                 riskOptions={riskOptions}
                 onRiskOptionsChange={setRiskOptions}
                 countyOptions={countyOptions}
                 onCountyOptionsChange={setCountyOptions}
               />
             </div>
-
-            <ProjectCostSegments
-              value={costSegments}
-              onChange={setCostSegments}
-              contractedValue={Number(watchedContractedValue) || 0}
-              onUseSegmentTotal={handleUseSegmentTotal}
-            />
 
             <FormField
               control={form.control}

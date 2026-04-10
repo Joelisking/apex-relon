@@ -10,5 +10,5 @@ export class CreateProposalTemplateDto {
 
   @IsString()
   @IsOptional()
-  serviceTypeId?: string;
+  jobTypeId?: string;
 }

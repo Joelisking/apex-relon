@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { tasksApi } from '@/lib/api/tasks-client';
 import { projectsApi } from '@/lib/api/projects-client';
 import { TaskDialog } from '@/components/tasks/TaskDialog';
+import { ProjectCalendarPopover } from './ProjectCalendarPopover';
 import { MonthTab } from './MonthTab';
 import { WeekTab } from './WeekTab';
 import { AgendaTab } from './AgendaTab';
@@ -32,6 +33,7 @@ export function CalendarView() {
   const [showTasks, setShowTasks] = useState(true);
   const [showProjects, setShowProjects] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedProjectEvent, setSelectedProjectEvent] = useState<CalendarEvent | null>(null);
 
   const rbcView = activeView;
   const { start: rangeStart, end: rangeEnd } = useMemo(
@@ -71,6 +73,8 @@ export function CalendarView() {
   function handleEventClick(event: CalendarEvent) {
     if (event.kind === 'task') {
       setSelectedTask(event.resource as Task);
+    } else if (event.kind === 'project-due') {
+      setSelectedProjectEvent(event);
     } else {
       router.push(`/projects/${event.sourceId}`);
     }
@@ -149,6 +153,12 @@ export function CalendarView() {
           setSelectedTask(null);
           queryClient.invalidateQueries({ queryKey: ['calendar-tasks'] });
         }}
+      />
+
+      <ProjectCalendarPopover
+        event={selectedProjectEvent}
+        onClose={() => setSelectedProjectEvent(null)}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ['calendar-projects'] })}
       />
     </div>
   );
