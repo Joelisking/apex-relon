@@ -46,7 +46,8 @@ export const projectColumns: ColumnDef<Project>[] = [
   },
   {
     accessorKey: 'jobNumber',
-    header: 'Job #',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Job #" />,
+    enableSorting: true,
     cell: ({ row }) => {
       const jobNumber = row.original.jobNumber;
       return jobNumber ? (
@@ -112,14 +113,6 @@ export const projectColumns: ColumnDef<Project>[] = [
     },
   },
   {
-    accessorKey: 'estimatedRevenue',
-    header: 'Est. Revenue',
-    cell: ({ row }) =>
-      row.original.estimatedRevenue
-        ? `$${row.original.estimatedRevenue.toLocaleString()}`
-        : '-',
-  },
-  {
     accessorKey: 'totalCost',
     header: 'Cost',
     cell: ({ row }) =>
@@ -145,7 +138,8 @@ export const projectColumns: ColumnDef<Project>[] = [
   {
     id: 'client',
     accessorFn: (row) => row.client?.name || '',
-    header: 'Client',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Client" />,
+    enableSorting: true,
     filterFn: (row, id, value) => value.includes(row.getValue(id)),
     cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.client?.name || '—'}</span>,
   },

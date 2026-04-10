@@ -665,7 +665,7 @@ export function CreateLeadDialog({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">
-                  Mailing Address
+                  Project Address
                 </p>
                 {selectedClient?.address && (
                   <label className="flex items-center gap-1.5 cursor-pointer select-none">

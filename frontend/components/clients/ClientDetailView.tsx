@@ -33,7 +33,6 @@ import { CustomerActivityTimeline } from './CustomerActivityTimeline';
 import { EditCustomerDialog } from './EditCustomerDialog';
 import { CustomerHealthSection } from './CustomerHealthSection';
 import { CustomerUpsellSection } from './CustomerUpsellSection';
-import { CustomerCustomFields } from './CustomerCustomFields';
 import { useAuth } from '@/contexts/auth-context';
 import { toast } from 'sonner';
 import { LinkedTasksSection } from '../tasks/LinkedTasksSection';
@@ -216,7 +215,6 @@ export function ClientDetailView({
     { value: 'activities', label: 'Activities' },
     { value: 'tasks', label: 'Tasks' },
     { value: 'quotes', label: 'Quotes' },
-    { value: 'fields', label: 'Custom Fields' },
   ];
 
   return (
@@ -330,10 +328,6 @@ export function ClientDetailView({
 
         <TabsContent value="quotes" className="mt-0">
           <LinkedQuotesSection clientId={client.id} />
-        </TabsContent>
-
-        <TabsContent value="fields" className="mt-0">
-          <CustomerCustomFields clientId={client.id} />
         </TabsContent>
 
         </div>

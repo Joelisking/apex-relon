@@ -14,7 +14,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Loader2, MapPin } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ProjectCostSegments } from './ProjectCostSegments';
 import { ProjectLocationSection } from './ProjectLocationSection';
 import { ProjectTeamMembersSection } from './ProjectTeamMembersSection';
 import { ProjectCoreFields } from './ProjectCoreFields';
@@ -42,14 +41,13 @@ export function CreateProjectDialog({
     countyOptions, setCountyOptions,
     serviceCategories,
     selectedCategoryIds, selectedServiceTypeIds,
-    costSegments, setCostSegments,
     activeOptionalStages, setActiveOptionalStages,
     linkedServiceItems, filteredServiceItems,
     addServiceItem, removeServiceItem,
     teamMembers, availableUsers, addTeamMember, removeTeamMember,
     toggleCategory, toggleServiceType,
-    handleClientChange, handleUseSegmentTotal, handleGeocode,
-    watchedContractedValue, onSubmit,
+    handleClientChange, handleGeocode,
+    onSubmit,
   } = useCreateProjectForm({ open, onOpenChange, onProjectCreated, initialClientId });
 
   const [useClientAddress, setUseClientAddress] = useState(false);
@@ -143,13 +141,6 @@ export function CreateProjectDialog({
                 endOfProjectValueDefault={0}
               />
             </div>
-
-            <ProjectCostSegments
-              value={costSegments}
-              onChange={setCostSegments}
-              contractedValue={Number(watchedContractedValue) || 0}
-              onUseSegmentTotal={handleUseSegmentTotal}
-            />
 
             <div className="space-y-2">
               {clientAddress && (

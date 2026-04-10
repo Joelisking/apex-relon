@@ -413,9 +413,9 @@ export function EditLeadDialog({
               )}
             />
 
-            {/* Mailing Address */}
+            {/* Project Address */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Mailing Address</p>
+              <p className="text-xs font-medium text-muted-foreground">Project Address</p>
               <FormField
                 control={form.control}
                 name="address"

@@ -12,7 +12,6 @@ import { clientsApi, leadsApi, settingsApi, serviceItemsApi } from '@/lib/api/cl
 import { pipelineApi, type PipelineStage } from '@/lib/api/pipeline-client';
 import { usePrimaryServiceTypeName } from './usePrimaryServiceTypeName';
 import type { DropdownOption, ServiceCategory } from '@/lib/types';
-import type { CostSegmentInput } from '@/components/projects/ProjectCostSegments';
 import type { LinkedServiceItem } from '@/components/projects/ProjectServiceItemsField';
 import type { TeamMember } from '@/components/projects/ProjectTeamMembersSection';
 
@@ -63,7 +62,6 @@ export function useCreateProjectForm({
   const [pendingTeamMemberIds, setPendingTeamMemberIds] = useState<string[]>([]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [selectedServiceTypeIds, setSelectedServiceTypeIds] = useState<string[]>([]);
-  const [costSegments, setCostSegments] = useState<CostSegmentInput[]>([]);
   const [activeOptionalStages, setActiveOptionalStages] = useState<string[]>([]);
   const [geocodedLat, setGeocodedLat] = useState<number | null>(null);
   const [geocodedLng, setGeocodedLng] = useState<number | null>(null);
@@ -212,10 +210,6 @@ export function useCreateProjectForm({
     form.setValue('clientId', clientId);
   }
 
-  function handleUseSegmentTotal(total: number) {
-    form.setValue('contractedValue', total, { shouldValidate: true });
-  }
-
   function handleGeocode(lat: number | null, lng: number | null) {
     setGeocodedLat(lat);
     setGeocodedLng(lng);
@@ -227,7 +221,6 @@ export function useCreateProjectForm({
     setSelectedCategoryIds([]);
     setSelectedServiceTypeIds([]);
     setSelectedServiceItemIds([]);
-    setCostSegments([]);
     setActiveOptionalStages([]);
     setGeocodedLat(null);
     setGeocodedLng(null);
@@ -248,7 +241,6 @@ export function useCreateProjectForm({
         teamMemberIds: pendingTeamMemberIds.length > 0 ? pendingTeamMemberIds : undefined,
         categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
         serviceTypeIds: selectedServiceTypeIds.length > 0 ? selectedServiceTypeIds : undefined,
-        costSegments: costSegments.length > 0 ? costSegments : undefined,
         activeOptionalStages,
         address: values.address || undefined,
         latitude: geocodedLat ?? (values.latitude ? Number(values.latitude) : undefined),
@@ -289,8 +281,6 @@ export function useCreateProjectForm({
     serviceCategories,
     selectedCategoryIds,
     selectedServiceTypeIds,
-    costSegments,
-    setCostSegments,
     activeOptionalStages,
     setActiveOptionalStages,
     // service items
@@ -308,7 +298,6 @@ export function useCreateProjectForm({
     toggleCategory,
     toggleServiceType,
     handleClientChange,
-    handleUseSegmentTotal,
     handleGeocode,
     watchedContractedValue: form.watch('contractedValue'),
     onSubmit,

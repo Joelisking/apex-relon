@@ -435,8 +435,15 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
+function getOrdinalSuffix(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return s[(v - 20) % 10] || s[v] || s[0];
+}
+
 export function formatProposalDate(date: Date): string {
-  return `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+  const day = date.getDate();
+  return `${MONTH_NAMES[date.getMonth()]} ${day}${getOrdinalSuffix(day)}, ${date.getFullYear()}`;
 }
 
 export function monthName(date: Date): string {

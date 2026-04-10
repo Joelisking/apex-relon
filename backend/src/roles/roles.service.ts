@@ -88,38 +88,33 @@ export class RolesService implements OnModuleInit {
   }
 
   private async seedBuiltInRoles() {
-    // Fast-path: skip the upsert loop when all expected roles are already present.
-    const allExpectedKeys = [
-      ...BUILT_IN_ROLES.map((r) => r.key),
-      ...SEEDED_ROLES.map((r) => r.key),
-    ];
-    const existingCount = await this.prisma.role.count({
-      where: { key: { in: allExpectedKeys } },
-    });
-    if (existingCount >= allExpectedKeys.length) {
-      this.logger.log('Roles already seeded. Skipping.');
-      return;
-    }
-
-    // Upsert built-in roles, enforcing isBuiltIn: true
+    // Always upsert built-in roles to enforce canAssignBuiltIn and isBuiltIn flags,
+    // even if the roles already exist (guards against stale DB state).
     for (const role of BUILT_IN_ROLES) {
       await this.prisma.role.upsert({
         where: { key: role.key },
-        update: { isBuiltIn: true },
+        update: { isBuiltIn: true, canAssignBuiltIn: role.canAssignBuiltIn },
         create: role,
       });
     }
 
-    // Seed non-built-in default roles (only create if missing, never set isBuiltIn)
-    for (const role of SEEDED_ROLES) {
-      await this.prisma.role.upsert({
-        where: { key: role.key },
-        update: { isBuiltIn: false },
-        create: role,
-      });
+    // Seed non-built-in default roles only if missing.
+    const seededKeys = SEEDED_ROLES.map((r) => r.key);
+    const existingSeeded = await this.prisma.role.count({
+      where: { key: { in: seededKeys } },
+    });
+    if (existingSeeded < seededKeys.length) {
+      for (const role of SEEDED_ROLES) {
+        await this.prisma.role.upsert({
+          where: { key: role.key },
+          update: { isBuiltIn: false },
+          create: role,
+        });
+      }
+      this.logger.log('Seeded default roles.');
     }
 
-    this.logger.log('Roles seeded.');
+    this.logger.log('Built-in roles synced.');
   }
 
   async getAll() {

@@ -294,7 +294,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
 
   const TABS = [
     { value: 'overview', label: 'Overview' },
-    { value: 'budget', label: 'Budget' },
+    { value: 'financials', label: 'Financials' },
     { value: 'tasks', label: 'Tasks' },
     { value: 'quotes', label: 'Invoices' },
     ...(project.leadId ? [{ value: 'proposals', label: 'Proposals' }] : []),
@@ -450,7 +450,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
               />
             </TabsContent>
 
-            <TabsContent value="budget" className="mt-0">
+            <TabsContent value="financials" className="mt-0">
               <div className="space-y-6">
                 {(project.costSegments?.length ?? 0) > 0 && (
                   <ProjectCostSegmentsSection
