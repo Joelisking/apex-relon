@@ -51,7 +51,7 @@ const WINGDINGS_MAP: Record<string, string> = {
   'F04E': '✕',  // x mark
   'F050': '●',  // filled circle
   'F0B7': '•',  // bullet
-  'F076': '◆',  // black diamond
+  'F076': '❖',  // U+2756 BLACK DIAMOND MINUS WHITE X (the actual Wingdings 0x76 glyph)
   'F0FC': '✓',  // check mark
   'F0FE': '☑',  // ballot box with check
   'F036': '★',  // star
@@ -521,7 +521,16 @@ export function patchFontFallbacks(xml: string): string {
     .replace(/w:eastAsia="Times"/g, 'w:eastAsia="Times New Roman"')
     .replace(/w:cs="Times"/g, 'w:cs="Times New Roman"')
     .replace(/w:ascii="Optima"/g, 'w:ascii="Liberation Serif"')
-    .replace(/w:hAnsi="Optima"/g, 'w:hAnsi="Liberation Serif"');
+    .replace(/w:hAnsi="Optima"/g, 'w:hAnsi="Liberation Serif"')
+    // Word on this template references "Copperplate Gothic Light", but the
+    // bundled Apex .ttc only contains family "Copperplate" with subfamilies
+    // Regular/Light/Bold (it's the macOS Linotype Copperplate, not the
+    // Microsoft "Copperplate Gothic" variant). Remap so LibreOffice finds the
+    // installed font. Even when fonts aren't bundled, Liberation Serif covers
+    // "Copperplate Light" the same way it covered "Copperplate Gothic Light".
+    .replace(/w:ascii="Copperplate Gothic Light"/g, 'w:ascii="Copperplate Light"')
+    .replace(/w:hAnsi="Copperplate Gothic Light"/g, 'w:hAnsi="Copperplate Light"')
+    .replace(/w:cs="Copperplate Gothic Light"/g, 'w:cs="Copperplate Light"');
 }
 
 /**
@@ -532,29 +541,80 @@ export function patchFontFallbacks(xml: string): string {
  * Word. The font isn't installed on Linux, so LibreOffice falls back to a
  * regular serif that renders the lowercase as actual lowercase, producing
  * "apex Consulting & Surveying, inc." instead of the intended "APEX
- * CONSULTING & SURVEYING, INC.". We approximate the small-caps look by
- * upper-casing the text and adding bold, then strip the unknown font so the
- * surrounding default takes over.
+ * CONSULTING & SURVEYING, INC.". We upper-case the text and strip the unknown
+ * font so the surrounding default serif takes over — without forcing bold,
+ * which would make the result heavier than the original Copperplate look.
  */
+/**
+ * Center the title paragraph (the one that contains Copperplate Gothic runs).
+ * The Apex templates set the title paragraph's justification to "both"
+ * (justified), which spreads the diamonds and the company name across the
+ * full width — looks fine in Word with Copperplate's tight metrics, but
+ * looks wrong with our Liberation Serif fallback. Centering it puts the
+ * ornaments tight against the title text, matching the intended look.
+ */
+export function centerCopperplateTitleParagraph(xml: string): string {
+  return xml.replace(
+    /<w:p\b[^>]*>[\s\S]*?<\/w:p>/g,
+    (paraXml) => {
+      if (!/Copperplate/i.test(paraXml)) return paraXml;
+      // Replace existing <w:jc> in the pPr, or insert one if missing.
+      if (/<w:jc\s+w:val="[^"]*"\s*\/>/.test(paraXml)) {
+        return paraXml.replace(
+          /<w:jc\s+w:val="[^"]*"\s*\/>/,
+          '<w:jc w:val="center"/>',
+        );
+      }
+      return paraXml.replace(
+        /<w:pPr>([\s\S]*?)<\/w:pPr>/,
+        '<w:pPr>$1<w:jc w:val="center"/></w:pPr>',
+      );
+    },
+  );
+}
+
 export function patchCopperplateRuns(xml: string): string {
   return xml.replace(
     /(<w:r\b[^>]*>)(<w:rPr>[\s\S]*?<\/w:rPr>)([\s\S]*?)(<\/w:r>)/g,
     (match, openTag: string, rPr: string, body: string, closeTag: string) => {
-      if (!/Copperplate\s*Gothic/i.test(rPr)) return match;
+      if (!/Copperplate/i.test(rPr)) return match;
 
-      // Strip the Copperplate font ref entirely; surrounding default takes over.
-      let newRPr = rPr.replace(/<w:rFonts\b[^/]*\/>/g, '');
-      // Add bold so the upper-cased text reads as a heavy title.
-      if (!/<w:b\b/.test(newRPr)) {
-        newRPr = newRPr.replace(/<\/w:rPr>/, '<w:b/></w:rPr>');
+      // Replace the Copperplate font ref with an explicit Liberation Serif +
+      // explicit size. We set the size explicitly because dropping the rPr
+      // would let each run inherit a different ancestor (LibreOffice resolves
+      // empty/missing rPr differently per run, which produced visibly
+      // mismatched sizes between the two title runs).
+      let newRPr = rPr.replace(
+        /<w:rFonts\b[^/]*\/>/g,
+        '<w:rFonts w:ascii="Liberation Serif" w:hAnsi="Liberation Serif" w:cs="Liberation Serif"/>',
+      );
+      // Force an explicit size (20pt = sz 40) so both runs render identically.
+      if (/<w:sz\b/.test(newRPr)) {
+        newRPr = newRPr.replace(/<w:sz\s+w:val="\d+"\s*\/>/, '<w:sz w:val="40"/>');
+      } else {
+        newRPr = newRPr.replace(/<\/w:rPr>/, '<w:sz w:val="40"/></w:rPr>');
       }
-      // If we just emptied the rPr, drop it altogether to keep the run lean.
-      if (newRPr === '<w:rPr></w:rPr>') newRPr = '';
 
       const newBody = body.replace(
         /(<w:t[^>]*>)([\s\S]*?)(<\/w:t>)/g,
-        (_m, open: string, text: string, close: string) =>
-          `${open}${text.toUpperCase()}${close}`,
+        (_m, open: string, text: string, close: string) => {
+          // Decode XML entities, uppercase, re-encode — toUpperCase() on a
+          // raw <w:t> body would corrupt &amp; into &AMP; (invalid XML).
+          const decoded = text
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&apos;/g, "'")
+            .replace(/&amp;/g, '&');
+          const upper = decoded.toUpperCase();
+          const reencoded = upper
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+          return `${open}${reencoded}${close}`;
+        },
       );
 
       return `${openTag}${newRPr}${newBody}${closeTag}`;
@@ -576,6 +636,13 @@ export function fillDocx(
 ): Buffer {
   const zip = new PizZip(templateBuffer);
 
+  // When the proprietary template fonts (Wingdings, Copperplate Gothic Light)
+  // are baked into the runtime image — see backend/fonts/README.md — we skip
+  // the XML rewrites that approximate them with Unicode + Liberation Serif,
+  // because the real fonts now render the original markup correctly.
+  const bundledFonts = process.env.APEX_BUNDLED_FONTS === '1' ||
+                       process.env.APEX_BUNDLED_FONTS === 'true';
+
   // Update docProps/custom.xml if present
   const customXmlFile = zip.files['docProps/custom.xml'];
   if (customXmlFile) {
@@ -585,6 +652,8 @@ export function fillDocx(
 
   // Patch font references in styles.xml so LibreOffice picks the right
   // metric-equivalent fonts (must run on the styles file, not document.xml).
+  // Always applied: Optima/Times still aren't bundled even with proprietary
+  // fonts present, and Liberation Serif is the metric clone for both.
   const stylesFile = zip.files['word/styles.xml'];
   if (stylesFile) {
     zip.file('word/styles.xml', patchFontFallbacks(stylesFile.asText()));
@@ -600,12 +669,17 @@ export function fillDocx(
     xml = stripKnownTemplateGarbage(xml);
     // 1a. Pre-process <w:sym> elements → Unicode so symbol fonts aren't required
     xml = preprocessSymbolElements(xml);
-    // 1b. Pre-process Wingdings/Symbol PUA chars stored in <w:t> runs (header ornaments)
-    xml = convertSymbolFontTextRuns(xml);
+    // 1b. Pre-process Wingdings/Symbol PUA chars in <w:t> runs (header ornaments)
+    //     — skipped when real Wingdings is bundled.
+    if (!bundledFonts) xml = convertSymbolFontTextRuns(xml);
     // 1c. Patch font fallbacks (Times → Times New Roman, Optima → Liberation Serif)
     xml = patchFontFallbacks(xml);
-    // 1d. Convert Copperplate Gothic Light title runs to uppercase + bold
-    xml = patchCopperplateRuns(xml);
+    // 1d. Center the Copperplate-bearing title paragraph
+    xml = centerCopperplateTitleParagraph(xml);
+    // 1e. Convert Copperplate Gothic Light title runs to uppercase + explicit size
+    //     — skipped when real Copperplate Gothic Light is bundled, since the
+    //     real font renders lowercase as small capitals naturally.
+    if (!bundledFonts) xml = patchCopperplateRuns(xml);
     // 1. Merge split highlighted runs so string patterns match
     xml = mergeAdjacentHighlightedRuns(xml);
     // 2. Paragraph overrides (document only — before DOCPROPERTY so brackets still fill)

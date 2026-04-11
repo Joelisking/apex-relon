@@ -32,8 +32,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-freefont-ttf \
     fonts-noto \
     fontconfig \
-    && fc-cache -fv \
     && rm -rf /var/lib/apt/lists/*
+
+# Bundled proprietary fonts (Wingdings, Copperplate Gothic Light, etc.) used by
+# the Apex proposal templates. The fonts/ directory is gitignored — see
+# fonts/README.md for which .ttf files to drop in. The COPY succeeds even if
+# only the README is present, in which case the workaround paths in
+# proposal-fill.util.ts stay active.
+COPY fonts/ /usr/share/fonts/truetype/apex/
+RUN fc-cache -fv
 
 # Non-root user
 RUN groupadd -g 1001 nodejs && useradd -r -u 1001 -g nodejs nestjs
@@ -60,6 +67,10 @@ USER nestjs
 ENV NODE_ENV=production
 # LibreOffice needs a writable HOME to create its user profile at runtime
 ENV HOME=/tmp
+# Tell the proposal-fill pipeline that real Wingdings + Copperplate Gothic Light
+# fonts are installed in /usr/share/fonts/truetype/apex/. Set to "0" (or remove)
+# to fall back to the XML-rewrite workarounds.
+ENV APEX_BUNDLED_FONTS=1
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \

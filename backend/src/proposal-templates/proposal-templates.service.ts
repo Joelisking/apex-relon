@@ -393,14 +393,27 @@ export class ProposalTemplatesService implements OnModuleInit {
     });
     if (!template) throw new NotFoundException('Template not found');
 
-    // 1.5. If regenerating from the editor, delete the prior proposal first.
-    // The Proposal model has a unique constraint on costBreakdownId (and fileId);
-    // re-creating without first removing the old row would violate that constraint.
-    if (dto.replaceProposalId) {
-      const existing = await this.prisma.proposal.findUnique({
-        where: { id: dto.replaceProposalId },
+    // 1.5. If regenerating, delete the prior proposal first. The Proposal model
+    // has a unique constraint on costBreakdownId (and fileId); re-creating without
+    // first removing the old row would violate it.
+    //
+    // Two ways to land here:
+    //   a) editor sent replaceProposalId explicitly (edit-existing flow)
+    //   b) the cost breakdown already has a proposal — even from "New Proposal",
+    //      one breakdown = one proposal, so we always replace.
+    let replaceId = dto.replaceProposalId;
+    if (!replaceId && dto.costBreakdownId) {
+      const existing = await this.prisma.proposal.findFirst({
+        where: { costBreakdownId: dto.costBreakdownId },
+        select: { id: true },
       });
-      if (existing) await this.deleteProposal(dto.replaceProposalId);
+      if (existing) replaceId = existing.id;
+    }
+    if (replaceId) {
+      const existing = await this.prisma.proposal.findUnique({
+        where: { id: replaceId },
+      });
+      if (existing) await this.deleteProposal(replaceId);
     }
 
     // 2. Derive CRM values from lead (if provided)
