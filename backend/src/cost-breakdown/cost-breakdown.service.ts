@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateCostBreakdownDto } from './dto/create-cost-breakdown.dto';
 import { UpdateCostBreakdownDto } from './dto/update-cost-breakdown.dto';
@@ -110,15 +111,34 @@ export class CostBreakdownService {
 
   async update(id: string, dto: UpdateCostBreakdownDto, tenantId: string) {
     await this.findOne(id, tenantId);
+    const { roleDisplayNames, ...rest } = dto;
+    const data: Prisma.CostBreakdownUpdateInput = { ...rest };
+    const sanitized = this.sanitizeRoleDisplayNames(roleDisplayNames);
+    if (sanitized !== undefined) {
+      data.roleDisplayNames = sanitized;
+    }
     const updated = await this.prisma.costBreakdown.update({
       where: { id },
-      data: dto,
+      data,
     });
     // If projectId is being set, sync ProjectServiceItems
     if (dto.projectId) {
       await this.syncProjectServiceItems(id, dto.projectId);
     }
     return updated;
+  }
+
+  private sanitizeRoleDisplayNames(
+    input: Record<string, string> | null | undefined,
+  ): Prisma.InputJsonValue | typeof Prisma.JsonNull | undefined {
+    if (input === undefined) return undefined;
+    if (input === null) return Prisma.JsonNull;
+    const cleaned: Record<string, string> = {};
+    for (const [key, value] of Object.entries(input)) {
+      const trimmed = typeof value === 'string' ? value.trim() : '';
+      if (trimmed) cleaned[key] = trimmed;
+    }
+    return Object.keys(cleaned).length === 0 ? Prisma.JsonNull : cleaned;
   }
 
   async addLine(costBreakdownId: string, serviceItemId: string, tenantId: string) {

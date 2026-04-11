@@ -1290,6 +1290,7 @@ model CostBreakdown {
   roundedFee    Float?
   benchmarkLockedAt DateTime?
   showDirectExpenses Boolean @default(true)
+  roleDisplayNames Json?
 
   project     Project?     @relation("ProjectBreakdowns", fields: [projectId], references: [id], onDelete: SetNull)
   primaryOf   Project?     @relation("PrimaryBreakdown")

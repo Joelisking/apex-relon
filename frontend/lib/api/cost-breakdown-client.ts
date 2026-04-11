@@ -24,6 +24,7 @@ export interface UpdateCostBreakdownDto {
   perDiemRate?: number | null;
   roundedFee?: number | null;
   showDirectExpenses?: boolean;
+  roleDisplayNames?: Record<string, string> | null;
 }
 
 export interface UpsertRoleEstimateDto {

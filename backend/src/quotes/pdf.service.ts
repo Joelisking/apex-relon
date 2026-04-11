@@ -756,6 +756,25 @@ export class PdfService {
       ...apiColumns.map((r) => ({ key: r.key, label: r.label })),
       ...customRoleKeys.map((k) => ({ key: k, label: k })),
     ];
+
+    // Apply breakdown-global display-name overrides (Record<roleString, display>).
+    // Key can be either the API role key or the estimate's stored role string
+    // (which in this codebase is the role label). Try both to stay robust.
+    const overrides = (breakdown.roleDisplayNames ?? null) as Record<string, string> | null;
+    if (overrides) {
+      for (const col of columns) {
+        const apiRole = allRoles.find((r) => r.key === col.key);
+        const candidates = apiRole ? [col.key, apiRole.label] : [col.key];
+        for (const candidate of candidates) {
+          const value = overrides[candidate];
+          if (typeof value === 'string' && value.trim()) {
+            col.label = value.trim();
+            break;
+          }
+        }
+      }
+    }
+
     const nCols = columns.length; // total number of role columns
 
     // ── Per-role representative hourly rate (first non-null found) ──────────────

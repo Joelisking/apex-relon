@@ -35,9 +35,17 @@ interface Props {
   line: CostBreakdownLine;
   roles: RoleResponse[];
   onChange: (updatedLine: CostBreakdownLine) => void;
+  roleDisplayNames?: Record<string, string> | null;
+  onDisplayNameChange?: (roleString: string, newName: string) => Promise<void> | void;
 }
 
-export default function CostBreakdownLineCard({ line, roles, onChange }: Props) {
+export default function CostBreakdownLineCard({
+  line,
+  roles,
+  onChange,
+  roleDisplayNames,
+  onDisplayNameChange,
+}: Props) {
   const isField = line.serviceItem.description === 'Field';
   const [addingTask, setAddingTask] = useState(false);
 
@@ -238,6 +246,8 @@ export default function CostBreakdownLineCard({ line, roles, onChange }: Props) 
           estimates={line.roleEstimates.filter((e) => e.subtaskId === subtask.id)}
           roles={roles}
           defaultRate={line.serviceItem.defaultPrice}
+          roleDisplayNames={roleDisplayNames}
+          onDisplayNameChange={onDisplayNameChange}
           onAdd={handleAddEstimate}
           onUpdate={handleUpdateEstimate}
           onDelete={handleDeleteEstimate}

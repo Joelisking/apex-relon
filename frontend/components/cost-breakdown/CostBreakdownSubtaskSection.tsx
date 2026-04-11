@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { Plus, Trash2, X, Pencil, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -16,10 +17,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
 import { serviceItemsApi } from '@/lib/api/client';
 import type { RoleResponse } from '@/lib/api/roles-client';
 import type { ServiceItemSubtask, CostBreakdownRoleEstimate } from '@/lib/types';
+import { getEffectiveRoleLabel, getCanonicalRoleLabel } from './role-label.util';
 import { toast } from 'sonner';
 
 const SKIP_REMOVE_KEY = 'cb.skipRemoveSubtask';
@@ -38,6 +41,8 @@ interface Props {
   estimates: CostBreakdownRoleEstimate[];
   roles: RoleResponse[];
   defaultRate?: number | null;
+  roleDisplayNames?: Record<string, string> | null;
+  onDisplayNameChange?: (roleString: string, newName: string) => Promise<void> | void;
   onAdd: (estimate: CostBreakdownRoleEstimate) => void;
   onUpdate: (estimate: CostBreakdownRoleEstimate, hours: number, rate?: number) => void;
   onDelete: (estimate: CostBreakdownRoleEstimate) => void;
@@ -51,6 +56,8 @@ export default function CostBreakdownSubtaskSection({
   estimates,
   roles,
   defaultRate,
+  roleDisplayNames,
+  onDisplayNameChange,
   onAdd,
   onUpdate,
   onDelete,
@@ -91,6 +98,7 @@ export default function CostBreakdownSubtaskSection({
     }
   };
   const [newRole, setNewRole] = useState('');
+  const [newDisplayName, setNewDisplayName] = useState('');
   const [newHours, setNewHours] = useState('');
   const [newRate, setNewRate] = useState(defaultRate != null ? String(defaultRate) : '');
   const [saving, setSaving] = useState(false);
@@ -102,6 +110,15 @@ export default function CostBreakdownSubtaskSection({
   // Available API roles not yet used (shown as datalist suggestions)
   const availableRoles = roles.filter((r) => !usedRoles.has(r.key) && !usedRoles.has(r.label));
 
+  const handleSelectNewRole = useCallback(
+    (role: string) => {
+      setNewRole(role);
+      const existing = role ? roleDisplayNames?.[role]?.trim() ?? '' : '';
+      setNewDisplayName(existing);
+    },
+    [roleDisplayNames],
+  );
+
   const handleAdd = useCallback(async () => {
     if (!newRole.trim() || !newHours) return;
     const hours = parseFloat(newHours);
@@ -110,14 +127,24 @@ export default function CostBreakdownSubtaskSection({
 
     setSaving(true);
     try {
+      const roleString = newRole.trim();
       const created = await costBreakdownApi.upsertRoleEstimate(lineId, {
         subtaskId: subtask.id,
-        role: newRole.trim(),
+        role: roleString,
         estimatedHours: hours,
         hourlyRate: rate,
       });
       onAdd(created);
+      // Persist breakdown-global display name if it differs from the current override
+      if (onDisplayNameChange) {
+        const currentOverride = roleDisplayNames?.[roleString]?.trim() ?? '';
+        const nextOverride = newDisplayName.trim();
+        if (nextOverride !== currentOverride) {
+          await onDisplayNameChange(roleString, nextOverride);
+        }
+      }
       setNewRole('');
+      setNewDisplayName('');
       setNewHours('');
       setNewRate(defaultRate != null ? String(defaultRate) : '');
       setAdding(false);
@@ -126,7 +153,7 @@ export default function CostBreakdownSubtaskSection({
     } finally {
       setSaving(false);
     }
-  }, [newRole, newHours, newRate, lineId, subtask.id, defaultRate, onAdd]);
+  }, [newRole, newDisplayName, newHours, newRate, lineId, subtask.id, defaultRate, onAdd, onDisplayNameChange, roleDisplayNames]);
 
   const subtaskTotal = estimates.reduce((s, e) => s + e.estimatedHours, 0);
 
@@ -204,6 +231,8 @@ export default function CostBreakdownSubtaskSection({
               estimate={estimate}
               roles={roles}
               lineId={lineId}
+              roleDisplayNames={roleDisplayNames}
+              onDisplayNameChange={onDisplayNameChange}
               onUpdate={onUpdate}
               onDelete={onDelete}
             />
@@ -212,50 +241,70 @@ export default function CostBreakdownSubtaskSection({
 
         {/* Add form */}
         {adding ? (
-          <div className="flex items-center gap-2 px-4 py-2 bg-muted/10">
-            <SearchableSelect
-              value={newRole}
-              onValueChange={setNewRole}
-              options={availableRoles.map((r) => ({ value: r.label, label: r.label }))}
-              placeholder="Role..."
-              searchPlaceholder="Search roles..."
-              emptyMessage="No roles available."
-              className="h-7 w-44 text-xs"
-            />
-            <Input
-              type="number"
-              min="0"
-              step="0.5"
-              placeholder="Hours"
-              value={newHours}
-              onChange={(e) => setNewHours(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-              className="h-7 w-20 text-xs"
-            />
-            <Input
-              type="number"
-              min="0"
-              step="1"
-              placeholder="Rate (opt)"
-              value={newRate}
-              onChange={(e) => setNewRate(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-              className="h-7 w-24 text-xs"
-            />
-            <Button
-              size="sm"
-              className="h-7 text-xs"
-              onClick={handleAdd}
-              disabled={saving || !newRole.trim() || !newHours}>
-              Add
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 text-xs"
-              onClick={() => setAdding(false)}>
-              Cancel
-            </Button>
+          <div className="flex flex-col gap-1 px-4 py-2 bg-muted/10">
+            <div className="flex items-center gap-2">
+              <SearchableSelect
+                value={newRole}
+                onValueChange={handleSelectNewRole}
+                options={availableRoles.map((r) => ({ value: r.label, label: r.label }))}
+                placeholder="Role..."
+                searchPlaceholder="Search roles..."
+                emptyMessage="No roles available."
+                className="h-7 w-36 text-xs"
+              />
+              <Input
+                placeholder="Display as… (opt)"
+                value={newDisplayName}
+                onChange={(e) => setNewDisplayName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                maxLength={60}
+                disabled={!onDisplayNameChange}
+                className="h-7 w-36 text-xs"
+              />
+              <Input
+                type="number"
+                min="0"
+                step="0.5"
+                placeholder="Hours"
+                value={newHours}
+                onChange={(e) => setNewHours(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                className="h-7 w-20 text-xs"
+              />
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                placeholder="Rate (opt)"
+                value={newRate}
+                onChange={(e) => setNewRate(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                className="h-7 w-24 text-xs"
+              />
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleAdd}
+                disabled={saving || !newRole.trim() || !newHours}>
+                Add
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setAdding(false);
+                  setNewRole('');
+                  setNewDisplayName('');
+                }}>
+                Cancel
+              </Button>
+            </div>
+            {newRole && onDisplayNameChange && (
+              <p className="text-[10px] text-muted-foreground pl-1">
+                Display name applies to this role across the whole breakdown.
+              </p>
+            )}
           </div>
         ) : (
           <div className="px-4 py-1.5">
@@ -329,15 +378,27 @@ interface RowProps {
   estimate: CostBreakdownRoleEstimate;
   roles: RoleResponse[];
   lineId: string;
+  roleDisplayNames?: Record<string, string> | null;
+  onDisplayNameChange?: (roleString: string, newName: string) => Promise<void> | void;
   onUpdate: (estimate: CostBreakdownRoleEstimate, hours: number, rate?: number) => void;
   onDelete: (estimate: CostBreakdownRoleEstimate) => void;
 }
 
-function EstimateRow({ estimate, roles, lineId, onUpdate, onDelete }: RowProps) {
+function EstimateRow({
+  estimate,
+  roles,
+  lineId,
+  roleDisplayNames,
+  onDisplayNameChange,
+  onUpdate,
+  onDelete,
+}: RowProps) {
   const [hours, setHours] = useState(estimate.estimatedHours.toString());
   const [rate, setRate] = useState(estimate.hourlyRate?.toString() ?? '');
 
-  const roleLabel = roles.find((r) => r.key === estimate.role || r.label === estimate.role)?.label ?? estimate.role;
+  const canonicalLabel = getCanonicalRoleLabel(estimate.role, roles);
+  const displayLabel = getEffectiveRoleLabel(estimate.role, roles, roleDisplayNames);
+  const hasOverride = displayLabel !== canonicalLabel;
   const cost = estimate.hourlyRate != null ? estimate.estimatedHours * estimate.hourlyRate : null;
 
   const handleBlur = useCallback(() => {
@@ -356,8 +417,23 @@ function EstimateRow({ estimate, roles, lineId, onUpdate, onDelete }: RowProps) 
   }, [lineId, estimate, onDelete]);
 
   return (
-    <div className="flex items-center gap-3 px-4 py-1.5">
-      <span className="text-xs flex-1 min-w-0 truncate text-muted-foreground">{roleLabel}</span>
+    <div className="flex items-center gap-3 px-4 py-1.5 group/estrow">
+      <div className="flex items-center gap-1 flex-1 min-w-0">
+        <span className="text-xs truncate text-muted-foreground">
+          {displayLabel}
+          {hasOverride && (
+            <span className="ml-1 text-[10px] text-muted-foreground/60">· {canonicalLabel}</span>
+          )}
+        </span>
+        {onDisplayNameChange && (
+          <RoleDisplayNamePopover
+            roleString={estimate.role}
+            canonicalLabel={canonicalLabel}
+            currentOverride={roleDisplayNames?.[estimate.role] ?? ''}
+            onSave={onDisplayNameChange}
+          />
+        )}
+      </div>
       <div className="flex items-center gap-1">
         <Input
           type="number"
@@ -395,5 +471,95 @@ function EstimateRow({ estimate, roles, lineId, onUpdate, onDelete }: RowProps) 
         <Trash2 className="h-3 w-3" />
       </Button>
     </div>
+  );
+}
+
+interface RoleDisplayNamePopoverProps {
+  roleString: string;
+  canonicalLabel: string;
+  currentOverride: string;
+  onSave: (roleString: string, newName: string) => Promise<void> | void;
+}
+
+function RoleDisplayNamePopover({
+  roleString,
+  canonicalLabel,
+  currentOverride,
+  onSave,
+}: RoleDisplayNamePopoverProps) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(currentOverride);
+  const [busy, setBusy] = useState(false);
+
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (next) setDraft(currentOverride);
+      setOpen(next);
+    },
+    [currentOverride],
+  );
+
+  const handleSave = useCallback(async () => {
+    setBusy(true);
+    try {
+      await onSave(roleString, draft);
+      setOpen(false);
+    } finally {
+      setBusy(false);
+    }
+  }, [onSave, roleString, draft]);
+
+  return (
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-4 w-4 text-muted-foreground opacity-0 group-hover/estrow:opacity-100 transition-opacity"
+          title="Edit display name"
+          aria-label="Edit role display name">
+          <Pencil className="h-2.5 w-2.5" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 p-3">
+        <div className="space-y-2">
+          <div className="space-y-1">
+            <Label htmlFor={`role-display-${roleString}`} className="text-xs">
+              Display name
+            </Label>
+            <Input
+              id={`role-display-${roleString}`}
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={canonicalLabel}
+              maxLength={60}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSave();
+                if (e.key === 'Escape') setOpen(false);
+              }}
+              className="h-7 text-xs"
+            />
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Applies to this role across the whole breakdown. Leave blank to use the original name.
+          </p>
+          <div className="flex items-center justify-end gap-1 pt-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 text-xs"
+              onClick={() => setOpen(false)}
+              disabled={busy}>
+              Cancel
+            </Button>
+            <Button size="sm" className="h-6 text-xs" onClick={handleSave} disabled={busy}>
+              {busy && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+              Save
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

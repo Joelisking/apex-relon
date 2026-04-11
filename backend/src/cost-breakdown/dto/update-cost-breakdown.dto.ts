@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsBoolean, ValidateIf } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean, IsObject, ValidateIf } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class UpdateCostBreakdownDto {
@@ -63,4 +63,9 @@ export class UpdateCostBreakdownDto {
   @IsBoolean()
   @IsOptional()
   showDirectExpenses?: boolean;
+
+  @ValidateIf((o) => o.roleDisplayNames !== null)
+  @IsObject()
+  @IsOptional()
+  roleDisplayNames?: Record<string, string> | null;
 }

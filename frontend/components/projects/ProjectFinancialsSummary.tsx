@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Loader2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { projectsApi, type ProjectProfitability, type ServiceItemPerformance } from '@/lib/api/projects-client';
 
@@ -176,14 +176,14 @@ function ServiceItemPerformanceTable({ rows }: { rows: ServiceItemPerformance[] 
             <tr className="border-b border-border/40 bg-muted/5">
               <th className="px-3 py-1.5" />
               {roles.map((role) => (
-                <>
-                  <th key={`${role}-budget`} className="px-2 py-1.5 text-right font-normal text-muted-foreground w-16">
+                <Fragment key={role}>
+                  <th className="px-2 py-1.5 text-right font-normal text-muted-foreground w-16">
                     Budget
                   </th>
-                  <th key={`${role}-actual`} className="px-2 py-1.5 text-right font-normal text-muted-foreground w-16">
+                  <th className="px-2 py-1.5 text-right font-normal text-muted-foreground w-16">
                     Actual
                   </th>
-                </>
+                </Fragment>
               ))}
             </tr>
           </thead>
@@ -196,14 +196,14 @@ function ServiceItemPerformanceTable({ rows }: { rows: ServiceItemPerformance[] 
                   const actual = row.actualByRole[role] ?? 0;
                   const over = budget > 0 && actual > budget;
                   return (
-                    <>
-                      <td key={`${role}-budget`} className="px-2 py-2 text-right tabular-nums text-muted-foreground">
+                    <Fragment key={role}>
+                      <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">
                         {budget > 0 ? fmtHours(budget) : '—'}
                       </td>
-                      <td key={`${role}-actual`} className={`px-2 py-2 text-right tabular-nums ${over ? 'text-red-600 font-medium' : actual > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
+                      <td className={`px-2 py-2 text-right tabular-nums ${over ? 'text-red-600 font-medium' : actual > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
                         {actual > 0 ? fmtHours(actual) : '—'}
                       </td>
-                    </>
+                    </Fragment>
                   );
                 })}
               </tr>

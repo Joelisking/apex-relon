@@ -326,6 +326,26 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
     });
   }, []);
 
+  const handleSaveDisplayName = useCallback(async (roleString: string, newName: string) => {
+    if (!breakdown) return;
+    const trimmed = newName.trim();
+    const current = breakdown.roleDisplayNames ?? {};
+    const next: Record<string, string> = { ...current };
+    if (trimmed) {
+      if (next[roleString] === trimmed) return;
+      next[roleString] = trimmed;
+    } else {
+      if (!(roleString in next)) return;
+      delete next[roleString];
+    }
+    try {
+      const updated = await costBreakdownApi.update(breakdown.id, { roleDisplayNames: next });
+      setBreakdown((prev) => (prev ? { ...prev, ...updated, roleDisplayNames: next } : null));
+    } catch {
+      toast.error('Failed to save display name');
+    }
+  }, [breakdown]);
+
   if (loading) {
     return (
       <div className="space-y-4 animate-pulse">
@@ -537,6 +557,8 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
               line={line}
               roles={cbRoles}
               onChange={handleLineChange}
+              roleDisplayNames={breakdown.roleDisplayNames ?? null}
+              onDisplayNameChange={handleSaveDisplayName}
             />
           ))}
 
