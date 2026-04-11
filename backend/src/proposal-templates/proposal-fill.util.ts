@@ -573,51 +573,49 @@ export function centerCopperplateTitleParagraph(xml: string): string {
   );
 }
 
+/**
+ * Force consistent rendering on the Apex title runs (the ones that originally
+ * referenced Copperplate Gothic Light).
+ *
+ * The bundled macOS Copperplate.ttc *does* have a "lowercase letters drawn as
+ * smaller capitals" design, but on Linux LibreOffice doesn't reliably honour
+ * that — the runs come out as plain lowercase. The bulletproof fix is to
+ * apply Word's `<w:smallCaps/>` formatting at the renderer level: any font
+ * will draw the lowercase letters as scaled-down uppercase when this flag is
+ * set, regardless of whether the font itself supports the feature.
+ *
+ * We also force an explicit Liberation Serif font + sz=40 (20pt) so both
+ * title runs render identically, instead of inheriting different sizes from
+ * adjacent Wingdings runs (LibreOffice resolves empty/missing rPr
+ * inconsistently between sibling runs).
+ *
+ * Always-on, regardless of APEX_BUNDLED_FONTS — the bundled font isn't
+ * reliable enough on Linux to trust on its own.
+ */
 export function patchCopperplateRuns(xml: string): string {
   return xml.replace(
     /(<w:r\b[^>]*>)(<w:rPr>[\s\S]*?<\/w:rPr>)([\s\S]*?)(<\/w:r>)/g,
     (match, openTag: string, rPr: string, body: string, closeTag: string) => {
       if (!/Copperplate/i.test(rPr)) return match;
 
-      // Replace the Copperplate font ref with an explicit Liberation Serif +
-      // explicit size. We set the size explicitly because dropping the rPr
-      // would let each run inherit a different ancestor (LibreOffice resolves
-      // empty/missing rPr differently per run, which produced visibly
-      // mismatched sizes between the two title runs).
+      // 1. Replace the Copperplate font ref with explicit Liberation Serif.
       let newRPr = rPr.replace(
         /<w:rFonts\b[^/]*\/>/g,
         '<w:rFonts w:ascii="Liberation Serif" w:hAnsi="Liberation Serif" w:cs="Liberation Serif"/>',
       );
-      // Force an explicit size (20pt = sz 40) so both runs render identically.
+      // 2. Force an explicit size (20pt = sz 40) so both runs render identically.
       if (/<w:sz\b/.test(newRPr)) {
         newRPr = newRPr.replace(/<w:sz\s+w:val="\d+"\s*\/>/, '<w:sz w:val="40"/>');
       } else {
         newRPr = newRPr.replace(/<\/w:rPr>/, '<w:sz w:val="40"/></w:rPr>');
       }
+      // 3. Add <w:smallCaps/> so lowercase letters render as scaled-down caps.
+      if (!/<w:smallCaps\b/.test(newRPr)) {
+        newRPr = newRPr.replace(/<\/w:rPr>/, '<w:smallCaps/></w:rPr>');
+      }
 
-      const newBody = body.replace(
-        /(<w:t[^>]*>)([\s\S]*?)(<\/w:t>)/g,
-        (_m, open: string, text: string, close: string) => {
-          // Decode XML entities, uppercase, re-encode — toUpperCase() on a
-          // raw <w:t> body would corrupt &amp; into &AMP; (invalid XML).
-          const decoded = text
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&quot;/g, '"')
-            .replace(/&apos;/g, "'")
-            .replace(/&amp;/g, '&');
-          const upper = decoded.toUpperCase();
-          const reencoded = upper
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&apos;');
-          return `${open}${reencoded}${close}`;
-        },
-      );
-
-      return `${openTag}${newRPr}${newBody}${closeTag}`;
+      // Body text is left unchanged — smallCaps does the visual work.
+      return `${openTag}${newRPr}${body}${closeTag}`;
     },
   );
 }
@@ -676,10 +674,11 @@ export function fillDocx(
     xml = patchFontFallbacks(xml);
     // 1d. Center the Copperplate-bearing title paragraph
     xml = centerCopperplateTitleParagraph(xml);
-    // 1e. Convert Copperplate Gothic Light title runs to uppercase + explicit size
-    //     — skipped when real Copperplate Gothic Light is bundled, since the
-    //     real font renders lowercase as small capitals naturally.
-    if (!bundledFonts) xml = patchCopperplateRuns(xml);
+    // 1e. Force explicit Liberation Serif + sz=40 + smallCaps on the title
+    //     runs. Always-on: the bundled macOS Copperplate doesn't reliably
+    //     render small caps on Linux, so we apply the formatting at the
+    //     renderer level instead of trusting the font.
+    xml = patchCopperplateRuns(xml);
     // 1. Merge split highlighted runs so string patterns match
     xml = mergeAdjacentHighlightedRuns(xml);
     // 2. Paragraph overrides (document only — before DOCPROPERTY so brackets still fill)
