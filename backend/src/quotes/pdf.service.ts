@@ -60,7 +60,13 @@ async function renderRotatedTextPng(
   angleDeg: number,
   maxLineWidthPx: number,
   dpi: number,
-): Promise<{ buffer: Buffer; width: number; height: number }> {
+): Promise<{
+  buffer: Buffer;
+  width: number;
+  height: number;
+  horizontalWidth: number;
+  horizontalHeight: number;
+}> {
   // Important: we rely on `dpi` + a Pango-markup `size="Npt"` to get a
   // specific, deterministic text size. Without `dpi`, sharp auto-fits the
   // text to fill the given `width`/`height` box which gave us wildly
@@ -100,6 +106,8 @@ async function renderRotatedTextPng(
     buffer: rotated.data,
     width: rotated.info.width,
     height: rotated.info.height,
+    horizontalWidth: horizontal.info.width,
+    horizontalHeight: horizontal.info.height,
   };
 }
 
@@ -134,21 +142,7 @@ async function renderTitleBlockPng(
     .png()
     .toBuffer({ resolveWithObject: true });
 
-  // Border rectangle as an SVG (svg-to-pdfkit clip and rect rendering works,
-  // it's only `rotate(text)` that breaks). We render it via sharp because we
-  // want a PNG, not pdfmake-rendered SVG.
-  const borderInsetPx = Math.round(4 * pixelsPerPoint);
-  const innerW = widthPx - 2 * borderInsetPx;
-  const innerH = heightPx - 2 * borderInsetPx;
-  const strokePx = Math.max(1, Math.round(0.6 * pixelsPerPoint));
-  const borderSvg =
-    `<svg width="${widthPx}" height="${heightPx}" xmlns="http://www.w3.org/2000/svg">` +
-    `<rect x="${borderInsetPx + strokePx / 2}" y="${borderInsetPx + strokePx / 2}" ` +
-    `width="${innerW - strokePx}" height="${innerH - strokePx}" ` +
-    `fill="none" stroke="#1e3a5f" stroke-width="${strokePx}"/>` +
-    `</svg>`;
-
-  // Center the text inside the bordered area.
+  // Center the text — no border, just bold text matching the Apex example style.
   const textLeft = Math.max(0, Math.round((widthPx - textImg.info.width) / 2));
   const textTop = Math.max(0, Math.round((heightPx - textImg.info.height) / 2));
 
@@ -161,7 +155,6 @@ async function renderTitleBlockPng(
     },
   })
     .composite([
-      { input: Buffer.from(borderSvg), left: 0, top: 0 },
       { input: textImg.data, left: textLeft, top: textTop },
     ])
     .png()
@@ -176,11 +169,13 @@ async function renderTitleBlockPng(
  * what makes the Apex layout look like the example: rotated tails extend
  * over the title-block region instead of getting clipped).
  *
- * Each label is positioned so the END of its (now-rotated) text lands at
- * the bottom-center of its column. After sharp rotates a horizontal strip
- * by -60° around its center, the END of the original text ends up at the
- * bottom-right of the new bbox, so we position the rotated image so its
- * bottom-right corner equals the desired pivot point.
+ * Each label is positioned so the START of its (now-rotated) text lands at
+ * the bottom-center of its column. Sharp rotates the horizontal strip by
+ * -60° CCW around its center so the text tilts "/" (bottom-left → top-right,
+ * first letter near the column). After that rotation, the original point
+ * (0, H/2) — the left-middle of the horizontal strip — lands at
+ * (H·√3/4, newH − H/4) in the rotated bbox, i.e. just inside the
+ * bottom-left corner. We place the image so that point equals the pivot.
  *
  * Canvas height adapts to the longest label so the rotated text is never
  * clipped — the caller reads `heightPt` back to set the table row height.
@@ -207,16 +202,28 @@ async function renderColumnHeadersPng(
   // Wrap width in pixels at the target DPI. Tuned so short/medium labels
   // stay single-line but long ones ("SURVEY CREW CHIEF", "SURVEY
   // TECHNICIAN") break at a word boundary — measured with Roboto-Medium.
-  const maxLineWidthPx = Math.round(fontSizePt * pixelsPerPoint * 9);
+  // Multiplier 6 at 8pt gives ~192px, which wraps two-word labels nicely.
+  const maxLineWidthPx = Math.round(fontSizePt * pixelsPerPoint * 6);
+
+  // Rotation angle — positive = clockwise in sharp's convention.
+  // 60° gives a steeper sweep closer to the Apex examples.
+  const ANGLE_DEG = 60;
+  const alpha = ANGLE_DEG * (Math.PI / 180);
 
   const rendered = await Promise.all(
     labels.map((label) =>
-      renderRotatedTextPng(label, fontSizePt, -60, maxLineWidthPx, dpi),
+      renderRotatedTextPng(label, fontSizePt, -ANGLE_DEG, maxLineWidthPx, dpi),
     ),
   );
 
-  // Canvas height = tallest rotated label + a small bottom padding.
-  const bottomPaddingPx = Math.round(3 * pixelsPerPoint);
+  // Canvas height = tallest rotated label + bottom padding.
+  // Each label's image extends below pivotY by H·cos(α)/2 (general formula
+  // for any rotation angle α). At 45° that's H·√2/4 ≈ 0.354·H. With the
+  // old fixed 12px padding this was a razor-thin margin at 8pt, causing
+  // pixel-level clipping on some labels. We now compute it dynamically.
+  const maxHorizontalHeight = Math.max(...rendered.map((r) => r.horizontalHeight));
+  const bottomExtensionPx = Math.ceil(maxHorizontalHeight * Math.cos(alpha) / 2);
+  const bottomPaddingPx = bottomExtensionPx + Math.round(4 * pixelsPerPoint);
   const maxRotatedHeight = rendered.reduce((m, r) => Math.max(m, r.height), 0);
   const heightPx = maxRotatedHeight + bottomPaddingPx;
 
@@ -224,12 +231,20 @@ async function renderColumnHeadersPng(
   const composites = rendered.map((r, i) => {
     const colWidthPx = Math.round(columnWidthsPt[i] * pixelsPerPoint);
     // Pivot at the horizontal CENTER of the column — same x as where the
-    // data values (e.g. "$160") render, so the last letter of each
+    // data values (e.g. "$160") render, so the first letter of each
     // rotated label sits directly above the column's values.
     const pivotX = cursorPx + colWidthPx / 2;
     const pivotY = heightPx - bottomPaddingPx;
-    const left = Math.max(0, pivotX - r.width);
-    const top = Math.max(0, pivotY - r.height);
+    // General formula for the text-start position in the rotated bounding
+    // box at angle α (derived by rotating the left-middle of the horizontal
+    // strip around the strip center):
+    //   startX = H·sin(α)/2
+    //   startY = r.height − H·cos(α)/2
+    // This replaces the old hardcoded -60° constants (√3/4 and 1/4).
+    const startX = (r.horizontalHeight * Math.sin(alpha)) / 2;
+    const startY = r.height - (r.horizontalHeight * Math.cos(alpha)) / 2;
+    const left = Math.round(pivotX - startX);
+    const top = Math.round(pivotY - startY);
     cursorPx += colWidthPx;
     return { input: r.buffer, left, top };
   });
@@ -794,14 +809,15 @@ export class PdfService {
     };
     const printer = new PdfPrinter(fonts);
 
-    // Column widths: task-description ('*'), one per role, total-hours, total-fee.
-    // Role columns are wide enough that 2-line-wrapped rotated labels don't
-    // overlap their neighbours (the math: at 8pt font + wrap to ~2 lines,
-    // the rotated bbox is ~140-170px, which fits in a 44pt column = 176px
-    // at 4 pixels-per-point).
-    const COL = 44;
-    const TOT_HRS = 44;
-    const TOT_FEE = 62;
+    // Column CONTENT widths — pdfmake adds paddingLeft+paddingRight (6pt)
+    // to each column when rendering. Role columns stay tight (34 content /
+    // 40 rendered) so the whole numeric block sits to the right, giving the
+    // task column plenty of room (190 content / 196 rendered) for the title
+    // block and task descriptions.
+    const COL = 34;
+    const TOT_HRS = 34;
+    const TOT_FEE = 50;
+    const TASK_COL_CONTENT = 190;
     // Total number of cells per row: 1 (task) + nCols (roles) + 1 (hrs) + 1 (fee) = nCols + 3
     const nCells = nCols + 3;
 
@@ -887,23 +903,23 @@ export class PdfService {
       TOT_HRS,
       TOT_FEE,
     ];
-    // Compute the leading task-description column width so the headers image
-    // can include it as transparent left padding (gives the leftmost rotated
-    // labels' tails room to extend over the title-block area).
-    // Page width minus margins minus the fixed-width columns to the right.
-    const PAGE_W = 612; // Letter
-    const PAGE_MARGINS = 80; // 40 left + 40 right
-    const TASK_COL_WIDTH = Math.max(
-      120,
-      PAGE_W - PAGE_MARGINS - (nCols * COL + TOT_HRS + TOT_FEE),
+    // pdfmake adds `paddingLeft + paddingRight` (from the layout function)
+    // to every column's content width when rendering, so we compute the
+    // RENDERED widths (content + 6) and feed them to the headers image so
+    // its column boundaries line up exactly with the table's.
+    const CELL_PAD = 3; // matches paddingLeft/paddingRight in the layout below
+    const PAD_TOTAL_PER_COL = CELL_PAD * 2;
+    const renderedColumnWidths = headerColumnWidthsPt.map(
+      (w) => w + PAD_TOTAL_PER_COL,
     );
+    const TASK_COL_WIDTH = TASK_COL_CONTENT + PAD_TOTAL_PER_COL;
 
     const headerImage = await renderColumnHeadersPng(
       headerLabels,
-      headerColumnWidthsPt,
+      renderedColumnWidths,
       TASK_COL_WIDTH,
       4, // 4 device pixels per PDF point — sharp text stays crisp at this density
-      6, // font size in PDF points (small, like the Apex example)
+      8, // font size in PDF points
     );
     const headerImageDataUrl = `data:image/png;base64,${headerImage.buffer.toString('base64')}`;
 
@@ -1115,12 +1131,14 @@ export class PdfService {
     const dateStr = new Date(breakdown.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     const companyName = settings.companyName || 'Apex Consulting & Surveying';
 
-    // Explicit task-column width (rather than '*') so the pdfmake column
-    // positions exactly match the column positions baked into the headers
-    // image. pdfmake's '*' calculation accounts for internal padding and
-    // gives a slightly different width than our compute, which offset the
-    // rotated labels from their columns.
-    const tableWidths = [TASK_COL_WIDTH, ...columns.map(() => COL), TOT_HRS, TOT_FEE];
+    // Explicit content widths for every column — matches the image's baked-in
+    // column boundaries exactly. No '*' flex so nothing can drift.
+    const tableWidths = [
+      TASK_COL_CONTENT,
+      ...columns.map(() => COL),
+      TOT_HRS,
+      TOT_FEE,
+    ];
 
     const logoDataUrl = loadApexLogoDataUrl();
     const projectLabelLine =
