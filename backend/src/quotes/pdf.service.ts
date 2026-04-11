@@ -776,10 +776,14 @@ export class PdfService {
     };
     const printer = new PdfPrinter(fonts);
 
-    // Column widths: task-description ('*'), one per role (28pt), total-hours, total-fee
-    const COL = 28;
-    const TOT_HRS = 38;
-    const TOT_FEE = 60;
+    // Column widths: task-description ('*'), one per role, total-hours, total-fee.
+    // Role columns are wide enough that 2-line-wrapped rotated labels don't
+    // overlap their neighbours (the math: at 8pt font + wrap to ~2 lines,
+    // the rotated bbox is ~140-170px, which fits in a 44pt column = 176px
+    // at 4 pixels-per-point).
+    const COL = 44;
+    const TOT_HRS = 44;
+    const TOT_FEE = 62;
     // Total number of cells per row: 1 (task) + nCols (roles) + 1 (hrs) + 1 (fee) = nCols + 3
     const nCells = nCols + 3;
 
