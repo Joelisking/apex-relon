@@ -59,6 +59,9 @@ COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 COPY --chown=nestjs:nodejs prisma ./prisma
 
+# Static assets baked into the image (logos, images used by PDF generation)
+COPY --chown=nestjs:nodejs assets ./assets
+
 # Copy compiled app
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 

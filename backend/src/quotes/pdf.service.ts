@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { QuoteSettingsService } from './quote-settings.service';
 import * as path from 'path';
+import * as fs from 'fs';
+import sharp from 'sharp';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PdfPrinter = require('pdfmake/js/Printer').default;
@@ -9,6 +11,245 @@ const PdfPrinter = require('pdfmake/js/Printer').default;
 function resolveFontPath(filename: string): string {
   const pdfmakeDir = path.dirname(require.resolve('pdfmake/package.json'));
   return path.join(pdfmakeDir, 'fonts', 'Roboto', filename);
+}
+
+/**
+ * Resolve a path to a file under backend/assets/, working both for compiled
+ * code (`dist/quotes/pdf.service.js` → `../../assets/...`) and for ts-node
+ * dev mode (`src/quotes/pdf.service.ts` → `../../assets/...`).
+ */
+function resolveAssetPath(filename: string): string {
+  return path.resolve(__dirname, '..', '..', 'assets', filename);
+}
+
+let cachedLogoDataUrl: string | null = null;
+function loadApexLogoDataUrl(): string | null {
+  if (cachedLogoDataUrl !== null) return cachedLogoDataUrl || null;
+  try {
+    const buf = fs.readFileSync(resolveAssetPath('apex-logo.png'));
+    cachedLogoDataUrl = `data:image/png;base64,${buf.toString('base64')}`;
+    return cachedLogoDataUrl;
+  } catch {
+    cachedLogoDataUrl = '';
+    return null;
+  }
+}
+
+function escapePangoMarkup(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * Render a single piece of text using sharp's native text input and rotate it
+ * by the given angle. Returns a Buffer of an RGBA PNG with a transparent
+ * background. pdfmake's SVG-text rendering ignores `transform="rotate(...)"`,
+ * so we have to bake the rotation into a raster image instead.
+ */
+async function renderRotatedTextPng(
+  text: string,
+  fontPx: number,
+  angleDeg: number,
+  maxLineWidthPx: number,
+): Promise<{ buffer: Buffer; width: number; height: number }> {
+  // Sharp's text input wraps automatically at the `width` boundary, so by
+  // passing a small `width` we let long labels (e.g. "SURVEY CREW CHIEF")
+  // break onto multiple lines instead of producing a huge rotated image.
+  // `wrap: 'word'` keeps each word intact — long single-word labels (e.g.
+  // "ADMINISTRATOR") stay on one line and overflow the width, but they
+  // remain readable. `word-char` would wrap mid-word and look broken.
+  const horizontal = await sharp({
+    text: {
+      text: `<span foreground="#374151" font_weight="bold">${escapePangoMarkup(text)}</span>`,
+      font: 'sans-serif',
+      width: maxLineWidthPx,
+      // Tall enough for ~5 wrapped lines at fontPx — sharp trims excess.
+      height: Math.round(fontPx * 1.4 * 5),
+      rgba: true,
+      align: 'left' as const,
+      wrap: 'word' as const,
+    },
+  })
+    .trim()
+    .png()
+    .toBuffer({ resolveWithObject: true });
+
+  // Rotate around center (sharp's default), with transparent background.
+  const rotated = await sharp(horizontal.data)
+    .rotate(angleDeg, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer({ resolveWithObject: true });
+
+  return {
+    buffer: rotated.data,
+    width: rotated.info.width,
+    height: rotated.info.height,
+  };
+}
+
+/**
+ * Render a horizontal "FEE COMPUTATION WORKSHEET" title block with a
+ * rectangular border, sized to fit a given pixel box. Used as a composite
+ * onto the leading empty area of the headers PNG so the title block sits in
+ * the task-description column visual area.
+ */
+async function renderTitleBlockPng(
+  widthPx: number,
+  heightPx: number,
+  pixelsPerPoint: number,
+): Promise<Buffer> {
+  const fontPx = Math.round(11 * pixelsPerPoint);
+  // Render the two lines of text via sharp's text input — horizontal text
+  // works fine, only rotation is broken in pdfmake.
+  const textImg = await sharp({
+    text: {
+      text: '<span foreground="#1e3a5f" font_weight="bold">FEE COMPUTATION\nWORKSHEET</span>',
+      font: 'sans-serif',
+      width: widthPx - Math.round(8 * pixelsPerPoint),
+      height: fontPx * 3,
+      rgba: true,
+      align: 'center' as const,
+    },
+  })
+    .trim()
+    .png()
+    .toBuffer({ resolveWithObject: true });
+
+  // Border rectangle as an SVG (svg-to-pdfkit clip and rect rendering works,
+  // it's only `rotate(text)` that breaks). We render it via sharp because we
+  // want a PNG, not pdfmake-rendered SVG.
+  const borderInsetPx = Math.round(4 * pixelsPerPoint);
+  const innerW = widthPx - 2 * borderInsetPx;
+  const innerH = heightPx - 2 * borderInsetPx;
+  const strokePx = Math.max(1, Math.round(0.6 * pixelsPerPoint));
+  const borderSvg =
+    `<svg width="${widthPx}" height="${heightPx}" xmlns="http://www.w3.org/2000/svg">` +
+    `<rect x="${borderInsetPx + strokePx / 2}" y="${borderInsetPx + strokePx / 2}" ` +
+    `width="${innerW - strokePx}" height="${innerH - strokePx}" ` +
+    `fill="none" stroke="#1e3a5f" stroke-width="${strokePx}"/>` +
+    `</svg>`;
+
+  // Center the text inside the bordered area.
+  const textLeft = Math.max(0, Math.round((widthPx - textImg.info.width) / 2));
+  const textTop = Math.max(0, Math.round((heightPx - textImg.info.height) / 2));
+
+  return sharp({
+    create: {
+      width: widthPx,
+      height: heightPx,
+      channels: 4,
+      background: { r: 255, g: 255, b: 255, alpha: 0 },
+    },
+  })
+    .composite([
+      { input: Buffer.from(borderSvg), left: 0, top: 0 },
+      { input: textImg.data, left: textLeft, top: textTop },
+    ])
+    .png()
+    .toBuffer();
+}
+
+/**
+ * Compose all rotated column headers into a single transparent PNG sized to
+ * fit the *entire* table width — including the leading "task description"
+ * column. The leading area stays empty so the leftmost rotated label has
+ * room to project its tail upward and to the left into that area (this is
+ * what makes the Apex layout look like the example: rotated tails extend
+ * over the title-block region instead of getting clipped).
+ *
+ * Each label is positioned so the END of its (now-rotated) text lands at
+ * the bottom-center of its column. After sharp rotates a horizontal strip
+ * by -60° around its center, the END of the original text ends up at the
+ * bottom-right of the new bbox, so we position the rotated image so its
+ * bottom-right corner equals the desired pivot point.
+ *
+ * Canvas height adapts to the longest label so the rotated text is never
+ * clipped — the caller reads `heightPt` back to set the table row height.
+ */
+async function renderColumnHeadersPng(
+  labels: string[],
+  columnWidthsPt: number[],
+  leadingEmptyPt: number,
+  pixelsPerPoint: number,
+  fontSizePt: number,
+): Promise<{
+  buffer: Buffer;
+  widthPx: number;
+  heightPx: number;
+  heightPt: number;
+  widthPt: number;
+}> {
+  const totalWidthPt = leadingEmptyPt + columnWidthsPt.reduce((a, b) => a + b, 0);
+  const widthPx = Math.round(totalWidthPt * pixelsPerPoint);
+  const fontPx = Math.round(fontSizePt * pixelsPerPoint);
+  // Constrain unrotated text width — multi-word labels wrap to ~2 lines,
+  // single-word labels stay on one line and run wide.
+  const maxLineWidthPx = Math.round(fontPx * 6);
+
+  const rendered = await Promise.all(
+    labels.map((label) =>
+      renderRotatedTextPng(label, fontPx, -60, maxLineWidthPx),
+    ),
+  );
+
+  // Canvas height = tallest rotated label + a small bottom padding.
+  const bottomPaddingPx = Math.round(3 * pixelsPerPoint);
+  const maxRotatedHeight = rendered.reduce((m, r) => Math.max(m, r.height), 0);
+  const heightPx = maxRotatedHeight + bottomPaddingPx;
+
+  let cursorPx = Math.round(leadingEmptyPt * pixelsPerPoint);
+  const composites = rendered.map((r, i) => {
+    const colWidthPx = Math.round(columnWidthsPt[i] * pixelsPerPoint);
+    const pivotX = cursorPx + colWidthPx / 2;
+    const pivotY = heightPx - bottomPaddingPx;
+    const left = Math.max(0, pivotX - r.width);
+    const top = Math.max(0, pivotY - r.height);
+    cursorPx += colWidthPx;
+    return { input: r.buffer, left, top };
+  });
+
+  // Title block composited into the leading empty area, vertically centered
+  // (and slightly inset from the canvas edges so the border has breathing room).
+  const titleInsetPx = Math.round(8 * pixelsPerPoint);
+  const titleWidthPx = Math.round(leadingEmptyPt * pixelsPerPoint) - 2 * titleInsetPx;
+  const titleHeightPx = Math.min(
+    heightPx - 2 * titleInsetPx,
+    Math.round(50 * pixelsPerPoint),
+  );
+  if (titleWidthPx > 0 && titleHeightPx > 0) {
+    const titleBuf = await renderTitleBlockPng(
+      titleWidthPx,
+      titleHeightPx,
+      pixelsPerPoint,
+    );
+    composites.unshift({
+      input: titleBuf,
+      left: titleInsetPx,
+      top: Math.max(0, heightPx - titleHeightPx - titleInsetPx),
+    });
+  }
+
+  const composed = await sharp({
+    create: {
+      width: widthPx,
+      height: heightPx,
+      channels: 4,
+      background: { r: 255, g: 255, b: 255, alpha: 0 },
+    },
+  })
+    .composite(composites)
+    .png()
+    .toBuffer({ resolveWithObject: true });
+
+  return {
+    buffer: composed.data,
+    widthPx: composed.info.width,
+    heightPx: composed.info.height,
+    heightPt: composed.info.height / pixelsPerPoint,
+    widthPt: totalWidthPt,
+  };
 }
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -529,11 +770,10 @@ export class PdfService {
     };
     const printer = new PdfPrinter(fonts);
 
-    // Column widths: task-description ('*'), one per role (26pt), total-hours, total-fee
-    const COL = 26;
-    const TOT_HRS = 34;
-    const TOT_FEE = 56;
-    const HDR_ROT = 52; // margin for rotated header text
+    // Column widths: task-description ('*'), one per role (28pt), total-hours, total-fee
+    const COL = 28;
+    const TOT_HRS = 38;
+    const TOT_FEE = 60;
     // Total number of cells per row: 1 (task) + nCols (roles) + 1 (hrs) + 1 (fee) = nCols + 3
     const nCells = nCols + 3;
 
@@ -602,38 +842,87 @@ export class PdfService {
     ];
 
     // ── Column header row ──────────────────────────────────────────────────────
+    // Left cell: "FEE COMPUTATION WORKSHEET" title block, rowSpan 2 so it
+    // covers both the rotated-header row and the labor-rates row.
+    //
+    // Role + total columns: rotated text doesn't render at all in pdfmake's
+    // SVG support, so we composite all labels into a single PNG via sharp
+    // and use a colSpan cell to host it. The rotation pivot of each label
+    // sits centered over its column position.
+    const headerLabels = [
+      ...columns.map((c) => c.label.toUpperCase()),
+      'TOTAL HOURS',
+      'TOTAL FEE',
+    ];
+    const headerColumnWidthsPt = [
+      ...columns.map(() => COL),
+      TOT_HRS,
+      TOT_FEE,
+    ];
+    // Compute the leading task-description column width so the headers image
+    // can include it as transparent left padding (gives the leftmost rotated
+    // labels' tails room to extend over the title-block area).
+    // Page width minus margins minus the fixed-width columns to the right.
+    const PAGE_W = 612; // Letter
+    const PAGE_MARGINS = 80; // 40 left + 40 right
+    const TASK_COL_WIDTH = Math.max(
+      120,
+      PAGE_W - PAGE_MARGINS - (nCols * COL + TOT_HRS + TOT_FEE),
+    );
+
+    const headerImage = await renderColumnHeadersPng(
+      headerLabels,
+      headerColumnWidthsPt,
+      TASK_COL_WIDTH,
+      4, // 4 device pixels per PDF point — sharp text stays crisp at this density
+      8, // font size in PDF points
+    );
+    const headerImageDataUrl = `data:image/png;base64,${headerImage.buffer.toString('base64')}`;
+    const headerRowHeightPt = headerImage.heightPt;
+
+    // Single colSpan cell holds the image; the title block overlays the
+    // leftmost portion via a separate stack rendered after the table cell.
     const headerRow: object[] = [
-      { text: 'Task Description', fontSize: 7, bold: true, color: '#6b7280', border: [false, false, false, true], fillColor: '#ffffff', margin: [2, HDR_ROT, 2, 2] },
-      ...columns.map((col) => ({
-        text: col.label,
-        rotation: -60,
-        fontSize: 7,
-        bold: true,
-        alignment: 'left' as const,
-        margin: [1, HDR_ROT, 1, 2],
-        border: [false, false, false, true],
-        color: '#374151',
+      {
+        image: headerImageDataUrl,
+        width: headerImage.widthPt,
+        colSpan: nCells,
+        border: [false, false, false, true] as [boolean, boolean, boolean, boolean],
+        margin: [0, 0, 0, 0] as [number, number, number, number],
+      },
+      ...Array.from({ length: nCells - 1 }, () => ({
+        text: '',
+        border: [false, false, false, true] as [boolean, boolean, boolean, boolean],
       })),
-      { text: 'Total\nHours', fontSize: 7, bold: true, alignment: 'center' as const, border: [false, false, false, true], margin: [0, HDR_ROT, 0, 2], color: '#374151' },
-      { text: 'Total\nFee', fontSize: 7, bold: true, alignment: 'center' as const, border: [false, false, false, true], margin: [0, HDR_ROT, 0, 2], color: '#374151' },
     ];
 
-    // ── Labor Rates row (top) ─────────────────────────────────────────────────
+    // ── Labor Rates row ────────────────────────────────────────────────
     const laborRatesRow: object[] = [
-      { text: 'Labor Rates (Hrly)', fontSize: 7, bold: true, border: [false, false, false, false], fillColor: COLORS.laborRates, color: '#374151', margin: [2, 1, 2, 1] },
+      { text: 'Labor Rates (Hrly)', fontSize: 7, bold: true, color: '#374151', fillColor: COLORS.laborRates, border: [false, false, false, true] as [boolean, boolean, boolean, boolean], margin: [2, 1, 2, 1] as [number, number, number, number] },
       ...columns.map((col) => ({
         text: rateByRole[col.key] != null ? usd(rateByRole[col.key]!) : '',
         fontSize: 7,
         alignment: 'center' as const,
-        border: [false, false, false, false],
+        border: [false, false, false, true] as [boolean, boolean, boolean, boolean],
         fillColor: COLORS.laborRates,
         color: '#374151',
       })),
-      { text: '', fontSize: 7, border: [false, false, false, false], fillColor: COLORS.laborRates },
-      { text: '', fontSize: 7, border: [false, false, false, false], fillColor: COLORS.laborRates },
+      { text: '', fontSize: 7, border: [false, false, false, true] as [boolean, boolean, boolean, boolean], fillColor: COLORS.laborRates },
+      { text: '', fontSize: 7, border: [false, false, false, true] as [boolean, boolean, boolean, boolean], fillColor: COLORS.laborRates },
     ];
 
-    const matrixRows: object[][] = [headerRow, laborRatesRow];
+    // ── "Labor Rates (Hrly)" label row — appears just below the title block,
+    //    above the first phase. The leftmost cell is a regular header now
+    //    (the title block has ended). This is what introduces the
+    //    "Task Description" header for the data rows.
+    const taskHeaderRow: object[] = [
+      { text: 'Task Description', fontSize: 8, bold: true, color: '#374151', border: [false, true, false, true], fillColor: '#ffffff', margin: [2, 2, 2, 2] },
+      ...columns.map(() => ({ text: '', border: [false, true, false, true], fillColor: '#ffffff' })),
+      { text: '', border: [false, true, false, true], fillColor: '#ffffff' },
+      { text: '', border: [false, true, false, true], fillColor: '#ffffff' },
+    ];
+
+    const matrixRows: object[][] = [headerRow, laborRatesRow, taskHeaderRow];
 
     // ── Phase and subtask rows ─────────────────────────────────────────────────
     let phaseIndex = 0;
@@ -811,43 +1100,65 @@ export class PdfService {
 
     const tableWidths = ['*', ...columns.map(() => COL), TOT_HRS, TOT_FEE];
 
+    const logoDataUrl = loadApexLogoDataUrl();
+    const projectLabelLine =
+      projectName || clientName || breakdown.title || '—';
+
     const content: object[] = [
-      // ── Document header ──────────────────────────────────────────────
+      // ── Document header: "Survey Manhours" + project label on the left,
+      //    Apex logo (or company text fallback) on the right.
       {
         columns: [
           {
             stack: [
-              { text: 'MANHOUR JUSTIFICATION', bold: true, fontSize: 15, color: '#1e3a5f', margin: [0, 0, 0, 2] },
-              { text: breakdown.title, fontSize: 10, color: '#374151', bold: true },
-              ...(clientName ? [{ text: clientName, fontSize: 9, color: '#6b7280', margin: [0, 1, 0, 0] }] : []),
-              ...(projectName ? [{ text: projectName, fontSize: 8, color: '#9ca3af' }] : []),
+              { text: 'Survey Manhours', fontSize: 11, bold: true, color: '#1e3a5f', margin: [0, 0, 0, 1] },
+              { text: `Project: ${projectLabelLine}`, fontSize: 9, color: '#374151', bold: true },
+              ...(clientName && clientName !== projectLabelLine
+                ? [{ text: clientName, fontSize: 8, color: '#6b7280', margin: [0, 1, 0, 0] }]
+                : []),
               ...(jobType ? [{ text: jobType, fontSize: 8, color: '#9ca3af' }] : []),
             ],
           },
-          {
-            stack: [
-              { text: companyName, fontSize: 10, bold: true, alignment: 'right' as const, color: '#1e3a5f' },
-              { text: `Date: ${dateStr}`, fontSize: 8, alignment: 'right' as const, color: '#6b7280', margin: [0, 2, 0, 0] },
-            ],
-            width: 180,
-          },
+          logoDataUrl
+            ? { image: logoDataUrl, width: 90, alignment: 'right' as const }
+            : {
+                stack: [
+                  { text: companyName, fontSize: 10, bold: true, alignment: 'right' as const, color: '#1e3a5f' },
+                  { text: `Date: ${dateStr}`, fontSize: 8, alignment: 'right' as const, color: '#6b7280', margin: [0, 2, 0, 0] },
+                ],
+                width: 180,
+              },
         ],
-        margin: [0, 0, 0, 10],
+        margin: [0, 0, 0, 14],
       },
-      // Horizontal rule
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 532, y2: 0, lineWidth: 1.5, lineColor: '#1e3a5f' }], margin: [0, 0, 0, 10] },
+      // Date strip below header (when logo is shown, date moves here so the
+      // logo can dominate the right side without competing text)
+      ...(logoDataUrl
+        ? [
+            {
+              text: `Date: ${dateStr}`,
+              fontSize: 8,
+              alignment: 'right' as const,
+              color: '#6b7280',
+              margin: [0, -8, 0, 8] as [number, number, number, number],
+            },
+          ]
+        : []),
       // Matrix table
       {
         table: {
-          headerRows: 2,
+          headerRows: 3,
           widths: tableWidths,
+          // Force the rotated-header row to the exact height of the
+          // composited PNG; remaining rows auto-size from content.
+          heights: (rowIndex: number) => (rowIndex === 0 ? headerRowHeightPt : ('auto' as any)),
           body: matrixRows,
         },
         layout: {
-          hLineWidth: (i: number, node: any) => (i === 0 || i === 1 || i === node.table.body.length ? 0.5 : 0.3),
+          hLineWidth: (i: number, node: any) => (i === 0 || i === node.table.body.length ? 0.5 : 0.3),
           vLineWidth: () => 0.3,
-          hLineColor: () => '#d1d5db',
-          vLineColor: () => '#e5e7eb',
+          hLineColor: () => '#9ca3af',
+          vLineColor: () => '#9ca3af',
           paddingLeft: () => 3,
           paddingRight: () => 3,
           paddingTop: () => 2,
