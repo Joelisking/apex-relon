@@ -223,11 +223,10 @@ async function renderColumnHeadersPng(
   let cursorPx = Math.round(leadingEmptyPt * pixelsPerPoint);
   const composites = rendered.map((r, i) => {
     const colWidthPx = Math.round(columnWidthsPt[i] * pixelsPerPoint);
-    // Pivot at the RIGHT edge of the column (where the column divider
-    // line is). Matches the Apex reference: each rotated label's END is
-    // anchored to the right border of its column, and the tail extends
-    // up-and-left from there.
-    const pivotX = cursorPx + colWidthPx;
+    // Pivot at the horizontal CENTER of the column — same x as where the
+    // data values (e.g. "$160") render, so the last letter of each
+    // rotated label sits directly above the column's values.
+    const pivotX = cursorPx + colWidthPx / 2;
     const pivotY = heightPx - bottomPaddingPx;
     const left = Math.max(0, pivotX - r.width);
     const top = Math.max(0, pivotY - r.height);
@@ -907,7 +906,6 @@ export class PdfService {
       6, // font size in PDF points (small, like the Apex example)
     );
     const headerImageDataUrl = `data:image/png;base64,${headerImage.buffer.toString('base64')}`;
-    const headerRowHeightPt = headerImage.heightPt;
 
     // The headers image is rendered as a STANDALONE element above the
     // table (not as a table cell). This way cell padding doesn't shift it
@@ -1168,14 +1166,19 @@ export class PdfService {
             },
           ]
         : []),
+      // Rotated column headers — rendered as a standalone image so it
+      // shares the page's horizontal origin with the table below (any
+      // offset from cell padding would misalign columns from their labels).
+      {
+        image: headerImageDataUrl,
+        width: headerImage.widthPt,
+        margin: [0, 0, 0, 0] as [number, number, number, number],
+      },
       // Matrix table
       {
         table: {
-          headerRows: 3,
+          headerRows: 2,
           widths: tableWidths,
-          // Force the rotated-header row to the exact height of the
-          // composited PNG; remaining rows auto-size from content.
-          heights: (rowIndex: number) => (rowIndex === 0 ? headerRowHeightPt : ('auto' as any)),
           body: matrixRows,
         },
         layout: {
