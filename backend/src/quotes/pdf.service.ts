@@ -56,26 +56,34 @@ function escapePangoMarkup(s: string): string {
  */
 async function renderRotatedTextPng(
   text: string,
-  fontPx: number,
+  fontSizePt: number,
   angleDeg: number,
   maxLineWidthPx: number,
+  dpi: number,
 ): Promise<{ buffer: Buffer; width: number; height: number }> {
-  // Sharp's text input wraps automatically at the `width` boundary, so by
-  // passing a small `width` we let long labels (e.g. "SURVEY CREW CHIEF")
-  // break onto multiple lines instead of producing a huge rotated image.
-  // `wrap: 'word'` keeps each word intact — long single-word labels (e.g.
-  // "ADMINISTRATOR") stay on one line and overflow the width, but they
-  // remain readable. `word-char` would wrap mid-word and look broken.
+  // Important: we rely on `dpi` + a Pango-markup `size="Npt"` to get a
+  // specific, deterministic text size. Without `dpi`, sharp auto-fits the
+  // text to fill the given `width`/`height` box which gave us wildly
+  // different (and huge) glyph sizes. With `dpi` set, `height` must be
+  // omitted (sharp errors otherwise).
+  //
+  // We also point `fontfile` at the bundled Roboto-Medium.ttf (same font
+  // pdfmake uses) so glyph widths are identical on macOS and Linux.
+  //
+  // `wrap: 'word'` keeps each word intact. Long single-word labels (e.g.
+  // "ADMINISTRATOR") overflow the width and stay single-line.
   const horizontal = await sharp({
     text: {
-      text: `<span foreground="#374151" font_weight="bold">${escapePangoMarkup(text)}</span>`,
-      font: 'sans-serif',
+      text:
+        `<span foreground="#374151" font_weight="bold" size="${fontSizePt}pt">` +
+        `${escapePangoMarkup(text)}</span>`,
+      fontfile: resolveFontPath('Roboto-Medium.ttf'),
+      font: 'Roboto',
       width: maxLineWidthPx,
-      // Tall enough for ~5 wrapped lines at fontPx — sharp trims excess.
-      height: Math.round(fontPx * 1.4 * 5),
       rgba: true,
       align: 'left' as const,
       wrap: 'word' as const,
+      dpi,
     },
   })
     .trim()
@@ -106,17 +114,20 @@ async function renderTitleBlockPng(
   heightPx: number,
   pixelsPerPoint: number,
 ): Promise<Buffer> {
-  const fontPx = Math.round(11 * pixelsPerPoint);
-  // Render the two lines of text via sharp's text input — horizontal text
-  // works fine, only rotation is broken in pdfmake.
+  const dpi = pixelsPerPoint * 72;
+  // Render the two lines of text via sharp's text input. Point size is
+  // specified in the Pango markup so dpi controls the pixel size.
   const textImg = await sharp({
     text: {
-      text: '<span foreground="#1e3a5f" font_weight="bold">FEE COMPUTATION\nWORKSHEET</span>',
-      font: 'sans-serif',
+      text:
+        '<span foreground="#1e3a5f" font_weight="bold" size="11pt">' +
+        'FEE COMPUTATION\nWORKSHEET</span>',
+      fontfile: resolveFontPath('Roboto-Medium.ttf'),
+      font: 'Roboto',
       width: widthPx - Math.round(8 * pixelsPerPoint),
-      height: fontPx * 3,
       rgba: true,
       align: 'center' as const,
+      dpi,
     },
   })
     .trim()
@@ -189,14 +200,18 @@ async function renderColumnHeadersPng(
 }> {
   const totalWidthPt = leadingEmptyPt + columnWidthsPt.reduce((a, b) => a + b, 0);
   const widthPx = Math.round(totalWidthPt * pixelsPerPoint);
-  const fontPx = Math.round(fontSizePt * pixelsPerPoint);
-  // Constrain unrotated text width — multi-word labels wrap to ~2 lines,
-  // single-word labels stay on one line and run wide.
-  const maxLineWidthPx = Math.round(fontPx * 6);
+  // Sharp needs an explicit `dpi` to render text at a specific point size.
+  // `pixelsPerPoint * 72` is the correct conversion: at 72 DPI, 1 pt = 1 px,
+  // so at 288 DPI (pixelsPerPoint=4) 1 pt = 4 px.
+  const dpi = pixelsPerPoint * 72;
+  // Wrap width in pixels at the target DPI. Tuned so short/medium labels
+  // stay single-line but long ones ("SURVEY CREW CHIEF", "SURVEY
+  // TECHNICIAN") break at a word boundary — measured with Roboto-Medium.
+  const maxLineWidthPx = Math.round(fontSizePt * pixelsPerPoint * 9);
 
   const rendered = await Promise.all(
     labels.map((label) =>
-      renderRotatedTextPng(label, fontPx, -60, maxLineWidthPx),
+      renderRotatedTextPng(label, fontSizePt, -60, maxLineWidthPx, dpi),
     ),
   );
 
@@ -885,7 +900,7 @@ export class PdfService {
       headerColumnWidthsPt,
       TASK_COL_WIDTH,
       4, // 4 device pixels per PDF point — sharp text stays crisp at this density
-      8, // font size in PDF points
+      6, // font size in PDF points (small, like the Apex example)
     );
     const headerImageDataUrl = `data:image/png;base64,${headerImage.buffer.toString('base64')}`;
     const headerRowHeightPt = headerImage.heightPt;
