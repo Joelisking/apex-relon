@@ -3,7 +3,13 @@ import { PrismaService } from '../database/prisma.service';
 import { QuoteSettingsService } from './quote-settings.service';
 import * as path from 'path';
 import * as fs from 'fs';
-import sharp from 'sharp';
+
+// sharp is CommonJS (`module.exports = <function>`). tsconfig has
+// `allowSyntheticDefaultImports` but NOT `esModuleInterop`, so a plain
+// `import sharp from 'sharp'` compiles to `sharp_1.default` which is
+// undefined at runtime — use require to grab the function directly.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const sharp: typeof import('sharp') = require('sharp');
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PdfPrinter = require('pdfmake/js/Printer').default;
