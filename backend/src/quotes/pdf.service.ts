@@ -223,7 +223,11 @@ async function renderColumnHeadersPng(
   let cursorPx = Math.round(leadingEmptyPt * pixelsPerPoint);
   const composites = rendered.map((r, i) => {
     const colWidthPx = Math.round(columnWidthsPt[i] * pixelsPerPoint);
-    const pivotX = cursorPx + colWidthPx / 2;
+    // Pivot at the RIGHT edge of the column (where the column divider
+    // line is). Matches the Apex reference: each rotated label's END is
+    // anchored to the right border of its column, and the tail extends
+    // up-and-left from there.
+    const pivotX = cursorPx + colWidthPx;
     const pivotY = heightPx - bottomPaddingPx;
     const left = Math.max(0, pivotX - r.width);
     const top = Math.max(0, pivotY - r.height);
@@ -905,21 +909,11 @@ export class PdfService {
     const headerImageDataUrl = `data:image/png;base64,${headerImage.buffer.toString('base64')}`;
     const headerRowHeightPt = headerImage.heightPt;
 
-    // Single colSpan cell holds the image; the title block overlays the
-    // leftmost portion via a separate stack rendered after the table cell.
-    const headerRow: object[] = [
-      {
-        image: headerImageDataUrl,
-        width: headerImage.widthPt,
-        colSpan: nCells,
-        border: [false, false, false, true] as [boolean, boolean, boolean, boolean],
-        margin: [0, 0, 0, 0] as [number, number, number, number],
-      },
-      ...Array.from({ length: nCells - 1 }, () => ({
-        text: '',
-        border: [false, false, false, true] as [boolean, boolean, boolean, boolean],
-      })),
-    ];
+    // The headers image is rendered as a STANDALONE element above the
+    // table (not as a table cell). This way cell padding doesn't shift it
+    // relative to the data columns — the image sits at the exact same
+    // horizontal position as the table, so each rotated label lines up
+    // with its column below.
 
     // ── Labor Rates row ────────────────────────────────────────────────
     const laborRatesRow: object[] = [
@@ -947,7 +941,7 @@ export class PdfService {
       { text: '', border: [false, true, false, true], fillColor: '#ffffff' },
     ];
 
-    const matrixRows: object[][] = [headerRow, laborRatesRow, taskHeaderRow];
+    const matrixRows: object[][] = [laborRatesRow, taskHeaderRow];
 
     // ── Phase and subtask rows ─────────────────────────────────────────────────
     let phaseIndex = 0;
@@ -1123,7 +1117,12 @@ export class PdfService {
     const dateStr = new Date(breakdown.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     const companyName = settings.companyName || 'Apex Consulting & Surveying';
 
-    const tableWidths = ['*', ...columns.map(() => COL), TOT_HRS, TOT_FEE];
+    // Explicit task-column width (rather than '*') so the pdfmake column
+    // positions exactly match the column positions baked into the headers
+    // image. pdfmake's '*' calculation accounts for internal padding and
+    // gives a slightly different width than our compute, which offset the
+    // rotated labels from their columns.
+    const tableWidths = [TASK_COL_WIDTH, ...columns.map(() => COL), TOT_HRS, TOT_FEE];
 
     const logoDataUrl = loadApexLogoDataUrl();
     const projectLabelLine =
