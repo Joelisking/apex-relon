@@ -158,7 +158,7 @@ function ServiceSubtaskPicker({
           </button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-[var(--radix-popover-trigger-width)] p-0 max-h-75"
+          className="w-(--radix-popover-trigger-width) p-0 max-h-75"
           align="start"
           sideOffset={4}>
           <Command shouldFilter>

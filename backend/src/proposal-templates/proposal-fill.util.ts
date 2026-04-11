@@ -501,6 +501,68 @@ function stripKnownTemplateGarbage(xml: string): string {
 }
 
 /**
+ * Patch font references that LibreOffice can't substitute cleanly on Linux.
+ *
+ * The Apex templates inherit font names that don't have metric-equivalent
+ * fallbacks installed on the server (Liberation/FreeFont/Noto):
+ *   - "Times" — distinct from "Times New Roman"; Linux Liberation Serif is the
+ *     metric clone of TNR, NOT plain Times. Plain "Times" falls back to a
+ *     wider serif, which causes body lines to wrap earlier than in Word and
+ *     pushes content onto a second page.
+ *   - "Optima" — used by the Title style; no clean substitute on Linux.
+ *
+ * Rewriting these names so LibreOffice picks Liberation Serif (for body) and
+ * a sensible default (for the title) keeps line wrapping identical to Word.
+ */
+export function patchFontFallbacks(xml: string): string {
+  return xml
+    .replace(/w:ascii="Times"/g, 'w:ascii="Times New Roman"')
+    .replace(/w:hAnsi="Times"/g, 'w:hAnsi="Times New Roman"')
+    .replace(/w:eastAsia="Times"/g, 'w:eastAsia="Times New Roman"')
+    .replace(/w:cs="Times"/g, 'w:cs="Times New Roman"')
+    .replace(/w:ascii="Optima"/g, 'w:ascii="Liberation Serif"')
+    .replace(/w:hAnsi="Optima"/g, 'w:hAnsi="Liberation Serif"');
+}
+
+/**
+ * Convert Copperplate Gothic Light text runs (used for the Apex title) to
+ * uppercase and strip the font reference.
+ *
+ * Copperplate Gothic Light renders lowercase letters as small capitals in
+ * Word. The font isn't installed on Linux, so LibreOffice falls back to a
+ * regular serif that renders the lowercase as actual lowercase, producing
+ * "apex Consulting & Surveying, inc." instead of the intended "APEX
+ * CONSULTING & SURVEYING, INC.". We approximate the small-caps look by
+ * upper-casing the text and adding bold, then strip the unknown font so the
+ * surrounding default takes over.
+ */
+export function patchCopperplateRuns(xml: string): string {
+  return xml.replace(
+    /(<w:r\b[^>]*>)(<w:rPr>[\s\S]*?<\/w:rPr>)([\s\S]*?)(<\/w:r>)/g,
+    (match, openTag: string, rPr: string, body: string, closeTag: string) => {
+      if (!/Copperplate\s*Gothic/i.test(rPr)) return match;
+
+      // Strip the Copperplate font ref entirely; surrounding default takes over.
+      let newRPr = rPr.replace(/<w:rFonts\b[^/]*\/>/g, '');
+      // Add bold so the upper-cased text reads as a heavy title.
+      if (!/<w:b\b/.test(newRPr)) {
+        newRPr = newRPr.replace(/<\/w:rPr>/, '<w:b/></w:rPr>');
+      }
+      // If we just emptied the rPr, drop it altogether to keep the run lean.
+      if (newRPr === '<w:rPr></w:rPr>') newRPr = '';
+
+      const newBody = body.replace(
+        /(<w:t[^>]*>)([\s\S]*?)(<\/w:t>)/g,
+        (_m, open: string, text: string, close: string) =>
+          `${open}${text.toUpperCase()}${close}`,
+      );
+
+      return `${openTag}${newRPr}${newBody}${closeTag}`;
+    },
+  );
+}
+
+/**
  * Fill a .docx template buffer with proposal data.
  * Handles DOCPROPERTY fields, plain bracket placeholders, dynamic custom
  * brackets, positional table-cell overrides, and full paragraph overrides.
@@ -521,6 +583,13 @@ export function fillDocx(
     zip.file('docProps/custom.xml', updateCustomProps(customXml, data));
   }
 
+  // Patch font references in styles.xml so LibreOffice picks the right
+  // metric-equivalent fonts (must run on the styles file, not document.xml).
+  const stylesFile = zip.files['word/styles.xml'];
+  if (stylesFile) {
+    zip.file('word/styles.xml', patchFontFallbacks(stylesFile.asText()));
+  }
+
   // Process each Word XML file
   for (const xmlPath of XML_FILES) {
     const xmlFile = zip.files[xmlPath];
@@ -533,6 +602,10 @@ export function fillDocx(
     xml = preprocessSymbolElements(xml);
     // 1b. Pre-process Wingdings/Symbol PUA chars stored in <w:t> runs (header ornaments)
     xml = convertSymbolFontTextRuns(xml);
+    // 1c. Patch font fallbacks (Times → Times New Roman, Optima → Liberation Serif)
+    xml = patchFontFallbacks(xml);
+    // 1d. Convert Copperplate Gothic Light title runs to uppercase + bold
+    xml = patchCopperplateRuns(xml);
     // 1. Merge split highlighted runs so string patterns match
     xml = mergeAdjacentHighlightedRuns(xml);
     // 2. Paragraph overrides (document only — before DOCPROPERTY so brackets still fill)
