@@ -157,6 +157,13 @@ export class TimeTrackingService {
     });
   }
 
+  async getAllRates() {
+    return this.prisma.userRate.findMany({
+      orderBy: { effectiveFrom: 'desc' },
+      include: { payGrade: { select: { id: true, name: true, code: true } } },
+    });
+  }
+
   async getRatesForUser(userId: string) {
     return this.prisma.userRate.findMany({
       where: { userId },
@@ -245,6 +252,20 @@ export class TimeTrackingService {
     const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
     const userRole = user?.role ?? null;
 
+    // CB role estimates may store the role key OR the role label.
+    // Build a set of matchers so we match regardless of which form was used.
+    const roleMatchers: string[] = [];
+    if (userRole) {
+      roleMatchers.push(userRole);
+      const roleRecord = await this.prisma.role.findUnique({
+        where: { key: userRole },
+        select: { label: true },
+      });
+      if (roleRecord && roleRecord.label !== userRole) {
+        roleMatchers.push(roleRecord.label);
+      }
+    }
+
     const cb = await this.prisma.costBreakdown.findFirst({
       where: { projectId },
       include: {
@@ -253,7 +274,7 @@ export class TimeTrackingService {
             roleEstimates: {
               where: {
                 subtaskId: serviceItemSubtaskId,
-                ...(userRole ? { role: userRole } : {}),
+                ...(roleMatchers.length > 0 ? { role: { in: roleMatchers } } : {}),
               },
             },
           },

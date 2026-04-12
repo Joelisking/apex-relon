@@ -85,9 +85,9 @@ const ALL_ADMIN_ITEMS = [
   { label: 'Admin — Task Types', href: '/admin/task-types', icon: ListChecks, permission: 'settings:manage' },
   { label: 'Admin — Work Codes', href: '/admin/work-codes', icon: ClipboardList, permission: 'settings:manage' },
   // Financial Configuration
-  { label: 'Admin — Pay Grades', href: '/admin/pay-grades', icon: Layers, permission: 'settings:manage' },
-  { label: 'Admin — Pay Rates', href: '/admin/pay-rates', icon: DollarSign, permission: 'settings:manage' },
-  { label: 'Admin — INDOT Pay Zones', href: '/admin/indot-pay-zones', icon: MapPin, permission: 'settings:manage' },
+  { label: 'Admin — Pay Grades', href: '/admin/pay-grades', icon: Layers, permission: 'pay_grades:view' },
+  { label: 'Admin — Pay Rates', href: '/admin/pay-rates', icon: DollarSign, permission: 'pay_rates:view' },
+  { label: 'Admin — INDOT Pay Zones', href: '/admin/indot-pay-zones', icon: MapPin, permission: 'indot_zones:view' },
   { label: 'Admin — Invoicing Settings', href: '/admin/quote-settings', icon: FileText, permission: 'settings:manage' },
   // Pipeline & Automation
   { label: 'Admin — Pipeline', href: '/admin/pipeline', icon: GitBranch, permission: 'pipeline:manage' },

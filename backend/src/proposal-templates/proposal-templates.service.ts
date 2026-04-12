@@ -282,11 +282,11 @@ export class ProposalTemplatesService implements OnModuleInit {
       }
     }
 
-    // Lock the cost breakdown so it can't be edited after acceptance
+    // Lock the cost breakdown and mark as final so it can't be edited after acceptance
     if (proposal.costBreakdownId) {
       await this.prisma.costBreakdown.update({
         where: { id: proposal.costBreakdownId },
-        data: { benchmarkLockedAt: new Date() },
+        data: { benchmarkLockedAt: new Date(), status: 'FINAL' },
       });
     }
 

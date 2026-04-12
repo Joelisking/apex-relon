@@ -34,6 +34,7 @@ export function UserRateGradeCell({ userId, grade, rate }: Props) {
   }, [editing]);
 
   function invalidate() {
+    queryClient.invalidateQueries({ queryKey: ['all-user-rates'] });
     queryClient.invalidateQueries({ queryKey: ['user-rates', userId] });
   }
 

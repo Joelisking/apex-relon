@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   useQuery,
   useMutation,
@@ -37,7 +37,10 @@ import {
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ServiceSubtaskPicker } from '@/components/shared/ServiceSubtaskPicker';
 import { cn } from '@/lib/utils';
-import type { ProjectServiceItem, ServiceItem } from '@/lib/types';
+import { useAuth } from '@/contexts/auth-context';
+import { rolesApi, type RoleResponse } from '@/lib/api/roles-client';
+import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
+import type { ProjectServiceItem, ServiceItem, CostBreakdown } from '@/lib/types';
 
 function getToken() {
   return getTokenFromClientCookies() ?? '';
@@ -94,7 +97,7 @@ interface TimeEntryDialogProps {
   /** Pre-fill the date field when creating a new entry (YYYY-MM-DD) */
   initialDate?: string;
   /** When set, the entry is submitted on behalf of this user (proxy entry) */
-  targetUser?: { id: string; name: string } | null;
+  targetUser?: { id: string; name: string; role: string } | null;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
 }
@@ -110,6 +113,7 @@ export function TimeEntryDialog({
   onSaved,
 }: TimeEntryDialogProps) {
   const queryClient = useQueryClient();
+  const { user: authUser } = useAuth();
 
   const [date, setDate] = useState(() => {
     const d = new Date();
@@ -197,6 +201,36 @@ export function TimeEntryDialog({
     enabled: !!projectId,
   });
 
+  // Roles catalog — map role key → label for CB estimate matching
+  const { data: rolesCatalog = [] } = useQuery<RoleResponse[]>({
+    queryKey: ['roles'],
+    queryFn: () => rolesApi.getAll(),
+    staleTime: 5 * 60_000,
+  });
+
+  // Cost breakdown for the selected project — used for role-based filtering
+  const { data: projectBreakdowns } = useQuery<CostBreakdown[]>({
+    queryKey: ['cost-breakdowns', 'project', projectId],
+    queryFn: () => costBreakdownApi.getAll({ projectId }),
+    enabled: !!projectId,
+    staleTime: 60_000,
+  });
+
+  const cbLines = useMemo(() => {
+    const activeCb = projectBreakdowns?.find((cb) => cb.status !== 'ARCHIVED');
+    return activeCb?.lines ?? [];
+  }, [projectBreakdowns]);
+
+  // Role matchers for the effective user (self or target)
+  const effectiveRole = targetUser?.role ?? authUser?.role;
+  const roleMatchers = useMemo(() => {
+    if (!effectiveRole) return null;
+    const matchers = new Set<string>([effectiveRole]);
+    const roleRecord = rolesCatalog.find((r) => r.key === effectiveRole);
+    if (roleRecord) matchers.add(roleRecord.label);
+    return matchers;
+  }, [effectiveRole, rolesCatalog]);
+
   // If project has linked service items, restrict dropdown to those; otherwise show all
   const projectLinkedItems =
     projectId && projectServiceItems && projectServiceItems.length > 0
@@ -204,9 +238,32 @@ export function TimeEntryDialog({
       : null;
 
   const baseServiceItems = projectLinkedItems ?? serviceItems;
-  const visibleServiceItems = isIndot
+  const indotFiltered = isIndot
     ? baseServiceItems.filter((si) => si.isIndot)
     : baseServiceItems;
+
+  // Role-based filtering: only show subtasks where the user's role has an estimate
+  const visibleServiceItems = useMemo(() => {
+    if (!roleMatchers || cbLines.length === 0) return indotFiltered;
+    const filtered = indotFiltered
+      .map((si) => {
+        const cbLine = cbLines.find((l) => l.serviceItemId === si.id);
+        if (!cbLine) return null;
+        const allowedSubtaskIds = new Set(
+          cbLine.roleEstimates
+            .filter(
+              (re) => roleMatchers.has(re.role) && re.estimatedHours > 0,
+            )
+            .map((re) => re.subtaskId),
+        );
+        if (allowedSubtaskIds.size === 0) return null;
+        const subtasks = si.subtasks.filter((st) => allowedSubtaskIds.has(st.id));
+        if (subtasks.length === 0) return null;
+        return { ...si, subtasks };
+      })
+      .filter((si): si is ServiceItem => si !== null);
+    return filtered.length > 0 ? filtered : indotFiltered;
+  }, [indotFiltered, cbLines, roleMatchers]);
 
   // The selected service item (used for estimated cost display)
   const selectedItem = serviceItems.find(
@@ -571,55 +628,72 @@ export function TimeEntryDialog({
             </div>
           )}
 
-          {/* Service Item + Subtask — grouped picker */}
-          <ServiceSubtaskPicker
-            serviceItems={visibleServiceItems}
-            helperText={
-              projectLinkedItems
-                ? `(${projectLinkedItems.length} linked to project)`
-                : undefined
-            }
-            serviceItemId={serviceItemId}
-            serviceItemSubtaskId={serviceItemSubtaskId}
-            onSelect={(siId, stId) => {
-              setServiceItemId(siId);
-              setServiceItemSubtaskId(stId);
-            }}
-          />
+          {/* Service Item + Subtask — only shown after project is selected */}
+          {projectId ? (
+            <ServiceSubtaskPicker
+              serviceItems={visibleServiceItems}
+              helperText={
+                projectLinkedItems
+                  ? `(${projectLinkedItems.length} linked to project)`
+                  : undefined
+              }
+              serviceItemId={serviceItemId}
+              serviceItemSubtaskId={serviceItemSubtaskId}
+              onSelect={(siId, stId) => {
+                setServiceItemId(siId);
+                setServiceItemSubtaskId(stId);
+              }}
+            />
+          ) : (
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground">Service Item / Subtask</Label>
+              <p className="text-xs text-muted-foreground italic">
+                Select a project to see available service items
+              </p>
+            </div>
+          )}
 
-          {/* Subtask budget callout */}
-          {subtaskBudget && subtaskBudget.budgetHours > 0 && (
-            <div className="flex items-center gap-4 rounded-md border border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-xs">
-              <div>
-                <span className="text-muted-foreground">Budget </span>
+          {/* Subtask hour budget — shown immediately after subtask is selected */}
+          {serviceItemSubtaskId && projectId && subtaskBudget && (
+            <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2.5 text-xs space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Proposed hours</span>
                 <span className="font-semibold tabular-nums">
-                  {subtaskBudget.budgetHours.toFixed(1)} hrs
+                  {subtaskBudget.budgetHours > 0
+                    ? `${subtaskBudget.budgetHours.toFixed(1)} hrs`
+                    : 'No budget set'}
                 </span>
               </div>
-              <div>
-                <span className="text-muted-foreground">Logged </span>
-                <span className="font-semibold tabular-nums">
-                  {subtaskBudget.loggedHours.toFixed(1)} hrs
-                </span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">
-                  Remaining{' '}
-                </span>
-                <span
-                  className={cn(
-                    'font-semibold tabular-nums',
-                    subtaskBudget.remainingHours < 0
-                      ? 'text-red-600'
-                      : 'text-green-600',
-                  )}>
-                  {subtaskBudget.remainingHours >= 0 ? '' : '−'}
-                  {Math.abs(subtaskBudget.remainingHours).toFixed(
-                    1,
-                  )}{' '}
-                  hrs
-                </span>
-              </div>
+              {subtaskBudget.budgetHours > 0 && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Already logged</span>
+                    <span className="font-semibold tabular-nums">
+                      {subtaskBudget.loggedHours.toFixed(1)} hrs
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-border/40 pt-1.5">
+                    <span className="text-muted-foreground font-medium">Remaining</span>
+                    <span
+                      className={cn(
+                        'font-semibold tabular-nums',
+                        subtaskBudget.remainingHours < 0
+                          ? 'text-red-600'
+                          : subtaskBudget.remainingHours === 0
+                            ? 'text-amber-600'
+                            : 'text-green-600',
+                      )}>
+                      {subtaskBudget.remainingHours < 0 && '−'}
+                      {Math.abs(subtaskBudget.remainingHours).toFixed(1)} hrs
+                    </span>
+                  </div>
+                  {subtaskBudget.remainingHours < 0 && (
+                    <p className="text-red-600 text-[11px] mt-0.5">
+                      This subtask is over budget by {Math.abs(subtaskBudget.remainingHours).toFixed(1)} hours
+                    </p>
+                  )}
+                </>
+              )}
             </div>
           )}
 

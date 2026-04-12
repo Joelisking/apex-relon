@@ -113,26 +113,32 @@ export class TimeTrackingController {
   // ─── User Rates ───────────────────────────────────────────────────────────
 
   @Post('rates')
-  @Permissions('time_tracking:create')
+  @Permissions('pay_rates:manage')
   createRate(@Body() dto: CreateUserRateDto) {
     return this.timeTrackingService.createRate(dto);
   }
 
+  @Get('rates')
+  @Permissions('pay_rates:view')
+  getAllRates() {
+    return this.timeTrackingService.getAllRates();
+  }
+
   @Get('rates/:userId')
-  @Permissions('time_tracking:view')
+  @Permissions('pay_rates:view')
   getRates(@Param('userId') userId: string) {
     return this.timeTrackingService.getRatesForUser(userId);
   }
 
   @Patch('rates/:id')
-  @Permissions('time_tracking:create')
+  @Permissions('pay_rates:manage')
   updateRate(@Param('id') id: string, @Body() dto: UpdateUserRateDto) {
     return this.timeTrackingService.updateRate(id, dto);
   }
 
   @Delete('rates/:id')
   @HttpCode(204)
-  @Permissions('time_tracking:create')
+  @Permissions('pay_rates:manage')
   deleteRate(@Param('id') id: string) {
     return this.timeTrackingService.deleteRate(id);
   }

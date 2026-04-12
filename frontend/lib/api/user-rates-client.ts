@@ -67,6 +67,9 @@ export interface UpdateUserRateDto {
 }
 
 export const userRatesApi = {
+  getAll: (): Promise<UserRate[]> =>
+    authFetch('/rates'),
+
   getForUser: (userId: string): Promise<UserRate[]> =>
     authFetch(`/rates/${userId}`),
 

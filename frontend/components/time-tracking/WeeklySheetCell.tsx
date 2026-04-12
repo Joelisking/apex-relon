@@ -26,7 +26,7 @@ interface WeeklySheetCellProps {
   entries: CellEntry[];
   projectId: string;
   date: string;
-  targetUser: { id: string; name: string } | null;
+  targetUser: { id: string; name: string; role: string } | null;
   canEdit: boolean;
   onUpdated: () => void;
 }

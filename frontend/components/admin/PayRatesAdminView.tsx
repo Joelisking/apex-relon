@@ -6,7 +6,12 @@ import { DollarSign, Layers } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { usersApi } from '@/lib/api/users-client';
-import { payGradesApi, type PayGrade } from '@/lib/api/user-rates-client';
+import {
+  payGradesApi,
+  userRatesApi,
+  type PayGrade,
+  type UserRate,
+} from '@/lib/api/user-rates-client';
 import { UserRateRow } from './UserRateRow';
 
 export function PayRatesAdminView() {
@@ -20,9 +25,21 @@ export function PayRatesAdminView() {
     queryFn: () => payGradesApi.getAll(),
   });
 
+  const { data: allRates = [], isLoading: ratesLoading } = useQuery<UserRate[]>({
+    queryKey: ['all-user-rates'],
+    queryFn: () => userRatesApi.getAll(),
+  });
+
   const users = usersData?.users ?? [];
   const activeGrades = payGrades.filter((g) => g.isActive);
-  const isLoading = usersLoading || gradesLoading;
+  const isLoading = usersLoading || gradesLoading || ratesLoading;
+
+  const ratesByUserId = new Map<string, UserRate[]>();
+  for (const rate of allRates) {
+    const list = ratesByUserId.get(rate.userId) ?? [];
+    list.push(rate);
+    ratesByUserId.set(rate.userId, list);
+  }
 
   return (
     <div className="p-6 max-w-3xl space-y-6">
@@ -73,7 +90,12 @@ export function PayRatesAdminView() {
       ) : (
         <div className="space-y-2">
           {users.map((user) => (
-            <UserRateRow key={user.id} user={user} payGrades={activeGrades} />
+            <UserRateRow
+              key={user.id}
+              user={user}
+              payGrades={activeGrades}
+              rates={ratesByUserId.get(user.id) ?? []}
+            />
           ))}
         </div>
       )}

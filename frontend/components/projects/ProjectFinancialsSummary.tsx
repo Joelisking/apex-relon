@@ -1,8 +1,9 @@
 'use client';
 
-import { Fragment, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { projectsApi, type ProjectProfitability, type ServiceItemPerformance } from '@/lib/api/projects-client';
+import { projectsApi, type ProjectProfitability } from '@/lib/api/projects-client';
+import { ServiceItemPerformanceSection } from './ServiceItemPerformanceSection';
 
 interface ProjectFinancialsSummaryProps {
   projectId: string;
@@ -136,81 +137,8 @@ export function ProjectFinancialsSummary({
 
       {/* Performance: proposed vs actual per service item per role */}
       {data.serviceItemPerformance?.length > 0 && (
-        <ServiceItemPerformanceTable rows={data.serviceItemPerformance} />
+        <ServiceItemPerformanceSection rows={data.serviceItemPerformance} />
       )}
-    </div>
-  );
-}
-
-function ServiceItemPerformanceTable({ rows }: { rows: ServiceItemPerformance[] }) {
-  // Collect all roles across all rows
-  const roles = Array.from(
-    new Set(
-      rows.flatMap((r) => [
-        ...Object.keys(r.proposedByRole),
-        ...Object.keys(r.actualByRole),
-      ]),
-    ),
-  ).sort();
-
-  if (roles.length === 0) return null;
-
-  return (
-    <div className="rounded-lg border border-border/50 overflow-hidden">
-      <div className="px-3 py-2 border-b border-border/40 bg-muted/30">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-[0.06em]">
-          Performance by Service Item
-        </p>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b border-border/40 bg-muted/10">
-              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Service Item</th>
-              {roles.map((role) => (
-                <th key={role} className="px-3 py-2 text-center font-medium text-muted-foreground" colSpan={2}>
-                  {role}
-                </th>
-              ))}
-            </tr>
-            <tr className="border-b border-border/40 bg-muted/5">
-              <th className="px-3 py-1.5" />
-              {roles.map((role) => (
-                <Fragment key={role}>
-                  <th className="px-2 py-1.5 text-right font-normal text-muted-foreground w-16">
-                    Budget
-                  </th>
-                  <th className="px-2 py-1.5 text-right font-normal text-muted-foreground w-16">
-                    Actual
-                  </th>
-                </Fragment>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/40">
-            {rows.map((row) => (
-              <tr key={row.serviceItemId} className="hover:bg-muted/20">
-                <td className="px-3 py-2 font-medium">{row.serviceItemName}</td>
-                {roles.map((role) => {
-                  const budget = row.proposedByRole[role] ?? 0;
-                  const actual = row.actualByRole[role] ?? 0;
-                  const over = budget > 0 && actual > budget;
-                  return (
-                    <Fragment key={role}>
-                      <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">
-                        {budget > 0 ? fmtHours(budget) : '—'}
-                      </td>
-                      <td className={`px-2 py-2 text-right tabular-nums ${over ? 'text-red-600 font-medium' : actual > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
-                        {actual > 0 ? fmtHours(actual) : '—'}
-                      </td>
-                    </Fragment>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }

@@ -94,6 +94,18 @@ export class ProjectsProfitabilityService {
       ) ?? 0;
 
     // Service item performance: proposed vs actual hours per service item per role
+    // CB role estimates store labels; time entries store user.role as keys.
+    // Build a key→label map so both sides use labels consistently.
+    const roleKeyToLabel = new Map<string, string>();
+    const allRoleKeys = new Set(timeEntries.map((e) => e.user.role));
+    if (allRoleKeys.size > 0) {
+      const roleRecords = await this.prisma.role.findMany({
+        where: { key: { in: [...allRoleKeys] } },
+        select: { key: true, label: true },
+      });
+      for (const r of roleRecords) roleKeyToLabel.set(r.key, r.label);
+    }
+
     const serviceItemMap = new Map<string, ServiceItemPerformance>();
     for (const line of costBreakdown?.lines ?? []) {
       const siId = line.serviceItem.id;
@@ -107,10 +119,10 @@ export class ProjectsProfitabilityService {
     }
     for (const entry of timeEntries) {
       if (!entry.serviceItemId) continue;
-      const role = entry.user.role;
-      if (!serviceItemMap.has(entry.serviceItemId)) continue; // skip entries outside CB scope
+      const roleLabel = roleKeyToLabel.get(entry.user.role) ?? entry.user.role;
+      if (!serviceItemMap.has(entry.serviceItemId)) continue;
       const perf = serviceItemMap.get(entry.serviceItemId)!;
-      perf.actualByRole[role] = (perf.actualByRole[role] ?? 0) + entry.hours;
+      perf.actualByRole[roleLabel] = (perf.actualByRole[roleLabel] ?? 0) + entry.hours;
     }
 
     const totalCost = laborCost + directCost;

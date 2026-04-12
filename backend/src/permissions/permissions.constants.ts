@@ -175,6 +175,18 @@ export const ALL_PERMISSIONS: PermissionDefinition[] = [
     module: 'Reports',
   },
 
+  // Pay Grades
+  { key: 'pay_grades:view', label: 'View Pay Grades', module: 'Pay Grades' },
+  { key: 'pay_grades:manage', label: 'Manage Pay Grades (create/edit/delete)', module: 'Pay Grades' },
+
+  // Pay Rates
+  { key: 'pay_rates:view', label: 'View Pay Rates', module: 'Pay Rates' },
+  { key: 'pay_rates:manage', label: 'Manage Pay Rates (set/edit/delete)', module: 'Pay Rates' },
+
+  // INDOT Pay Zones
+  { key: 'indot_zones:view', label: 'View INDOT Pay Zones', module: 'INDOT Pay Zones' },
+  { key: 'indot_zones:manage', label: 'Manage INDOT Pay Zones (create/edit/delete)', module: 'INDOT Pay Zones' },
+
   // Settings
   {
     key: 'settings:manage',
@@ -318,6 +330,12 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'pipeline:manage',
     'reports:view',
     'reports:export',
+    'pay_grades:view',
+    'pay_grades:manage',
+    'pay_rates:view',
+    'pay_rates:manage',
+    'indot_zones:view',
+    'indot_zones:manage',
     'settings:manage',
     'settings:view',
     'settings:edit',
@@ -385,6 +403,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'reports:export',
     'reports:view_all',
     'workflows:view',
+    'pay_grades:view',
+    'pay_rates:view',
+    'indot_zones:view',
     'settings:view',
     'notifications:view',
     'users:list_basic',
@@ -414,6 +435,9 @@ export const ADMIN_PANEL_PERMISSIONS = [
   'roles:view',
   'settings:view',
   'settings:manage',
+  'pay_grades:view',
+  'pay_rates:view',
+  'indot_zones:view',
   'permissions:view',
   'audit_logs:view',
   'ai_settings:view',

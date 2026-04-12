@@ -271,7 +271,7 @@ export function WeeklySheetTab() {
           weekDays={weekDays}
           dailyTotals={timesheetData?.dailyTotals ?? {}}
           grandTotal={timesheetData?.grandTotal ?? 0}
-          targetUser={targetUser ? { id: targetUser.id, name: targetUser.name } : null}
+          targetUser={targetUser ? { id: targetUser.id, name: targetUser.name, role: targetUser.role } : null}
           canEdit={canEdit}
           statusFilter={statusFilter}
           onUpdated={handleUpdated}

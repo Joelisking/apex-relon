@@ -110,19 +110,19 @@ export class SettingsController {
   // ── Pay Grades ─────────────────────────────────────────────────────────────
 
   @Get('pay-grades')
-  @Permissions('time_tracking:view')
+  @Permissions('pay_grades:view')
   findAllPayGrades() {
     return this.settingsService.findAllPayGrades();
   }
 
   @Post('pay-grades')
-  @Permissions('settings:manage')
+  @Permissions('pay_grades:manage')
   createPayGrade(@Body() dto: { name: string; code: string; description?: string; sortOrder?: number; isDefault?: boolean }) {
     return this.settingsService.createPayGrade(dto);
   }
 
   @Patch('pay-grades/:id')
-  @Permissions('settings:manage')
+  @Permissions('pay_grades:manage')
   updatePayGrade(
     @Param('id') id: string,
     @Body() dto: Partial<{ name: string; description: string; sortOrder: number; isDefault: boolean; isActive: boolean }>,
@@ -131,7 +131,7 @@ export class SettingsController {
   }
 
   @Delete('pay-grades/:id')
-  @Permissions('settings:manage')
+  @Permissions('pay_grades:manage')
   @HttpCode(HttpStatus.NO_CONTENT)
   deletePayGrade(@Param('id') id: string) {
     return this.settingsService.deletePayGrade(id);
@@ -140,19 +140,19 @@ export class SettingsController {
   // ── INDOT Pay Zones ────────────────────────────────────────────────────────
 
   @Get('indot-pay-zones')
-  @Permissions('settings:manage')
+  @Permissions('indot_zones:view')
   findAllIndotPayZones() {
     return this.settingsService.findAllIndotPayZones();
   }
 
   @Post('indot-pay-zones')
-  @Permissions('settings:manage')
+  @Permissions('indot_zones:manage')
   createIndotPayZone(@Body() dto: { name: string; payGradeId: string; counties?: string[] }) {
     return this.settingsService.createIndotPayZone(dto);
   }
 
   @Patch('indot-pay-zones/:id')
-  @Permissions('settings:manage')
+  @Permissions('indot_zones:manage')
   updateIndotPayZone(
     @Param('id') id: string,
     @Body() dto: Partial<{ name: string; payGradeId: string; counties: string[] }>,
@@ -161,7 +161,7 @@ export class SettingsController {
   }
 
   @Delete('indot-pay-zones/:id')
-  @Permissions('settings:manage')
+  @Permissions('indot_zones:manage')
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteIndotPayZone(@Param('id') id: string) {
     return this.settingsService.deleteIndotPayZone(id);

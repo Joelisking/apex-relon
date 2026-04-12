@@ -30,7 +30,7 @@ interface WeeklySheetGridProps {
   weekDays: string[];
   dailyTotals: Record<string, number>;
   grandTotal: number;
-  targetUser: { id: string; name: string } | null;
+  targetUser: { id: string; name: string; role: string } | null;
   canEdit: boolean;
   statusFilter: string;
   onUpdated: () => void;
