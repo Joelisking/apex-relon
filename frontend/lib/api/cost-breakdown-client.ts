@@ -35,8 +35,11 @@ export interface UpsertRoleEstimateDto {
 }
 
 export const costBreakdownApi = {
-  getAll: (filters?: { leadId?: string }) => {
-    const params = filters?.leadId ? `?leadId=${filters.leadId}` : '';
+  getAll: (filters?: { leadId?: string; projectId?: string }) => {
+    const qs = new URLSearchParams();
+    if (filters?.leadId) qs.set('leadId', filters.leadId);
+    if (filters?.projectId) qs.set('projectId', filters.projectId);
+    const params = qs.toString() ? `?${qs.toString()}` : '';
     return apiFetch<CostBreakdown[]>(`/cost-breakdowns${params}`);
   },
   getOne: (id: string) => apiFetch<CostBreakdown>(`/cost-breakdowns/${id}`),

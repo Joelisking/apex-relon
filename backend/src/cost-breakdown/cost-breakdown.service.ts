@@ -18,9 +18,10 @@ const LINE_INCLUDE = {
 export class CostBreakdownService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(tenantId: string, filters?: { leadId?: string }) {
+  async findAll(tenantId: string, filters?: { leadId?: string; projectId?: string }) {
     const where: Record<string, unknown> = { tenantId };
     if (filters?.leadId) where.leadId = filters.leadId;
+    if (filters?.projectId) where.projectId = filters.projectId;
     const breakdowns = await this.prisma.costBreakdown.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -29,9 +30,8 @@ export class CostBreakdownService {
         project: { select: { id: true, name: true } },
         lead: { select: { id: true, company: true, contactName: true } },
         lines: {
-          include: {
-            roleEstimates: true,
-          },
+          orderBy: { sortOrder: 'asc' },
+          include: LINE_INCLUDE,
         },
       },
     });

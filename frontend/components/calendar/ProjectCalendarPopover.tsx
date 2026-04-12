@@ -20,9 +20,16 @@ interface ProjectCalendarPopoverProps {
   event: CalendarEvent | null;
   onClose: () => void;
   onSaved: () => void;
+  /** When false, the due date is read-only and the Save button is hidden. */
+  canEdit?: boolean;
 }
 
-export function ProjectCalendarPopover({ event, onClose, onSaved }: ProjectCalendarPopoverProps) {
+export function ProjectCalendarPopover({
+  event,
+  onClose,
+  onSaved,
+  canEdit = true,
+}: ProjectCalendarPopoverProps) {
   const router = useRouter();
   const [date, setDate] = useState('');
   const [saving, setSaving] = useState(false);
@@ -34,7 +41,7 @@ export function ProjectCalendarPopover({ event, onClose, onSaved }: ProjectCalen
   const projectName = event?.title?.replace(/^Due:\s*/, '') ?? '';
 
   const handleSave = async () => {
-    if (!event) return;
+    if (!event || !canEdit) return;
     setSaving(true);
     try {
       await projectsApi.update(event.sourceId, {
@@ -59,7 +66,19 @@ export function ProjectCalendarPopover({ event, onClose, onSaved }: ProjectCalen
 
         <div className="space-y-1.5 py-1">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Due Date</p>
-          <DatePicker value={date} onChange={setDate} placeholder="No due date set" />
+          {canEdit ? (
+            <DatePicker value={date} onChange={setDate} placeholder="No due date set" />
+          ) : (
+            <p className="text-sm text-foreground h-9 flex items-center">
+              {date
+                ? new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })
+                : 'No due date set'}
+            </p>
+          )}
         </div>
 
         <DialogFooter className="flex-row items-center justify-between gap-2 pt-2">
@@ -72,11 +91,15 @@ export function ProjectCalendarPopover({ event, onClose, onSaved }: ProjectCalen
             View Project
           </Button>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-            <Button size="sm" onClick={handleSave} disabled={saving}>
-              {saving && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-              Save
+            <Button variant="outline" size="sm" onClick={onClose}>
+              {canEdit ? 'Cancel' : 'Close'}
             </Button>
+            {canEdit && (
+              <Button size="sm" onClick={handleSave} disabled={saving}>
+                {saving && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                Save
+              </Button>
+            )}
           </div>
         </DialogFooter>
       </DialogContent>

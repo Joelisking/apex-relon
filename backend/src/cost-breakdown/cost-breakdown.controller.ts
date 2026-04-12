@@ -32,8 +32,11 @@ export class CostBreakdownController {
   ) {}
 
   @Get()
-  findAll(@Query('leadId') leadId?: string) {
-    return this.service.findAll(TENANT_ID, { leadId });
+  findAll(
+    @Query('leadId') leadId?: string,
+    @Query('projectId') projectId?: string,
+  ) {
+    return this.service.findAll(TENANT_ID, { leadId, projectId });
   }
 
   @Get(':id')

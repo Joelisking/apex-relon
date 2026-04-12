@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { tasksApi } from '@/lib/api/tasks-client';
 import { projectsApi } from '@/lib/api/projects-client';
 import { ptoApi } from '@/lib/api/pto-client';
+import { usersApi, type UserDirectoryItem } from '@/lib/api/users-client';
 import { TaskDialog } from '@/components/tasks/TaskDialog';
 import { ProjectCalendarPopover } from './ProjectCalendarPopover';
 import { MonthTab } from './MonthTab';
@@ -20,6 +21,7 @@ import {
   getVisibleRange,
   type CalendarEvent,
 } from './calendarUtils';
+import { useAuth } from '@/contexts/auth-context';
 import type { Task } from '@/lib/types';
 import type { Project } from '@/lib/api/projects-client';
 import { cn } from '@/lib/utils';
@@ -29,6 +31,13 @@ type CalView = 'month' | 'week' | 'agenda';
 export function CalendarView() {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { user, hasPermission } = useAuth();
+
+  const canAssign = hasPermission('tasks:assign');
+  const canViewAll = hasPermission('tasks:view_all');
+  const canEditTasks = hasPermission('tasks:edit');
+  const canEditAllTasks = hasPermission('tasks:edit_all');
+  const canEditProjects = hasPermission('projects:edit');
 
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [activeView, setActiveView] = useState<CalView>('month');
@@ -37,6 +46,20 @@ export function CalendarView() {
   const [showPto, setShowPto] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedProjectEvent, setSelectedProjectEvent] = useState<CalendarEvent | null>(null);
+
+  // Assignees are needed so TaskDialog can render the Assign To picker
+  // (and so the Status → Done button is accessible to the assigned user).
+  const { data: assignableUsers = [] } = useQuery<UserDirectoryItem[]>({
+    queryKey: ['assignable-users', canViewAll, user?.teamId],
+    queryFn: async () => {
+      const { users: all } = await usersApi.getUsersDirectory();
+      return canViewAll
+        ? all
+        : all.filter((u) => !u.teamId || u.teamId === user?.teamId);
+    },
+    enabled: canAssign,
+    staleTime: 5 * 60_000,
+  });
 
   const rbcView = activeView;
   const { start: rangeStart, end: rangeEnd } = useMemo(
@@ -173,6 +196,18 @@ export function CalendarView() {
         open={selectedTask !== null}
         onOpenChange={(open) => { if (!open) setSelectedTask(null); }}
         editingTask={selectedTask}
+        currentUserId={user?.id}
+        canAssign={canAssign}
+        assignableUsers={assignableUsers}
+        canEdit={
+          canEditAllTasks ||
+          (canEditTasks &&
+            !!selectedTask &&
+            !!user?.id &&
+            (selectedTask.assignedToId
+              ? selectedTask.assignedToId === user.id
+              : selectedTask.createdById === user.id))
+        }
         onSaved={() => {
           setSelectedTask(null);
           queryClient.invalidateQueries({ queryKey: ['calendar-tasks'] });
@@ -181,6 +216,7 @@ export function CalendarView() {
 
       <ProjectCalendarPopover
         event={selectedProjectEvent}
+        canEdit={canEditProjects}
         onClose={() => setSelectedProjectEvent(null)}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ['calendar-projects'] })}
       />

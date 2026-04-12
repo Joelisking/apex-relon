@@ -35,20 +35,7 @@ import {
   RadioGroupItem,
 } from '@/components/ui/radio-group';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { ChevronsUpDown, Check } from 'lucide-react';
+import { ServiceSubtaskPicker } from '@/components/shared/ServiceSubtaskPicker';
 import { cn } from '@/lib/utils';
 import type { ProjectServiceItem, ServiceItem } from '@/lib/types';
 
@@ -97,151 +84,6 @@ interface ProjectOption {
   jobNumber?: string | null;
   isIndot?: boolean;
   jobType?: { division?: { name: string } | null } | null;
-}
-
-interface ServiceSubtaskPickerProps {
-  visibleServiceItems: ServiceItem[];
-  projectLinkedCount: number | null;
-  serviceItemId: string;
-  serviceItemSubtaskId: string;
-  onSelect: (
-    serviceItemId: string,
-    serviceItemSubtaskId: string,
-  ) => void;
-}
-
-function ServiceSubtaskPicker({
-  visibleServiceItems,
-  projectLinkedCount,
-  serviceItemId,
-  serviceItemSubtaskId,
-  onSelect,
-}: ServiceSubtaskPickerProps) {
-  const [open, setOpen] = useState(false);
-
-  const selectedItem = visibleServiceItems.find(
-    (si) => si.id === serviceItemId,
-  );
-  const selectedSubtask = selectedItem?.subtasks?.find(
-    (st) => st.id === serviceItemSubtaskId,
-  );
-
-  const displayLabel = selectedItem
-    ? selectedSubtask
-      ? `${selectedItem.name} · ${selectedSubtask.name}`
-      : selectedItem.name
-    : null;
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-2">
-        <Label>Service Item / Subtask</Label>
-        {projectLinkedCount !== null && (
-          <span className="text-xs text-muted-foreground">
-            ({projectLinkedCount} linked to project)
-          </span>
-        )}
-      </div>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className={cn(
-              'flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors hover:bg-muted/40',
-              !displayLabel && 'text-muted-foreground',
-            )}>
-            <span className="line-clamp-1 text-left">
-              {displayLabel ??
-                'Select service item / subtask (optional)'}
-            </span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-(--radix-popover-trigger-width) p-0 max-h-75"
-          align="start"
-          sideOffset={4}>
-          <Command shouldFilter>
-            <CommandInput placeholder="Search…" />
-            <CommandList className="max-h-65 overflow-y-auto">
-              <CommandEmpty>No items found.</CommandEmpty>
-              {/* None option */}
-              <CommandGroup>
-                <CommandItem
-                  value="__none__"
-                  onSelect={() => {
-                    onSelect('', '');
-                    setOpen(false);
-                  }}>
-                  <Check
-                    className={cn(
-                      'mr-2 h-4 w-4 shrink-0',
-                      !serviceItemId ? 'opacity-100' : 'opacity-0',
-                    )}
-                  />
-                  None
-                </CommandItem>
-              </CommandGroup>
-              {/* Grouped items */}
-              {visibleServiceItems.map((si) => {
-                const subs = si.subtasks ?? [];
-                if (subs.length === 0) {
-                  return (
-                    <CommandGroup key={si.id} heading={si.name}>
-                      <CommandItem
-                        value={`${si.name}`}
-                        onSelect={() => {
-                          onSelect(si.id, '');
-                          setOpen(false);
-                        }}>
-                        <Check
-                          className={cn(
-                            'mr-2 h-4 w-4 shrink-0',
-                            serviceItemId === si.id &&
-                              !serviceItemSubtaskId
-                              ? 'opacity-100'
-                              : 'opacity-0',
-                          )}
-                        />
-                        {si.name}
-                      </CommandItem>
-                    </CommandGroup>
-                  );
-                }
-                return (
-                  <CommandGroup key={si.id} heading={si.name}>
-                    {subs.map((st) => (
-                      <CommandItem
-                        key={st.id}
-                        value={`${si.name} ${st.name}`}
-                        onSelect={() => {
-                          onSelect(si.id, st.id);
-                          setOpen(false);
-                        }}>
-                        <Check
-                          className={cn(
-                            'mr-2 h-4 w-4 shrink-0',
-                            serviceItemId === si.id &&
-                              serviceItemSubtaskId === st.id
-                              ? 'opacity-100'
-                              : 'opacity-0',
-                          )}
-                        />
-                        <span className="text-muted-foreground mr-1.5">
-                          ↳
-                        </span>
-                        {st.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                );
-              })}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-    </div>
-  );
 }
 
 interface TimeEntryDialogProps {
@@ -731,8 +573,12 @@ export function TimeEntryDialog({
 
           {/* Service Item + Subtask — grouped picker */}
           <ServiceSubtaskPicker
-            visibleServiceItems={visibleServiceItems}
-            projectLinkedCount={projectLinkedItems?.length ?? null}
+            serviceItems={visibleServiceItems}
+            helperText={
+              projectLinkedItems
+                ? `(${projectLinkedItems.length} linked to project)`
+                : undefined
+            }
             serviceItemId={serviceItemId}
             serviceItemSubtaskId={serviceItemSubtaskId}
             onSelect={(siId, stId) => {

@@ -7,8 +7,6 @@ import {
   X,
   Loader2,
   Check,
-  User,
-  Search,
   ChevronDown,
   Tag,
 } from 'lucide-react';
@@ -22,6 +20,7 @@ import {
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { EntityLinkPicker } from './EntityLinkPicker';
+import { AssignUserPicker } from './AssignUserPicker';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
@@ -30,11 +29,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { tasksApi, type CreateTaskDto } from '@/lib/api/tasks-client';
-import { settingsApi, API_URL, getTokenFromClientCookies } from '@/lib/api/client';
+import { settingsApi } from '@/lib/api/client';
+import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
+import { rolesApi, type RoleResponse } from '@/lib/api/roles-client';
 import { toast } from 'sonner';
 import { type UserDirectoryItem } from '@/lib/api/users-client';
-import { SearchableSelect } from '@/components/ui/searchable-select';
-import type { Task, TaskType, CostBreakdownLine } from '@/lib/types';
+import { ServiceSubtaskPicker } from '@/components/shared/ServiceSubtaskPicker';
+import type { Task, TaskType, CostBreakdown, ServiceItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 interface TaskDialogProps {
@@ -44,6 +45,14 @@ interface TaskDialogProps {
   assignableUsers?: UserDirectoryItem[];
   currentUserId?: string;
   canAssign?: boolean;
+  /**
+   * Whether the current user can edit this task's fields. When false, all
+   * non-status fields are read-only; the user may still mark the task as done
+   * via the Status section if `canMarkDone` allows it.
+   * Defaults to `true` for backwards compatibility with callers that haven't
+   * been updated; new callers should pass an explicit value.
+   */
+  canEdit?: boolean;
   onSaved: () => void;
   /** Pre-fill entity link when creating a new task from a record's detail view */
   defaultEntityType?: string;
@@ -126,10 +135,15 @@ export function TaskDialog({
   assignableUsers = [],
   currentUserId,
   canAssign = false,
+  canEdit = true,
   onSaved,
   defaultEntityType,
   defaultEntityId,
 }: TaskDialogProps) {
+  // When editing an existing task without edit permission, the dialog is
+  // read-only except for the Status section. New-task creation always allows
+  // full editing (create-task permission is enforced by the parent).
+  const readOnly = !!editingTask && !canEdit;
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<
     CreateTaskDto & { status?: string; completionNote?: string }
@@ -144,9 +158,6 @@ export function TaskDialog({
     entityId: '',
     taskTypeId: '',
   });
-
-  const [assignOpen, setAssignOpen] = useState(false);
-  const [assignQuery, setAssignQuery] = useState('');
   const [taskTypeOpen, setTaskTypeOpen] = useState(false);
   const [dueDateOpen, setDueDateOpen] = useState(false);
 
@@ -154,22 +165,68 @@ export function TaskDialog({
   const [linkedJobTypeId, setLinkedJobTypeId] = useState<string | undefined>(undefined);
   const [taskTypes, setTaskTypes] = useState<TaskType[]>([]);
 
-  // Service item picker (project tasks with CB)
+  // Load the project's cost breakdown (with lines + subtasks) when a project is linked.
   const isProjectTask = form.entityType === 'PROJECT' && !!form.entityId;
-  const { data: cbLines = [] } = useQuery<CostBreakdownLine[]>({
-    queryKey: ['project-cb-lines', form.entityId],
-    queryFn: async () => {
-      const token = getTokenFromClientCookies();
-      const res = await fetch(`${API_URL}/cost-breakdowns?projectId=${form.entityId}`, {
-        headers: { Authorization: token ? `Bearer ${token}` : '' },
-      });
-      if (!res.ok) return [];
-      const breakdowns = await res.json() as Array<{ lines: CostBreakdownLine[] }>;
-      return breakdowns[0]?.lines ?? [];
-    },
+  const { data: projectCostBreakdowns = [] } = useQuery<CostBreakdown[]>({
+    queryKey: ['project-cost-breakdowns', form.entityId],
+    queryFn: () => costBreakdownApi.getAll({ projectId: form.entityId! }),
     enabled: isProjectTask,
     staleTime: 60_000,
   });
+  const cbLines = useMemo(
+    () => projectCostBreakdowns[0]?.lines ?? [],
+    [projectCostBreakdowns],
+  );
+
+  // Load the full role catalog so we can resolve a User.role (stored as
+  // Role.key) to its Role.label — which is what CostBreakdownRoleEstimate.role
+  // actually stores (see CostBreakdownSubtaskSection.tsx:249).
+  const { data: rolesCatalog = [] } = useQuery<RoleResponse[]>({
+    queryKey: ['roles'],
+    queryFn: () => rolesApi.getAll(),
+    staleTime: 5 * 60_000,
+  });
+
+  // Set of strings that identify the assignee's role in the CB — holds BOTH
+  // the key and the label, plus any roleDisplayNames override, so we match
+  // regardless of which form the CB estimate was stored as.
+  const assigneeRoleMatchers = useMemo(() => {
+    const user = assignableUsers.find((u) => u.id === form.assignedToId);
+    if (!user?.role) return null;
+    const matchers = new Set<string>([user.role]);
+    const roleRecord = rolesCatalog.find((r) => r.key === user.role);
+    if (roleRecord) matchers.add(roleRecord.label);
+    return matchers;
+  }, [assignableUsers, form.assignedToId, rolesCatalog]);
+
+  // Service items visible to the picker come from the CB lines, further
+  // filtered down to subtasks that have a role estimate for the assignee.
+  // When no assignee (or no role match exists in this CB), fall back to the
+  // unfiltered list so users aren't left with an empty picker.
+  const cbServiceItems: ServiceItem[] = useMemo(() => {
+    if (!assigneeRoleMatchers) return cbLines.map((line) => line.serviceItem);
+    const filtered = cbLines
+      .map((line) => {
+        const allowedSubtaskIds = new Set(
+          line.roleEstimates
+            .filter(
+              (re) =>
+                assigneeRoleMatchers.has(re.role) && re.estimatedHours > 0,
+            )
+            .map((re) => re.subtaskId),
+        );
+        if (allowedSubtaskIds.size === 0) return null;
+        const subtasks = line.serviceItem.subtasks.filter((st) =>
+          allowedSubtaskIds.has(st.id),
+        );
+        if (subtasks.length === 0) return null;
+        return { ...line.serviceItem, subtasks };
+      })
+      .filter((si): si is ServiceItem => si !== null);
+    // Fall back to unfiltered if the role produces an empty list — otherwise
+    // the user has no way to pick anything for this assignee.
+    return filtered.length > 0 ? filtered : cbLines.map((l) => l.serviceItem);
+  }, [cbLines, assigneeRoleMatchers]);
 
   // Whether the current user is allowed to set DONE in this dialog
   const allowDone = canMarkDone(editingTask, currentUserId);
@@ -180,8 +237,6 @@ export function TaskDialog({
       setLinkedJobTypeId(undefined);
       return;
     }
-    setAssignOpen(false);
-    setAssignQuery('');
     setTaskTypeOpen(false);
     if (editingTask) {
       setForm({
@@ -196,6 +251,10 @@ export function TaskDialog({
         entityType: editingTask.entityType || '',
         entityId: editingTask.entityId || '',
         taskTypeId: editingTask.taskTypeId || '',
+        estimatedHours: editingTask.estimatedHours ?? undefined,
+        serviceItemId: editingTask.serviceItemId ?? undefined,
+        serviceItemSubtaskId: editingTask.serviceItemSubtaskId ?? undefined,
+        costBreakdownLineId: editingTask.costBreakdownLineId ?? undefined,
         status: editingTask.status,
         completionNote: '',
       });
@@ -227,18 +286,6 @@ export function TaskDialog({
       .then((data) => setTaskTypes(data.filter((tt) => tt.isActive)))
       .catch(() => setTaskTypes([]));
   }, [linkedJobTypeId]);
-
-  const filteredAssignees = useMemo(() => {
-    if (!assignQuery.trim()) return assignableUsers;
-    const q = assignQuery.toLowerCase();
-    return assignableUsers.filter((u) =>
-      u.name.toLowerCase().includes(q),
-    );
-  }, [assignableUsers, assignQuery]);
-
-  const selectedUser = assignableUsers.find(
-    (u) => u.id === form.assignedToId,
-  );
 
   const selectedTaskType = taskTypes.find((tt) => tt.id === form.taskTypeId);
 
@@ -286,13 +333,137 @@ export function TaskDialog({
 
         {/* Body */}
         <div className="px-6 pt-6 pb-5 space-y-4">
-          {/* Title */}
+          {/* All editable fields except Status are wrapped in a fieldset so
+              read-only mode natively disables every descendant form control. */}
+          <fieldset
+            disabled={readOnly}
+            className="border-0 p-0 m-0 min-w-0 space-y-4 disabled:opacity-70">
+          {/* Entity Link — at top so subtask picker + task type can scope to it */}
+          <EntityLinkPicker
+            entityType={form.entityType ?? ''}
+            entityId={form.entityId ?? ''}
+            onChange={(type, id, jobTypeId) => {
+              setForm((prev) => ({
+                ...prev,
+                entityType: type,
+                entityId: id,
+                taskTypeId: '',
+                serviceItemId: undefined,
+                serviceItemSubtaskId: undefined,
+                costBreakdownLineId: undefined,
+                estimatedHours: undefined,
+              }));
+              setLinkedJobTypeId(jobTypeId);
+            }}
+          />
+
+          {/* Assign To — the assignee's role filters which subtasks are pickable below */}
+          {canAssign && assignableUsers.length > 0 && (
+            <AssignUserPicker
+              assignableUsers={assignableUsers}
+              selectedUserId={form.assignedToId ?? ''}
+              currentUserId={currentUserId}
+              helperText={
+                isProjectTask && cbLines.length > 0
+                  ? '— filters subtasks by role'
+                  : undefined
+              }
+              onSelect={(userId) => {
+                const newUser = assignableUsers.find((u) => u.id === userId);
+                const newRoleKey = newUser?.role ?? null;
+                const newRoleLabel = newRoleKey
+                  ? (rolesCatalog.find((r) => r.key === newRoleKey)?.label ?? null)
+                  : null;
+                const newMatchers = new Set<string>();
+                if (newRoleKey) newMatchers.add(newRoleKey);
+                if (newRoleLabel) newMatchers.add(newRoleLabel);
+
+                // If the currently-picked subtask has no role estimate for
+                // the new assignee's role, clear the CB-linked selection so
+                // the user is prompted to pick again.
+                const currentSubtaskId = form.serviceItemSubtaskId;
+                let clearSelection = false;
+                if (newMatchers.size > 0 && currentSubtaskId) {
+                  const stillValid = cbLines.some((line) =>
+                    line.roleEstimates.some(
+                      (re) =>
+                        re.subtaskId === currentSubtaskId &&
+                        newMatchers.has(re.role) &&
+                        re.estimatedHours > 0,
+                    ),
+                  );
+                  if (!stillValid) clearSelection = true;
+                }
+                setForm((prev) => ({
+                  ...prev,
+                  assignedToId: userId,
+                  ...(clearSelection
+                    ? {
+                        serviceItemId: undefined,
+                        serviceItemSubtaskId: undefined,
+                        costBreakdownLineId: undefined,
+                        estimatedHours: undefined,
+                      }
+                    : {}),
+                }));
+              }}
+            />
+          )}
+
+          {/* Service Item / Subtask — grouped picker, only for project tasks with a CB */}
+          {isProjectTask && cbServiceItems.length > 0 && (
+            <ServiceSubtaskPicker
+              label="Service Item / Subtask"
+              helperText="— from cost breakdown"
+              placeholder="Pick a subtask (or type a custom title below)"
+              serviceItems={cbServiceItems}
+              serviceItemId={form.serviceItemId ?? ''}
+              serviceItemSubtaskId={form.serviceItemSubtaskId ?? ''}
+              onSelect={(siId, stId) => {
+                const line = cbLines.find((l) => l.serviceItemId === siId);
+                let autoHours: number | undefined = undefined;
+                let autoTitle: string | null = null;
+                if (line) {
+                  // When an assignee is set, scope hours to their role;
+                  // otherwise fall back to the sum of all role estimates.
+                  const relevant = assigneeRoleMatchers
+                    ? line.roleEstimates.filter((re) =>
+                        assigneeRoleMatchers.has(re.role),
+                      )
+                    : line.roleEstimates;
+                  if (stId) {
+                    autoHours = relevant
+                      .filter((re) => re.subtaskId === stId)
+                      .reduce((s, re) => s + re.estimatedHours, 0);
+                    const subtask = line.serviceItem.subtasks.find((s) => s.id === stId);
+                    autoTitle = subtask?.name ?? null;
+                  } else {
+                    autoHours = relevant.reduce((s, re) => s + re.estimatedHours, 0);
+                    autoTitle = line.serviceItem.name;
+                  }
+                }
+                setForm((prev) => ({
+                  ...prev,
+                  serviceItemId: siId || undefined,
+                  serviceItemSubtaskId: stId || undefined,
+                  costBreakdownLineId: line?.id ?? undefined,
+                  estimatedHours:
+                    autoHours && autoHours > 0 ? autoHours : prev.estimatedHours,
+                  title: autoTitle ?? prev.title,
+                }));
+              }}
+            />
+          )}
+
+          {/* Title — auto-filled from the selected subtask, editable for custom tasks */}
           <input
             value={form.title}
-            onChange={(e) =>
-              setForm({ ...form, title: e.target.value })
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder={
+              isProjectTask && cbServiceItems.length > 0
+                ? 'Pick a subtask above, or type a custom title...'
+                : 'Task title...'
             }
-            placeholder="Task title..."
             className="w-full text-[17px] font-semibold bg-transparent outline-none placeholder:text-muted-foreground text-foreground leading-snug"
             autoFocus
           />
@@ -308,17 +479,32 @@ export function TaskDialog({
             rows={2}
           />
 
-          <div className="border-t border-dashed border-border/50" />
+          {/* Estimated hours — shown once a service item/subtask is picked */}
+          {form.serviceItemId && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
+                Estimated Hours
+              </p>
+              <input
+                type="number"
+                min={0}
+                step={0.25}
+                value={form.estimatedHours ?? ''}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    estimatedHours: e.target.value
+                      ? parseFloat(e.target.value)
+                      : undefined,
+                  }))
+                }
+                placeholder="Auto-filled from cost breakdown"
+                className="w-36 h-8 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          )}
 
-          {/* Entity Link — at top so task type can filter based on it */}
-          <EntityLinkPicker
-            entityType={form.entityType ?? ''}
-            entityId={form.entityId ?? ''}
-            onChange={(type, id, jobTypeId) => {
-              setForm({ ...form, entityType: type, entityId: id, taskTypeId: '', serviceItemId: undefined, costBreakdownLineId: undefined, estimatedHours: undefined });
-              setLinkedJobTypeId(jobTypeId);
-            }}
-          />
+          <div className="border-t border-dashed border-border/50" />
 
           {/* Task Type — filtered by the linked entity's project type */}
           {taskTypes.length > 0 && (
@@ -390,58 +576,6 @@ export function TaskDialog({
             </div>
           )}
 
-          {/* Service Item — only shown when linked to a project that has CB lines */}
-          {isProjectTask && cbLines.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
-                Service Item
-                <span className="ml-1.5 normal-case text-muted-foreground tracking-normal font-normal">
-                  — from cost breakdown
-                </span>
-              </p>
-              <SearchableSelect
-                value={form.serviceItemId ?? ''}
-                onValueChange={(val) => {
-                  const line = cbLines.find((l) => l.serviceItemId === val);
-                  const autoHours = line
-                    ? line.roleEstimates.reduce((s, re) => s + re.estimatedHours, 0)
-                    : 0;
-                  setForm((prev) => ({
-                    ...prev,
-                    serviceItemId: val || undefined,
-                    costBreakdownLineId: line?.id || undefined,
-                    estimatedHours: autoHours > 0 ? autoHours : prev.estimatedHours,
-                  }));
-                }}
-                placeholder="Select service item (optional)"
-                searchPlaceholder="Search service items…"
-                emptyMessage="No service items found."
-                options={[
-                  { value: '', label: 'None' },
-                  ...cbLines.map((l) => ({ value: l.serviceItemId, label: l.serviceItem.name })),
-                ]}
-              />
-              {form.serviceItemId && (
-                <div className="space-y-1.5 pt-1">
-                  <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
-                    Estimated Hours
-                  </p>
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.25}
-                    value={form.estimatedHours ?? ''}
-                    onChange={(e) => setForm((prev) => ({ ...prev, estimatedHours: e.target.value ? parseFloat(e.target.value) : undefined }))}
-                    placeholder="Auto-filled from cost breakdown"
-                    className="w-36 h-8 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="border-t border-dashed border-border/50" />
-
           {/* Priority */}
           <div className="space-y-2">
             <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
@@ -465,7 +599,10 @@ export function TaskDialog({
             </div>
           </div>
 
-          {/* Status (edit mode only) */}
+          </fieldset>
+
+          {/* Status (edit mode only) — sits outside the disabled fieldset so
+              read-only users assigned to the task can still mark it as done. */}
           {editingTask && (
             <div className="space-y-2">
               <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
@@ -519,6 +656,9 @@ export function TaskDialog({
             </div>
           )}
 
+          <fieldset
+            disabled={readOnly}
+            className="border-0 p-0 m-0 min-w-0 disabled:opacity-70">
           {/* Due Date + Time */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -596,133 +736,17 @@ export function TaskDialog({
               )}
             </div>
           </div>
-
-          {/* Assign To */}
-          {canAssign && assignableUsers.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
-                Assign To
-              </p>
-              <Popover
-                open={assignOpen}
-                onOpenChange={(v) => {
-                  setAssignOpen(v);
-                  if (!v) setAssignQuery('');
-                }}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-                      'w-full flex items-center gap-2 px-3 h-9 rounded-md border border-input bg-background text-sm text-left transition-colors hover:bg-muted/40',
-                      !selectedUser && 'text-muted-foreground',
-                    )}>
-                    {selectedUser ? (
-                      <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
-                        {selectedUser.name.charAt(0).toUpperCase()}
-                      </div>
-                    ) : (
-                      <User className="h-3.5 w-3.5 shrink-0" />
-                    )}
-                    <span className="flex-1 truncate">
-                      {selectedUser
-                        ? `${selectedUser.name}${selectedUser.id === currentUserId ? ' (me)' : ''}`
-                        : 'Assign to someone...'}
-                    </span>
-                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="p-0 overflow-hidden flex flex-col"
-                  style={{
-                    width: 'var(--radix-popover-trigger-width)',
-                    maxHeight: '260px',
-                  }}
-                  align="start"
-                  sideOffset={4}>
-                  <div className="flex items-center gap-2 px-3 h-9 border-b border-border/60 shrink-0">
-                    <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <input
-                      autoFocus
-                      value={assignQuery}
-                      onChange={(e) => setAssignQuery(e.target.value)}
-                      placeholder="Search people..."
-                      className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                    />
-                    {assignQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setAssignQuery('')}>
-                        <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                      </button>
-                    )}
-                  </div>
-                  <div
-                    className="overflow-y-auto flex-1 py-1"
-                    onWheel={(e) => e.stopPropagation()}>
-                    {/* Unassigned */}
-                    {!assignQuery && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setForm({ ...form, assignedToId: '' });
-                          setAssignOpen(false);
-                        }}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-muted/50',
-                          !form.assignedToId && 'bg-muted/30',
-                        )}>
-                        <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground/25 flex items-center justify-center shrink-0">
-                          <User className="h-2.5 w-2.5 text-muted-foreground" />
-                        </div>
-                        <span className="flex-1 text-muted-foreground">
-                          Unassigned
-                        </span>
-                        {!form.assignedToId && (
-                          <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-                        )}
-                      </button>
-                    )}
-                    {filteredAssignees.map((u) => (
-                      <button
-                        key={u.id}
-                        type="button"
-                        onClick={() => {
-                          setForm({ ...form, assignedToId: u.id });
-                          setAssignOpen(false);
-                          setAssignQuery('');
-                        }}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-muted/50',
-                          form.assignedToId === u.id && 'bg-muted/30',
-                        )}>
-                        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
-                          {u.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="flex-1 truncate">
-                          {u.name}
-                          {u.id === currentUserId ? ' (me)' : ''}
-                        </span>
-                        {form.assignedToId === u.id && (
-                          <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-                        )}
-                      </button>
-                    ))}
-                    {filteredAssignees.length === 0 && (
-                      <div className="py-6 text-center text-sm text-muted-foreground">
-                        No users found
-                      </div>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          )}
+          </fieldset>
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-border/60 bg-muted/20">
           <span className="text-[10px] uppercase tracking-[0.06em] text-muted-foreground font-medium">
-            {editingTask ? 'Editing task' : 'New task'}
+            {editingTask
+              ? readOnly
+                ? 'Viewing task'
+                : 'Editing task'
+              : 'New task'}
           </span>
           <div className="flex items-center gap-2">
             <Button
@@ -732,20 +756,30 @@ export function TaskDialog({
               onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleSave}
-              disabled={
-                saving ||
-                !form.title.trim() ||
-                (isMarkingDone && !form.completionNote?.trim())
-              }>
-              {saving && (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              )}
-              {editingTask ? 'Update task' : 'Create task'}
-            </Button>
+            {/* In read-only mode the only legal save is a status change
+                (handled by canMarkDone). Hide Save entirely if there is no
+                pending status change. */}
+            {(() => {
+              const pendingStatusChange =
+                !!editingTask && form.status !== editingTask.status;
+              if (readOnly && !pendingStatusChange) return null;
+              return (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={
+                    saving ||
+                    !form.title.trim() ||
+                    (isMarkingDone && !form.completionNote?.trim())
+                  }>
+                  {saving && (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  )}
+                  {editingTask ? 'Update task' : 'Create task'}
+                </Button>
+              );
+            })()}
           </div>
         </div>
       </DialogContent>

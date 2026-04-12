@@ -71,17 +71,34 @@ export class TasksController {
 
   @Get('entity/:entityType/:entityId')
   @Permissions('tasks:view')
-  findByEntity(
+  async findByEntity(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string,
   ) {
-    return this.tasksService.findByEntity(entityType, entityId);
+    const canViewAll = await this.permissionsService.hasPermission(
+      user.role,
+      'tasks:view_all',
+    );
+    return this.tasksService.findByEntity(
+      entityType,
+      entityId,
+      user.id,
+      canViewAll,
+    );
   }
 
   @Get(':id')
   @Permissions('tasks:view')
-  findOne(@Param('id') id: string) {
-    return this.tasksService.findOne(id);
+  async findOne(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
+    const canViewAll = await this.permissionsService.hasPermission(
+      user.role,
+      'tasks:view_all',
+    );
+    return this.tasksService.findOne(id, user.id, canViewAll);
   }
 
   @Post()

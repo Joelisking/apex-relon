@@ -88,7 +88,7 @@ export class TasksService {
     return this.resolveEntityNames(tasks);
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, viewerUserId?: string, canViewAll?: boolean) {
     const task = await this.prisma.task.findUnique({
       where: { id },
       include: {
@@ -100,6 +100,17 @@ export class TasksService {
       },
     });
     if (!task) throw new NotFoundException('Task not found');
+
+    // Mirror findAll's ownership scoping: without tasks:view_all, the viewer
+    // can only read tasks assigned to them or created by them. Return 404
+    // (not 403) so existence isn't inferable by probing IDs.
+    if (!canViewAll && viewerUserId) {
+      const isOwner = task.assignedToId
+        ? task.assignedToId === viewerUserId
+        : task.createdById === viewerUserId;
+      if (!isOwner) throw new NotFoundException('Task not found');
+    }
+
     return (await this.resolveEntityNames([task]))[0];
   }
 
@@ -459,9 +470,22 @@ export class TasksService {
     return { team, members: memberStats };
   }
 
-  async findByEntity(entityType: string, entityId: string) {
+  async findByEntity(
+    entityType: string,
+    entityId: string,
+    viewerUserId?: string,
+    canViewAll?: boolean,
+  ) {
+    const where: Record<string, unknown> = { entityType, entityId };
+    // Scope to tasks the viewer owns unless they have tasks:view_all.
+    if (!canViewAll && viewerUserId) {
+      where.OR = [
+        { assignedToId: viewerUserId },
+        { createdById: viewerUserId },
+      ];
+    }
     const tasks = await this.prisma.task.findMany({
-      where: { entityType, entityId },
+      where,
       include: {
         assignedTo: {
           select: { id: true, name: true, email: true, role: true },

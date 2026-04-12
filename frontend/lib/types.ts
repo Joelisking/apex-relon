@@ -660,6 +660,10 @@ export interface Task {
   taskType?: { id: string; name: string } | null;
   completionNote?: string | null;
   uncompleteReason?: string | null;
+  estimatedHours?: number | null;
+  costBreakdownLineId?: string | null;
+  serviceItemId?: string | null;
+  serviceItemSubtaskId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
