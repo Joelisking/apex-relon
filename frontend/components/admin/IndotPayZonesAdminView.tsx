@@ -113,11 +113,29 @@ interface ZoneDialogProps {
   initialValues?: ZoneFormState & { id?: string };
   payGrades: PayGrade[];
   counties: DropdownOption[];
+  existingZones: IndotPayZone[];
 }
 
-function ZoneDialog({ open, onClose, initialValues, payGrades, counties }: ZoneDialogProps) {
+function ZoneDialog({
+  open,
+  onClose,
+  initialValues,
+  payGrades,
+  counties,
+  existingZones,
+}: ZoneDialogProps) {
   const queryClient = useQueryClient();
   const isEdit = !!initialValues?.id;
+
+  // Counties + grades already taken by OTHER zones (excluding the one being edited).
+  const otherZones = existingZones.filter((z) => z.id !== initialValues?.id);
+  const takenPayGradeIds = new Set(otherZones.map((z) => z.payGradeId));
+  const takenCounties = new Set(otherZones.flatMap((z) => z.counties));
+
+  const availablePayGrades = payGrades.filter(
+    (g) => g.isActive && !takenPayGradeIds.has(g.id),
+  );
+  const availableCounties = counties.filter((c) => !takenCounties.has(c.label));
 
   const [form, setForm] = useState<ZoneFormState>(
     initialValues
@@ -137,7 +155,7 @@ function ZoneDialog({ open, onClose, initialValues, payGrades, counties }: ZoneD
       reset();
       onClose();
     },
-    onError: () => toast.error('Failed to create zone'),
+    onError: (err: Error) => toast.error(err.message || 'Failed to create zone'),
   });
 
   const updateMutation = useMutation({
@@ -147,7 +165,7 @@ function ZoneDialog({ open, onClose, initialValues, payGrades, counties }: ZoneD
       toast.success('Zone updated');
       onClose();
     },
-    onError: () => toast.error('Failed to update zone'),
+    onError: (err: Error) => toast.error(err.message || 'Failed to update zone'),
   });
 
   const isPending = createMutation.isPending || updateMutation.isPending;
@@ -203,7 +221,12 @@ function ZoneDialog({ open, onClose, initialValues, payGrades, counties }: ZoneD
                 <SelectValue placeholder="Select pay grade…" />
               </SelectTrigger>
               <SelectContent>
-                {payGrades.map((grade) => (
+                {availablePayGrades.length === 0 && (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground italic">
+                    All pay grades are already assigned to other zones
+                  </div>
+                )}
+                {availablePayGrades.map((grade) => (
                   <SelectItem key={grade.id} value={grade.id}>
                     {grade.name}
                     {grade.isDefault && (
@@ -215,7 +238,7 @@ function ZoneDialog({ open, onClose, initialValues, payGrades, counties }: ZoneD
             </Select>
             <p className="text-xs text-muted-foreground">
               Time entries for projects in these counties will use this pay grade to determine
-              the labor rate.
+              the labor rate. Each pay grade can only belong to one zone.
             </p>
           </div>
 
@@ -223,9 +246,12 @@ function ZoneDialog({ open, onClose, initialValues, payGrades, counties }: ZoneD
             <Label>Counties</Label>
             <CountyMultiSelect
               selected={form.counties}
-              options={counties}
+              options={availableCounties}
               onChange={(c) => setForm((p) => ({ ...p, counties: c }))}
             />
+            <p className="text-xs text-muted-foreground">
+              Counties already used by another zone are hidden to prevent conflicts.
+            </p>
           </div>
         </div>
 
@@ -421,6 +447,7 @@ export function IndotPayZonesAdminView() {
         }
         payGrades={payGrades}
         counties={countyOptions}
+        existingZones={zones}
       />
 
       <AlertDialog open={!!deletingId} onOpenChange={(v) => { if (!v) setDeletingId(null); }}>

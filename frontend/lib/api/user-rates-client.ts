@@ -45,7 +45,17 @@ async function authFetch(path: string, init: RequestInit = {}, base = 'time-trac
       ...(init.headers ?? {}),
     },
   });
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+  if (!res.ok) {
+    let message = `Request failed: ${res.status}`;
+    try {
+      const body = await res.json();
+      if (typeof body?.message === 'string') message = body.message;
+      else if (Array.isArray(body?.message)) message = body.message.join(', ');
+    } catch {
+      // body wasn't JSON; keep the generic message
+    }
+    throw new Error(message);
+  }
   if (res.status === 204 || res.headers.get('content-length') === '0') return undefined;
   return res.json();
 }

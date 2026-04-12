@@ -857,6 +857,10 @@ export class SettingsService implements OnModuleInit {
   }
 
   async createIndotPayZone(dto: { name: string; payGradeId: string; counties?: string[] }) {
+    await this.assertZoneUniqueness({
+      payGradeId: dto.payGradeId,
+      counties: dto.counties ?? [],
+    });
     return this.prisma.indotPayZone.create({
       data: { name: dto.name, payGradeId: dto.payGradeId, counties: dto.counties ?? [] },
       include: { payGrade: { select: { id: true, name: true, code: true } } },
@@ -864,11 +868,48 @@ export class SettingsService implements OnModuleInit {
   }
 
   async updateIndotPayZone(id: string, dto: Partial<{ name: string; payGradeId: string; counties: string[] }>) {
+    if (dto.payGradeId !== undefined || dto.counties !== undefined) {
+      const current = await this.prisma.indotPayZone.findUnique({ where: { id } });
+      if (!current) throw new NotFoundException(`INDOT pay zone ${id} not found`);
+      await this.assertZoneUniqueness({
+        payGradeId: dto.payGradeId ?? current.payGradeId,
+        counties: dto.counties ?? current.counties,
+        excludeId: id,
+      });
+    }
     return this.prisma.indotPayZone.update({
       where: { id },
       data: dto,
       include: { payGrade: { select: { id: true, name: true, code: true } } },
     });
+  }
+
+  private async assertZoneUniqueness(args: {
+    payGradeId: string;
+    counties: string[];
+    excludeId?: string;
+  }) {
+    const others = await this.prisma.indotPayZone.findMany({
+      where: args.excludeId ? { id: { not: args.excludeId } } : undefined,
+      select: { id: true, name: true, payGradeId: true, counties: true, payGrade: { select: { name: true } } },
+    });
+
+    const gradeConflict = others.find((z) => z.payGradeId === args.payGradeId);
+    if (gradeConflict) {
+      throw new BadRequestException(
+        `Pay grade "${gradeConflict.payGrade.name}" is already assigned to zone "${gradeConflict.name}"`,
+      );
+    }
+
+    const requested = new Set(args.counties);
+    for (const z of others) {
+      const overlap = z.counties.filter((c) => requested.has(c));
+      if (overlap.length > 0) {
+        throw new BadRequestException(
+          `Counties already assigned to zone "${z.name}": ${overlap.join(', ')}`,
+        );
+      }
+    }
   }
 
   async deleteIndotPayZone(id: string) {
