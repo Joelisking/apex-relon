@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../database/prisma.service';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { CreateUserRateDto } from './dto/create-user-rate.dto';
+import { UpdateUserRateDto } from './dto/update-user-rate.dto';
 import { CreateProjectBudgetDto } from './dto/create-project-budget.dto';
 import { ProjectsProfitabilityService } from '../projects/projects-profitability.service';
 
@@ -162,6 +163,28 @@ export class TimeTrackingService {
       orderBy: { effectiveFrom: 'desc' },
       include: { payGrade: { select: { id: true, name: true, code: true } } },
     });
+  }
+
+  async updateRate(id: string, dto: UpdateUserRateDto) {
+    const data: {
+      rate?: number;
+      effectiveFrom?: Date;
+      effectiveTo?: Date | null;
+    } = {};
+    if (dto.rate !== undefined) data.rate = dto.rate;
+    if (dto.effectiveFrom !== undefined) data.effectiveFrom = new Date(dto.effectiveFrom);
+    if (dto.effectiveTo !== undefined) {
+      data.effectiveTo = dto.effectiveTo ? new Date(dto.effectiveTo) : null;
+    }
+    return this.prisma.userRate.update({
+      where: { id },
+      data,
+      include: { payGrade: { select: { id: true, name: true, code: true } } },
+    });
+  }
+
+  async deleteRate(id: string) {
+    await this.prisma.userRate.delete({ where: { id } });
   }
 
   /**

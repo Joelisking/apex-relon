@@ -50,6 +50,12 @@ async function authFetch(path: string, init: RequestInit = {}, base = 'time-trac
   return res.json();
 }
 
+export interface UpdateUserRateDto {
+  rate?: number;
+  effectiveFrom?: string;
+  effectiveTo?: string | null;
+}
+
 export const userRatesApi = {
   getForUser: (userId: string): Promise<UserRate[]> =>
     authFetch(`/rates/${userId}`),
@@ -59,6 +65,15 @@ export const userRatesApi = {
       method: 'POST',
       body: JSON.stringify(dto),
     }),
+
+  update: (id: string, dto: UpdateUserRateDto): Promise<UserRate> =>
+    authFetch(`/rates/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    }),
+
+  delete: (id: string): Promise<void> =>
+    authFetch(`/rates/${id}`, { method: 'DELETE' }),
 };
 
 export const payGradesApi = {

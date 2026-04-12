@@ -14,6 +14,7 @@ import {
 import { TimeTrackingService } from './time-tracking.service';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { CreateUserRateDto } from './dto/create-user-rate.dto';
+import { UpdateUserRateDto } from './dto/update-user-rate.dto';
 import { CreateProjectBudgetDto } from './dto/create-project-budget.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -121,6 +122,19 @@ export class TimeTrackingController {
   @Permissions('time_tracking:view')
   getRates(@Param('userId') userId: string) {
     return this.timeTrackingService.getRatesForUser(userId);
+  }
+
+  @Patch('rates/:id')
+  @Permissions('time_tracking:create')
+  updateRate(@Param('id') id: string, @Body() dto: UpdateUserRateDto) {
+    return this.timeTrackingService.updateRate(id, dto);
+  }
+
+  @Delete('rates/:id')
+  @HttpCode(204)
+  @Permissions('time_tracking:create')
+  deleteRate(@Param('id') id: string) {
+    return this.timeTrackingService.deleteRate(id);
   }
 
   // ─── Budgets ──────────────────────────────────────────────────────────────

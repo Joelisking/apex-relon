@@ -775,23 +775,75 @@ export class SettingsService implements OnModuleInit {
   }
 
   async createPayGrade(dto: { name: string; code: string; description?: string; sortOrder?: number; isDefault?: boolean }) {
-    return this.prisma.payGrade.create({
-      data: {
-        name: dto.name,
-        code: dto.code,
-        description: dto.description,
-        sortOrder: dto.sortOrder ?? 0,
-        isDefault: dto.isDefault ?? false,
-        isActive: true,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      if (dto.isDefault) {
+        await tx.payGrade.updateMany({
+          where: { isDefault: true },
+          data: { isDefault: false },
+        });
+      }
+      return tx.payGrade.create({
+        data: {
+          name: dto.name,
+          code: dto.code,
+          description: dto.description,
+          sortOrder: dto.sortOrder ?? 0,
+          isDefault: dto.isDefault ?? false,
+          isActive: true,
+        },
+      });
     });
   }
 
-  async updatePayGrade(id: string, dto: Partial<{ name: string; description: string; sortOrder: number; isDefault: boolean; isActive: boolean }>) {
-    return this.prisma.payGrade.update({ where: { id }, data: dto });
+  async updatePayGrade(
+    id: string,
+    dto: Partial<{ name: string; description: string; sortOrder: number; isDefault: boolean; isActive: boolean }>,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.payGrade.findUnique({ where: { id } });
+      if (!current) {
+        throw new NotFoundException(`Pay grade ${id} not found`);
+      }
+
+      if (dto.isDefault === false && current.isDefault) {
+        throw new BadRequestException(
+          'Cannot unset the default pay grade directly — set another grade as default instead',
+        );
+      }
+      if (dto.isActive === false && current.isDefault) {
+        throw new BadRequestException('Cannot deactivate the default pay grade');
+      }
+
+      if (dto.isDefault === true && !current.isDefault) {
+        await tx.payGrade.updateMany({
+          where: { isDefault: true, id: { not: id } },
+          data: { isDefault: false },
+        });
+      }
+
+      return tx.payGrade.update({ where: { id }, data: dto });
+    });
   }
 
   async deletePayGrade(id: string) {
+    const grade = await this.prisma.payGrade.findUnique({
+      where: { id },
+      include: { _count: { select: { userRates: true, payZones: true } } },
+    });
+    if (!grade) throw new NotFoundException(`Pay grade ${id} not found`);
+    if (grade.isDefault) {
+      throw new BadRequestException('Cannot delete the default pay grade');
+    }
+    if (grade._count.userRates > 0) {
+      throw new BadRequestException(
+        `Cannot delete pay grade "${grade.name}" — ${grade._count.userRates} user rate(s) still reference it`,
+      );
+    }
+    if (grade._count.payZones > 0) {
+      throw new BadRequestException(
+        `Cannot delete pay grade "${grade.name}" — ${grade._count.payZones} INDOT pay zone(s) still reference it`,
+      );
+    }
     await this.prisma.payGrade.delete({ where: { id } });
   }
 
@@ -826,23 +878,22 @@ export class SettingsService implements OnModuleInit {
   private async seedPayGrades() {
     const PAY_GRADES = [
       { code: 'base',    name: 'Base Rate',   description: 'Standard labor rate for all non-INDOT work', sortOrder: 0, isDefault: true },
-      { code: 'billing', name: 'Billing',      description: 'Billable rate charged to clients',           sortOrder: 1, isDefault: false },
-      { code: 'indot_1', name: 'INDOT Pay 1',  description: 'INDOT Pay Grade 1',                         sortOrder: 2, isDefault: false },
-      { code: 'indot_2', name: 'INDOT Pay 2',  description: 'INDOT Pay Grade 2',                         sortOrder: 3, isDefault: false },
-      { code: 'indot_3', name: 'INDOT Pay 3',  description: 'INDOT Pay Grade 3',                         sortOrder: 4, isDefault: false },
+      { code: 'indot_1', name: 'INDOT Pay 1', description: 'INDOT Pay Grade 1',                          sortOrder: 1, isDefault: false },
+      { code: 'indot_2', name: 'INDOT Pay 2', description: 'INDOT Pay Grade 2',                          sortOrder: 2, isDefault: false },
+      { code: 'indot_3', name: 'INDOT Pay 3', description: 'INDOT Pay Grade 3',                          sortOrder: 3, isDefault: false },
     ];
 
+    // First-run only: skip if any grades already exist so admin deletions
+    // (other than Base Rate, which is protected by deletePayGrade) aren't resurrected.
     const existingCount = await this.prisma.payGrade.count();
-    if (existingCount >= PAY_GRADES.length) {
-      this.logger.log(`Pay grades already seeded (${existingCount} entries). Skipping.`);
+    if (existingCount > 0) {
+      this.logger.log(`Pay grades already present (${existingCount} entries). Skipping seed.`);
       return;
     }
 
     for (const grade of PAY_GRADES) {
-      await this.prisma.payGrade.upsert({
-        where: { code: grade.code },
-        update: {},
-        create: {
+      await this.prisma.payGrade.create({
+        data: {
           name: grade.name,
           code: grade.code,
           description: grade.description,
