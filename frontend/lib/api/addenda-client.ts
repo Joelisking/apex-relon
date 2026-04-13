@@ -5,6 +5,10 @@ export interface AddendumLine {
   addendumId: string;
   description: string;
   role?: string | null;
+  serviceItemId?: string | null;
+  serviceItemSubtaskId?: string | null;
+  serviceItem?: { id: string; name: string } | null;
+  subtask?: { id: string; name: string; serviceItemId: string } | null;
   estimatedHours: number;
   billableRate: number;
   lineTotal: number;
@@ -21,6 +25,7 @@ export interface Addendum {
   status: string;
   total: number;
   approvedAt?: string | null;
+  roleDisplayNames?: Record<string, string> | null;
   createdById: string;
   createdAt: string;
   updatedAt: string;
@@ -28,28 +33,35 @@ export interface Addendum {
   lines: AddendumLine[];
 }
 
+export interface CreateAddendumLinePayload {
+  description: string;
+  role?: string;
+  serviceItemId?: string;
+  serviceItemSubtaskId?: string;
+  estimatedHours: number;
+  billableRate: number;
+  sortOrder?: number;
+}
+
 export interface CreateAddendumDto {
   title: string;
   description?: string;
-  lines?: {
-    description: string;
-    role?: string;
-    estimatedHours: number;
-    billableRate: number;
-    sortOrder?: number;
-  }[];
+  lines?: CreateAddendumLinePayload[];
 }
 
 export interface UpdateAddendumDto {
   title?: string;
   description?: string;
   status?: string;
+  roleDisplayNames?: Record<string, string> | null;
 }
 
 export interface UpsertAddendumLineDto {
   id?: string;
   description: string;
   role?: string;
+  serviceItemId?: string;
+  serviceItemSubtaskId?: string;
   estimatedHours: number;
   billableRate: number;
   sortOrder?: number;

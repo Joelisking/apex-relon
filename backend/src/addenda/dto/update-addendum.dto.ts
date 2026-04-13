@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, Min } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsObject, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class UpdateAddendumDto {
@@ -13,6 +13,10 @@ export class UpdateAddendumDto {
   @IsString()
   @IsOptional()
   status?: string;
+
+  @IsObject()
+  @IsOptional()
+  roleDisplayNames?: Record<string, string> | null;
 }
 
 export class UpsertAddendumLineDto {
@@ -26,6 +30,14 @@ export class UpsertAddendumLineDto {
   @IsString()
   @IsOptional()
   role?: string;
+
+  @IsString()
+  @IsOptional()
+  serviceItemId?: string;
+
+  @IsString()
+  @IsOptional()
+  serviceItemSubtaskId?: string;
 
   @IsNumber()
   @Min(0)

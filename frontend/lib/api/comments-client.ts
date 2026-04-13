@@ -6,6 +6,7 @@ export interface ProjectComment {
   authorId: string;
   content: string;
   mentionedIds: string[];
+  visibility: 'TEAM' | 'PRIVATE';
   createdAt: string;
   updatedAt: string;
   author: { id: string; name: string; role: string };
@@ -14,6 +15,7 @@ export interface ProjectComment {
 export interface CreateCommentDto {
   content: string;
   mentionedIds?: string[];
+  visibility?: 'TEAM' | 'PRIVATE';
 }
 
 export const commentsApi = {

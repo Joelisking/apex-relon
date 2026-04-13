@@ -9,6 +9,14 @@ export class CreateAddendumLineDto {
   @IsOptional()
   role?: string;
 
+  @IsString()
+  @IsOptional()
+  serviceItemId?: string;
+
+  @IsString()
+  @IsOptional()
+  serviceItemSubtaskId?: string;
+
   @IsNumber()
   @Min(0)
   @Type(() => Number)

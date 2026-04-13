@@ -22,8 +22,11 @@ export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
   @Get('projects/:projectId/comments')
-  findAll(@Param('projectId') projectId: string) {
-    return this.commentsService.findAllForProject(projectId);
+  findAll(
+    @Param('projectId') projectId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.commentsService.findAllForProject(projectId, user.id);
   }
 
   @Post('projects/:projectId/comments')

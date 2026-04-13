@@ -599,6 +599,46 @@ export class EmailService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
+  // Comment Mention
+  // ─────────────────────────────────────────────────────────────────────────
+  async sendCommentMentionEmail(
+    to: string,
+    recipientName: string,
+    authorName: string,
+    projectName: string,
+    projectId: string,
+    commentExcerpt: string,
+  ): Promise<void> {
+    const projectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/projects/${projectId}`;
+    const cleanExcerpt = commentExcerpt.replace(/@\[([^\]]+)\]\([a-f0-9-]{36}\)/g, '@$1');
+
+    const body = `
+      ${greeting(recipientName)}
+      ${paragraph(`<strong>${authorName}</strong> mentioned you in a comment on <strong>${projectName}</strong>:`)}
+      ${alertBox(`"${cleanExcerpt.length > 200 ? cleanExcerpt.slice(0, 200) + '…' : cleanExcerpt}"`, 'warning')}
+      ${ctaButton('View Project', projectUrl)}
+      ${signature()}
+    `;
+
+    const html = shell({
+      headerLabel: 'You were mentioned',
+      headerIcon: '',
+      preheader: `${authorName} mentioned you on ${projectName}`,
+      body,
+    });
+
+    const text = `Hi ${recipientName},\n\n${authorName} mentioned you in a comment on "${projectName}":\n\n"${cleanExcerpt}"\n\nView project: ${projectUrl}\n\nApex Consulting & Surveying, Inc.`;
+
+    await this.send({
+      to,
+      subject: `${authorName} mentioned you on "${projectName}"`,
+      html,
+      text,
+      label: 'Comment Mention',
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   // Workflow Automation Email
   // ─────────────────────────────────────────────────────────────────────────
   async sendWorkflowEmail(to: string, subject: string, body: string): Promise<void> {

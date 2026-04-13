@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsArray, IsOptional, IsUUID } from 'class-validator';
+import { IsString, IsNotEmpty, IsArray, IsOptional, IsUUID, IsIn } from 'class-validator';
 
 export class CreateCommentDto {
   @IsString()
@@ -9,4 +9,9 @@ export class CreateCommentDto {
   @IsUUID(undefined, { each: true })
   @IsOptional()
   mentionedIds?: string[];
+
+  @IsString()
+  @IsIn(['TEAM', 'PRIVATE'])
+  @IsOptional()
+  visibility?: string;
 }

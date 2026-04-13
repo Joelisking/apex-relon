@@ -388,16 +388,17 @@ model ProjectServiceItem {
 }
 
 model ProjectAddendum {
-  id          String   @id @default(uuid())
-  projectId   String
-  title       String
-  description String?  @db.Text
-  status      String   @default("DRAFT")  // "DRAFT" | "APPROVED" | "INVOICED"
-  total       Float    @default(0)
-  approvedAt  DateTime?
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String   @id @default(uuid())
+  projectId        String
+  title            String
+  description      String?  @db.Text
+  status           String   @default("DRAFT")  // "DRAFT" | "APPROVED" | "INVOICED"
+  total            Float    @default(0)
+  approvedAt       DateTime?
+  roleDisplayNames Json?
+  createdById      String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdBy   User    @relation("AddendaCreatedBy", fields: [createdById], references: [id])
@@ -408,18 +409,22 @@ model ProjectAddendum {
 }
 
 model ProjectAddendumLine {
-  id             String   @id @default(uuid())
-  addendumId     String
-  description    String
-  role           String?
-  estimatedHours Float    @default(0)
-  billableRate   Float    @default(0)
-  lineTotal      Float    @default(0)
-  sortOrder      Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  addendumId           String
+  description          String
+  role                 String?
+  serviceItemId        String?
+  serviceItemSubtaskId String?
+  estimatedHours       Float    @default(0)
+  billableRate         Float    @default(0)
+  lineTotal            Float    @default(0)
+  sortOrder            Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
-  addendum ProjectAddendum @relation(fields: [addendumId], references: [id], onDelete: Cascade)
+  addendum    ProjectAddendum     @relation(fields: [addendumId], references: [id], onDelete: Cascade)
+  serviceItem ServiceItem?        @relation(fields: [serviceItemId], references: [id])
+  subtask     ServiceItemSubtask? @relation(fields: [serviceItemSubtaskId], references: [id])
 
   @@index([addendumId])
   @@map("project_addendum_lines")
@@ -1201,6 +1206,7 @@ model ServiceItem {
   quoteLineItems      QuoteLineItem[]
   projectServiceItems ProjectServiceItem[]
   costBreakdownLines  CostBreakdownLine[]
+  addendumLines       ProjectAddendumLine[]
 
   @@index([isActive])
   @@map("service_items")
@@ -1218,6 +1224,7 @@ model ServiceItemSubtask {
   roleEstimates ServiceItemRoleEstimate[]
   timeEntries   TimeEntry[]
   costBreakdownEstimates CostBreakdownRoleEstimate[]
+  addendumLines          ProjectAddendumLine[]
 
   @@index([serviceItemId])
   @@map("service_item_subtasks")
@@ -1349,6 +1356,7 @@ model ProjectComment {
   authorId     String
   content      String   @db.Text
   mentionedIds String[] @default([])
+  visibility   String   @default("TEAM")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

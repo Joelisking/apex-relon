@@ -40,6 +40,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { rolesApi, type RoleResponse } from '@/lib/api/roles-client';
 import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
+import { addendaApi, type Addendum } from '@/lib/api/addenda-client';
 import type { ProjectServiceItem, ServiceItem, CostBreakdown } from '@/lib/types';
 
 function getToken() {
@@ -221,6 +222,22 @@ export function TimeEntryDialog({
     return activeCb?.lines ?? [];
   }, [projectBreakdowns]);
 
+  // Approved addenda for the selected project — used for addendum subtask visibility
+  const { data: projectAddenda } = useQuery<Addendum[]>({
+    queryKey: ['addenda', projectId],
+    queryFn: () => addendaApi.getAll(projectId!),
+    enabled: !!projectId,
+    staleTime: 60_000,
+  });
+
+  const approvedAddendumLines = useMemo(() => {
+    if (!projectAddenda) return [];
+    return projectAddenda
+      .filter((a) => a.status === 'APPROVED' || a.status === 'INVOICED')
+      .flatMap((a) => a.lines)
+      .filter((l) => l.serviceItemSubtaskId && l.role);
+  }, [projectAddenda]);
+
   // Role matchers for the effective user (self or target)
   const effectiveRole = targetUser?.role ?? authUser?.role;
   const roleMatchers = useMemo(() => {
@@ -243,19 +260,42 @@ export function TimeEntryDialog({
     : baseServiceItems;
 
   // Role-based filtering: only show subtasks where the user's role has an estimate
+  // (from cost breakdown OR from approved addendum lines)
   const visibleServiceItems = useMemo(() => {
-    if (!roleMatchers || cbLines.length === 0) return indotFiltered;
+    const hasSources = cbLines.length > 0 || approvedAddendumLines.length > 0;
+    if (!roleMatchers || !hasSources) return indotFiltered;
+
+    // Build a map of serviceItemId → Set<subtaskId> from approved addendum lines
+    const addendumSubtasksByItem = new Map<string, Set<string>>();
+    for (const line of approvedAddendumLines) {
+      if (line.serviceItemId && line.serviceItemSubtaskId && line.role && roleMatchers.has(line.role) && line.estimatedHours > 0) {
+        const existing = addendumSubtasksByItem.get(line.serviceItemId);
+        if (existing) {
+          existing.add(line.serviceItemSubtaskId);
+        } else {
+          addendumSubtasksByItem.set(line.serviceItemId, new Set([line.serviceItemSubtaskId]));
+        }
+      }
+    }
+
     const filtered = indotFiltered
       .map((si) => {
+        // Collect allowed subtask IDs from CB estimates
         const cbLine = cbLines.find((l) => l.serviceItemId === si.id);
-        if (!cbLine) return null;
-        const allowedSubtaskIds = new Set(
-          cbLine.roleEstimates
-            .filter(
-              (re) => roleMatchers.has(re.role) && re.estimatedHours > 0,
-            )
-            .map((re) => re.subtaskId),
-        );
+        const allowedSubtaskIds = new Set<string>();
+        if (cbLine) {
+          for (const re of cbLine.roleEstimates) {
+            if (roleMatchers.has(re.role) && re.estimatedHours > 0) {
+              allowedSubtaskIds.add(re.subtaskId);
+            }
+          }
+        }
+        // Also include subtask IDs from approved addendum lines
+        const addendumIds = addendumSubtasksByItem.get(si.id);
+        if (addendumIds) {
+          for (const id of addendumIds) allowedSubtaskIds.add(id);
+        }
+
         if (allowedSubtaskIds.size === 0) return null;
         const subtasks = si.subtasks.filter((st) => allowedSubtaskIds.has(st.id));
         if (subtasks.length === 0) return null;
@@ -263,7 +303,7 @@ export function TimeEntryDialog({
       })
       .filter((si): si is ServiceItem => si !== null);
     return filtered.length > 0 ? filtered : indotFiltered;
-  }, [indotFiltered, cbLines, roleMatchers]);
+  }, [indotFiltered, cbLines, approvedAddendumLines, roleMatchers]);
 
   // The selected service item (used for estimated cost display)
   const selectedItem = serviceItems.find(

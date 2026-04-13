@@ -283,11 +283,23 @@ export class TimeTrackingService {
       orderBy: { createdAt: 'desc' },
     });
 
-    const budgetHours =
+    const cbBudgetHours =
       cb?.lines.reduce(
         (sum, line) => sum + line.roleEstimates.reduce((s, re) => s + re.estimatedHours, 0),
         0,
       ) ?? 0;
+
+    // Also include hours from approved/invoiced addendum lines for the same subtask + role
+    const addendumLines = await this.prisma.projectAddendumLine.findMany({
+      where: {
+        addendum: { projectId, status: { in: ['APPROVED', 'INVOICED'] } },
+        serviceItemSubtaskId,
+        ...(roleMatchers.length > 0 ? { role: { in: roleMatchers } } : {}),
+      },
+    });
+    const addendumHours = addendumLines.reduce((s, l) => s + l.estimatedHours, 0);
+
+    const budgetHours = cbBudgetHours + addendumHours;
 
     const agg = await this.prisma.timeEntry.aggregate({
       where: { projectId, serviceItemSubtaskId, userId },

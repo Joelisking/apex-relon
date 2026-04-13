@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EmailService } from '../email/email.service';
 import { NotificationType } from '../notifications/notification-types.constants';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
@@ -18,16 +19,24 @@ function extractMentions(content: string): string[] {
 
 @Injectable()
 export class CommentsService {
+  private readonly logger = new Logger(CommentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly email: EmailService,
   ) {}
 
-  async findAllForProject(projectId: string) {
-    return this.prisma.projectComment.findMany({
+  async findAllForProject(projectId: string, requesterId: string) {
+    const comments = await this.prisma.projectComment.findMany({
       where: { projectId },
       include: { author: { select: { id: true, name: true, role: true } } },
       orderBy: { createdAt: 'asc' },
+    });
+
+    return comments.filter((c) => {
+      if (c.visibility !== 'PRIVATE') return true;
+      return c.authorId === requesterId || c.mentionedIds.includes(requesterId);
     });
   }
 
@@ -40,6 +49,7 @@ export class CommentsService {
         authorId,
         content: dto.content,
         mentionedIds,
+        visibility: dto.visibility ?? 'TEAM',
       },
       include: { author: { select: { id: true, name: true, role: true } } },
     });
@@ -71,6 +81,24 @@ export class CommentsService {
         }));
 
       await this.notifications.createMany(dtos);
+
+      // Send email to mentioned users
+      const mentionedUsers = await this.prisma.user.findMany({
+        where: { id: { in: dtos.map((d) => d.userId) } },
+        select: { id: true, name: true, email: true },
+      });
+      for (const mu of mentionedUsers) {
+        this.email
+          .sendCommentMentionEmail(
+            mu.email,
+            mu.name,
+            comment.author.name,
+            project.name,
+            projectId,
+            comment.content,
+          )
+          .catch((err) => this.logger.error(`Failed to send mention email to ${mu.email}`, err));
+      }
     }
 
     return comment;
