@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -103,9 +103,8 @@ export default function CostBreakdownView() {
             Estimating documents for surveying projects
           </p>
         </div>
-        <Button onClick={() => router.push('/cost-breakdown/new')} size="sm">
-          <Plus className="mr-2 h-4 w-4" />
-          New Breakdown
+        <Button size="sm" onClick={() => router.push('/cost-breakdown/new')}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" /> New Breakdown
         </Button>
       </div>
 

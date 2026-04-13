@@ -79,6 +79,11 @@ export const ALL_PERMISSIONS: PermissionDefinition[] = [
     label: 'Delete Projects',
     module: 'Projects',
   },
+  {
+    key: 'projects:view_financials',
+    label: 'View Project Financials (cost, margin, profit)',
+    module: 'Projects',
+  },
 
   // Costs
   { key: 'costs:view', label: 'View Cost Logs', module: 'Costs' },
@@ -298,6 +303,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'projects:edit',
     'projects:move_stage',
     'projects:delete',
+    'projects:view_financials',
     'costs:view',
     'costs:create',
     'costs:delete',
@@ -379,6 +385,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'projects:edit',
     'projects:move_stage',
     'projects:delete',
+    'projects:view_financials',
     'costs:view',
     'costs:create',
     'costs:delete',

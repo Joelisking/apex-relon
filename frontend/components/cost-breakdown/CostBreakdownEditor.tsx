@@ -48,6 +48,8 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const prefilledLeadId = searchParams.get('leadId') ?? '';
+  const prefilledProjectId = searchParams.get('projectId') ?? '';
+  const prefilledProjectName = searchParams.get('projectName') ?? '';
   const returnTo = searchParams.get('returnTo') ?? '';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -229,6 +231,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
         title: title.trim(),
         jobTypeId: jobTypeId || undefined,
         leadId: leadId || undefined,
+        projectId: prefilledProjectId || undefined,
       });
 
       const lineByServiceItemId = new Map(created.lines.map((l) => [l.serviceItemId, l]));
@@ -392,17 +395,26 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card p-6 space-y-5">
-          <div className="space-y-1.5">
-            <Label>Prospective Project</Label>
-            <SearchableSelect
-              value={leadId}
-              onValueChange={(val) => { setLeadId(val); setTitleManuallyEdited(false); }}
-              options={leadOptions}
-              placeholder="Select prospective project..."
-              searchPlaceholder="Search..."
-              emptyMessage="No prospective projects found."
-            />
-          </div>
+          {prefilledProjectId ? (
+            <div className="space-y-1.5">
+              <Label>Linked Project</Label>
+              <div className="h-9 px-3 flex items-center rounded-md border border-input bg-muted/40 text-sm text-foreground">
+                {prefilledProjectName || 'Selected project'}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label>Prospective Project</Label>
+              <SearchableSelect
+                value={leadId}
+                onValueChange={(val) => { setLeadId(val); setTitleManuallyEdited(false); }}
+                options={leadOptions}
+                placeholder="Select prospective project..."
+                searchPlaceholder="Search..."
+                emptyMessage="No prospective projects found."
+              />
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="cb-title">Title</Label>
@@ -461,6 +473,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
 
   const linkedLabel = breakdown.project?.name ?? breakdown.lead?.company ?? null;
   const hasRatedCost = breakdown.totalEstimatedCost > 0;
+  const isFinal = breakdown.status === 'FINAL';
   const cbRoles = roles.filter((r) => r.showInCostBreakdown !== false);
 
   const toN = (v: string) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
@@ -530,7 +543,6 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             onClick={() => {
               const params = new URLSearchParams({ costBreakdownId: breakdown.id });
               if (breakdown.leadId) params.set('leadId', breakdown.leadId);
-              if (returnTo) params.set('returnTo', returnTo);
               router.push(`/proposals/new?${params.toString()}`);
             }}>
             <FilePlus className="mr-1.5 h-3.5 w-3.5" />
@@ -538,6 +550,13 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
           </Button>
         </div>
       </div>
+
+      {/* Finalized banner */}
+      {isFinal && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          This cost breakdown is finalized. Revert to Draft to make changes.
+        </div>
+      )}
 
       {/* Phase cards */}
       <div className="space-y-4">
@@ -597,7 +616,8 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             variant="outline"
             size="sm"
             className="gap-1.5 text-muted-foreground hover:text-foreground"
-            onClick={() => setShowAddLine(true)}>
+            onClick={() => setShowAddLine(true)}
+            disabled={isFinal}>
             <Plus className="h-3.5 w-3.5" />
             Add Service Item Line
           </Button>
@@ -611,6 +631,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             <h2 className="text-sm font-semibold">Direct Expenses</h2>
             <Switch
               checked={breakdown.showDirectExpenses !== false}
+              disabled={isFinal}
               onCheckedChange={async (checked) => {
                 setBreakdown((prev) => prev ? { ...prev, showDirectExpenses: checked } : null);
                 try {
@@ -660,6 +681,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             value={mileageQty}
             onChange={(e) => setMileageQty(e.target.value)}
             onBlur={scheduleExpenseSave}
+            disabled={isFinal}
             className="h-8 text-sm"
           />
           <Input
@@ -670,6 +692,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             value={mileageRate}
             onChange={(e) => setMileageRate(e.target.value)}
             onBlur={scheduleExpenseSave}
+            disabled={isFinal}
             className="h-8 text-sm"
           />
           <p className="text-sm tabular-nums text-right">
@@ -687,6 +710,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             value={lodgingQty}
             onChange={(e) => setLodgingQty(e.target.value)}
             onBlur={scheduleExpenseSave}
+            disabled={isFinal}
             className="h-8 text-sm"
           />
           <Input
@@ -697,6 +721,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             value={lodgingRate}
             onChange={(e) => setLodgingRate(e.target.value)}
             onBlur={scheduleExpenseSave}
+            disabled={isFinal}
             className="h-8 text-sm"
           />
           <p className="text-sm tabular-nums text-right">
@@ -714,6 +739,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             value={perDiemQty}
             onChange={(e) => setPerDiemQty(e.target.value)}
             onBlur={scheduleExpenseSave}
+            disabled={isFinal}
             className="h-8 text-sm"
           />
           <Input
@@ -724,6 +750,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             value={perDiemRate}
             onChange={(e) => setPerDiemRate(e.target.value)}
             onBlur={scheduleExpenseSave}
+            disabled={isFinal}
             className="h-8 text-sm"
           />
           <p className="text-sm tabular-nums text-right">
@@ -759,6 +786,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
               value={roundedFee}
               onChange={(e) => setRoundedFee(e.target.value)}
               onBlur={scheduleExpenseSave}
+              disabled={isFinal}
               className="h-8 text-sm"
             />
           </div>
@@ -846,7 +874,6 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             onClick={() => {
               const params = new URLSearchParams({ costBreakdownId: breakdown.id });
               if (breakdown.leadId) params.set('leadId', breakdown.leadId);
-              if (returnTo) params.set('returnTo', returnTo);
               router.push(`/proposals/new?${params.toString()}`);
             }}>
             <FilePlus className="mr-1.5 h-3.5 w-3.5" />

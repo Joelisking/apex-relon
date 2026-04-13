@@ -89,7 +89,7 @@ export class TimeTrackingController {
 
     // Strip targetUserId from updates — ownership cannot be changed
     const { targetUserId: _, ...safeDto } = dto;
-    return this.timeTrackingService.updateEntry(id, safeDto);
+    return this.timeTrackingService.updateEntry(id, safeDto, user.id);
   }
 
   @Delete('entries/:id')
@@ -107,7 +107,23 @@ export class TimeTrackingController {
       throw new ForbiddenException('You can only delete your own time entries');
     }
 
-    return this.timeTrackingService.deleteEntry(id);
+    return this.timeTrackingService.deleteEntry(id, user.id);
+  }
+
+  // ─── Rate Check ───────────────────────────────────────────────────────────
+
+  @Get('rate-check')
+  @Permissions('time_tracking:create')
+  async getRateCheck(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('userId') userId?: string,
+  ) {
+    const canEnterForOthers = await this.permissionsService.hasPermission(
+      user.role,
+      'time_tracking:enter_for_others',
+    );
+    const effectiveUserId = canEnterForOthers && userId ? userId : user.id;
+    return this.timeTrackingService.checkUserRate(effectiveUserId);
   }
 
   // ─── User Rates ───────────────────────────────────────────────────────────

@@ -358,6 +358,27 @@ export class BottleneckService {
 
   // ─── AI Bottleneck Report ─────────────────────────────────────────────────
 
+  /**
+   * Ensure the AI response is markdown, not JSON.
+   * If the model returned JSON despite instructions, convert it to readable sections.
+   */
+  private ensureMarkdown(content: string): string {
+    const trimmed = content.trim();
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (typeof parsed === 'object' && parsed !== null) {
+        return Object.entries(parsed)
+          .map(([key, val]) =>
+            `## ${key}\n\n${typeof val === 'string' ? val : JSON.stringify(val, null, 2)}`,
+          )
+          .join('\n\n');
+      }
+    } catch {
+      // Not JSON — use as-is
+    }
+    return content;
+  }
+
   async generateAiReport(): Promise<{ content: string; generatedAt: Date }> {
     const { stuckDays, criticalStageDays } = await this.getThresholds();
 
@@ -416,7 +437,8 @@ Write 3 specific actions the CEO should take this week. For each, name the perso
 ## Revenue Risk
 In 2–3 sentences, estimate the revenue at risk if these bottlenecks continue unresolved.`;
 
-    const content = await this.aiService.generateFreeform(prompt, undefined, 2048);
+    const rawContent = await this.aiService.generateFreeform(prompt, undefined, 2048);
+    const content = this.ensureMarkdown(rawContent);
 
     // Store in DB
     await this.prisma.aIAnalyticsReport.create({
@@ -437,6 +459,6 @@ In 2–3 sentences, estimate the revenue at risk if these bottlenecks continue u
       orderBy: { generatedAt: 'desc' },
     });
     if (!report) return null;
-    return { content: report.content, generatedAt: report.generatedAt };
+    return { content: this.ensureMarkdown(report.content), generatedAt: report.generatedAt };
   }
 }

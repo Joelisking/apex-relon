@@ -27,6 +27,36 @@ export interface MentionTextareaHandle {
   focus: () => void;
 }
 
+// ─── Mention format helpers ─────────────────────────────────────────────────
+
+/** Convert raw storage format `@[Name](uuid)` → display `@Name` */
+function rawToDisplay(raw: string): string {
+  return raw.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1');
+}
+
+/** Convert display format back to raw using registry. Longest name first to avoid partial matches. */
+function displayToRaw(display: string, registry: Map<string, string>): string {
+  const entries = [...registry.entries()].sort((a, b) => b[0].length - a[0].length);
+  let result = display;
+  for (const [name, id] of entries) {
+    result = result.split(`@${name}`).join(`@[${name}](${id})`);
+  }
+  return result;
+}
+
+/** Build a name→id registry by parsing all mentions in a raw string. */
+function buildRegistryFromRaw(raw: string): Map<string, string> {
+  const registry = new Map<string, string>();
+  const re = /@\[([^\]]+)\]\(([^)]+)\)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(raw)) !== null) {
+    registry.set(m[1], m[2]);
+  }
+  return registry;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 export const MentionTextarea = forwardRef<MentionTextareaHandle, MentionTextareaProps>(
   function MentionTextarea(
     { value, onChange, onKeyDown, placeholder, disabled, className, autoFocus },
@@ -34,11 +64,24 @@ export const MentionTextarea = forwardRef<MentionTextareaHandle, MentionTextarea
   ) {
     const taRef = useRef<HTMLTextAreaElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const mentionRegistry = useRef<Map<string, string>>(new Map());
+    const [displayValue, setDisplayValue] = useState(() => rawToDisplay(value ?? ''));
     const [mentionQuery, setMentionQuery] = useState<string | null>(null);
     const [mentionStart, setMentionStart] = useState(-1);
     const [selectedIdx, setSelectedIdx] = useState(0);
 
     useImperativeHandle(ref, () => ({ focus: () => taRef.current?.focus() }));
+
+    // Sync display value and registry when value is changed externally
+    // (e.g. form reset after submit, or pre-filling an existing comment for edit)
+    /* eslint-disable react-hooks/set-state-in-effect */
+    useEffect(() => {
+      const raw = value ?? '';
+      const display = rawToDisplay(raw);
+      setDisplayValue(display);
+      mentionRegistry.current = buildRegistryFromRaw(raw);
+    }, [value]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const { data: usersData } = useQuery({
       queryKey: ['users-directory'],
@@ -92,30 +135,35 @@ export const MentionTextarea = forwardRef<MentionTextareaHandle, MentionTextarea
 
     const insertMention = useCallback(
       (user: UserDirectoryItem) => {
-        const before = value.slice(0, mentionStart);
         const ta = taRef.current;
-        const cursor = ta?.selectionStart ?? value.length;
-        const after = value.slice(cursor);
-        const mention = `@[${user.name}](${user.id}) `;
-        const newValue = before + mention + after;
-        onChange(newValue);
+        const cursor = ta?.selectionStart ?? displayValue.length;
+        const before = displayValue.slice(0, mentionStart);
+        const after = displayValue.slice(cursor);
+        const mentionDisplay = `@${user.name} `;
+        const newDisplay = before + mentionDisplay + after;
+
+        mentionRegistry.current.set(user.name, user.id);
+        setDisplayValue(newDisplay);
+        onChange(displayToRaw(newDisplay, mentionRegistry.current));
         setMentionQuery(null);
 
         requestAnimationFrame(() => {
           if (ta) {
-            const pos = before.length + mention.length;
+            const pos = before.length + mentionDisplay.length;
             ta.selectionStart = pos;
             ta.selectionEnd = pos;
             ta.focus();
           }
         });
       },
-      [value, mentionStart, onChange],
+      [displayValue, mentionStart, onChange],
     );
 
     const handleInput = useCallback(
       (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        onChange(e.target.value);
+        const newDisplay = e.target.value;
+        setDisplayValue(newDisplay);
+        onChange(displayToRaw(newDisplay, mentionRegistry.current));
         detectMention(e.target);
       },
       [onChange, detectMention],
@@ -179,7 +227,7 @@ export const MentionTextarea = forwardRef<MentionTextareaHandle, MentionTextarea
       <div className="relative">
         <textarea
           ref={taRef}
-          value={value}
+          value={displayValue}
           onChange={handleInput}
           onKeyDown={handleKeyDownInternal}
           onClick={handleClick}

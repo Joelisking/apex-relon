@@ -44,6 +44,7 @@ interface Props {
   daysInStatus: number;
   canEdit: boolean;
   canMoveStage: boolean;
+  canViewFinancials: boolean;
   stages: PipelineStage[];
   isUpdatingStatus: boolean;
   onStatusChange: (status: string) => void;
@@ -64,6 +65,7 @@ export function ProjectDetailHeader({
   daysInStatus,
   canEdit,
   canMoveStage,
+  canViewFinancials,
   stages,
   isUpdatingStatus,
   onStatusChange,
@@ -165,8 +167,8 @@ export function ProjectDetailHeader({
         </div>
       </div>
 
-      {/* Metrics strip */}
-      <div className="border-t border-border/40 bg-muted/20 grid grid-cols-6 divide-x divide-border/40">
+      {/* Metrics strip — only shown to users with financial visibility permission */}
+      {canViewFinancials && <div className="border-t border-border/40 bg-muted/20 grid grid-cols-6 divide-x divide-border/40">
         <div className="px-5 py-3.5">
           <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-medium mb-1.5">
             Contracted
@@ -219,7 +221,7 @@ export function ProjectDetailHeader({
             <span className="text-sm font-medium text-muted-foreground ml-0.5">d</span>
           </p>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

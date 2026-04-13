@@ -430,6 +430,7 @@ export function IndotPayZonesAdminView() {
       )}
 
       <ZoneDialog
+        key={editingZone?.id ?? 'new'}
         open={dialogOpen}
         onClose={() => {
           setDialogOpen(false);

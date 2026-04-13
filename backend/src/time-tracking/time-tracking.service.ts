@@ -5,12 +5,14 @@ import { CreateUserRateDto } from './dto/create-user-rate.dto';
 import { UpdateUserRateDto } from './dto/update-user-rate.dto';
 import { CreateProjectBudgetDto } from './dto/create-project-budget.dto';
 import { ProjectsProfitabilityService } from '../projects/projects-profitability.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class TimeTrackingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly profitabilityService: ProjectsProfitabilityService,
+    private readonly auditService: AuditService,
   ) {}
 
   // ─── Time Entries ─────────────────────────────────────────────────────────
@@ -25,6 +27,17 @@ export class TimeTrackingService {
       if (!targetExists) {
         throw new BadRequestException(`User ${dto.userId} not found`);
       }
+    }
+
+    // Validate that the user's role is assigned to the selected service item subtask
+    // in the project's cost breakdown (prevents unauthorized time logging)
+    if (dto.projectId && dto.serviceItemId && dto.serviceItemSubtaskId) {
+      await this.validateRoleForServiceItem(
+        dto.userId,
+        dto.projectId,
+        dto.serviceItemId,
+        dto.serviceItemSubtaskId,
+      );
     }
 
     const rate = await this.resolveRate(dto.userId, dto.projectId);
@@ -59,6 +72,20 @@ export class TimeTrackingService {
     if (dto.projectId) {
       await this.profitabilityService.recalculateProjectCost(dto.projectId);
     }
+
+    await this.auditService.log({
+      userId: dto.submittedById ?? dto.userId,
+      action: 'time_entry.created',
+      targetUserId: dto.submittedById ? dto.userId : undefined,
+      details: {
+        entryId: entry.id,
+        hours: entry.hours,
+        date: dto.date,
+        projectId: dto.projectId ?? null,
+        serviceItemId: dto.serviceItemId ?? null,
+        billable: entry.billable,
+      },
+    });
 
     return entry;
   }
@@ -100,7 +127,7 @@ export class TimeTrackingService {
     });
   }
 
-  async updateEntry(id: string, data: Partial<CreateTimeEntryDto>) {
+  async updateEntry(id: string, data: Partial<CreateTimeEntryDto>, actorId?: string) {
     const entry = await this.getEntryById(id);
 
     const hours = data.hours ?? entry.hours;
@@ -131,14 +158,34 @@ export class TimeTrackingService {
       await this.profitabilityService.recalculateProjectCost(entry.projectId);
     }
 
+    if (actorId) {
+      await this.auditService.log({
+        userId: actorId,
+        action: 'time_entry.updated',
+        targetUserId: entry.userId !== actorId ? entry.userId : undefined,
+        details: { entryId: id, changes: data },
+      });
+    }
+
     return updated;
   }
 
-  async deleteEntry(id: string) {
-    const entry = await this.prisma.timeEntry.findUnique({ where: { id }, select: { projectId: true } });
+  async deleteEntry(id: string, actorId?: string) {
+    const entry = await this.prisma.timeEntry.findUnique({
+      where: { id },
+      select: { projectId: true, userId: true, hours: true },
+    });
     await this.prisma.timeEntry.delete({ where: { id } });
     if (entry?.projectId) {
       await this.profitabilityService.recalculateProjectCost(entry.projectId);
+    }
+    if (actorId) {
+      await this.auditService.log({
+        userId: actorId,
+        action: 'time_entry.deleted',
+        targetUserId: entry?.userId !== actorId ? entry?.userId : undefined,
+        details: { entryId: id, hours: entry?.hours, projectId: entry?.projectId ?? null },
+      });
     }
   }
 
@@ -199,6 +246,76 @@ export class TimeTrackingService {
    * For INDOT projects: looks up the project's county → IndotPayZone → PayGrade → UserRate.
    * Fallback: uses the user's default-grade rate.
    */
+  /**
+   * Validates that the user's role has an estimate for the given service item subtask
+   * in the project's cost breakdown (or an approved addendum). Throws if not authorized.
+   */
+  private async validateRoleForServiceItem(
+    userId: string,
+    projectId: string,
+    serviceItemId: string,
+    serviceItemSubtaskId: string,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    if (!user) return; // user not found — let the entry fail on FK constraint
+
+    const userRole = user.role;
+
+    // Check primary cost breakdown
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { primaryCostBreakdownId: true },
+    });
+
+    if (project?.primaryCostBreakdownId) {
+      const cbLine = await this.prisma.costBreakdownLine.findFirst({
+        where: {
+          costBreakdownId: project.primaryCostBreakdownId,
+          serviceItemId,
+        },
+        select: { id: true },
+      });
+
+      if (cbLine) {
+        const estimate = await this.prisma.costBreakdownRoleEstimate.findFirst({
+          where: {
+            lineId: cbLine.id,
+            subtaskId: serviceItemSubtaskId,
+            role: userRole,
+            estimatedHours: { gt: 0 },
+          },
+        });
+
+        if (estimate) return; // authorized via CB
+
+        // Check approved addenda for this project
+        const addendumLine = await this.prisma.projectAddendumLine.findFirst({
+          where: {
+            addendum: {
+              projectId,
+              status: { in: ['APPROVED', 'INVOICED'] },
+            },
+            serviceItemId,
+            serviceItemSubtaskId,
+            role: userRole,
+            estimatedHours: { gt: 0 },
+          },
+        });
+
+        if (addendumLine) return; // authorized via addendum
+
+        throw new BadRequestException(
+          `Role '${userRole}' is not assigned to this service item subtask in the project's cost breakdown.`,
+        );
+      }
+      // No CB line for this service item — no restriction applies
+    }
+    // No primary CB on project — no restriction applies
+  }
+
   private async resolveRate(userId: string, projectId?: string | null) {
     if (projectId) {
       const project = await this.prisma.project.findUnique({
@@ -238,6 +355,14 @@ export class TimeTrackingService {
       },
       orderBy: { effectiveFrom: 'desc' },
     });
+  }
+
+  /**
+   * Returns whether the user has a configured pay rate (for pre-flight check before time logging).
+   */
+  async checkUserRate(userId: string, projectId?: string): Promise<{ hasRate: boolean }> {
+    const rate = await this.resolveRate(userId, projectId ?? null);
+    return { hasRate: rate !== null && rate.rate > 0 };
   }
 
   /**

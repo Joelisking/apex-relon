@@ -19,6 +19,7 @@ import {
   Activity,
   DollarSign,
   Pencil,
+  Plus,
   TrendingUp,
   TrendingDown,
   Loader2,
@@ -290,9 +291,11 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
 
   const isEngineeringProject = project.jobType?.division?.name === 'Engineering';
 
+  const canViewFinancials = hasPermission('projects:view_financials');
+
   const TABS = [
     { value: 'overview', label: 'Overview' },
-    { value: 'financials', label: 'Financials' },
+    ...(canViewFinancials ? [{ value: 'financials', label: 'Financials' }] : []),
     { value: 'tasks', label: 'Tasks' },
     { value: 'quotes', label: 'Invoices' },
     ...(project.leadId ? [{ value: 'proposals', label: 'Proposals' }] : []),
@@ -338,6 +341,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
         daysInStatus={daysInStatus}
         canEdit={hasPermission('projects:edit')}
         canMoveStage={hasPermission('projects:move_stage')}
+        canViewFinancials={hasPermission('projects:view_financials')}
         stages={projectStages}
         isUpdatingStatus={isUpdatingStatus}
         onStatusChange={handleStatusChange}
@@ -450,8 +454,24 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
               />
             </TabsContent>
 
-            <TabsContent value="financials" className="mt-0">
+            {canViewFinancials && <TabsContent value="financials" className="mt-0">
               <div className="space-y-6">
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const params = new URLSearchParams({
+                        projectId: project.id,
+                        projectName: project.name,
+                        returnTo: encodeURIComponent(`/projects/${project.id}?tab=financials`),
+                      });
+                      router.push(`/cost-breakdown/new?${params.toString()}`);
+                    }}>
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
+                    New Cost Breakdown
+                  </Button>
+                </div>
                 <ProjectFinancialsSummary
                   projectId={project.id}
                   contractedValue={contractedValue}
@@ -472,7 +492,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
                   canEditCosts={canEditCosts}
                 />
               </div>
-            </TabsContent>
+            </TabsContent>}
 
             <TabsContent value="tasks" className="mt-0">
               <LinkedTasksSection entityType="PROJECT" entityId={project.id} />

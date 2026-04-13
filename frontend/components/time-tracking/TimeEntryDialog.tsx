@@ -153,6 +153,24 @@ export function TimeEntryDialog({
       ? computedHours
       : parseFloat(directHours) || 0;
 
+  const effectiveUserId = targetUser?.id ?? authUser?.id ?? '';
+
+  // Pre-flight check: does the effective user have a pay rate configured?
+  const { data: rateCheck } = useQuery<{ hasRate: boolean }>({
+    queryKey: ['rate-check', effectiveUserId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (targetUser?.id) params.set('userId', targetUser.id);
+      const res = await fetch(`${API_URL}/time-tracking/rate-check?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (!res.ok) return { hasRate: true }; // fail open — don't block on API errors
+      return res.json();
+    },
+    enabled: open && !!effectiveUserId,
+    staleTime: 60_000,
+  });
+
   // Fetch projects (with service type category for engineering detection)
   const { data: projects = [] } = useQuery<ProjectOption[]>({
     queryKey: ['projects-simple'],
@@ -210,17 +228,19 @@ export function TimeEntryDialog({
   });
 
   // Cost breakdown for the selected project — used for role-based filtering
-  const { data: projectBreakdowns } = useQuery<CostBreakdown[]>({
+  const { data: projectBreakdowns, isLoading: isCbLoading } = useQuery<CostBreakdown[]>({
     queryKey: ['cost-breakdowns', 'project', projectId],
     queryFn: () => costBreakdownApi.getAll({ projectId }),
     enabled: !!projectId,
     staleTime: 60_000,
   });
 
+  // null = still loading (don't bypass filter yet); [] = loaded but no CB
   const cbLines = useMemo(() => {
+    if (projectId && isCbLoading) return null;
     const activeCb = projectBreakdowns?.find((cb) => cb.status !== 'ARCHIVED');
     return activeCb?.lines ?? [];
-  }, [projectBreakdowns]);
+  }, [projectId, isCbLoading, projectBreakdowns]);
 
   // Approved addenda for the selected project — used for addendum subtask visibility
   const { data: projectAddenda } = useQuery<Addendum[]>({
@@ -262,6 +282,10 @@ export function TimeEntryDialog({
   // Role-based filtering: only show subtasks where the user's role has an estimate
   // (from cost breakdown OR from approved addendum lines)
   const visibleServiceItems = useMemo(() => {
+    // cbLines is null while loading — hold off to prevent the bypass window
+    // where all service items appear before the CB data arrives
+    if (cbLines === null) return [];
+
     const hasSources = cbLines.length > 0 || approvedAddendumLines.length > 0;
     if (!roleMatchers || !hasSources) return indotFiltered;
 
@@ -302,8 +326,33 @@ export function TimeEntryDialog({
         return { ...si, subtasks };
       })
       .filter((si): si is ServiceItem => si !== null);
-    return filtered.length > 0 ? filtered : indotFiltered;
+    return filtered;
   }, [indotFiltered, cbLines, approvedAddendumLines, roleMatchers]);
+
+  // When editing, ensure the entry's saved service item is always shown in the picker
+  // even if the role-based filter would exclude it (e.g. role has no estimate for it)
+  const visibleServiceItemsForDisplay = useMemo(() => {
+    if (!entry?.serviceItemId) return visibleServiceItems;
+    if (visibleServiceItems.some((si) => si.id === entry.serviceItemId)) return visibleServiceItems;
+    const entryItem = baseServiceItems.find((si) => si.id === entry.serviceItemId);
+    if (!entryItem) return visibleServiceItems;
+    return [...visibleServiceItems, entryItem];
+  }, [visibleServiceItems, entry, baseServiceItems]);
+
+  // Clear selection if the currently-selected service item is no longer in the visible list
+  // (e.g. CB data finishes loading and the item isn't allowed for this role)
+  // Exception: never clear the original entry's service item when editing.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!serviceItemId) return;
+    if (cbLines === null) return; // still loading — don't clear prematurely
+    if (entry?.serviceItemId === serviceItemId) return; // preserve entry's saved item
+    if (!visibleServiceItems.find((si) => si.id === serviceItemId)) {
+      setServiceItemId('');
+      setServiceItemSubtaskId('');
+    }
+  }, [visibleServiceItems, serviceItemId, cbLines, entry]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // The selected service item (used for estimated cost display)
   const selectedItem = serviceItems.find(
@@ -467,6 +516,8 @@ export function TimeEntryDialog({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const noRateConfigured = rateCheck?.hasRate === false && !entry;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl flex flex-col max-h-[90dvh]">
@@ -484,7 +535,27 @@ export function TimeEntryDialog({
           )}
         </DialogHeader>
 
-        <div className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1">
+        {noRateConfigured ? (
+          <>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm text-amber-800 space-y-1">
+              <p className="font-medium">No pay rate configured</p>
+              <p className="text-amber-700">
+                {targetUser
+                  ? `${targetUser.name} does not have a pay rate configured.`
+                  : 'Your account does not have a pay rate configured.'}{' '}
+                Please contact your system administrator to set up{' '}
+                {targetUser ? 'their' : 'your'} hourly rate before logging time.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" className="h-11 sm:h-9" onClick={() => onOpenChange(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+          <div className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1">
           {/* Date */}
           <div className="space-y-1.5">
             <Label>Date</Label>
@@ -671,7 +742,7 @@ export function TimeEntryDialog({
           {/* Service Item + Subtask — only shown after project is selected */}
           {projectId ? (
             <ServiceSubtaskPicker
-              serviceItems={visibleServiceItems}
+              serviceItems={visibleServiceItemsForDisplay}
               helperText={
                 projectLinkedItems
                   ? `(${projectLinkedItems.length} linked to project)`
@@ -799,24 +870,26 @@ export function TimeEntryDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button
-            variant="outline"
-            className="h-11 sm:h-9"
-            onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            className="h-11 sm:h-9"
-            onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending || !canSave}>
-            {saveMutation.isPending
-              ? 'Saving…'
-              : entry
-                ? 'Update'
-                : 'Log Time'}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="h-11 sm:h-9"
+              onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="h-11 sm:h-9"
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending || !canSave}>
+              {saveMutation.isPending
+                ? 'Saving…'
+                : entry
+                  ? 'Update'
+                  : 'Log Time'}
+            </Button>
+          </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

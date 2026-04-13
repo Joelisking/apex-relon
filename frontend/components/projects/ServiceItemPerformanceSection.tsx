@@ -21,6 +21,7 @@ interface RoleBarProps {
 function RoleBar({ role, budget, actual }: RoleBarProps) {
   const percentage = pct(actual, budget);
   const over = budget > 0 && actual > budget;
+  const unbudgeted = budget === 0 && actual > 0;
   const remaining = budget - actual;
 
   return (
@@ -46,24 +47,29 @@ function RoleBar({ role, budget, actual }: RoleBarProps) {
                 {percentage}%
               </span>
             </>
+          ) : unbudgeted ? (
+            <>
+              <span className="text-red-600">{fmtHours(actual)} logged</span>
+              <span className="text-[11px] font-medium text-red-600">unbudgeted</span>
+            </>
           ) : (
             <span className="text-muted-foreground">{fmtHours(actual)} logged</span>
           )}
         </div>
       </div>
 
-      {budget > 0 && (
+      {(budget > 0 || unbudgeted) && (
         <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
           <div
             className={cn(
               'h-full rounded-full transition-all',
-              over
+              unbudgeted || over
                 ? 'bg-red-500'
                 : percentage >= 80
                   ? 'bg-amber-500'
                   : 'bg-emerald-500',
             )}
-            style={{ width: `${Math.min(percentage, 100)}%` }}
+            style={{ width: unbudgeted ? '100%' : `${Math.min(percentage, 100)}%` }}
           />
         </div>
       )}
@@ -81,6 +87,10 @@ function RoleBar({ role, budget, actual }: RoleBarProps) {
               ? 'Budget fully used'
               : `${fmtHours(remaining)} remaining`}
         </p>
+      )}
+
+      {unbudgeted && (
+        <p className="text-[11px] text-red-600">No budget allocated for this role</p>
       )}
     </div>
   );
