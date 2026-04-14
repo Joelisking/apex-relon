@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { leadsApi } from '@/lib/api/client';
 import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
 import { proposalTemplatesApi } from '@/lib/api/proposal-templates-client';
+import { projectsApi } from '@/lib/api/projects-client';
 import ProposalPreview, { applySubstitutions } from './ProposalPreview';
 import DynamicFieldsSection from './DynamicFieldsSection';
 import TableEditorSection from './TableEditorSection';
@@ -58,6 +59,7 @@ export default function ProposalEditor() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefilledLeadId = searchParams.get('leadId');
+  const prefilledProjectId = searchParams.get('projectId');
   const prefilledBreakdownId = searchParams.get('costBreakdownId');
   const prefilledTemplateId = searchParams.get('templateId');
   const prefilledProposalId = searchParams.get('proposalId');
@@ -139,6 +141,14 @@ export default function ProposalEditor() {
     queryKey: ['cost-breakdown', prefilledBreakdownId],
     queryFn: () => costBreakdownApi.getOne(prefilledBreakdownId!),
     enabled: !!prefilledBreakdownId,
+  });
+
+  // Fetch project when navigating from a project page (no leadId in URL)
+  const derivedProjectId = prefilledProjectId ?? prefilledBreakdown?.projectId ?? null;
+  const { data: prefilledProject } = useQuery({
+    queryKey: ['project', derivedProjectId],
+    queryFn: () => projectsApi.getById(derivedProjectId!),
+    enabled: !!derivedProjectId && !prefilledLeadId,
   });
 
   // 0.2: if no leadId in URL, fall back to the breakdown's linked lead
@@ -224,6 +234,17 @@ export default function ProposalEditor() {
     }
   }, [selectedLead, formSnapshot]);
 
+  // Pre-fill form from the linked project (for proposals created directly on a project)
+  useEffect(() => {
+    if (!prefilledProject) return;
+    if (formSnapshot) return; // snapshot takes priority when re-editing
+    if (prefilledProject.name) setProjectName(prefilledProject.name);
+    if (prefilledProject.address) {
+      setAddress(prefilledProject.address);
+      setSameAddress(true);
+    }
+  }, [prefilledProject, formSnapshot]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Pre-fill fee from selected breakdown
   useEffect(() => {
     if (!selectedBreakdown) return;
@@ -269,12 +290,13 @@ export default function ProposalEditor() {
     }
   };
 
-  const companyName = selectedLead?.company ?? null;
+  const companyName = selectedLead?.company ?? prefilledProject?.client?.name ?? null;
   const addressFilled = !!(address || city || stateVal || zip);
 
   const buildGenerateDto = () => ({
     leadId: selectedLead?.id,
     costBreakdownId: selectedBreakdown?.id,
+    projectId: !selectedLead?.id ? (derivedProjectId ?? undefined) : undefined,
     replaceProposalId: prefilledProposalId || undefined,
     salutation: salutation || undefined,
     firstName: firstName || undefined,

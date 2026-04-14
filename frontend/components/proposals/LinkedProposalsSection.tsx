@@ -31,6 +31,7 @@ import type { Lead } from '@/lib/types';
 interface LinkedProposalsSectionProps {
   leadId?: string;
   projectId?: string;
+  projectName?: string;
   lead?: Lead;
 }
 
@@ -68,7 +69,7 @@ const CB_STATUS_STYLES: Record<string, string> = {
   FINAL: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
 };
 
-export function LinkedProposalsSection({ leadId, projectId, lead }: LinkedProposalsSectionProps) {
+export function LinkedProposalsSection({ leadId, projectId, projectName, lead }: LinkedProposalsSectionProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -449,6 +450,7 @@ export function LinkedProposalsSection({ leadId, projectId, lead }: LinkedPropos
               params.set('returnTo', `/leads/${leadId}?tab=proposals`);
             } else if (projectId) {
               params.set('projectId', projectId);
+              if (projectName) params.set('projectName', projectName);
               params.set('returnTo', `/projects/${projectId}?tab=financials`);
             }
             router.push(`/cost-breakdown/new?${params.toString()}`);

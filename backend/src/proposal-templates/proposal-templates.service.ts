@@ -523,6 +523,18 @@ export class ProposalTemplatesService implements OnModuleInit {
         derivedProjectName = project.name ?? '';
         clientId = project.clientId ?? null;
       }
+    } else if (dto.projectId) {
+      // Direct project-linked proposal (no lead, no CB selected)
+      const project = await this.prisma.project.findUnique({
+        where: { id: dto.projectId },
+        include: { client: true },
+      });
+      if (project) {
+        companyName = (project.client as any)?.name ?? '';
+        derivedProjectName = project.name ?? '';
+        derivedAddress = (project as any).address ?? '';
+        clientId = project.clientId ?? null;
+      }
     }
 
     // 3. Build ProposalData — DTO overrides win over CRM

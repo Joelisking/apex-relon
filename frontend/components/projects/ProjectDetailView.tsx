@@ -505,6 +505,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
               <LinkedProposalsSection
                 leadId={project.leadId ?? undefined}
                 projectId={project.id}
+                projectName={project.name}
               />
             </TabsContent>
 

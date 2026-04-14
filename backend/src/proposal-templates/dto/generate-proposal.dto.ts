@@ -7,6 +7,10 @@ export class GenerateProposalDto {
 
   @IsString()
   @IsOptional()
+  projectId?: string;
+
+  @IsString()
+  @IsOptional()
   costBreakdownId?: string;
 
   @IsString()
