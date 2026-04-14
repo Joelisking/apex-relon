@@ -13,7 +13,7 @@ export class ProjectsServiceItemsService {
 
     return this.prisma.projectServiceItem.findMany({
       where: { projectId },
-      include: { serviceItem: true },
+      include: { serviceItem: { include: { subtasks: true } } },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
     });
   }
