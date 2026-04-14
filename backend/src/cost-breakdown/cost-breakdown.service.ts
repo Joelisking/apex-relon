@@ -235,11 +235,18 @@ export class CostBreakdownService {
     });
     if (!line) throw new NotFoundException('Cost breakdown line not found');
 
-    const result = await this.prisma.costBreakdownRoleEstimate.delete({
-      where: { lineId_subtaskId_role: { lineId, subtaskId, role } },
-    });
-    await this.syncLeadExpectedValue(line.costBreakdownId);
-    return result;
+    try {
+      const result = await this.prisma.costBreakdownRoleEstimate.delete({
+        where: { lineId_subtaskId_role: { lineId, subtaskId, role } },
+      });
+      await this.syncLeadExpectedValue(line.costBreakdownId);
+      return result;
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        throw new NotFoundException(`Role estimate not found (lineId=${lineId}, subtaskId=${subtaskId}, role=${role})`);
+      }
+      throw err;
+    }
   }
 
   private async syncLeadExpectedValue(costBreakdownId: string): Promise<void> {

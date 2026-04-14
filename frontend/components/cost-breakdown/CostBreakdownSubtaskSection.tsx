@@ -438,7 +438,8 @@ function EstimateRow({
     try {
       await costBreakdownApi.deleteRoleEstimate(lineId, estimate.subtaskId, estimate.role);
       onDelete(estimate);
-    } catch {
+    } catch (err) {
+      console.error('[deleteRoleEstimate] failed', { lineId, subtaskId: estimate.subtaskId, role: estimate.role, err });
       toast.error('Failed to remove role');
     }
   }, [lineId, estimate, onDelete]);
