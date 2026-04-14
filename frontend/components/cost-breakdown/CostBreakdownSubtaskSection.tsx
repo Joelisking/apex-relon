@@ -241,6 +241,21 @@ export default function CostBreakdownSubtaskSection({
               onDisplayNameChange={onDisplayNameChange}
               onUpdate={onUpdate}
               onDelete={onDelete}
+              onRoleChange={async (newRole) => {
+                try {
+                  await costBreakdownApi.deleteRoleEstimate(lineId, estimate.subtaskId, estimate.role);
+                  const created = await costBreakdownApi.upsertRoleEstimate(lineId, {
+                    subtaskId: estimate.subtaskId,
+                    role: newRole,
+                    estimatedHours: estimate.estimatedHours,
+                    hourlyRate: estimate.hourlyRate ?? undefined,
+                  });
+                  onDelete(estimate);
+                  onAdd(created);
+                } catch {
+                  toast.error('Failed to update role');
+                }
+              }}
               disabled={disabled}
             />
           ))}
@@ -389,6 +404,7 @@ interface RowProps {
   onDisplayNameChange?: (roleString: string, newName: string) => Promise<void> | void;
   onUpdate: (estimate: CostBreakdownRoleEstimate, hours: number, rate?: number) => void;
   onDelete: (estimate: CostBreakdownRoleEstimate) => void;
+  onRoleChange?: (newRole: string) => Promise<void>;
   disabled?: boolean;
 }
 
@@ -400,6 +416,7 @@ function EstimateRow({
   onDisplayNameChange,
   onUpdate,
   onDelete,
+  onRoleChange,
   disabled = false,
 }: RowProps) {
   const [hours, setHours] = useState(estimate.estimatedHours.toString());
@@ -434,12 +451,14 @@ function EstimateRow({
             <span className="ml-1 text-[10px] text-muted-foreground/60">· {canonicalLabel}</span>
           )}
         </span>
-        {onDisplayNameChange && (
+        {!disabled && (
           <RoleDisplayNamePopover
             roleString={estimate.role}
             canonicalLabel={canonicalLabel}
             currentOverride={roleDisplayNames?.[estimate.role] ?? ''}
             onSave={onDisplayNameChange}
+            roles={roles}
+            onRoleChange={onRoleChange}
           />
         )}
       </div>
@@ -491,7 +510,9 @@ interface RoleDisplayNamePopoverProps {
   roleString: string;
   canonicalLabel: string;
   currentOverride: string;
-  onSave: (roleString: string, newName: string) => Promise<void> | void;
+  onSave?: (roleString: string, newName: string) => Promise<void> | void;
+  roles?: RoleResponse[];
+  onRoleChange?: (newRole: string) => Promise<void>;
 }
 
 function RoleDisplayNamePopover({
@@ -499,28 +520,40 @@ function RoleDisplayNamePopover({
   canonicalLabel,
   currentOverride,
   onSave,
+  roles,
+  onRoleChange,
 }: RoleDisplayNamePopoverProps) {
   const [open, setOpen] = useState(false);
+  const [selectedRole, setSelectedRole] = useState(roleString);
   const [draft, setDraft] = useState(currentOverride);
   const [busy, setBusy] = useState(false);
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
-      if (next) setDraft(currentOverride);
+      if (next) {
+        setSelectedRole(roleString);
+        setDraft(currentOverride);
+      }
       setOpen(next);
     },
-    [currentOverride],
+    [currentOverride, roleString],
   );
 
   const handleSave = useCallback(async () => {
     setBusy(true);
     try {
-      await onSave(roleString, draft);
+      if (selectedRole !== roleString && onRoleChange) {
+        await onRoleChange(selectedRole);
+      } else if (onSave) {
+        await onSave(roleString, draft);
+      }
       setOpen(false);
     } finally {
       setBusy(false);
     }
-  }, [onSave, roleString, draft]);
+  }, [onSave, onRoleChange, roleString, selectedRole, draft]);
+
+  const roleOptions = roles?.map((r) => ({ value: r.label, label: r.label })) ?? [];
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -529,34 +562,50 @@ function RoleDisplayNamePopover({
           variant="ghost"
           size="icon"
           className="h-4 w-4 text-muted-foreground opacity-0 group-hover/estrow:opacity-100 transition-opacity"
-          title="Edit display name"
-          aria-label="Edit role display name">
+          title="Edit role"
+          aria-label="Edit role">
           <Pencil className="h-2.5 w-2.5" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 p-3">
         <div className="space-y-2">
-          <div className="space-y-1">
-            <Label htmlFor={`role-display-${roleString}`} className="text-xs">
-              Display name
-            </Label>
-            <Input
-              id={`role-display-${roleString}`}
-              autoFocus
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder={canonicalLabel}
-              maxLength={60}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSave();
-                if (e.key === 'Escape') setOpen(false);
-              }}
-              className="h-7 text-xs"
-            />
-          </div>
-          <p className="text-[10px] text-muted-foreground">
-            Applies to this role across the whole breakdown. Leave blank to use the original name.
-          </p>
+          {roles && onRoleChange && (
+            <div className="space-y-1">
+              <Label className="text-xs">Role</Label>
+              <SearchableSelect
+                value={selectedRole}
+                onValueChange={setSelectedRole}
+                options={roleOptions}
+                placeholder="Select role..."
+                searchPlaceholder="Search roles..."
+                emptyMessage="No roles found."
+                className="h-7 text-xs"
+              />
+            </div>
+          )}
+          {onSave && selectedRole === roleString && (
+            <div className="space-y-1">
+              <Label htmlFor={`role-display-${roleString}`} className="text-xs">
+                Display name
+              </Label>
+              <Input
+                id={`role-display-${roleString}`}
+                autoFocus={!roles}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={canonicalLabel}
+                maxLength={60}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSave();
+                  if (e.key === 'Escape') setOpen(false);
+                }}
+                className="h-7 text-xs"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Applies across the whole breakdown. Leave blank to use the original name.
+              </p>
+            </div>
+          )}
           <div className="flex items-center justify-end gap-1 pt-1">
             <Button
               size="sm"

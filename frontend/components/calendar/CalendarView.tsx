@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { Info } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CalendarCombobox } from './CalendarCombobox';
 import { tasksApi } from '@/lib/api/tasks-client';
 import { projectsApi } from '@/lib/api/projects-client';
 import { ptoApi, type PtoRequest } from '@/lib/api/pto-client';
@@ -88,6 +88,30 @@ export function CalendarView() {
     queryKey: ['calendar-pto', dueAfter, dueBefore],
     queryFn: () => ptoApi.getCalendarRequests(dueAfter, dueBefore),
   });
+
+  const projectOptions = useMemo(
+    () =>
+      (projects as Project[]).map((p) => {
+        const prefix = p.jobNumber ? `${p.jobNumber}` : '';
+        const label = prefix ? `${prefix} — ${p.name}` : p.name;
+        return {
+          id: p.id,
+          label,
+          searchValue: prefix ? `${prefix} ${p.name}` : p.name,
+        };
+      }),
+    [projects],
+  );
+
+  const personOptions = useMemo(
+    () =>
+      assignableUsers.map((u) => ({
+        id: u.id,
+        label: u.name,
+        searchValue: u.name,
+      })),
+    [assignableUsers],
+  );
 
   const events = useMemo<CalendarEvent[]>(() => {
     const evts: CalendarEvent[] = [];
@@ -198,35 +222,20 @@ export function CalendarView() {
 
         {canAdvancedFilter && (
           <div className="flex items-center gap-2">
-            <Select
-              value={filterProjectId ?? 'all'}
-              onValueChange={(v) => setFilterProjectId(v === 'all' ? null : v)}
-            >
-              <SelectTrigger className="h-7 w-[160px] text-xs">
-                <SelectValue placeholder="All Projects" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Projects</SelectItem>
-                {(projects as Project[]).map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={filterAssigneeId ?? 'all'}
-              onValueChange={(v) => setFilterAssigneeId(v === 'all' ? null : v)}
-            >
-              <SelectTrigger className="h-7 w-[160px] text-xs">
-                <SelectValue placeholder="All People" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All People</SelectItem>
-                {assignableUsers.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CalendarCombobox
+              value={filterProjectId}
+              onChange={setFilterProjectId}
+              options={projectOptions}
+              placeholder="All Projects"
+              width="w-[180px]"
+            />
+            <CalendarCombobox
+              value={filterAssigneeId}
+              onChange={setFilterAssigneeId}
+              options={personOptions}
+              placeholder="All People"
+              width="w-[160px]"
+            />
           </div>
         )}
 
