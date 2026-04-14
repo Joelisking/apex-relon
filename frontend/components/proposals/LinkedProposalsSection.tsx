@@ -419,7 +419,17 @@ export function LinkedProposalsSection({ leadId, projectId, projectName, lead }:
                           size="sm"
                           variant="outline"
                           className="h-6 text-[11px] gap-1"
-                          onClick={() => router.push(`/cost-breakdown/${proposal.costBreakdown!.id}`)}>
+                          onClick={() => {
+                            const returnTo = projectId
+                              ? `/projects/${projectId}?tab=financials`
+                              : leadId
+                                ? `/leads/${leadId}?tab=proposals`
+                                : '';
+                            const dest = returnTo
+                              ? `/cost-breakdown/${proposal.costBreakdown!.id}?returnTo=${encodeURIComponent(returnTo)}`
+                              : `/cost-breakdown/${proposal.costBreakdown!.id}`;
+                            router.push(dest);
+                          }}>
                           View
                         </Button>
                       </div>
@@ -503,7 +513,17 @@ export function LinkedProposalsSection({ leadId, projectId, projectName, lead }:
                   size="sm"
                   variant="outline"
                   className="h-6 text-[11px]"
-                  onClick={() => router.push(`/cost-breakdown/${cb.id}`)}>
+                  onClick={() => {
+                    const returnTo = projectId
+                      ? `/projects/${projectId}?tab=financials`
+                      : leadId
+                        ? `/leads/${leadId}?tab=proposals`
+                        : '';
+                    const dest = returnTo
+                      ? `/cost-breakdown/${cb.id}?returnTo=${encodeURIComponent(returnTo)}`
+                      : `/cost-breakdown/${cb.id}`;
+                    router.push(dest);
+                  }}>
                   View
                 </Button>
                 <Button

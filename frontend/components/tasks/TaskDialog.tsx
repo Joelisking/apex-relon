@@ -160,6 +160,7 @@ export function TaskDialog({
   });
   const [taskTypeOpen, setTaskTypeOpen] = useState(false);
   const [dueDateOpen, setDueDateOpen] = useState(false);
+  const [showAllCbItems, setShowAllCbItems] = useState(false);
 
   // Task types filtered by the linked entity's project type
   const [linkedJobTypeId, setLinkedJobTypeId] = useState<string | undefined>(undefined);
@@ -199,13 +200,18 @@ export function TaskDialog({
     return matchers;
   }, [assignableUsers, form.assignedToId, rolesCatalog]);
 
-  // Service items visible to the picker come from the CB lines, further
-  // filtered down to subtasks that have a role estimate for the assignee.
-  // When no assignee (or no role match exists in this CB), fall back to the
-  // unfiltered list so users aren't left with an empty picker.
-  const cbServiceItems: ServiceItem[] = useMemo(() => {
+  // All CB service items, unfiltered — used for the "show all" fallback.
+  const allCbServiceItems: ServiceItem[] = useMemo(
+    () => cbLines.map((l) => l.serviceItem),
+    [cbLines],
+  );
+
+  // Service items filtered down to subtasks that have a role estimate for the
+  // assignee. When no assignee/role is set, returns the full unfiltered list.
+  // No silent fallback — an empty result is surfaced to the user explicitly.
+  const filteredCbServiceItems: ServiceItem[] = useMemo(() => {
     if (!assigneeRoleMatchers) return cbLines.map((line) => line.serviceItem);
-    const filtered = cbLines
+    return cbLines
       .map((line) => {
         const allowedSubtaskIds = new Set(
           line.roleEstimates
@@ -223,10 +229,17 @@ export function TaskDialog({
         return { ...line.serviceItem, subtasks };
       })
       .filter((si): si is ServiceItem => si !== null);
-    // Fall back to unfiltered if the role produces an empty list — otherwise
-    // the user has no way to pick anything for this assignee.
-    return filtered.length > 0 ? filtered : cbLines.map((l) => l.serviceItem);
   }, [cbLines, assigneeRoleMatchers]);
+
+  // True when an assignee with a known role is selected but their role has no
+  // subtasks in this cost breakdown (i.e. the filter returned nothing).
+  const roleFilterEmpty =
+    !!assigneeRoleMatchers && filteredCbServiceItems.length === 0;
+
+  // Items shown in the picker — either role-filtered or all, depending on state.
+  const cbServiceItems = showAllCbItems
+    ? allCbServiceItems
+    : filteredCbServiceItems;
 
   // Whether the current user is allowed to set DONE in this dialog
   const allowDone = canMarkDone(editingTask, currentUserId);
@@ -235,6 +248,7 @@ export function TaskDialog({
   useEffect(() => {
     if (!open) {
       setLinkedJobTypeId(undefined);
+      setShowAllCbItems(false);
       return;
     }
     setTaskTypeOpen(false);
@@ -343,6 +357,7 @@ export function TaskDialog({
             entityType={form.entityType ?? ''}
             entityId={form.entityId ?? ''}
             onChange={(type, id, jobTypeId) => {
+              setShowAllCbItems(false);
               setForm((prev) => ({
                 ...prev,
                 entityType: type,
@@ -369,6 +384,7 @@ export function TaskDialog({
                   : undefined
               }
               onSelect={(userId) => {
+                setShowAllCbItems(false);
                 const newUser = assignableUsers.find((u) => u.id === userId);
                 const newRoleKey = newUser?.role ?? null;
                 const newRoleLabel = newRoleKey
@@ -411,10 +427,30 @@ export function TaskDialog({
           )}
 
           {/* Service Item / Subtask — grouped picker, only for project tasks with a CB */}
-          {isProjectTask && cbServiceItems.length > 0 && (
+          {isProjectTask && allCbServiceItems.length > 0 && (
+            roleFilterEmpty && !showAllCbItems ? (
+              <div className="rounded-md border border-dashed border-border/60 bg-muted/20 px-4 py-3 space-y-2">
+                <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
+                  Service Item / Subtask
+                  <span className="ml-1.5 normal-case tracking-normal font-normal">
+                    — from cost breakdown
+                  </span>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  No tasks available for this user in the cost breakdown.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowAllCbItems(true)}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Show all service items and subtasks for this project
+                </button>
+              </div>
+            ) : (
             <ServiceSubtaskPicker
               label="Service Item / Subtask"
-              helperText="— from cost breakdown"
+              helperText={showAllCbItems ? '— showing all (role has no tasks)' : '— from cost breakdown'}
               placeholder="Pick a subtask (or type a custom title below)"
               serviceItems={cbServiceItems}
               serviceItemId={form.serviceItemId ?? ''}
@@ -453,6 +489,7 @@ export function TaskDialog({
                 }));
               }}
             />
+            )
           )}
 
           {/* Title — auto-filled from the selected subtask, editable for custom tasks */}

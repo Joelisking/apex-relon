@@ -134,6 +134,7 @@ export function TimeEntryDialog({
   const [serviceItemId, setServiceItemId] = useState('');
   const [serviceItemSubtaskId, setServiceItemSubtaskId] =
     useState('');
+  const [showAllItems, setShowAllItems] = useState(false);
 
   // Compute hours from start/end times (supports HH:MM or HH:MM:SS)
   const computedHours = (() => {
@@ -339,6 +340,13 @@ export function TimeEntryDialog({
     return [...visibleServiceItems, entryItem];
   }, [visibleServiceItems, entry, baseServiceItems]);
 
+  // True when a role filter is active but produces no results (not a loading state).
+  // Used to show the "no tasks for this role" empty state instead of a silent empty picker.
+  const hasSources =
+    (cbLines !== null && cbLines.length > 0) || approvedAddendumLines.length > 0;
+  const roleFilterEmpty =
+    cbLines !== null && !!roleMatchers && hasSources && visibleServiceItems.length === 0;
+
   // Clear selection if the currently-selected service item is no longer in the visible list
   // (e.g. CB data finishes loading and the item isn't allowed for this role)
   // Exception: never clear the original entry's service item when editing.
@@ -393,6 +401,7 @@ export function TimeEntryDialog({
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
+    setShowAllItems(false);
     if (entry) {
       // Editing an existing entry — use direct hours mode since we don't store start/end times
       setInputMode('hours');
@@ -453,6 +462,7 @@ export function TimeEntryDialog({
   // Reset work code / service item / isIndot when project changes
   const handleProjectChange = (val: string) => {
     const newProjectId = val === '__none__' ? '' : val;
+    setShowAllItems(false);
     setProjectId(newProjectId);
     const newProject = projects.find((p) => p.id === newProjectId);
     if (newProject?.jobType?.division?.name !== 'Engineering') {
@@ -468,6 +478,7 @@ export function TimeEntryDialog({
   };
 
   const handleIsIndotChange = (val: string) => {
+    setShowAllItems(false);
     setIsIndot(val === 'yes');
     setProjectId('');
     setWorkCodeId('');
@@ -741,20 +752,47 @@ export function TimeEntryDialog({
 
           {/* Service Item + Subtask — only shown after project is selected */}
           {projectId ? (
-            <ServiceSubtaskPicker
-              serviceItems={visibleServiceItemsForDisplay}
-              helperText={
-                projectLinkedItems
-                  ? `(${projectLinkedItems.length} linked to project)`
-                  : undefined
-              }
-              serviceItemId={serviceItemId}
-              serviceItemSubtaskId={serviceItemSubtaskId}
-              onSelect={(siId, stId) => {
-                setServiceItemId(siId);
-                setServiceItemSubtaskId(stId);
-              }}
-            />
+            roleFilterEmpty && !showAllItems ? (
+              <div className="rounded-md border border-dashed border-border/60 bg-muted/20 px-4 py-3 space-y-2">
+                <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
+                  Service Item / Subtask
+                  {projectLinkedItems && (
+                    <span className="ml-1.5 normal-case tracking-normal font-normal">
+                      ({projectLinkedItems.length} linked to project)
+                    </span>
+                  )}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {targetUser
+                    ? `No tasks available for ${targetUser.name}'s role in this cost breakdown.`
+                    : 'No tasks available for your role in this cost breakdown.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowAllItems(true)}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Show all service items and subtasks for this project
+                </button>
+              </div>
+            ) : (
+              <ServiceSubtaskPicker
+                serviceItems={showAllItems ? indotFiltered : visibleServiceItemsForDisplay}
+                helperText={
+                  showAllItems
+                    ? '— showing all (role has no tasks)'
+                    : projectLinkedItems
+                      ? `(${projectLinkedItems.length} linked to project)`
+                      : undefined
+                }
+                serviceItemId={serviceItemId}
+                serviceItemSubtaskId={serviceItemSubtaskId}
+                onSelect={(siId, stId) => {
+                  setServiceItemId(siId);
+                  setServiceItemSubtaskId(stId);
+                }}
+              />
+            )
           ) : (
             <div className="space-y-1.5">
               <Label className="text-muted-foreground">Service Item / Subtask</Label>
