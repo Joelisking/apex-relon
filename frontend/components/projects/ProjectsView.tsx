@@ -764,7 +764,7 @@ export default function ProjectsView({
           stagesLoading={stagesLoading}
         />
       ) : view === 'map' ? (
-        <ProjectsMapView projects={filteredByType} />
+        <ProjectsMapView projects={filteredByType} stages={projectStages} />
       ) : (
         <>
           {selectedProjects.length > 0 && (

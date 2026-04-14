@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { MapPin, AlertCircle, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Project } from '@/lib/api/projects-client';
+import type { PipelineStage } from '@/lib/api/pipeline-client';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? '';
@@ -20,33 +21,55 @@ const MAP_STYLES: Record<MapStyle, string> = {
 // Fort Wayne, IN — default center when no projects are located
 const DEFAULT_CENTER = { longitude: -85.1394, latitude: 41.0793, zoom: 10 };
 
-const STATUS_COLORS: Record<string, string> = {
+// Fallback colors for system statuses not found in pipeline stages
+const FALLBACK_COLORS: Record<string, string> = {
   'Completed': '#22c55e',
   'On Hold': '#f59e0b',
   'Cancelled': '#ef4444',
   'Closed': '#6b7280',
 };
 
-function getStatusColor(status: string): string {
-  return STATUS_COLORS[status] ?? '#3b82f6';
-}
+const DEFAULT_PIN_COLOR = '#3b82f6';
 
 interface ProjectsMapViewProps {
   projects: Project[];
+  stages: PipelineStage[];
 }
 
-const ALL_STATUSES = ['Planning', 'Active', 'On Hold', 'Completed', 'Cancelled'];
-
-export function ProjectsMapView({ projects }: ProjectsMapViewProps) {
+export function ProjectsMapView({ projects, stages }: ProjectsMapViewProps) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mapStyle, setMapStyle] = useState<MapStyle>('streets');
-  const [activeStatuses, setActiveStatuses] = useState<Set<string>>(
-    () => new Set(['Planning', 'Active', 'On Hold']),
+
+  // All statuses: stages in sort order, then any project statuses not covered by stages
+  const allStatuses = useMemo(() => {
+    const stageNames = new Set(stages.map((s) => s.name));
+    const extraFromProjects = Array.from(new Set(projects.map((p) => p.status))).filter(
+      (s) => !stageNames.has(s),
+    );
+    return [...stages.map((s) => s.name), ...extraFromProjects];
+  }, [stages, projects]);
+
+  // Track which statuses the user has explicitly turned OFF.
+  // Any status not in this set is considered active — so new stages that appear
+  // after mount (async load) are automatically shown rather than hidden.
+  const [deactivated, setDeactivated] = useState<Set<string>>(new Set());
+
+  const activeStatuses = useMemo(
+    () => new Set(allStatuses.filter((s) => !deactivated.has(s))),
+    [allStatuses, deactivated],
+  );
+
+  const getStatusColor = useCallback(
+    (status: string): string => {
+      const stage = stages.find((s) => s.name === status);
+      return stage?.color ?? FALLBACK_COLORS[status] ?? DEFAULT_PIN_COLOR;
+    },
+    [stages],
   );
 
   const toggleStatus = useCallback((status: string) => {
-    setActiveStatuses((prev) => {
+    setDeactivated((prev) => {
       const next = new Set(prev);
       if (next.has(status)) {
         next.delete(status);
@@ -95,29 +118,31 @@ export function ProjectsMapView({ projects }: ProjectsMapViewProps) {
       {/* Status filter bar */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-muted-foreground font-medium">Filter:</span>
-        {ALL_STATUSES.map((status) => (
+        {allStatuses.map((status) => {
+          const isActive = activeStatuses.has(status);
+          const count = projects.filter((p) => p.status === status).length;
+          return (
+            <button
+              key={status}
+              onClick={() => toggleStatus(status)}
+              className={cn(
+                'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                isActive
+                  ? 'border-transparent text-white'
+                  : 'border-border bg-muted/50 text-muted-foreground hover:bg-muted',
+              )}
+              style={isActive ? { backgroundColor: getStatusColor(status) } : undefined}
+            >
+              {status}
+              {isActive && (
+                <span className="text-[10px] opacity-80 ml-0.5">({count})</span>
+              )}
+            </button>
+          );
+        })}
+        {deactivated.size > 0 && (
           <button
-            key={status}
-            onClick={() => toggleStatus(status)}
-            className={cn(
-              'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-              activeStatuses.has(status)
-                ? 'border-transparent text-white'
-                : 'border-border bg-muted/50 text-muted-foreground hover:bg-muted',
-            )}
-            style={activeStatuses.has(status) ? { backgroundColor: getStatusColor(status) } : undefined}
-          >
-            {status}
-            {activeStatuses.has(status) && (
-              <span className="text-[10px] opacity-80 ml-0.5">
-                ({projects.filter((p) => p.status === status).length})
-              </span>
-            )}
-          </button>
-        ))}
-        {activeStatuses.size < ALL_STATUSES.length && (
-          <button
-            onClick={() => setActiveStatuses(new Set(ALL_STATUSES))}
+            onClick={() => setDeactivated(new Set())}
             className="text-xs text-muted-foreground hover:text-foreground underline"
           >
             Show all
@@ -233,21 +258,20 @@ export function ProjectsMapView({ projects }: ProjectsMapViewProps) {
           {mapStyle === 'satellite' ? 'Streets' : 'Satellite'}
         </button>
 
-        {/* Legend */}
+        {/* Legend — dynamic from allStatuses */}
         <div className="absolute bottom-8 left-2 z-10 flex flex-col gap-1 rounded-md border border-border bg-background/90 px-2.5 py-2 shadow-md backdrop-blur-sm">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">
             Status
           </p>
-          {Object.entries(STATUS_COLORS).map(([status, color]) => (
+          {allStatuses.map((status) => (
             <div key={status} className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+              <span
+                className="h-2 w-2 rounded-full shrink-0"
+                style={{ backgroundColor: getStatusColor(status) }}
+              />
               <span className="text-[10px] text-muted-foreground">{status}</span>
             </div>
           ))}
-          <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-blue-500" />
-            <span className="text-[10px] text-muted-foreground">Active</span>
-          </div>
         </div>
       </div>
 
