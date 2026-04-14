@@ -4,10 +4,12 @@ import { dateFnsLocalizer, type Components } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, FolderKanban, Clock, Tag, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { CalendarEvent } from './calendarUtils';
+import type { Task } from '@/lib/types';
+import type { Project } from '@/lib/api/projects-client';
 
 // ── Localizer ─────────────────────────────────────────────────────────────────
 
@@ -19,33 +21,124 @@ export const localizer = dateFnsLocalizer({
   locales: { 'en-US': enUS },
 });
 
-// ── Event pill ────────────────────────────────────────────────────────────────
+// ── Text color helper ─────────────────────────────────────────────────────────
+
+function eventTextColor(event: CalendarEvent): string {
+  if (event.kind === 'task') {
+    if (event.status === 'DONE') return 'text-green-900';
+    if (event.priority === 'URGENT') return 'text-red-900';
+    if (event.priority === 'HIGH') return 'text-orange-900';
+    if (event.priority === 'MEDIUM') return 'text-amber-900';
+    return 'text-slate-800';
+  }
+  if (event.kind === 'project-milestone') return 'text-purple-900';
+  if (event.kind === 'project-due') return 'text-orange-900';
+  return 'text-slate-800';
+}
+
+// ── Compact pill (month / agenda) ─────────────────────────────────────────────
 
 export function EventPill({ event }: { event: CalendarEvent }) {
-  const textColor =
-    event.kind === 'task' && event.priority === 'URGENT'
-      ? 'text-red-900'
-      : event.kind === 'task' && event.priority === 'HIGH'
-        ? 'text-orange-900'
-        : event.kind === 'task' && event.priority === 'MEDIUM'
-          ? 'text-amber-900'
-          : event.kind === 'task' && event.status === 'DONE'
-            ? 'text-green-900'
-            : event.kind === 'project-milestone'
-                ? 'text-purple-900'
-                : event.kind === 'project-due'
-                  ? 'text-orange-900'
-                  : 'text-slate-800';
-
   return (
     <span
       className={cn(
         'block truncate rounded px-1 py-0.5 text-[11px] font-medium leading-tight',
-        textColor,
+        eventTextColor(event),
       )}
       style={{ backgroundColor: event.color }}>
       {event.title}
     </span>
+  );
+}
+
+// ── Rich pill (week view) ─────────────────────────────────────────────────────
+
+function WeekEventPill({ event }: { event: CalendarEvent }) {
+  const textColor = eventTextColor(event);
+  const task = event.kind === 'task' ? (event.resource as Task | undefined) : undefined;
+  const project =
+    event.kind === 'project-due' || event.kind === 'project-milestone'
+      ? (event.resource as Project | undefined)
+      : undefined;
+
+  const priorityLabel =
+    task && task.priority && task.priority !== 'MEDIUM' && task.status !== 'DONE'
+      ? task.priority.charAt(0) + task.priority.slice(1).toLowerCase()
+      : null;
+
+  return (
+    <div
+      className={cn('h-full w-full overflow-hidden flex flex-col gap-0.5 px-1.5 py-1', textColor)}>
+      {/* Title */}
+      <p className="text-[11px] font-semibold leading-tight line-clamp-2 break-words">
+        {event.title}
+      </p>
+
+      {/* Task detail rows */}
+      {task && (
+        <>
+          {task.assignedTo && (
+            <div className="flex items-center gap-1 min-w-0">
+              <User className="h-2.5 w-2.5 shrink-0 opacity-60" />
+              <span className="text-[10px] leading-tight truncate opacity-80">
+                {task.assignedTo.name}
+              </span>
+            </div>
+          )}
+          {task.entityName && (
+            <div className="flex items-center gap-1 min-w-0">
+              <FolderKanban className="h-2.5 w-2.5 shrink-0 opacity-60" />
+              <span className="text-[10px] leading-tight truncate opacity-80">
+                {task.entityName}
+              </span>
+            </div>
+          )}
+          {task.taskType && (
+            <div className="flex items-center gap-1 min-w-0">
+              <Tag className="h-2.5 w-2.5 shrink-0 opacity-60" />
+              <span className="text-[10px] leading-tight truncate opacity-70">
+                {task.taskType.name}
+              </span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 mt-auto flex-wrap">
+            {task.estimatedHours && task.estimatedHours > 0 && (
+              <div className="flex items-center gap-0.5">
+                <Clock className="h-2.5 w-2.5 opacity-50" />
+                <span className="text-[10px] opacity-70">{task.estimatedHours}h</span>
+              </div>
+            )}
+            {priorityLabel && (
+              <span className="text-[9px] font-bold uppercase tracking-wide opacity-70">
+                {priorityLabel}
+              </span>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Project event detail rows */}
+      {project && (
+        <>
+          {(project as Project & { client?: { name: string } }).client?.name && (
+            <div className="flex items-center gap-1 min-w-0">
+              <Briefcase className="h-2.5 w-2.5 shrink-0 opacity-60" />
+              <span className="text-[10px] leading-tight truncate opacity-80">
+                {(project as Project & { client?: { name: string } }).client!.name}
+              </span>
+            </div>
+          )}
+          {(project as Project & { jobNumber?: string }).jobNumber && (
+            <div className="flex items-center gap-1 min-w-0">
+              <Tag className="h-2.5 w-2.5 shrink-0 opacity-60" />
+              <span className="text-[10px] leading-tight truncate opacity-70">
+                {(project as Project & { jobNumber?: string }).jobNumber}
+              </span>
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
@@ -113,9 +206,10 @@ export function eventPropGetter(event: object) {
 
 // ── Shared components map factory ─────────────────────────────────────────────
 
-export function makeComponents(): Components<CalendarEvent, object> {
+export function makeComponents(view?: 'week' | 'month' | 'agenda'): Components<CalendarEvent, object> {
   return {
     toolbar: CalendarNavToolbar as Components<CalendarEvent, object>['toolbar'],
-    event: ({ event }) => <EventPill event={event} />,
+    event: ({ event }) =>
+      view === 'week' ? <WeekEventPill event={event} /> : <EventPill event={event} />,
   };
 }

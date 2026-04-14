@@ -216,11 +216,10 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
     if (!title.trim()) return;
     setFetchingItems(true);
     try {
-      const [all, filtered] = await Promise.all([
-        serviceItemsApi.getAll(),
-        jobTypeId ? serviceItemsApi.getAll(jobTypeId) : Promise.resolve([] as ServiceItem[]),
-      ]);
-      setAllServiceItems(all);
+      const filtered = jobTypeId
+        ? await serviceItemsApi.getAll(jobTypeId)
+        : await serviceItemsApi.getAll();
+      setAllServiceItems(filtered);
       setPrePopulated(filtered);
       setStep('configure');
     } catch {

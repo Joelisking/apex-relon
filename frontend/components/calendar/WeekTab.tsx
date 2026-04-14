@@ -28,7 +28,7 @@ export function WeekTab({ events, currentDate, onNavigate, onEventClick }: WeekT
         onNavigate={onNavigate}
         onSelectEvent={handleSelectEvent}
         eventPropGetter={eventPropGetter}
-        components={makeComponents()}
+        components={makeComponents('week')}
         popup
         showAllEvents
         style={{ height: '100%' }}
