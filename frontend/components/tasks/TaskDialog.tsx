@@ -29,13 +29,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { tasksApi, type CreateTaskDto } from '@/lib/api/tasks-client';
-import { settingsApi } from '@/lib/api/client';
+import { settingsApi, API_URL, getTokenFromClientCookies } from '@/lib/api/client';
 import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
 import { rolesApi, type RoleResponse } from '@/lib/api/roles-client';
 import { toast } from 'sonner';
 import { type UserDirectoryItem } from '@/lib/api/users-client';
 import { ServiceSubtaskPicker } from '@/components/shared/ServiceSubtaskPicker';
-import type { Task, TaskType, CostBreakdown, ServiceItem } from '@/lib/types';
+import type { Task, TaskType, CostBreakdown, ServiceItem, ProjectServiceItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 interface TaskDialogProps {
@@ -179,6 +179,22 @@ export function TaskDialog({
     [projectCostBreakdowns],
   );
 
+  // Fallback: linked service items for the project (used when there is no cost breakdown)
+  const { data: projectServiceItems = [] } = useQuery<ProjectServiceItem[]>({
+    queryKey: ['project-service-items', form.entityId],
+    queryFn: async () => {
+      const token = getTokenFromClientCookies() ?? '';
+      const res = await fetch(`${API_URL}/projects/${form.entityId}/service-items`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: isProjectTask,
+    staleTime: 60_000,
+  });
+
   // Load the full role catalog so we can resolve a User.role (stored as
   // Role.key) to its Role.label — which is what CostBreakdownRoleEstimate.role
   // actually stores (see CostBreakdownSubtaskSection.tsx:249).
@@ -200,16 +216,22 @@ export function TaskDialog({
     return matchers;
   }, [assignableUsers, form.assignedToId, rolesCatalog]);
 
-  // All CB service items, unfiltered — used for the "show all" fallback.
-  const allCbServiceItems: ServiceItem[] = useMemo(
-    () => cbLines.map((l) => l.serviceItem),
-    [cbLines],
-  );
+  // True when the project has a cost breakdown with lines to source items from.
+  const usingCbData = cbLines.length > 0;
 
-  // Service items filtered down to subtasks that have a role estimate for the
-  // assignee. When no assignee/role is set, returns the full unfiltered list.
-  // No silent fallback — an empty result is surfaced to the user explicitly.
+  // All service items for the picker — CB items when available, project items otherwise.
+  const allCbServiceItems: ServiceItem[] = useMemo(() => {
+    if (usingCbData) return cbLines.map((l) => l.serviceItem);
+    return projectServiceItems.map((psi) => psi.serviceItem);
+  }, [usingCbData, cbLines, projectServiceItems]);
+
+  // Service items filtered by the assignee's role — only applies to CB data.
+  // When using project items (no CB), all items are shown unfiltered.
   const filteredCbServiceItems: ServiceItem[] = useMemo(() => {
+    if (!usingCbData) {
+      // No CB — show all project service items without role filtering
+      return projectServiceItems.map((psi) => psi.serviceItem);
+    }
     if (!assigneeRoleMatchers) return cbLines.map((line) => line.serviceItem);
     return cbLines
       .map((line) => {
@@ -229,7 +251,7 @@ export function TaskDialog({
         return { ...line.serviceItem, subtasks };
       })
       .filter((si): si is ServiceItem => si !== null);
-  }, [cbLines, assigneeRoleMatchers]);
+  }, [usingCbData, cbLines, assigneeRoleMatchers, projectServiceItems]);
 
   // True when an assignee with a known role is selected but their role has no
   // subtasks in this cost breakdown (i.e. the filter returned nothing).
@@ -381,7 +403,7 @@ export function TaskDialog({
               selectedUserId={form.assignedToId ?? ''}
               currentUserId={currentUserId}
               helperText={
-                isProjectTask && cbLines.length > 0
+                isProjectTask && usingCbData
                   ? '— filters subtasks by role'
                   : undefined
               }
@@ -452,7 +474,13 @@ export function TaskDialog({
             ) : (
             <ServiceSubtaskPicker
               label="Service Item / Subtask"
-              helperText={showAllCbItems ? '— showing all (role has no tasks)' : '— from cost breakdown'}
+              helperText={
+                showAllCbItems
+                  ? '— showing all (role has no tasks)'
+                  : usingCbData
+                    ? '— from cost breakdown'
+                    : '— from project'
+              }
               placeholder="Pick a subtask (or type a custom title below)"
               serviceItems={cbServiceItems}
               serviceItemId={form.serviceItemId ?? ''}
@@ -478,6 +506,14 @@ export function TaskDialog({
                   } else {
                     autoHours = relevant.reduce((s, re) => s + re.estimatedHours, 0);
                     autoTitle = line.serviceItem.name;
+                  }
+                } else {
+                  // No CB line — resolve title from service items directly
+                  const si = allCbServiceItems.find((s) => s.id === siId);
+                  if (si) {
+                    autoTitle = stId
+                      ? (si.subtasks.find((st) => st.id === stId)?.name ?? si.name)
+                      : si.name;
                   }
                 }
                 setForm((prev) => ({
