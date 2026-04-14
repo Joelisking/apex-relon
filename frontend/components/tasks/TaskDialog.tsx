@@ -146,7 +146,7 @@ export function TaskDialog({
   const readOnly = !!editingTask && !canEdit;
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<
-    CreateTaskDto & { status?: string; completionNote?: string }
+    CreateTaskDto & { status?: string; completionNote?: string; entityJobNumber?: string }
   >({
     title: '',
     description: '',
@@ -264,6 +264,7 @@ export function TaskDialog({
         assignedToId: editingTask.assignedToId || '',
         entityType: editingTask.entityType || '',
         entityId: editingTask.entityId || '',
+        entityJobNumber: editingTask.entityJobNumber || '',
         taskTypeId: editingTask.taskTypeId || '',
         estimatedHours: editingTask.estimatedHours ?? undefined,
         serviceItemId: editingTask.serviceItemId ?? undefined,
@@ -307,7 +308,6 @@ export function TaskDialog({
 
   const handleSave = async () => {
     if (!form.title.trim()) return;
-    if (isMarkingDone && !form.completionNote?.trim()) return;
     setSaving(true);
     try {
       const payload = {
@@ -356,12 +356,14 @@ export function TaskDialog({
           <EntityLinkPicker
             entityType={form.entityType ?? ''}
             entityId={form.entityId ?? ''}
-            onChange={(type, id, jobTypeId) => {
+            entityJobNumber={form.entityJobNumber}
+            onChange={(type, id, jobTypeId, jobNumber) => {
               setShowAllCbItems(false);
               setForm((prev) => ({
                 ...prev,
                 entityType: type,
                 entityId: id,
+                entityJobNumber: jobNumber || '',
                 taskTypeId: '',
                 serviceItemId: undefined,
                 serviceItemSubtaskId: undefined,
@@ -803,11 +805,7 @@ export function TaskDialog({
                   type="button"
                   size="sm"
                   onClick={handleSave}
-                  disabled={
-                    saving ||
-                    !form.title.trim() ||
-                    (isMarkingDone && !form.completionNote?.trim())
-                  }>
+                  disabled={saving || !form.title.trim()}>
                   {saving && (
                     <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                   )}

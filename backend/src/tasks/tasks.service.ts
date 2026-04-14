@@ -243,11 +243,6 @@ export class TasksService {
           'Only the assigned user can mark this task as done',
         );
       }
-      if (!dto.completionNote) {
-        throw new BadRequestException(
-          'A completion note is required when marking a task as done',
-        );
-      }
     }
 
     // Validate revert rules when un-completing a DONE task
@@ -365,18 +360,12 @@ export class TasksService {
       );
     }
 
-    if (!completionNote) {
-      throw new BadRequestException(
-        'A completion note is required when marking a task as done',
-      );
-    }
-
     const task = await this.prisma.task.update({
       where: { id },
       data: {
         status: DONE_STATUS,
         completedAt: new Date(),
-        completionNote,
+        completionNote: completionNote || null,
       },
       include: {
         assignedTo: {
@@ -528,22 +517,29 @@ export class TasksService {
       projectIds.length
         ? this.prisma.project.findMany({
             where: { id: { in: projectIds } },
-            select: { id: true, name: true },
+            select: { id: true, name: true, jobNumber: true },
           })
         : [],
     ]);
 
     const nameMap = new Map<string, string>();
+    const jobNumberMap = new Map<string, string>();
     for (const l of leads as { id: string; company: string | null; contactName: string }[])
       nameMap.set(l.id, l.company || l.contactName);
     for (const c of clients as { id: string; name: string }[])
       nameMap.set(c.id, c.name);
-    for (const p of projects as { id: string; name: string }[])
+    for (const p of projects as { id: string; name: string; jobNumber: string | null }[]) {
       nameMap.set(p.id, p.name);
+      if (p.jobNumber) jobNumberMap.set(p.id, p.jobNumber);
+    }
 
     return tasks.map((t) => ({
       ...t,
       entityName: t.entityId ? (nameMap.get(t.entityId) ?? null) : null,
+      entityJobNumber:
+        t.entityType === 'PROJECT' && t.entityId
+          ? (jobNumberMap.get(t.entityId) ?? null)
+          : null,
     }));
   }
 }

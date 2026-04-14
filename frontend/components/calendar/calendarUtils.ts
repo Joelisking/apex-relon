@@ -20,6 +20,7 @@ export interface CalendarEvent {
   priority?: string;
   status?: string;
   estimatedDueDate?: string;
+  jobNumber?: string;
   resource?: Task | Project;
 }
 
@@ -101,12 +102,14 @@ function toLocalDate(iso: string): Date {
 
 export function projectToEvents(project: Project): CalendarEvent[] {
   const events: CalendarEvent[] = [];
+  const jobNumber = (project as Project & { jobNumber?: string }).jobNumber;
+  const nameWithJob = jobNumber ? `${jobNumber} — ${project.name}` : project.name;
 
   if (project.estimatedDueDate) {
     const d = toLocalDate(project.estimatedDueDate);
     events.push({
       id: `project-due-${project.id}`,
-      title: `Due: ${project.name}`,
+      title: `Due: ${nameWithJob}`,
       start: d,
       end: d,
       allDay: true,
@@ -114,6 +117,7 @@ export function projectToEvents(project: Project): CalendarEvent[] {
       sourceId: project.id,
       color: '#fed7aa', // orange-200
       estimatedDueDate: project.estimatedDueDate,
+      jobNumber,
       resource: project,
     });
   }
@@ -122,13 +126,14 @@ export function projectToEvents(project: Project): CalendarEvent[] {
     const d = toLocalDate(project.completedDate);
     events.push({
       id: `project-milestone-${project.id}`,
-      title: `✓ ${project.name}`,
+      title: `✓ ${nameWithJob}`,
       start: d,
       end: d,
       allDay: true,
       kind: 'project-milestone',
       sourceId: project.id,
       color: '#e9d5ff', // purple-200
+      jobNumber,
       resource: project,
     });
   }

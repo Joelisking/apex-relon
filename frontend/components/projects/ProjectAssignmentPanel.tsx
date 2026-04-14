@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserPlus, X, Loader2 } from 'lucide-react';
+import { UserPlus, X, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { projectsApi, type ProjectAssignment } from '@/lib/api/projects-client';
 import { usersApi } from '@/lib/api/users-client';
 import { rolesApi } from '@/lib/api/roles-client';
+import { getTeams, getTeam } from '@/lib/api/teams-client';
 import { useAuth } from '@/contexts/auth-context';
 
 interface ProjectAssignmentPanelProps {
@@ -33,6 +34,7 @@ export function ProjectAssignmentPanel({
   const { hasPermission } = useAuth();
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
+  const [selectedTeamId, setSelectedTeamId] = useState('');
 
   const qk = ['project-assignments', projectId];
 
@@ -52,15 +54,33 @@ export function ProjectAssignmentPanel({
     staleTime: 5 * 60 * 1000,
   });
 
-  const crewRoles = rolesData.map((r) => r.label);
+  const { data: teams = [] } = useQuery({
+    queryKey: ['teams'],
+    queryFn: () => getTeams(),
+    staleTime: 5 * 60 * 1000,
+  });
 
+  const { data: teamDetail, isLoading: isLoadingTeam } = useQuery({
+    queryKey: ['team', selectedTeamId],
+    queryFn: () => getTeam(selectedTeamId),
+    enabled: !!selectedTeamId,
+    staleTime: 60_000,
+  });
+
+  const crewRoles = rolesData.map((r) => r.label);
   const allUsers = usersData?.users ?? [];
   const assignedUserIds = new Set(assignments.map((a) => a.userId));
 
-  // Users available to add: not already assigned, not in named roles
+  // Users available to add individually: not already assigned, not in named roles
   const availableUsers = allUsers.filter(
     (u) => !assignedUserIds.has(u.id) && !excludeUserIds.includes(u.id),
   );
+
+  // Team members that aren't already assigned (and not in named roles)
+  const teamMembersToAdd =
+    teamDetail?.members?.filter(
+      (m) => !assignedUserIds.has(m.id) && !excludeUserIds.includes(m.id),
+    ) ?? [];
 
   const addMutation = useMutation({
     mutationFn: () =>
@@ -89,6 +109,29 @@ export function ProjectAssignmentPanel({
     onError: () => toast.error('Failed to remove assignment'),
   });
 
+  const addTeamMutation = useMutation({
+    mutationFn: async () => {
+      await Promise.all(
+        teamMembersToAdd.map((member) => {
+          const roleLabel =
+            rolesData.find((r) => r.key === member.role)?.label ?? member.role ?? '';
+          return projectsApi.addAssignment(projectId, {
+            userId: member.id,
+            role: roleLabel,
+          });
+        }),
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk });
+      queryClient.invalidateQueries({ queryKey: ['calendar-projects'] });
+      const teamName = teams.find((t) => t.id === selectedTeamId)?.name ?? 'Team';
+      toast.success(`${teamMembersToAdd.length} member${teamMembersToAdd.length !== 1 ? 's' : ''} added from ${teamName}`);
+      setSelectedTeamId('');
+    },
+    onError: () => toast.error('Failed to add team members'),
+  });
+
   const handleUserChange = (userId: string) => {
     setSelectedUserId(userId);
     const user = availableUsers.find((u) => u.id === userId);
@@ -104,7 +147,17 @@ export function ProjectAssignmentPanel({
     keywords: u.role,
   }));
 
+  const teamOptions = teams.map((t) => ({
+    value: t.id,
+    label: t.name,
+    keywords: t.type,
+  }));
+
+  const alreadyAssignedCount =
+    (teamDetail?.members?.length ?? 0) - teamMembersToAdd.length;
+
   const canAdd = selectedUserId && selectedRole;
+  const canAddTeam = selectedTeamId && teamMembersToAdd.length > 0 && !isLoadingTeam;
 
   return (
     <div className="space-y-4">
@@ -143,44 +196,86 @@ export function ProjectAssignmentPanel({
         </div>
       )}
 
-      {/* Add form — only shown when user can edit */}
-      {hasPermission('projects:edit') && <div className="flex items-center gap-2">
-        <SearchableSelect
-          value={selectedUserId}
-          onValueChange={handleUserChange}
-          options={userOptions}
-          placeholder="Select crew member..."
-          searchPlaceholder="Search by name..."
-          emptyMessage="All users are already assigned"
-          className="flex-1 h-8 text-xs"
-        />
+      {hasPermission('projects:edit') && (
+        <div className="space-y-2">
+          {/* Add individual member */}
+          <div className="flex items-center gap-2">
+            <SearchableSelect
+              value={selectedUserId}
+              onValueChange={handleUserChange}
+              options={userOptions}
+              placeholder="Select crew member..."
+              searchPlaceholder="Search by name..."
+              emptyMessage="All users are already assigned"
+              className="flex-1 h-8 text-xs"
+            />
 
-        <Select value={selectedRole} onValueChange={setSelectedRole}>
-          <SelectTrigger className="h-8 text-xs w-40">
-            <SelectValue placeholder="Role..." />
-          </SelectTrigger>
-          <SelectContent>
-            {crewRoles.map((r) => (
-              <SelectItem key={r} value={r} className="text-xs">
-                {r}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <Select value={selectedRole} onValueChange={setSelectedRole}>
+              <SelectTrigger className="h-8 text-xs w-40">
+                <SelectValue placeholder="Role..." />
+              </SelectTrigger>
+              <SelectContent>
+                {crewRoles.map((r) => (
+                  <SelectItem key={r} value={r} className="text-xs">
+                    {r}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-        <Button
-          size="sm"
-          className="h-8 gap-1.5 text-xs"
-          disabled={!canAdd || addMutation.isPending}
-          onClick={() => addMutation.mutate()}>
-          {addMutation.isPending ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <UserPlus className="h-3.5 w-3.5" />
-          )}
-          Add
-        </Button>
-      </div>}
+            <Button
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              disabled={!canAdd || addMutation.isPending}
+              onClick={() => addMutation.mutate()}>
+              {addMutation.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <UserPlus className="h-3.5 w-3.5" />
+              )}
+              Add
+            </Button>
+          </div>
+
+          {/* Add entire team */}
+          <div className="flex items-center gap-2">
+            <SearchableSelect
+              value={selectedTeamId}
+              onValueChange={setSelectedTeamId}
+              options={teamOptions}
+              placeholder="Or select a team..."
+              searchPlaceholder="Search teams..."
+              emptyMessage="No teams found"
+              className="flex-1 h-8 text-xs"
+            />
+
+            {/* Member preview badge */}
+            {selectedTeamId && !isLoadingTeam && teamDetail && (
+              <span className="text-[11px] text-muted-foreground whitespace-nowrap shrink-0">
+                {teamMembersToAdd.length} new
+                {alreadyAssignedCount > 0 && `, ${alreadyAssignedCount} already assigned`}
+              </span>
+            )}
+            {selectedTeamId && isLoadingTeam && (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
+            )}
+
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-8 gap-1.5 text-xs shrink-0"
+              disabled={!canAddTeam || addTeamMutation.isPending}
+              onClick={() => addTeamMutation.mutate()}>
+              {addTeamMutation.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Users className="h-3.5 w-3.5" />
+              )}
+              Add Team
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

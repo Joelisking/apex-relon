@@ -118,6 +118,14 @@ export function CalendarView() {
     [assignableUsers],
   );
 
+  const projectJobMap = useMemo<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    for (const p of projects as Project[]) {
+      if (p.jobNumber) map[p.id] = p.jobNumber;
+    }
+    return map;
+  }, [projects]);
+
   const events = useMemo<CalendarEvent[]>(() => {
     const evts: CalendarEvent[] = [];
 
@@ -127,7 +135,12 @@ export function CalendarView() {
         if (filterProjectId && !(t.entityType === 'PROJECT' && t.entityId === filterProjectId)) continue;
         if (filterAssigneeId && t.assignedToId !== filterAssigneeId) continue;
         const ev = taskToEvent(t);
-        if (ev) evts.push(ev);
+        if (ev) {
+          if (t.entityType === 'PROJECT' && t.entityId && projectJobMap[t.entityId]) {
+            ev.jobNumber = projectJobMap[t.entityId];
+          }
+          evts.push(ev);
+        }
       }
     }
 

@@ -171,10 +171,18 @@ export function TaskTableView({
                         <span className="text-[10px] uppercase tracking-[0.04em] text-muted-foreground font-medium leading-none">
                           {task.entityType}
                         </span>
+                        {task.entityJobNumber && (
+                          <>
+                            <span className="text-muted-foreground text-[10px] leading-none">·</span>
+                            <span className="font-mono text-[10px] text-muted-foreground leading-none">
+                              {task.entityJobNumber}
+                            </span>
+                          </>
+                        )}
                         {task.entityName && (
                           <>
                             <span className="text-muted-foreground text-[10px] leading-none">·</span>
-                            <span className="text-[11px] text-muted-foreground font-medium leading-none truncate max-w-[140px]">
+                            <span className="text-[11px] text-muted-foreground font-medium leading-none truncate max-w-[120px]">
                               {task.entityName}
                             </span>
                           </>

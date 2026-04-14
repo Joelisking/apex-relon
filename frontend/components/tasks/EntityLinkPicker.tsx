@@ -47,7 +47,8 @@ interface EntityOption {
 interface EntityLinkPickerProps {
   entityType: string;
   entityId: string;
-  onChange: (entityType: string, entityId: string, jobTypeId?: string) => void;
+  entityJobNumber?: string | null;
+  onChange: (entityType: string, entityId: string, jobTypeId?: string, jobNumber?: string) => void;
 }
 
 const TYPE_META = {
@@ -92,6 +93,7 @@ const ENTITY_TYPES: EntityType[] = ['LEAD', 'CLIENT', 'PROJECT'];
 export function EntityLinkPicker({
   entityType,
   entityId,
+  entityJobNumber,
   onChange,
 }: EntityLinkPickerProps) {
   const [open, setOpen] = useState(false);
@@ -99,6 +101,7 @@ export function EntityLinkPicker({
   const [filter, setFilter] = useState<FilterValue>('ALL');
   const [allOptions, setAllOptions] = useState<EntityOption[]>([]);
   const [asyncLabel, setAsyncLabel] = useState('');
+  const [asyncJobNumber, setAsyncJobNumber] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
 
   // ------------------------------------------------------------------
@@ -151,16 +154,14 @@ export function EntityLinkPicker({
   const loading = open && allOptions.length === 0;
 
   // ------------------------------------------------------------------
-  // Resolve display label
+  // Resolve display label + job number
   // ------------------------------------------------------------------
-  const resolvedLabel = useMemo(() => {
-    if (!entityType || !entityId) return '';
-    return (
-      allOptions.find(
-        (o) => o.type === entityType && o.id === entityId,
-      )?.label ?? ''
-    );
-  }, [entityType, entityId, allOptions]);
+  const selectedOption = useMemo(
+    () => allOptions.find((o) => o.type === entityType && o.id === entityId),
+    [entityType, entityId, allOptions],
+  );
+  const resolvedLabel = selectedOption?.label ?? '';
+  const resolvedJobNumber = selectedOption?.jobNumber ?? '';
 
   useEffect(() => {
     if (!entityType || !entityId || resolvedLabel) return;
@@ -183,7 +184,10 @@ export function EntityLinkPicker({
       projectsApi
         .getById(entityId)
         .then((p) => {
-          if (!cancelled) setAsyncLabel(p.name);
+          if (!cancelled) {
+            setAsyncLabel(p.name);
+            if (p.jobNumber) setAsyncJobNumber(p.jobNumber);
+          }
         })
         .catch(() => {});
     }
@@ -193,6 +197,7 @@ export function EntityLinkPicker({
   }, [entityType, entityId, resolvedLabel]);
 
   const selectedLabel = resolvedLabel || asyncLabel;
+  const selectedJobNumber = resolvedJobNumber || asyncJobNumber || entityJobNumber || '';
   const hasSelection = !!entityType && !!entityId;
   const selectedMeta = hasSelection
     ? TYPE_META[entityType as EntityType]
@@ -239,16 +244,18 @@ export function EntityLinkPicker({
   // ------------------------------------------------------------------
   const handleSelect = useCallback(
     (option: EntityOption) => {
-      onChange(option.type, option.id, option.jobTypeId);
+      onChange(option.type, option.id, option.jobTypeId, option.jobNumber);
       setAsyncLabel(option.label);
+      setAsyncJobNumber(option.jobNumber ?? '');
       setOpen(false);
     },
     [onChange],
   );
 
   const handleClear = () => {
-    onChange('', '', undefined);
+    onChange('', '', undefined, undefined);
     setAsyncLabel('');
+    setAsyncJobNumber('');
   };
 
   // ------------------------------------------------------------------
@@ -271,8 +278,13 @@ export function EntityLinkPicker({
               )}>
               {selectedMeta?.label}
             </span>
-            <span className="flex-1 min-w-0 truncate font-medium">
-              {selectedLabel}
+            <span className="flex-1 min-w-0 flex items-center gap-1.5 overflow-hidden">
+              {selectedJobNumber && (
+                <span className="shrink-0 font-mono text-[10px] opacity-60 leading-none">
+                  {selectedJobNumber}
+                </span>
+              )}
+              <span className="truncate font-medium leading-none">{selectedLabel}</span>
             </span>
             <button
               type="button"

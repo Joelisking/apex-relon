@@ -645,6 +645,7 @@ export interface Task {
   entityType?: string | null;
   entityId?: string | null;
   entityName?: string | null;
+  entityJobNumber?: string | null;
   assignedToId?: string | null;
   assignedTo?: {
     id: string;

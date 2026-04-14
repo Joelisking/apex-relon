@@ -46,6 +46,9 @@ export function EventPill({ event }: { event: CalendarEvent }) {
         eventTextColor(event),
       )}
       style={{ backgroundColor: event.color }}>
+      {event.kind === 'task' && event.jobNumber && (
+        <span className="opacity-50 mr-1">{event.jobNumber} ·</span>
+      )}
       {event.title}
     </span>
   );
@@ -85,11 +88,13 @@ function WeekEventPill({ event }: { event: CalendarEvent }) {
               </span>
             </div>
           )}
-          {task.entityName && (
+          {(event.jobNumber || task.entityName) && (
             <div className="flex items-center gap-1 min-w-0">
               <FolderKanban className="h-2.5 w-2.5 shrink-0 opacity-60" />
               <span className="text-[10px] leading-tight truncate opacity-80">
-                {task.entityName}
+                {event.jobNumber && task.entityName
+                  ? `${event.jobNumber} — ${task.entityName}`
+                  : event.jobNumber ?? task.entityName}
               </span>
             </div>
           )}

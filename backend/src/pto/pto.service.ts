@@ -160,8 +160,11 @@ export class PtoService {
     const request = await this.prisma.ptoRequest.findUnique({ where: { id: requestId } });
     if (!request) throw new NotFoundException(`PTO request ${requestId} not found`);
     if (request.userId !== userId) throw new ForbiddenException('You can only cancel your own requests');
-    if (request.status === 'APPROVED') {
-      throw new BadRequestException('Cannot cancel an already-approved request');
+    if (request.status === 'CANCELLED') {
+      throw new BadRequestException('Request is already cancelled');
+    }
+    if (request.status === 'DENIED') {
+      throw new BadRequestException('Cannot cancel a denied request');
     }
     return this.prisma.ptoRequest.update({
       where: { id: requestId },

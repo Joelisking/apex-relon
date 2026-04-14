@@ -217,8 +217,14 @@ export function TaskCardView({
                 {task.entityType && (
                   <Badge
                     variant="outline"
-                    className="text-[10px] font-normal gap-1 max-w-[140px]">
+                    className="text-[10px] font-normal gap-1 max-w-[160px]">
                     <Link2 className="h-2.5 w-2.5 shrink-0" />
+                    {task.entityJobNumber && (
+                      <span className="font-mono shrink-0">{task.entityJobNumber}</span>
+                    )}
+                    {task.entityJobNumber && task.entityName && (
+                      <span className="opacity-40">·</span>
+                    )}
                     <span className="truncate">
                       {task.entityName || task.entityType}
                     </span>

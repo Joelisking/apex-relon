@@ -221,7 +221,7 @@ function PtoRequestRow({ request, onCancel }: PtoRequestRowProps) {
           <StatusIcon className="h-3 w-3" />
           {config.label}
         </span>
-        {request.status === 'PENDING' && (
+        {(request.status === 'PENDING' || request.status === 'APPROVED') && (
           <Button
             variant="ghost"
             size="sm"
