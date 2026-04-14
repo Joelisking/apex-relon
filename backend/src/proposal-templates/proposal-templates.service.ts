@@ -171,9 +171,16 @@ export class ProposalTemplatesService implements OnModuleInit {
     this.logger.log(`Seeded ${seeded} proposal templates`);
   }
 
-  listProposals(tenantId: string, leadId?: string) {
+  listProposals(tenantId: string, filters?: { leadId?: string; projectId?: string }) {
+    // leadId takes priority; fall back to matching via the linked cost breakdown's projectId
+    const where: Record<string, unknown> = { tenantId };
+    if (filters?.leadId) {
+      where.leadId = filters.leadId;
+    } else if (filters?.projectId) {
+      where.costBreakdown = { projectId: filters.projectId };
+    }
     return this.prisma.proposal.findMany({
-      where: { tenantId, ...(leadId ? { leadId } : {}) },
+      where,
       include: {
         lead: { select: { id: true, company: true, contactName: true, projectName: true } },
         costBreakdown: { select: { id: true, title: true, status: true } },

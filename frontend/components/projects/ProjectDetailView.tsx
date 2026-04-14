@@ -298,9 +298,8 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
     ...(canViewFinancials ? [{ value: 'financials', label: 'Financials' }] : []),
     { value: 'tasks', label: 'Tasks' },
     { value: 'quotes', label: 'Invoices' },
-    ...(project.leadId ? [{ value: 'proposals', label: 'Proposals' }] : []),
+    { value: 'proposals', label: 'Proposals' },
     { value: 'crew', label: 'Crew' },
-    { value: 'services', label: 'Services' },
     ...(isEngineeringProject ? [{ value: 'time', label: 'Time Tracking' }] : []),
     { value: 'addenda', label: 'Addenda' },
     { value: 'comments', label: 'Comments' },
@@ -502,11 +501,12 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
               <LinkedQuotesSection projectId={project.id} />
             </TabsContent>
 
-            {project.leadId && (
-              <TabsContent value="proposals" className="mt-0">
-                <LinkedProposalsSection leadId={project.leadId} />
-              </TabsContent>
-            )}
+            <TabsContent value="proposals" className="mt-0">
+              <LinkedProposalsSection
+                leadId={project.leadId ?? undefined}
+                projectId={project.id}
+              />
+            </TabsContent>
 
             <TabsContent value="crew" className="mt-0">
               <div className="space-y-3">
@@ -519,17 +519,6 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
               </div>
             </TabsContent>
 
-            <TabsContent value="services" className="mt-0">
-              <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground mb-3">
-                  Service Items
-                </h3>
-                <ProjectServiceItemsPanel
-                  projectId={project.id}
-                  jobTypeIds={project.jobTypeIds ?? []}
-                />
-              </div>
-            </TabsContent>
 
             {isEngineeringProject && (
               <TabsContent value="time" className="mt-0">

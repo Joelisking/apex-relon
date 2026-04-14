@@ -29,7 +29,8 @@ import { ConvertLeadDialog } from '@/components/leads/ConvertLeadDialog';
 import type { Lead } from '@/lib/types';
 
 interface LinkedProposalsSectionProps {
-  leadId: string;
+  leadId?: string;
+  projectId?: string;
   lead?: Lead;
 }
 
@@ -67,7 +68,7 @@ const CB_STATUS_STYLES: Record<string, string> = {
   FINAL: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
 };
 
-export function LinkedProposalsSection({ leadId, lead }: LinkedProposalsSectionProps) {
+export function LinkedProposalsSection({ leadId, projectId, lead }: LinkedProposalsSectionProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -86,18 +87,23 @@ export function LinkedProposalsSection({ leadId, lead }: LinkedProposalsSectionP
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [acceptedContractedValue, setAcceptedContractedValue] = useState<number | undefined>(undefined);
 
+  const proposalFilter = leadId ? { leadId } : { projectId };
+  const cbFilter = leadId ? { leadId } : { projectId };
+
   const { data: proposals = [], isLoading } = useQuery({
-    queryKey: ['proposals', { leadId }],
-    queryFn: () => proposalTemplatesApi.getProposals({ leadId }),
+    queryKey: ['proposals', { leadId, projectId }],
+    queryFn: () => proposalTemplatesApi.getProposals(proposalFilter),
+    enabled: !!(leadId || projectId),
   });
 
   const { data: costBreakdowns = [], isLoading: loadingBreakdowns } = useQuery({
-    queryKey: ['cost-breakdowns', { leadId }],
-    queryFn: () => costBreakdownApi.getAll({ leadId }),
+    queryKey: ['cost-breakdowns', { leadId, projectId }],
+    queryFn: () => costBreakdownApi.getAll(cbFilter),
+    enabled: !!(leadId || projectId),
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['proposals', { leadId }] });
-  const invalidateCbs = () => queryClient.invalidateQueries({ queryKey: ['cost-breakdowns', { leadId }] });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['proposals', { leadId, projectId }] });
+  const invalidateCbs = () => queryClient.invalidateQueries({ queryKey: ['cost-breakdowns', { leadId, projectId }] });
 
   const handleDeleteCb = async (cbId: string) => {
     setDeletingCbId(cbId);
@@ -207,7 +213,8 @@ export function LinkedProposalsSection({ leadId, lead }: LinkedProposalsSectionP
 
   const handleOpenEditor = (proposal: Proposal) => {
     const params = new URLSearchParams();
-    params.set('leadId', leadId);
+    if (leadId) params.set('leadId', leadId);
+    else if (projectId) params.set('projectId', projectId);
     params.set('proposalId', proposal.id);
     if (proposal.costBreakdownId) params.set('costBreakdownId', proposal.costBreakdownId);
     if (proposal.proposalTemplateId) params.set('templateId', proposal.proposalTemplateId);
@@ -226,7 +233,7 @@ export function LinkedProposalsSection({ leadId, lead }: LinkedProposalsSectionP
           size="sm"
           variant="outline"
           className="h-7 text-[12px] gap-1.5"
-          onClick={() => router.push(`/proposals/new?leadId=${leadId}`)}>
+          onClick={() => router.push(`/proposals/new?${leadId ? `leadId=${leadId}` : `projectId=${projectId}`}`)}>
           <Plus className="h-3 w-3" />
           New Proposal
         </Button>
@@ -244,13 +251,13 @@ export function LinkedProposalsSection({ leadId, lead }: LinkedProposalsSectionP
           </div>
           <p className="text-[13px] font-medium text-foreground">No proposals yet</p>
           <p className="text-[12px] text-muted-foreground mt-0.5 mb-3">
-            Generate a proposal for this lead
+            Generate a proposal for this {leadId ? 'lead' : 'project'}
           </p>
           <Button
             size="sm"
             variant="outline"
             className="h-7 text-[12px] gap-1.5"
-            onClick={() => router.push(`/proposals/new?leadId=${leadId}`)}>
+            onClick={() => router.push(`/proposals/new?${leadId ? `leadId=${leadId}` : `projectId=${projectId}`}`)}>
             <Plus className="h-3 w-3" />
             New Proposal
           </Button>
@@ -436,8 +443,15 @@ export function LinkedProposalsSection({ leadId, lead }: LinkedProposalsSectionP
           variant="outline"
           className="h-7 text-[12px] gap-1.5"
           onClick={() => {
-            const returnTo = encodeURIComponent(`/leads/${leadId}?tab=proposals`);
-            router.push(`/cost-breakdown/new?leadId=${leadId}&returnTo=${returnTo}`);
+            const params = new URLSearchParams();
+            if (leadId) {
+              params.set('leadId', leadId);
+              params.set('returnTo', `/leads/${leadId}?tab=proposals`);
+            } else if (projectId) {
+              params.set('projectId', projectId);
+              params.set('returnTo', `/projects/${projectId}?tab=financials`);
+            }
+            router.push(`/cost-breakdown/new?${params.toString()}`);
           }}>
           <Plus className="h-3 w-3" />
           Create CB + Proposal
@@ -455,7 +469,7 @@ export function LinkedProposalsSection({ leadId, lead }: LinkedProposalsSectionP
           </div>
           <p className="text-[13px] font-medium text-foreground">No cost breakdowns</p>
           <p className="text-[12px] text-muted-foreground mt-0.5">
-            No cost breakdowns linked to this lead yet
+            No cost breakdowns linked to this {leadId ? 'lead' : 'project'} yet
           </p>
         </div>
       ) : (

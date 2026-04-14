@@ -85,8 +85,11 @@ export class ProposalTemplatesController {
 
   @Get('proposals')
   @Permissions('quotes:view')
-  listProposals(@Query('leadId') leadId?: string) {
-    return this.service.listProposals(TENANT_ID, leadId);
+  listProposals(
+    @Query('leadId') leadId?: string,
+    @Query('projectId') projectId?: string,
+  ) {
+    return this.service.listProposals(TENANT_ID, { leadId, projectId });
   }
 
   @Get('proposals/:id')

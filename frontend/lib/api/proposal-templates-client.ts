@@ -176,8 +176,11 @@ export const proposalTemplatesApi = {
 
   // ── Proposals ──────────────────────────────────────────────────────────────
 
-  getProposals(filters?: { leadId?: string }): Promise<Proposal[]> {
-    const q = filters?.leadId ? `?leadId=${encodeURIComponent(filters.leadId)}` : '';
+  getProposals(filters?: { leadId?: string; projectId?: string }): Promise<Proposal[]> {
+    const params = new URLSearchParams();
+    if (filters?.leadId) params.set('leadId', filters.leadId);
+    else if (filters?.projectId) params.set('projectId', filters.projectId);
+    const q = params.toString() ? `?${params.toString()}` : '';
     return apiFetch<Proposal[]>(`/proposal-templates/proposals${q}`);
   },
 
