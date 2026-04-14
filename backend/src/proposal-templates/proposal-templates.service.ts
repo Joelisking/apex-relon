@@ -97,10 +97,35 @@ export class ProposalTemplatesService implements OnModuleInit {
   async onModuleInit() {
     try {
       const count = await this.prisma.proposalTemplate.count();
-      if (count > 0) return; // already seeded
+      if (count > 0) {
+        // Templates already exist — patch names to the clean values from SEED_TEMPLATES
+        // in case they were seeded before clean names were defined.
+        await this.patchSeedTemplateNames();
+        return;
+      }
       await this.seedTemplates();
     } catch (err) {
       this.logger.warn(`Proposal template seeding skipped: ${(err as Error).message}`);
+    }
+  }
+
+  /** Update the `name` (and jobTypeId) of any seeded template whose fileName contains the seed file name. */
+  private async patchSeedTemplateNames() {
+    const jobTypes = await this.prisma.jobType.findMany({ select: { id: true, name: true } });
+    const jobTypeMap = new Map(jobTypes.map((s) => [s.name, s.id]));
+
+    for (const tpl of SEED_TEMPLATES) {
+      const existing = await this.prisma.proposalTemplate.findFirst({
+        where: { fileName: { contains: tpl.file } },
+      });
+      if (!existing) continue;
+      if (existing.name === tpl.name) continue; // already clean
+      const jobTypeId = tpl.serviceTypeName ? (jobTypeMap.get(tpl.serviceTypeName) ?? null) : null;
+      await this.prisma.proposalTemplate.update({
+        where: { id: existing.id },
+        data: { name: tpl.name, jobTypeId },
+      });
+      this.logger.log(`Patched template name: "${existing.name}" → "${tpl.name}"`);
     }
   }
 

@@ -10,6 +10,11 @@ import { proposalTemplatesApi, ProposalTemplate } from '@/lib/api/proposal-templ
 import { settingsApi } from '@/lib/api/client';
 import UploadTemplateDialog from './UploadTemplateDialog';
 
+/** Strip the UUID storage prefix (e.g. "ce5ce013-...-Template.docx" → "Template.docx") */
+function stripUuidPrefix(fileName: string): string {
+  return fileName.replace(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}-/, '');
+}
+
 export default function ProposalTemplatesSection() {
   const queryClient = useQueryClient();
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -106,7 +111,7 @@ export default function ProposalTemplatesSection() {
                     </p>
                   )}
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {template.fileName} &middot; Uploaded{' '}
+                    {stripUuidPrefix(template.fileName)} &middot; Uploaded{' '}
                     {new Date(template.createdAt).toLocaleDateString()}
                   </p>
                 </div>

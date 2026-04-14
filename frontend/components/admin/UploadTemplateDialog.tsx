@@ -51,7 +51,13 @@ export default function UploadTemplateDialog({
       return;
     }
     setSelectedFile(file);
-    if (!name) setName(file.name.replace(/\.docx$/i, ''));
+    if (!name) {
+      // Strip UUID prefix if present (storage uploads prefix filenames with UUID-)
+      const cleanName = file.name
+        .replace(/\.docx$/i, '')
+        .replace(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}-/, '');
+      setName(cleanName);
+    }
   };
 
   const handleClose = () => {
