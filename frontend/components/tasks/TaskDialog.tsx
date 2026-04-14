@@ -516,30 +516,28 @@ export function TaskDialog({
             rows={2}
           />
 
-          {/* Estimated hours — shown once a service item/subtask is picked */}
-          {form.serviceItemId && (
-            <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
-                Estimated Hours
-              </p>
-              <input
-                type="number"
-                min={0}
-                step={0.25}
-                value={form.estimatedHours ?? ''}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    estimatedHours: e.target.value
-                      ? parseFloat(e.target.value)
-                      : undefined,
-                  }))
-                }
-                placeholder="Auto-filled from cost breakdown"
-                className="w-36 h-8 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-            </div>
-          )}
+          {/* Estimated hours */}
+          <div className="space-y-1.5">
+            <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
+              Estimated Hours
+            </p>
+            <input
+              type="number"
+              min={0}
+              step={0.25}
+              value={form.estimatedHours ?? ''}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  estimatedHours: e.target.value
+                    ? parseFloat(e.target.value)
+                    : undefined,
+                }))
+              }
+              placeholder="e.g. 2.5"
+              className="w-36 h-8 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
 
           <div className="border-t border-dashed border-border/50" />
 

@@ -50,10 +50,16 @@ export function taskToEvent(task: Task): CalendarEvent | null {
     const [hStr, mStr] = task.dueTime.split(':');
     const h = parseInt(hStr ?? '0', 10);
     const m = parseInt(mStr ?? '0', 10);
-    const start = new Date(`${dateStr}T00:00:00`);
-    start.setHours(h, m, 0, 0);
-    const end = new Date(start);
-    end.setHours(end.getHours() + 1);
+    const end = new Date(`${dateStr}T00:00:00`);
+    end.setHours(h, m, 0, 0);
+    const durationMs =
+      (task.estimatedHours && task.estimatedHours > 0
+        ? task.estimatedHours
+        : 1) *
+      60 *
+      60 *
+      1000;
+    const start = new Date(end.getTime() - durationMs);
     return {
       id: `task-${task.id}`,
       title: task.title,
