@@ -44,8 +44,33 @@ export function getTaskColor(task: Task): string {
 export function taskToEvent(task: Task): CalendarEvent | null {
   if (!task.dueDate) return null;
 
-  const start = new Date(task.dueDate.slice(0, 10) + 'T00:00:00');
-  const end = new Date(task.dueDate.slice(0, 10) + 'T23:59:59');
+  const dateStr = task.dueDate.slice(0, 10);
+
+  if (task.dueTime) {
+    const [hStr, mStr] = task.dueTime.split(':');
+    const h = parseInt(hStr ?? '0', 10);
+    const m = parseInt(mStr ?? '0', 10);
+    const start = new Date(`${dateStr}T00:00:00`);
+    start.setHours(h, m, 0, 0);
+    const end = new Date(start);
+    end.setHours(end.getHours() + 1);
+    return {
+      id: `task-${task.id}`,
+      title: task.title,
+      start,
+      end,
+      allDay: false,
+      kind: 'task',
+      sourceId: task.id,
+      color: getTaskColor(task),
+      priority: task.priority,
+      status: task.status,
+      resource: task,
+    };
+  }
+
+  const start = new Date(`${dateStr}T00:00:00`);
+  const end = new Date(`${dateStr}T23:59:59`);
 
   return {
     id: `task-${task.id}`,
