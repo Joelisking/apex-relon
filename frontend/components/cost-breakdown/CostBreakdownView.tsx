@@ -2,7 +2,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -48,19 +53,29 @@ export default function CostBreakdownView() {
     setPage(1);
   }, [searchQuery]);
 
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await costBreakdownApi.delete(id);
-      fetchBreakdowns();
-    } catch (err) {
-      console.error('Failed to delete cost breakdown', err);
-    }
-  }, [fetchBreakdowns]);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await costBreakdownApi.delete(id);
+        fetchBreakdowns();
+      } catch (err) {
+        console.error('Failed to delete cost breakdown', err);
+      }
+    },
+    [fetchBreakdowns],
+  );
 
   const allCount = breakdowns.length;
-  const draftCount = breakdowns.filter((b) => b.status === 'DRAFT').length;
-  const finalCount = breakdowns.filter((b) => b.status === 'FINAL').length;
-  const totalHours = breakdowns.reduce((s, b) => s + b.totalEstimatedHours, 0);
+  const draftCount = breakdowns.filter(
+    (b) => b.status === 'DRAFT',
+  ).length;
+  const finalCount = breakdowns.filter(
+    (b) => b.status === 'FINAL',
+  ).length;
+  const totalHours = breakdowns.reduce(
+    (s, b) => s + b.totalEstimatedHours,
+    0,
+  );
 
   const filtered = useMemo(() => {
     let result = breakdowns;
@@ -72,16 +87,28 @@ export default function CostBreakdownView() {
       result = result.filter((b) => {
         const title = b.title.toLowerCase();
         const type = (b.jobType?.name ?? '').toLowerCase();
-        const linked = (b.project?.name ?? b.lead?.company ?? '').toLowerCase();
-        return title.includes(q) || type.includes(q) || linked.includes(q);
+        const linked = (
+          b.project?.name ??
+          b.lead?.company ??
+          ''
+        ).toLowerCase();
+        return (
+          title.includes(q) || type.includes(q) || linked.includes(q)
+        );
       });
     }
     return result;
   }, [breakdowns, statusFilter, searchQuery]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filtered.length / PAGE_SIZE),
+  );
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paged = filtered.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  );
 
   if (loading) {
     return (
@@ -98,12 +125,16 @@ export default function CostBreakdownView() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-display tracking-tight">Cost Breakdowns</h1>
+          <h1 className="text-3xl font-display tracking-tight">
+            Cost Breakdowns
+          </h1>
           <p className="text-sm text-muted-foreground">
             Estimating documents for surveying projects
           </p>
         </div>
-        <Button size="sm" onClick={() => router.push('/cost-breakdown/new')}>
+        <Button
+          size="sm"
+          onClick={() => router.push('/cost-breakdown/new')}>
           <Plus className="mr-1.5 h-3.5 w-3.5" /> New Breakdown
         </Button>
       </div>
@@ -122,7 +153,7 @@ export default function CostBreakdownView() {
             placeholder="Search breakdowns..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 pl-8 w-[200px] lg:w-[260px] bg-muted/50 border-0 focus-visible:ring-1 text-sm"
+            className="h-8 pl-8 w-50 lg:w-65 bg-muted/50 border-0 focus-visible:ring-1 text-sm"
           />
         </div>
         <div className="h-5 w-px bg-border/60 shrink-0" />
@@ -140,31 +171,52 @@ export default function CostBreakdownView() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
+            onClick={() => {
+              setSearchQuery('');
+              setStatusFilter('all');
+            }}
             className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1 ml-auto">
             Clear
           </Button>
         )}
         <span className="ml-auto text-xs text-muted-foreground">
-          {filtered.length} breakdown{filtered.length !== 1 ? 's' : ''}
+          {filtered.length} breakdown
+          {filtered.length !== 1 ? 's' : ''}
         </span>
       </div>
 
-      <CostBreakdownTable breakdowns={paged} onDelete={handleDelete} />
+      <CostBreakdownTable
+        breakdowns={paged}
+        onDelete={handleDelete}
+      />
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
           <p className="text-xs text-muted-foreground">
-            Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
+            Showing {(safePage - 1) * PAGE_SIZE + 1}–
+            {Math.min(safePage * PAGE_SIZE, filtered.length)} of{' '}
+            {filtered.length}
           </p>
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" className="h-7 w-7 p-0"
-              onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}>
               <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
-            <span className="text-xs tabular-nums px-2">{safePage} / {totalPages}</span>
-            <Button variant="outline" size="sm" className="h-7 w-7 p-0"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages}>
+            <span className="text-xs tabular-nums px-2">
+              {safePage} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() =>
+                setPage((p) => Math.min(totalPages, p + 1))
+              }
+              disabled={safePage >= totalPages}>
               <ChevronRight className="h-3.5 w-3.5" />
             </Button>
           </div>

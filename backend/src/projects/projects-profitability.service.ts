@@ -1,11 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 
+export interface SubtaskPerformance {
+  subtaskId: string;
+  subtaskName: string;
+  proposedByRole: Record<string, number>;
+  actualByRole: Record<string, number>;
+}
+
 export interface ServiceItemPerformance {
   serviceItemId: string;
   serviceItemName: string;
   proposedByRole: Record<string, number>;   // role → estimatedHours
   actualByRole: Record<string, number>;     // role → logged hours
+  subtasks: SubtaskPerformance[];
 }
 
 export interface ProjectProfitability {
@@ -106,15 +114,46 @@ export class ProjectsProfitabilityService {
       for (const r of roleRecords) roleKeyToLabel.set(r.key, r.label);
     }
 
+    // Batch-fetch subtask names for all subtaskIds referenced in the CB
+    const allSubtaskIds = new Set<string>();
+    for (const line of costBreakdown?.lines ?? []) {
+      for (const re of line.roleEstimates) {
+        if (re.subtaskId) allSubtaskIds.add(re.subtaskId);
+      }
+    }
+    for (const entry of timeEntries) {
+      if (entry.serviceItemSubtaskId) allSubtaskIds.add(entry.serviceItemSubtaskId);
+    }
+    const subtaskNameMap = new Map<string, string>();
+    if (allSubtaskIds.size > 0) {
+      const subtaskRecords = await this.prisma.serviceItemSubtask.findMany({
+        where: { id: { in: [...allSubtaskIds] } },
+        select: { id: true, name: true },
+      });
+      for (const st of subtaskRecords) subtaskNameMap.set(st.id, st.name);
+    }
+
+    // serviceItemId → SubtaskPerformance map (keyed by subtaskId)
+    const subtaskMapBySi = new Map<string, Map<string, SubtaskPerformance>>();
+
     const serviceItemMap = new Map<string, ServiceItemPerformance>();
     for (const line of costBreakdown?.lines ?? []) {
       const siId = line.serviceItem.id;
       if (!serviceItemMap.has(siId)) {
-        serviceItemMap.set(siId, { serviceItemId: siId, serviceItemName: line.serviceItem.name, proposedByRole: {}, actualByRole: {} });
+        serviceItemMap.set(siId, { serviceItemId: siId, serviceItemName: line.serviceItem.name, proposedByRole: {}, actualByRole: {}, subtasks: [] });
+        subtaskMapBySi.set(siId, new Map());
       }
       const perf = serviceItemMap.get(siId)!;
+      const stMap = subtaskMapBySi.get(siId)!;
       for (const re of line.roleEstimates) {
         perf.proposedByRole[re.role] = (perf.proposedByRole[re.role] ?? 0) + re.estimatedHours;
+        if (re.subtaskId) {
+          if (!stMap.has(re.subtaskId)) {
+            stMap.set(re.subtaskId, { subtaskId: re.subtaskId, subtaskName: subtaskNameMap.get(re.subtaskId) ?? re.subtaskId, proposedByRole: {}, actualByRole: {} });
+          }
+          const st = stMap.get(re.subtaskId)!;
+          st.proposedByRole[re.role] = (st.proposedByRole[re.role] ?? 0) + re.estimatedHours;
+        }
       }
     }
     for (const entry of timeEntries) {
@@ -123,6 +162,20 @@ export class ProjectsProfitabilityService {
       if (!serviceItemMap.has(entry.serviceItemId)) continue;
       const perf = serviceItemMap.get(entry.serviceItemId)!;
       perf.actualByRole[roleLabel] = (perf.actualByRole[roleLabel] ?? 0) + entry.hours;
+      if (entry.serviceItemSubtaskId) {
+        const stMap = subtaskMapBySi.get(entry.serviceItemId)!;
+        if (!stMap.has(entry.serviceItemSubtaskId)) {
+          stMap.set(entry.serviceItemSubtaskId, { subtaskId: entry.serviceItemSubtaskId, subtaskName: subtaskNameMap.get(entry.serviceItemSubtaskId) ?? entry.serviceItemSubtaskId, proposedByRole: {}, actualByRole: {} });
+        }
+        const st = stMap.get(entry.serviceItemSubtaskId)!;
+        st.actualByRole[roleLabel] = (st.actualByRole[roleLabel] ?? 0) + entry.hours;
+      }
+    }
+
+    // Attach subtasks to each service item
+    for (const [siId, stMap] of subtaskMapBySi) {
+      const perf = serviceItemMap.get(siId);
+      if (perf) perf.subtasks = [...stMap.values()];
     }
 
     const totalCost = laborCost + directCost;

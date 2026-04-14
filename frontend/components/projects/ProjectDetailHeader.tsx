@@ -22,12 +22,19 @@ const STATUS_CHIP: Record<string, string> = {
 
 function fmtVal(v: number): string {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `${(v / 1_000).toFixed(v >= 100_000 ? 0 : 1)}k`;
+  if (v >= 1_000)
+    return `${(v / 1_000).toFixed(v >= 100_000 ? 0 : 1)}k`;
   return v.toLocaleString();
 }
 
 function avatarInitials(name: string): string {
-  return name.trim().split(/\s+/).map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 interface Props {
@@ -76,7 +83,10 @@ export function ProjectDetailHeader({
   return (
     <div className="rounded-xl border border-border/50 overflow-hidden mb-6">
       {/* Accent bar */}
-      <div className="h-1 w-full" style={{ backgroundColor: accentColor }} />
+      <div
+        className="h-1 w-full"
+        style={{ backgroundColor: accentColor }}
+      />
 
       {/* Identity + Actions */}
       <div className="relative px-6 py-5 overflow-hidden">
@@ -123,17 +133,25 @@ export function ProjectDetailHeader({
                     <button
                       disabled={isUpdatingStatus}
                       className={`inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2.5 py-1 border hover:opacity-80 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed ${STATUS_CHIP[project.status] ?? 'text-gray-600 bg-gray-100 border-gray-200'}`}>
-                      {isUpdatingStatus ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                      {isUpdatingStatus ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : null}
                       {project.status}
                       <ChevronDown className="h-3 w-3 text-muted-foreground" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="min-w-[160px]">
+                  <DropdownMenuContent
+                    align="start"
+                    className="min-w-40">
                     {stages.map((s) => (
                       <DropdownMenuItem
                         key={s.id}
                         onSelect={() => onStatusChange(s.name)}
-                        className={s.name === project.status ? 'font-semibold' : ''}>
+                        className={
+                          s.name === project.status
+                            ? 'font-semibold'
+                            : ''
+                        }>
                         {s.name}
                       </DropdownMenuItem>
                     ))}
@@ -159,7 +177,11 @@ export function ProjectDetailHeader({
 
           <div className="flex items-center gap-2 shrink-0">
             {canEdit && (
-              <Button variant="outline" size="sm" onClick={onEdit} className="gap-1.5 text-xs h-8">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEdit}
+                className="gap-1.5 text-xs h-8">
                 <Pencil className="h-3.5 w-3.5" /> Edit
               </Button>
             )}
@@ -168,60 +190,68 @@ export function ProjectDetailHeader({
       </div>
 
       {/* Metrics strip — only shown to users with financial visibility permission */}
-      {canViewFinancials && <div className="border-t border-border/40 bg-muted/20 grid grid-cols-6 divide-x divide-border/40">
-        <div className="px-5 py-3.5">
-          <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-medium mb-1.5">
-            Contracted
-          </p>
-          <p className="text-[20px] font-mono font-bold tabular-nums text-foreground leading-none">
-            ${fmtVal(contractedValue)}
-          </p>
+      {canViewFinancials && (
+        <div className="border-t border-border/40 bg-muted/20 grid grid-cols-6 divide-x divide-border/40">
+          <div className="px-5 py-3.5">
+            <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-medium mb-1.5">
+              Contracted
+            </p>
+            <p className="text-[20px] font-mono font-bold tabular-nums text-foreground leading-none">
+              ${fmtVal(contractedValue)}
+            </p>
+          </div>
+          <div className="px-5 py-3.5">
+            <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-medium mb-1.5">
+              EOP Value
+            </p>
+            <p className="text-[20px] font-mono font-bold tabular-nums leading-none text-blue-600">
+              {rawEndOfProjectValue != null
+                ? `$${fmtVal(rawEndOfProjectValue)}`
+                : '—'}
+            </p>
+          </div>
+          <div className="px-5 py-3.5">
+            <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-medium mb-1.5">
+              Margin
+            </p>
+            <p
+              className={`text-[20px] font-mono font-bold tabular-nums leading-none ${margin >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+              {margin.toFixed(1)}
+              <span className="text-sm font-medium text-muted-foreground ml-0.5">
+                %
+              </span>
+            </p>
+          </div>
+          <div className="px-5 py-3.5">
+            <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-medium mb-1.5">
+              Total Cost
+            </p>
+            <p className="text-[20px] font-mono font-bold tabular-nums text-foreground leading-none">
+              {cost > 0 ? `$${fmtVal(cost)}` : '—'}
+            </p>
+          </div>
+          <div className="px-5 py-3.5">
+            <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-medium mb-1.5">
+              Profit
+            </p>
+            <p
+              className={`text-[20px] font-mono font-bold tabular-nums leading-none ${profit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+              {profit >= 0 ? '+' : ''}${fmtVal(Math.abs(profit))}
+            </p>
+          </div>
+          <div className="px-5 py-3.5">
+            <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-medium mb-1.5">
+              In Status
+            </p>
+            <p className="text-[20px] font-mono font-bold tabular-nums text-foreground leading-none">
+              {daysInStatus}
+              <span className="text-sm font-medium text-muted-foreground ml-0.5">
+                d
+              </span>
+            </p>
+          </div>
         </div>
-        <div className="px-5 py-3.5">
-          <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-medium mb-1.5">
-            EOP Value
-          </p>
-          <p className="text-[20px] font-mono font-bold tabular-nums leading-none text-blue-600">
-            {rawEndOfProjectValue != null ? `$${fmtVal(rawEndOfProjectValue)}` : '—'}
-          </p>
-        </div>
-        <div className="px-5 py-3.5">
-          <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-medium mb-1.5">
-            Margin
-          </p>
-          <p
-            className={`text-[20px] font-mono font-bold tabular-nums leading-none ${margin >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-            {margin.toFixed(1)}
-            <span className="text-sm font-medium text-muted-foreground ml-0.5">%</span>
-          </p>
-        </div>
-        <div className="px-5 py-3.5">
-          <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-medium mb-1.5">
-            Total Cost
-          </p>
-          <p className="text-[20px] font-mono font-bold tabular-nums text-foreground leading-none">
-            {cost > 0 ? `$${fmtVal(cost)}` : '—'}
-          </p>
-        </div>
-        <div className="px-5 py-3.5">
-          <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-medium mb-1.5">
-            Profit
-          </p>
-          <p
-            className={`text-[20px] font-mono font-bold tabular-nums leading-none ${profit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-            {profit >= 0 ? '+' : ''}${fmtVal(Math.abs(profit))}
-          </p>
-        </div>
-        <div className="px-5 py-3.5">
-          <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-medium mb-1.5">
-            In Status
-          </p>
-          <p className="text-[20px] font-mono font-bold tabular-nums text-foreground leading-none">
-            {daysInStatus}
-            <span className="text-sm font-medium text-muted-foreground ml-0.5">d</span>
-          </p>
-        </div>
-      </div>}
+      )}
     </div>
   );
 }

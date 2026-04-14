@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import type { ServiceItemPerformance } from '@/lib/api/projects-client';
+import type { ServiceItemPerformance, SubtaskPerformance } from '@/lib/api/projects-client';
 
 function fmtHours(n: number) {
   return `${n % 1 === 0 ? n : n.toFixed(1)}h`;
@@ -96,6 +96,45 @@ function RoleBar({ role, budget, actual }: RoleBarProps) {
   );
 }
 
+interface SubtaskRowProps {
+  subtask: SubtaskPerformance;
+}
+
+function SubtaskRow({ subtask }: SubtaskRowProps) {
+  const allRoles = Array.from(
+    new Set([
+      ...Object.keys(subtask.proposedByRole),
+      ...Object.keys(subtask.actualByRole),
+    ]),
+  ).sort();
+
+  const totalBudget = Object.values(subtask.proposedByRole).reduce((s, v) => s + v, 0);
+  const totalActual = Object.values(subtask.actualByRole).reduce((s, v) => s + v, 0);
+
+  return (
+    <div className="rounded-md border border-border/40 bg-muted/20 px-3 py-2.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-foreground">{subtask.subtaskName}</p>
+        <span className="text-[11px] tabular-nums text-muted-foreground shrink-0 ml-2">
+          {fmtHours(totalActual)}{totalBudget > 0 ? ` / ${fmtHours(totalBudget)}` : ' logged'}
+        </span>
+      </div>
+      {allRoles.length > 0 && (
+        <div className="space-y-2">
+          {allRoles.map((role) => (
+            <RoleBar
+              key={role}
+              role={role}
+              budget={subtask.proposedByRole[role] ?? 0}
+              actual={subtask.actualByRole[role] ?? 0}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface Props {
   rows: ServiceItemPerformance[];
 }
@@ -127,11 +166,14 @@ export function ServiceItemPerformanceSection({ rows }: Props) {
             0,
           );
 
+          const hasSubtasks = row.subtasks && row.subtasks.length > 0;
+
           return (
             <div
               key={row.serviceItemId}
               className="rounded-lg border border-border/50 px-4 py-3 space-y-3"
             >
+              {/* Service item header */}
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">{row.serviceItemName}</p>
                 <div className="flex items-center gap-2 text-xs tabular-nums text-muted-foreground">
@@ -139,16 +181,28 @@ export function ServiceItemPerformanceSection({ rows }: Props) {
                 </div>
               </div>
 
-              <div className="space-y-2.5">
-                {allRoles.map((role) => (
-                  <RoleBar
-                    key={role}
-                    role={role}
-                    budget={row.proposedByRole[role] ?? 0}
-                    actual={row.actualByRole[role] ?? 0}
-                  />
-                ))}
-              </div>
+              {/* Role bars (service item level, only shown when no subtasks) */}
+              {!hasSubtasks && allRoles.length > 0 && (
+                <div className="space-y-2.5">
+                  {allRoles.map((role) => (
+                    <RoleBar
+                      key={role}
+                      role={role}
+                      budget={row.proposedByRole[role] ?? 0}
+                      actual={row.actualByRole[role] ?? 0}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Subtask breakdown */}
+              {hasSubtasks && (
+                <div className="space-y-2">
+                  {row.subtasks.map((subtask) => (
+                    <SubtaskRow key={subtask.subtaskId} subtask={subtask} />
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}

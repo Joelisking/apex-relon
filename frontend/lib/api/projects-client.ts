@@ -153,11 +153,19 @@ export interface CreateProjectDto {
   costSegments?: { name: string; amount: number; sortOrder?: number }[];
 }
 
+export interface SubtaskPerformance {
+  subtaskId: string;
+  subtaskName: string;
+  proposedByRole: Record<string, number>;
+  actualByRole: Record<string, number>;
+}
+
 export interface ServiceItemPerformance {
   serviceItemId: string;
   serviceItemName: string;
   proposedByRole: Record<string, number>;
   actualByRole: Record<string, number>;
+  subtasks: SubtaskPerformance[];
 }
 
 export interface ProjectProfitability {

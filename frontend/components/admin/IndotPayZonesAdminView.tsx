@@ -1,8 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Trash2, Plus, Loader2, MapPin, X } from 'lucide-react';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
+import {
+  Pencil,
+  Trash2,
+  Plus,
+  Loader2,
+  MapPin,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,7 +53,12 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { settingsApi } from '@/lib/api/client';
-import { payGradesApi, indotPayZonesApi, type PayGrade, type IndotPayZone } from '@/lib/api/user-rates-client';
+import {
+  payGradesApi,
+  indotPayZonesApi,
+  type PayGrade,
+  type IndotPayZone,
+} from '@/lib/api/user-rates-client';
 import type { DropdownOption } from '@/lib/types';
 
 interface ZoneFormState {
@@ -51,7 +67,11 @@ interface ZoneFormState {
   counties: string[];
 }
 
-const EMPTY_FORM: ZoneFormState = { name: '', payGradeId: '', counties: [] };
+const EMPTY_FORM: ZoneFormState = {
+  name: '',
+  payGradeId: '',
+  counties: [],
+};
 
 interface CountyMultiSelectProps {
   selected: string[];
@@ -59,8 +79,14 @@ interface CountyMultiSelectProps {
   onChange: (selected: string[]) => void;
 }
 
-function CountyMultiSelect({ selected, options, onChange }: CountyMultiSelectProps) {
-  const available = options.filter((o) => !selected.includes(o.label));
+function CountyMultiSelect({
+  selected,
+  options,
+  onChange,
+}: CountyMultiSelectProps) {
+  const available = options.filter(
+    (o) => !selected.includes(o.label),
+  );
 
   function add(label: string) {
     onChange([...selected, label]);
@@ -74,16 +100,20 @@ function CountyMultiSelect({ selected, options, onChange }: CountyMultiSelectPro
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5 min-h-8">
         {selected.length === 0 && (
-          <span className="text-muted-foreground text-sm italic">No counties selected</span>
+          <span className="text-muted-foreground text-sm italic">
+            No counties selected
+          </span>
         )}
         {selected.map((county) => (
-          <Badge key={county} variant="secondary" className="gap-1 pr-1">
+          <Badge
+            key={county}
+            variant="secondary"
+            className="gap-1 pr-1">
             {county}
             <button
               type="button"
               onClick={() => remove(county)}
-              className="hover:text-destructive transition-colors"
-            >
+              className="hover:text-destructive transition-colors">
               <X className="h-3 w-3" />
             </button>
           </Badge>
@@ -128,18 +158,30 @@ function ZoneDialog({
   const isEdit = !!initialValues?.id;
 
   // Counties + grades already taken by OTHER zones (excluding the one being edited).
-  const otherZones = existingZones.filter((z) => z.id !== initialValues?.id);
-  const takenPayGradeIds = new Set(otherZones.map((z) => z.payGradeId));
-  const takenCounties = new Set(otherZones.flatMap((z) => z.counties));
+  const otherZones = existingZones.filter(
+    (z) => z.id !== initialValues?.id,
+  );
+  const takenPayGradeIds = new Set(
+    otherZones.map((z) => z.payGradeId),
+  );
+  const takenCounties = new Set(
+    otherZones.flatMap((z) => z.counties),
+  );
 
   const availablePayGrades = payGrades.filter(
     (g) => g.isActive && !takenPayGradeIds.has(g.id),
   );
-  const availableCounties = counties.filter((c) => !takenCounties.has(c.label));
+  const availableCounties = counties.filter(
+    (c) => !takenCounties.has(c.label),
+  );
 
   const [form, setForm] = useState<ZoneFormState>(
     initialValues
-      ? { name: initialValues.name, payGradeId: initialValues.payGradeId, counties: initialValues.counties }
+      ? {
+          name: initialValues.name,
+          payGradeId: initialValues.payGradeId,
+          counties: initialValues.counties,
+        }
       : EMPTY_FORM,
   );
 
@@ -150,25 +192,33 @@ function ZoneDialog({
   const createMutation = useMutation({
     mutationFn: () => indotPayZonesApi.create(form),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['indot-pay-zones'] });
+      queryClient.invalidateQueries({
+        queryKey: ['indot-pay-zones'],
+      });
       toast.success('Zone created');
       reset();
       onClose();
     },
-    onError: (err: Error) => toast.error(err.message || 'Failed to create zone'),
+    onError: (err: Error) =>
+      toast.error(err.message || 'Failed to create zone'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: () => indotPayZonesApi.update(initialValues!.id!, form),
+    mutationFn: () =>
+      indotPayZonesApi.update(initialValues!.id!, form),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['indot-pay-zones'] });
+      queryClient.invalidateQueries({
+        queryKey: ['indot-pay-zones'],
+      });
       toast.success('Zone updated');
       onClose();
     },
-    onError: (err: Error) => toast.error(err.message || 'Failed to update zone'),
+    onError: (err: Error) =>
+      toast.error(err.message || 'Failed to update zone'),
   });
 
-  const isPending = createMutation.isPending || updateMutation.isPending;
+  const isPending =
+    createMutation.isPending || updateMutation.isPending;
 
   function handleSubmit() {
     if (!form.name.trim()) {
@@ -194,11 +244,12 @@ function ZoneDialog({
           reset();
           onClose();
         }
-      }}
-    >
+      }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit INDOT Pay Zone' : 'New INDOT Pay Zone'}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? 'Edit INDOT Pay Zone' : 'New INDOT Pay Zone'}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
@@ -207,7 +258,9 @@ function ZoneDialog({
             <Input
               placeholder="e.g. Northeast Indiana"
               value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, name: e.target.value }))
+              }
             />
           </div>
 
@@ -215,8 +268,9 @@ function ZoneDialog({
             <Label>Pay Grade</Label>
             <Select
               value={form.payGradeId}
-              onValueChange={(v) => setForm((p) => ({ ...p, payGradeId: v }))}
-            >
+              onValueChange={(v) =>
+                setForm((p) => ({ ...p, payGradeId: v }))
+              }>
               <SelectTrigger>
                 <SelectValue placeholder="Select pay grade…" />
               </SelectTrigger>
@@ -230,15 +284,18 @@ function ZoneDialog({
                   <SelectItem key={grade.id} value={grade.id}>
                     {grade.name}
                     {grade.isDefault && (
-                      <span className="text-muted-foreground ml-1 text-xs">(default)</span>
+                      <span className="text-muted-foreground ml-1 text-xs">
+                        (default)
+                      </span>
                     )}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Time entries for projects in these counties will use this pay grade to determine
-              the labor rate. Each pay grade can only belong to one zone.
+              Time entries for projects in these counties will use
+              this pay grade to determine the labor rate. Each pay
+              grade can only belong to one zone.
             </p>
           </div>
 
@@ -247,10 +304,13 @@ function ZoneDialog({
             <CountyMultiSelect
               selected={form.counties}
               options={availableCounties}
-              onChange={(c) => setForm((p) => ({ ...p, counties: c }))}
+              onChange={(c) =>
+                setForm((p) => ({ ...p, counties: c }))
+              }
             />
             <p className="text-xs text-muted-foreground">
-              Counties already used by another zone are hidden to prevent conflicts.
+              Counties already used by another zone are hidden to
+              prevent conflicts.
             </p>
           </div>
         </div>
@@ -262,12 +322,13 @@ function ZoneDialog({
               reset();
               onClose();
             }}
-            disabled={isPending}
-          >
+            disabled={isPending}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isPending}>
-            {isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            {isPending && (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            )}
             {isEdit ? 'Save Changes' : 'Create Zone'}
           </Button>
         </DialogFooter>
@@ -279,28 +340,37 @@ function ZoneDialog({
 export function IndotPayZonesAdminView() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingZone, setEditingZone] = useState<IndotPayZone | null>(null);
+  const [editingZone, setEditingZone] = useState<IndotPayZone | null>(
+    null,
+  );
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const { data: zones = [], isLoading: zonesLoading } = useQuery<IndotPayZone[]>({
+  const { data: zones = [], isLoading: zonesLoading } = useQuery<
+    IndotPayZone[]
+  >({
     queryKey: ['indot-pay-zones'],
     queryFn: () => indotPayZonesApi.getAll(),
   });
 
-  const { data: payGrades = [], isLoading: gradesLoading } = useQuery<PayGrade[]>({
+  const { data: payGrades = [], isLoading: gradesLoading } = useQuery<
+    PayGrade[]
+  >({
     queryKey: ['pay-grades'],
     queryFn: () => payGradesApi.getAll(),
   });
 
-  const { data: countyOptions = [], isLoading: countiesLoading } = useQuery<DropdownOption[]>({
-    queryKey: ['dropdown-options', 'county'],
-    queryFn: () => settingsApi.getDropdownOptions('county'),
-  });
+  const { data: countyOptions = [], isLoading: countiesLoading } =
+    useQuery<DropdownOption[]>({
+      queryKey: ['dropdown-options', 'county'],
+      queryFn: () => settingsApi.getDropdownOptions('county'),
+    });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => indotPayZonesApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['indot-pay-zones'] });
+      queryClient.invalidateQueries({
+        queryKey: ['indot-pay-zones'],
+      });
       setDeletingId(null);
       toast.success('Zone deleted');
     },
@@ -325,11 +395,15 @@ export function IndotPayZonesAdminView() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <MapPin className="h-5 w-5 text-muted-foreground" />
-            <h1 className="text-2xl font-semibold">INDOT Pay Zones</h1>
+            <h1 className="text-2xl font-semibold">
+              INDOT Pay Zones
+            </h1>
           </div>
           <p className="text-muted-foreground text-sm">
-            Map Indiana counties to INDOT pay grades. When a time entry is logged against an INDOT
-            project, the county determines which pay grade — and therefore which hourly rate — applies.
+            Map Indiana counties to INDOT pay grades. When a time
+            entry is logged against an INDOT project, the county
+            determines which pay grade — and therefore which hourly
+            rate — applies.
           </p>
         </div>
         <Button onClick={openCreate} size="sm">
@@ -340,12 +414,14 @@ export function IndotPayZonesAdminView() {
 
       <div className="rounded-lg border border-border/50 p-4 bg-muted/20 text-sm space-y-1">
         <p className="font-medium text-sm">Lookup chain</p>
-        <p className="text-muted-foreground text-sm font-mono text-xs">
-          Project (INDOT) → county → Zone → Pay Grade → User Rate → hourly rate
+        <p className="text-muted-foreground font-mono text-xs">
+          Project (INDOT) → county → Zone → Pay Grade → User Rate →
+          hourly rate
         </p>
         <p className="text-muted-foreground text-sm">
-          A project marked INDOT must have at least one county set. If no zone covers the
-          project&apos;s county, the user&apos;s base rate is used as a fallback.
+          A project marked INDOT must have at least one county set. If
+          no zone covers the project&apos;s county, the user&apos;s
+          base rate is used as a fallback.
         </p>
       </div>
 
@@ -358,8 +434,14 @@ export function IndotPayZonesAdminView() {
       ) : zones.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <MapPin className="h-8 w-8 mx-auto mb-3 opacity-40" />
-          <p className="text-sm">No INDOT pay zones configured yet.</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={openCreate}>
+          <p className="text-sm">
+            No INDOT pay zones configured yet.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={openCreate}>
             <Plus className="h-4 w-4 mr-1.5" />
             Create first zone
           </Button>
@@ -372,31 +454,42 @@ export function IndotPayZonesAdminView() {
                 <TableHead>Zone Name</TableHead>
                 <TableHead>Pay Grade</TableHead>
                 <TableHead>Counties</TableHead>
-                <TableHead className="w-[100px]" />
+                <TableHead className="w-25" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {zones.map((zone) => (
                 <TableRow key={zone.id}>
-                  <TableCell className="font-medium">{zone.name}</TableCell>
+                  <TableCell className="font-medium">
+                    {zone.name}
+                  </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="font-mono text-xs">
+                    <Badge
+                      variant="outline"
+                      className="font-mono text-xs">
                       {zone.payGrade.name}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {zone.counties.length === 0 ? (
-                        <span className="text-muted-foreground text-xs italic">None</span>
+                        <span className="text-muted-foreground text-xs italic">
+                          None
+                        </span>
                       ) : (
                         zone.counties.slice(0, 5).map((county) => (
-                          <Badge key={county} variant="secondary" className="text-xs">
+                          <Badge
+                            key={county}
+                            variant="secondary"
+                            className="text-xs">
                             {county}
                           </Badge>
                         ))
                       )}
                       {zone.counties.length > 5 && (
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge
+                          variant="secondary"
+                          className="text-xs">
                           +{zone.counties.length - 5} more
                         </Badge>
                       )}
@@ -408,16 +501,14 @@ export function IndotPayZonesAdminView() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
-                        onClick={() => openEdit(zone)}
-                      >
+                        onClick={() => openEdit(zone)}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => setDeletingId(zone.id)}
-                      >
+                        onClick={() => setDeletingId(zone.id)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
@@ -451,23 +542,31 @@ export function IndotPayZonesAdminView() {
         existingZones={zones}
       />
 
-      <AlertDialog open={!!deletingId} onOpenChange={(v) => { if (!v) setDeletingId(null); }}>
+      <AlertDialog
+        open={!!deletingId}
+        onOpenChange={(v) => {
+          if (!v) setDeletingId(null);
+        }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete zone?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the zone permanently. Time entries already saved are not affected —
-              their rates are stored as snapshots.
+              This will remove the zone permanently. Time entries
+              already saved are not affected — their rates are stored
+              as snapshots.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deletingId && deleteMutation.mutate(deletingId)}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              onClick={() =>
+                deletingId && deleteMutation.mutate(deletingId)
+              }
+              disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending && (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              )}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
