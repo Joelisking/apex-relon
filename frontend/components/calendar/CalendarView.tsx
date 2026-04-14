@@ -75,8 +75,13 @@ export function CalendarView() {
   const dueBefore = rangeEnd.toISOString().split('T')[0];
 
   const { data: tasks = [] } = useQuery({
-    queryKey: ['calendar-tasks', dueAfter, dueBefore],
-    queryFn: () => tasksApi.getAll({ dueAfter, dueBefore }),
+    queryKey: filterProjectId
+      ? ['calendar-tasks', 'project', filterProjectId]
+      : ['calendar-tasks', dueAfter, dueBefore],
+    queryFn: () =>
+      filterProjectId
+        ? tasksApi.getAll({ entityType: 'project', entityId: filterProjectId })
+        : tasksApi.getAll({ dueAfter, dueBefore }),
   });
 
   const { data: projects = [] } = useQuery({
