@@ -21,6 +21,14 @@ const RISK_COLORS: Record<string, string> = {
   Blocked: 'bg-red-100 text-red-700',
 };
 
+export function buildProjectColumns(canViewFinancials: boolean): ColumnDef<Project>[] {
+  return projectColumns.filter((col) => {
+    const id = 'accessorKey' in col ? col.accessorKey : col.id;
+    if (!canViewFinancials && (id === 'contractedValue' || id === 'totalCost')) return false;
+    return true;
+  });
+}
+
 export const projectColumns: ColumnDef<Project>[] = [
   {
     id: 'select',

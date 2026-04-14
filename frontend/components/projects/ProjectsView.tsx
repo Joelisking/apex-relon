@@ -23,7 +23,7 @@ import { Search } from 'lucide-react';
 import { ProjectKanbanBoard } from './ProjectKanbanBoard';
 import { ProjectsMapView } from './ProjectsMapView';
 import { CreateProjectDialog } from './CreateProjectDialog';
-import { projectColumns } from './columns-projects';
+import { buildProjectColumns } from './columns-projects';
 import { DataTable } from '@/components/ui/data-table';
 import { projectsApi, type Project } from '@/lib/api/projects-client';
 import {
@@ -74,6 +74,8 @@ export default function ProjectsView({
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
   const canMoveStage = hasPermission('projects:move_stage');
+  const canViewFinancials = hasPermission('projects:view_financials');
+  const columns = buildProjectColumns(canViewFinancials);
   const [localProjects, setLocalProjects] = useState<Project[]>([]);
   const [view, setView] = useState<'kanban' | 'table' | 'map'>(() => {
     if (typeof window !== 'undefined') {
@@ -816,7 +818,7 @@ export default function ProjectsView({
             </div>
           )}
           <DataTable
-            columns={projectColumns}
+            columns={columns}
             data={filteredByType}
             onRowClick={(row) => handleProjectClick(row)}
             onSelectionChange={setSelectedProjects}

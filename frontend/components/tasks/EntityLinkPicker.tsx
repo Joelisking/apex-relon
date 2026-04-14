@@ -257,13 +257,13 @@ export function EntityLinkPicker({
   return (
     <>
       {/* ── Trigger ── */}
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 min-w-0">
         <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
           Link to Record
         </p>
 
         {hasSelection ? (
-          <div className="flex items-center gap-2 pl-3 pr-1.5 h-9 rounded-md border border-input bg-background text-sm">
+          <div className="w-full flex items-center gap-2 pl-3 pr-1.5 h-9 rounded-md border border-input bg-background text-sm">
             <span
               className={cn(
                 'shrink-0 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded',
