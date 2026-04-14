@@ -40,6 +40,7 @@ interface EntityOption {
   type: EntityType;
   label: string;
   sublabel?: string;
+  jobNumber?: string;
   jobTypeId?: string;
 }
 
@@ -130,7 +131,10 @@ export function EntityLinkPicker({
           id: p.id,
           type: 'PROJECT' as EntityType,
           label: p.name,
-          sublabel: p.client?.name,
+          sublabel:
+            [p.jobNumber, p.client?.name].filter(Boolean).join(' · ') ||
+            undefined,
+          jobNumber: p.jobNumber ?? undefined,
           jobTypeId: p.jobTypeId ?? undefined,
         })),
       ]);
@@ -204,7 +208,8 @@ export function EntityLinkPicker({
       const matchesQuery =
         !q ||
         o.label.toLowerCase().includes(q) ||
-        o.sublabel?.toLowerCase().includes(q);
+        o.sublabel?.toLowerCase().includes(q) ||
+        o.jobNumber?.toLowerCase().includes(q);
       return matchesFilter && matchesQuery;
     });
   }, [allOptions, query, filter]);
@@ -319,7 +324,7 @@ export function EntityLinkPicker({
               ref={searchRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by name, company…"
+              placeholder="Search by name, company, job number…"
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
             {query && (
