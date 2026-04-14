@@ -96,7 +96,6 @@ export class OpenAIProvider implements AIProvider {
       model: 'gpt-4o',
       max_tokens: maxTokens,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: prompt },
       ],
     });

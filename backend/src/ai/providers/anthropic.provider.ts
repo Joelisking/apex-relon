@@ -44,12 +44,12 @@ export class AnthropicProvider implements AIProvider {
     return this.client !== null;
   }
 
-  private async call(prompt: string, maxTokens = 1024): Promise<string> {
+  private async call(prompt: string, maxTokens = 1024, systemPrompt: string | undefined = SYSTEM_PROMPT): Promise<string> {
     if (!this.client) throw new Error('Anthropic API key not configured');
     const response = await this.client.messages.create({
       model: MODEL,
       max_tokens: maxTokens,
-      system: SYSTEM_PROMPT,
+      ...(systemPrompt ? { system: systemPrompt } : {}),
       messages: [{ role: 'user', content: prompt }],
     });
     return response.content[0].type === 'text' ? response.content[0].text : '';
@@ -115,6 +115,6 @@ export class AnthropicProvider implements AIProvider {
   }
 
   async generateFreeform(prompt: string, maxTokens = 2048): Promise<string> {
-    return this.call(prompt, maxTokens);
+    return this.call(prompt, maxTokens, undefined);
   }
 }

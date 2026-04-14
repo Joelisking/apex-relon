@@ -80,7 +80,7 @@ export function CalendarView() {
       : ['calendar-tasks', dueAfter, dueBefore],
     queryFn: () =>
       filterProjectId
-        ? tasksApi.getAll({ entityType: 'project', entityId: filterProjectId })
+        ? tasksApi.getAll({ entityType: 'PROJECT', entityId: filterProjectId })
         : tasksApi.getAll({ dueAfter, dueBefore }),
   });
 
@@ -124,7 +124,7 @@ export function CalendarView() {
     if (showTasks) {
       for (const task of tasks) {
         const t = task as Task;
-        if (filterProjectId && !(t.entityType === 'project' && t.entityId === filterProjectId)) continue;
+        if (filterProjectId && !(t.entityType === 'PROJECT' && t.entityId === filterProjectId)) continue;
         if (filterAssigneeId && t.assignedToId !== filterAssigneeId) continue;
         const ev = taskToEvent(t);
         if (ev) evts.push(ev);

@@ -44,14 +44,12 @@ export class GeminiProvider implements AIProvider {
     return this.client !== null;
   }
 
-  private async call(prompt: string): Promise<string> {
+  private async call(prompt: string, systemInstruction: string | undefined = SYSTEM_PROMPT): Promise<string> {
     if (!this.client) throw new Error('Gemini API key not configured');
     const response = await this.client.models.generateContent({
       model: MODEL,
       contents: prompt,
-      config: {
-        systemInstruction: SYSTEM_PROMPT,
-      },
+      config: systemInstruction ? { systemInstruction } : undefined,
     });
     return response.text || '';
   }
@@ -129,6 +127,6 @@ export class GeminiProvider implements AIProvider {
   }
 
   async generateFreeform(prompt: string): Promise<string> {
-    return this.call(prompt);
+    return this.call(prompt, undefined);
   }
 }
