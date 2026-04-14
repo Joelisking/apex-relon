@@ -464,7 +464,7 @@ export function ProjectDetailView({ projectId, currentUserId }: ProjectDetailVie
                       const params = new URLSearchParams({
                         projectId: project.id,
                         projectName: project.name,
-                        returnTo: encodeURIComponent(`/projects/${project.id}?tab=financials`),
+                        returnTo: `/projects/${project.id}?tab=financials`,
                       });
                       router.push(`/cost-breakdown/new?${params.toString()}`);
                     }}>

@@ -101,6 +101,12 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
     if (inferredJobTypeId) setJobTypeId(inferredJobTypeId);
   }, [leadId, leads, titleManuallyEdited]);
 
+  // Auto-populate title from project name when creating from a project page
+  useEffect(() => {
+    if (!prefilledProjectName || titleManuallyEdited) return;
+    setTitle(prefilledProjectName);
+  }, [prefilledProjectName, titleManuallyEdited]);
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -391,7 +397,11 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
             {returnTo ? 'Back' : 'Cost Breakdown'}
           </Button>
           <h1 className="text-2xl font-display tracking-tight">New Cost Breakdown</h1>
-          <p className="text-sm text-muted-foreground">Set up an estimating document for a prospective project</p>
+          <p className="text-sm text-muted-foreground">
+            {prefilledProjectId
+              ? 'Set up an estimating document for this project'
+              : 'Set up an estimating document for a prospective project'}
+          </p>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card p-6 space-y-5">
