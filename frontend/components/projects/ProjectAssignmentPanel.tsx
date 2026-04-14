@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { projectsApi, type ProjectAssignment } from '@/lib/api/projects-client';
@@ -88,6 +89,21 @@ export function ProjectAssignmentPanel({
     onError: () => toast.error('Failed to remove assignment'),
   });
 
+  const handleUserChange = (userId: string) => {
+    setSelectedUserId(userId);
+    const user = availableUsers.find((u) => u.id === userId);
+    if (user) {
+      const roleLabel = rolesData.find((r) => r.key === user.role)?.label ?? user.role ?? '';
+      setSelectedRole(roleLabel);
+    }
+  };
+
+  const userOptions = availableUsers.map((u) => ({
+    value: u.id,
+    label: u.name,
+    keywords: u.role,
+  }));
+
   const canAdd = selectedUserId && selectedRole;
 
   return (
@@ -129,24 +145,15 @@ export function ProjectAssignmentPanel({
 
       {/* Add form — only shown when user can edit */}
       {hasPermission('projects:edit') && <div className="flex items-center gap-2">
-        <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-          <SelectTrigger className="h-8 text-xs flex-1">
-            <SelectValue placeholder="Select crew member..." />
-          </SelectTrigger>
-          <SelectContent>
-            {availableUsers.map((u) => (
-              <SelectItem key={u.id} value={u.id} className="text-xs">
-                {u.name}
-                <span className="ml-1 text-muted-foreground">· {u.role}</span>
-              </SelectItem>
-            ))}
-            {availableUsers.length === 0 && (
-              <div className="py-2 text-center text-xs text-muted-foreground">
-                All users are already assigned
-              </div>
-            )}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          value={selectedUserId}
+          onValueChange={handleUserChange}
+          options={userOptions}
+          placeholder="Select crew member..."
+          searchPlaceholder="Search by name..."
+          emptyMessage="All users are already assigned"
+          className="flex-1 h-8 text-xs"
+        />
 
         <Select value={selectedRole} onValueChange={setSelectedRole}>
           <SelectTrigger className="h-8 text-xs w-40">
