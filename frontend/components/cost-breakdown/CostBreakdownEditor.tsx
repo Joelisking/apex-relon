@@ -588,6 +588,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
               onChange={handleLineChange}
               roleDisplayNames={breakdown.roleDisplayNames ?? null}
               onDisplayNameChange={handleSaveDisplayName}
+              disabled={isFinal}
             />
           ))}
 

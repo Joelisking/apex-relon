@@ -64,6 +64,7 @@ const CB_STATUS_STYLES: Record<string, string> = {
   DRAFT: 'bg-amber-50 text-amber-700 border-amber-200/80',
   RATED: 'bg-blue-50 text-blue-700 border-blue-200/80',
   APPROVED: 'bg-green-50 text-green-700 border-green-200/80',
+  FINAL: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
 };
 
 export function LinkedProposalsSection({ leadId, lead }: LinkedProposalsSectionProps) {

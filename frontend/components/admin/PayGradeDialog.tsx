@@ -55,10 +55,15 @@ interface Props {
   editing: PayGrade | null;
 }
 
+function nameToCode(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+}
+
 export function PayGradeDialog({ open, onClose, editing }: Props) {
   const queryClient = useQueryClient();
   const isEdit = !!editing;
   const [form, setForm] = useState<FormState>(() => formFromGrade(editing));
+  const [codeManuallyEdited, setCodeManuallyEdited] = useState(false);
 
   // Sync form to the currently-edited grade. This is the recommended pattern
   // for resetting state when a key prop changes — see "You Might Not Need an Effect".
@@ -66,6 +71,7 @@ export function PayGradeDialog({ open, onClose, editing }: Props) {
   if (lastEditingId.current !== (editing?.id ?? null)) {
     lastEditingId.current = editing?.id ?? null;
     setForm(formFromGrade(editing));
+    setCodeManuallyEdited(false);
   }
 
   const createMutation = useMutation({
@@ -137,23 +143,34 @@ export function PayGradeDialog({ open, onClose, editing }: Props) {
               id="pg-name"
               placeholder="e.g. INDOT Pay 4"
               value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              onChange={(e) => {
+                const name = e.target.value;
+                setForm((p) => ({
+                  ...p,
+                  name,
+                  ...(!isEdit && !codeManuallyEdited ? { code: nameToCode(name) } : {}),
+                }));
+              }}
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="pg-code">Code</Label>
-            <Input
-              id="pg-code"
-              placeholder="e.g. indot_4"
-              value={form.code}
-              onChange={(e) => setForm((p) => ({ ...p, code: e.target.value }))}
-              disabled={isEdit}
-            />
-            <p className="text-xs text-muted-foreground">
-              Internal identifier. Lowercase, underscore-separated. Cannot be changed after creation.
-            </p>
-          </div>
+          {!isEdit && (
+            <div className="space-y-1.5">
+              <Label htmlFor="pg-code">Code</Label>
+              <Input
+                id="pg-code"
+                placeholder="e.g. indot_4"
+                value={form.code}
+                onChange={(e) => {
+                  setCodeManuallyEdited(true);
+                  setForm((p) => ({ ...p, code: e.target.value }));
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Auto-generated from name. Lowercase, underscore-separated. Cannot be changed after creation.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="pg-desc">Description</Label>

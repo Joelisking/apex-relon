@@ -37,6 +37,7 @@ interface Props {
   onChange: (updatedLine: CostBreakdownLine) => void;
   roleDisplayNames?: Record<string, string> | null;
   onDisplayNameChange?: (roleString: string, newName: string) => Promise<void> | void;
+  disabled?: boolean;
 }
 
 export default function CostBreakdownLineCard({
@@ -45,6 +46,7 @@ export default function CostBreakdownLineCard({
   onChange,
   roleDisplayNames,
   onDisplayNameChange,
+  disabled = false,
 }: Props) {
   const isField = line.serviceItem.description === 'Field';
   const [addingTask, setAddingTask] = useState(false);
@@ -206,13 +208,15 @@ export default function CostBreakdownLineCard({
           ) : (
             <div className="flex items-center gap-1.5 group/siname">
               <span className="text-sm font-semibold">{line.serviceItem.name}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5 text-muted-foreground opacity-0 group-hover/siname:opacity-100 transition-opacity"
-                onClick={startEditSiName}>
-                <Pencil className="h-3 w-3" />
-              </Button>
+              {!disabled && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 text-muted-foreground opacity-0 group-hover/siname:opacity-100 transition-opacity"
+                  onClick={startEditSiName}>
+                  <Pencil className="h-3 w-3" />
+                </Button>
+              )}
             </div>
           )}
           <Badge
@@ -252,6 +256,7 @@ export default function CostBreakdownLineCard({
           onUpdate={handleUpdateEstimate}
           onDelete={handleDeleteEstimate}
           onRemove={() => handleRemoveSubtask(subtask.id)}
+          disabled={disabled}
           onRename={(newName) =>
             onChange({
               ...line,
@@ -266,8 +271,8 @@ export default function CostBreakdownLineCard({
         />
       ))}
 
-      {/* Add task footer */}
-      <div className="border-t border-border/30 px-4 py-2">
+      {/* Add task footer — hidden when breakdown is finalised */}
+      {!disabled && <div className="border-t border-border/30 px-4 py-2">
         {addingTask ? (
           <div className="flex items-center gap-2">
             <Input
@@ -299,7 +304,7 @@ export default function CostBreakdownLineCard({
             Add Task
           </Button>
         )}
-      </div>
+      </div>}
 
       <AlertDialog open={!!pendingSiRename} onOpenChange={(open) => { if (!open) setPendingSiRename(null); }}>
         <AlertDialogContent>

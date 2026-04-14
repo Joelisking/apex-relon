@@ -48,6 +48,7 @@ interface Props {
   onDelete: (estimate: CostBreakdownRoleEstimate) => void;
   onRemove: () => void;
   onRename?: (newName: string) => void;
+  disabled?: boolean;
 }
 
 export default function CostBreakdownSubtaskSection({
@@ -63,6 +64,7 @@ export default function CostBreakdownSubtaskSection({
   onDelete,
   onRemove,
   onRename,
+  disabled = false,
 }: Props) {
   const [adding, setAdding] = useState(false);
 
@@ -183,13 +185,15 @@ export default function CostBreakdownSubtaskSection({
         ) : (
           <div className="flex items-center gap-1.5 group/name">
             <span className="text-xs font-semibold text-foreground">{subtask.name}</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-4 w-4 text-muted-foreground opacity-0 group-hover/name:opacity-100 transition-opacity"
-              onClick={startEditName}>
-              <Pencil className="h-2.5 w-2.5" />
-            </Button>
+            {!disabled && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-4 w-4 text-muted-foreground opacity-0 group-hover/name:opacity-100 transition-opacity"
+                onClick={startEditName}>
+                <Pencil className="h-2.5 w-2.5" />
+              </Button>
+            )}
           </div>
         )}
         <div className="flex items-center gap-2 shrink-0">
@@ -198,21 +202,23 @@ export default function CostBreakdownSubtaskSection({
               {subtaskTotal.toFixed(1)} hrs
             </span>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5 text-muted-foreground hover:text-destructive"
-            title="Remove from breakdown"
-            onClick={() => {
-              if (localStorage.getItem(SKIP_REMOVE_KEY) === 'true') {
-                onRemove();
-              } else {
-                setDontShowAgain(false);
-                setShowRemoveDialog(true);
-              }
-            }}>
-            <X className="h-3 w-3" />
-          </Button>
+          {!disabled && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 text-muted-foreground hover:text-destructive"
+              title="Remove from breakdown"
+              onClick={() => {
+                if (localStorage.getItem(SKIP_REMOVE_KEY) === 'true') {
+                  onRemove();
+                } else {
+                  setDontShowAgain(false);
+                  setShowRemoveDialog(true);
+                }
+              }}>
+              <X className="h-3 w-3" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -235,12 +241,13 @@ export default function CostBreakdownSubtaskSection({
               onDisplayNameChange={onDisplayNameChange}
               onUpdate={onUpdate}
               onDelete={onDelete}
+              disabled={disabled}
             />
           ))}
         </div>
 
-        {/* Add form */}
-        {adding ? (
+        {/* Add form — hidden when breakdown is finalised */}
+        {!disabled && adding ? (
           <div className="flex flex-col gap-1 px-4 py-2 bg-muted/10">
             <div className="flex items-center gap-2">
               <SearchableSelect
@@ -306,7 +313,7 @@ export default function CostBreakdownSubtaskSection({
               </p>
             )}
           </div>
-        ) : (
+        ) : !disabled ? (
           <div className="px-4 py-1.5">
             <Button
               variant="ghost"
@@ -317,7 +324,7 @@ export default function CostBreakdownSubtaskSection({
               Add Role
             </Button>
           </div>
-        )}
+        ) : null}
       </div>
 
       <AlertDialog open={!!pendingRename} onOpenChange={(open) => { if (!open) setPendingRename(null); }}>
@@ -382,6 +389,7 @@ interface RowProps {
   onDisplayNameChange?: (roleString: string, newName: string) => Promise<void> | void;
   onUpdate: (estimate: CostBreakdownRoleEstimate, hours: number, rate?: number) => void;
   onDelete: (estimate: CostBreakdownRoleEstimate) => void;
+  disabled?: boolean;
 }
 
 function EstimateRow({
@@ -392,6 +400,7 @@ function EstimateRow({
   onDisplayNameChange,
   onUpdate,
   onDelete,
+  disabled = false,
 }: RowProps) {
   const [hours, setHours] = useState(estimate.estimatedHours.toString());
   const [rate, setRate] = useState(estimate.hourlyRate?.toString() ?? '');
@@ -442,6 +451,7 @@ function EstimateRow({
           value={hours}
           onChange={(e) => setHours(e.target.value)}
           onBlur={handleBlur}
+          disabled={disabled}
           className="h-6 w-16 text-xs text-right tabular-nums"
         />
         <span className="text-[11px] text-muted-foreground">hrs</span>
@@ -456,6 +466,7 @@ function EstimateRow({
           onChange={(e) => setRate(e.target.value)}
           onBlur={handleBlur}
           placeholder="—"
+          disabled={disabled}
           className="h-6 w-16 text-xs text-right tabular-nums"
         />
         <span className="text-[11px] text-muted-foreground">/hr</span>
@@ -463,13 +474,15 @@ function EstimateRow({
       <span className="text-xs tabular-nums w-14 text-right text-muted-foreground">
         {cost != null ? formatCurrency(cost) : '—'}
       </span>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-5 w-5 text-muted-foreground hover:text-destructive"
-        onClick={handleDelete}>
-        <Trash2 className="h-3 w-3" />
-      </Button>
+      {!disabled && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-5 w-5 text-muted-foreground hover:text-destructive"
+          onClick={handleDelete}>
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      )}
     </div>
   );
 }
