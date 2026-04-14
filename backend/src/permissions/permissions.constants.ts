@@ -273,6 +273,13 @@ export const ALL_PERMISSIONS: PermissionDefinition[] = [
     label: 'Delete Workflows',
     module: 'Workflows',
   },
+
+  // Calendar
+  {
+    key: 'calendar:advanced_filters',
+    label: 'Filter Calendar by Project & Assignee',
+    module: 'Calendar',
+  },
 ];
 
 // Default permissions for seeded Apex roles
@@ -362,6 +369,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'quickbooks:manage',
     'quickbooks:sync',
     'quickbooks:invoices',
+    'calendar:advanced_filters',
   ],
   PROJECT_MANAGER: [
     'leads:view',
@@ -421,6 +429,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'teams:view',
     'teams:manage_members',
     'teams:be_manager',
+    'calendar:advanced_filters',
   ],
   SURVEY_CREW_CHIEF: [
     'projects:view',

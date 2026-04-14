@@ -5,9 +5,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { Info } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { tasksApi } from '@/lib/api/tasks-client';
 import { projectsApi } from '@/lib/api/projects-client';
-import { ptoApi } from '@/lib/api/pto-client';
+import { ptoApi, type PtoRequest } from '@/lib/api/pto-client';
 import { usersApi, type UserDirectoryItem } from '@/lib/api/users-client';
 import { TaskDialog } from '@/components/tasks/TaskDialog';
 import { ProjectCalendarPopover } from './ProjectCalendarPopover';
@@ -38,12 +39,15 @@ export function CalendarView() {
   const canEditTasks = hasPermission('tasks:edit');
   const canEditAllTasks = hasPermission('tasks:edit_all');
   const canEditProjects = hasPermission('projects:edit');
+  const canAdvancedFilter = hasPermission('calendar:advanced_filters');
 
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [activeView, setActiveView] = useState<CalView>('month');
   const [showTasks, setShowTasks] = useState(true);
   const [showProjects, setShowProjects] = useState(true);
   const [showPto, setShowPto] = useState(true);
+  const [filterProjectId, setFilterProjectId] = useState<string | null>(null);
+  const [filterAssigneeId, setFilterAssigneeId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedProjectEvent, setSelectedProjectEvent] = useState<CalendarEvent | null>(null);
 
@@ -57,7 +61,7 @@ export function CalendarView() {
         ? all
         : all.filter((u) => !u.teamId || u.teamId === user?.teamId);
     },
-    enabled: canAssign,
+    enabled: canAssign || canAdvancedFilter,
     staleTime: 5 * 60_000,
   });
 
@@ -80,31 +84,42 @@ export function CalendarView() {
     queryFn: () => projectsApi.getAll(),
   });
 
-  const { data: ptoRequests = [] } = useQuery({
+  const { data: ptoRequests = [] } = useQuery<PtoRequest[]>({
     queryKey: ['calendar-pto', dueAfter, dueBefore],
     queryFn: () => ptoApi.getCalendarRequests(dueAfter, dueBefore),
   });
 
   const events = useMemo<CalendarEvent[]>(() => {
     const evts: CalendarEvent[] = [];
+
     if (showTasks) {
       for (const task of tasks) {
-        const ev = taskToEvent(task as Task);
+        const t = task as Task;
+        if (filterProjectId && !(t.entityType === 'project' && t.entityId === filterProjectId)) continue;
+        if (filterAssigneeId && t.assignedToId !== filterAssigneeId) continue;
+        const ev = taskToEvent(t);
         if (ev) evts.push(ev);
       }
     }
-    if (showProjects) {
+
+    // Project timeline events are not assignee-specific; hide them when filtering by person
+    if (showProjects && !filterAssigneeId) {
       for (const project of projects) {
+        if (filterProjectId && (project as Project).id !== filterProjectId) continue;
         evts.push(...projectToEvents(project as Project));
       }
     }
-    if (showPto) {
+
+    // PTO is not project-specific; hide it when filtering by project
+    if (showPto && !filterProjectId) {
       for (const req of ptoRequests) {
+        if (filterAssigneeId && req.userId !== filterAssigneeId) continue;
         evts.push(ptoToEvent(req));
       }
     }
+
     return evts;
-  }, [tasks, projects, ptoRequests, showTasks, showProjects, showPto]);
+  }, [tasks, projects, ptoRequests, showTasks, showProjects, showPto, filterProjectId, filterAssigneeId]);
 
   function handleEventClick(event: CalendarEvent) {
     if (event.kind === 'task') {
@@ -180,6 +195,40 @@ export function CalendarView() {
             PTO
           </button>
         </div>
+
+        {canAdvancedFilter && (
+          <div className="flex items-center gap-2">
+            <Select
+              value={filterProjectId ?? 'all'}
+              onValueChange={(v) => setFilterProjectId(v === 'all' ? null : v)}
+            >
+              <SelectTrigger className="h-7 w-[160px] text-xs">
+                <SelectValue placeholder="All Projects" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Projects</SelectItem>
+                {(projects as Project[]).map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={filterAssigneeId ?? 'all'}
+              onValueChange={(v) => setFilterAssigneeId(v === 'all' ? null : v)}
+            >
+              <SelectTrigger className="h-7 w-[160px] text-xs">
+                <SelectValue placeholder="All People" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All People</SelectItem>
+                {assignableUsers.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="ml-auto hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
           <Info className="h-3.5 w-3.5" />
