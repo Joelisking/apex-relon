@@ -170,6 +170,19 @@ export default function CostBreakdownLineCard({
     [line, onChange],
   );
 
+  const handleReplaceEstimate = useCallback(
+    (oldEstimate: CostBreakdownRoleEstimate, newEstimate: CostBreakdownRoleEstimate) => {
+      onChange({
+        ...line,
+        roleEstimates: [
+          ...line.roleEstimates.filter((r) => r.id !== oldEstimate.id),
+          newEstimate,
+        ],
+      });
+    },
+    [line, onChange],
+  );
+
   const excluded = new Set(line.excludedSubtaskIds ?? []);
   const visibleSubtasks = line.serviceItem.subtasks
     .slice()
@@ -255,6 +268,7 @@ export default function CostBreakdownLineCard({
           onAdd={handleAddEstimate}
           onUpdate={handleUpdateEstimate}
           onDelete={handleDeleteEstimate}
+          onReplace={handleReplaceEstimate}
           onRemove={() => handleRemoveSubtask(subtask.id)}
           disabled={disabled}
           onRename={(newName) =>

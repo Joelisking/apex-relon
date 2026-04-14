@@ -46,6 +46,7 @@ interface Props {
   onAdd: (estimate: CostBreakdownRoleEstimate) => void;
   onUpdate: (estimate: CostBreakdownRoleEstimate, hours: number, rate?: number) => void;
   onDelete: (estimate: CostBreakdownRoleEstimate) => void;
+  onReplace?: (oldEstimate: CostBreakdownRoleEstimate, newEstimate: CostBreakdownRoleEstimate) => void;
   onRemove: () => void;
   onRename?: (newName: string) => void;
   disabled?: boolean;
@@ -62,6 +63,7 @@ export default function CostBreakdownSubtaskSection({
   onAdd,
   onUpdate,
   onDelete,
+  onReplace,
   onRemove,
   onRename,
   disabled = false,
@@ -250,8 +252,7 @@ export default function CostBreakdownSubtaskSection({
                     estimatedHours: estimate.estimatedHours,
                     hourlyRate: estimate.hourlyRate ?? undefined,
                   });
-                  onDelete(estimate);
-                  onAdd(created);
+                  onReplace?.(estimate, created);
                 } catch {
                   toast.error('Failed to update role');
                 }
