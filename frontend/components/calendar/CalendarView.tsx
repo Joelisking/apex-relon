@@ -10,6 +10,8 @@ import { tasksApi } from '@/lib/api/tasks-client';
 import { projectsApi } from '@/lib/api/projects-client';
 import { ptoApi, type PtoRequest } from '@/lib/api/pto-client';
 import { usersApi, type UserDirectoryItem } from '@/lib/api/users-client';
+import { getTeams } from '@/lib/api/teams-client';
+import type { Team } from '@/lib/types';
 import { TaskDialog } from '@/components/tasks/TaskDialog';
 import { ProjectCalendarPopover } from './ProjectCalendarPopover';
 import { MonthTab } from './MonthTab';
@@ -48,6 +50,7 @@ export function CalendarView() {
   const [showPto, setShowPto] = useState(true);
   const [filterProjectId, setFilterProjectId] = useState<string | null>(null);
   const [filterAssigneeId, setFilterAssigneeId] = useState<string | null>(null);
+  const [filterTeamId, setFilterTeamId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedProjectEvent, setSelectedProjectEvent] = useState<CalendarEvent | null>(null);
 
@@ -62,6 +65,13 @@ export function CalendarView() {
         : all.filter((u) => !u.teamId || u.teamId === user?.teamId);
     },
     enabled: canAssign || canAdvancedFilter,
+    staleTime: 5 * 60_000,
+  });
+
+  const { data: teams = [] } = useQuery<Team[]>({
+    queryKey: ['teams-list'],
+    queryFn: getTeams,
+    enabled: canAdvancedFilter,
     staleTime: 5 * 60_000,
   });
 
@@ -126,6 +136,21 @@ export function CalendarView() {
     return map;
   }, [projects]);
 
+  // Set of user IDs belonging to the selected team — derived from already-fetched users
+  const teamMemberIds = useMemo<Set<string>>(() => {
+    if (!filterTeamId) return new Set();
+    return new Set(
+      assignableUsers
+        .filter((u) => u.teamId === filterTeamId)
+        .map((u) => u.id),
+    );
+  }, [filterTeamId, assignableUsers]);
+
+  const teamOptions = useMemo(
+    () => teams.map((t) => ({ id: t.id, label: t.name, searchValue: t.name })),
+    [teams],
+  );
+
   const events = useMemo<CalendarEvent[]>(() => {
     const evts: CalendarEvent[] = [];
 
@@ -134,6 +159,7 @@ export function CalendarView() {
         const t = task as Task;
         if (filterProjectId && !(t.entityType === 'PROJECT' && t.entityId === filterProjectId)) continue;
         if (filterAssigneeId && t.assignedToId !== filterAssigneeId) continue;
+        if (filterTeamId && !teamMemberIds.has(t.assignedToId ?? '')) continue;
         const ev = taskToEvent(t);
         if (ev) {
           if (t.entityType === 'PROJECT' && t.entityId && projectJobMap[t.entityId]) {
@@ -144,8 +170,8 @@ export function CalendarView() {
       }
     }
 
-    // Project timeline events are not assignee-specific; hide them when filtering by person
-    if (showProjects && !filterAssigneeId) {
+    // Project timeline events are not assignee/team-specific; hide them when filtering by person
+    if (showProjects && !filterAssigneeId && !filterTeamId) {
       for (const project of projects) {
         if (filterProjectId && (project as Project).id !== filterProjectId) continue;
         evts.push(...projectToEvents(project as Project));
@@ -156,12 +182,13 @@ export function CalendarView() {
     if (showPto && !filterProjectId) {
       for (const req of ptoRequests) {
         if (filterAssigneeId && req.userId !== filterAssigneeId) continue;
+        if (filterTeamId && !teamMemberIds.has(req.userId)) continue;
         evts.push(ptoToEvent(req));
       }
     }
 
     return evts;
-  }, [tasks, projects, ptoRequests, showTasks, showProjects, showPto, filterProjectId, filterAssigneeId]);
+  }, [tasks, projects, ptoRequests, showTasks, showProjects, showPto, filterProjectId, filterAssigneeId, filterTeamId, teamMemberIds, projectJobMap]);
 
   function handleEventClick(event: CalendarEvent) {
     if (event.kind === 'task') {
@@ -240,6 +267,13 @@ export function CalendarView() {
 
         {canAdvancedFilter && (
           <div className="flex items-center gap-2">
+            <CalendarCombobox
+              value={filterTeamId}
+              onChange={setFilterTeamId}
+              options={teamOptions}
+              placeholder="All Teams"
+              width="w-[150px]"
+            />
             <CalendarCombobox
               value={filterProjectId}
               onChange={setFilterProjectId}
