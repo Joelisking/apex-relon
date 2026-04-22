@@ -1,6 +1,6 @@
 # Apex CRM
 
-A single-tenant, AI-enhanced CRM & Business Performance Dashboard built for **Apex Consulting & Surveying, Inc.** — a DBE/MBE/EBE land surveying firm in Fort Wayne, IN. Manages leads, clients, projects, quotes, tasks, time tracking, and sales pipelines with multi-provider AI (Anthropic Claude, OpenAI GPT-4o, Google Gemini), QuickBooks Online integration, and bottleneck analytics.
+A single-tenant, AI-enhanced CRM & Business Performance Dashboard built for **Apex Consulting & Surveying, Inc.** — a DBE/MBE/EBE land surveying firm in Fort Wayne, IN. Manages leads, clients, projects, quotes, cost breakdowns, proposals, tasks, time tracking, PTO, and sales pipelines with multi-provider AI (Anthropic Claude, OpenAI GPT-4o, Google Gemini), QuickBooks Online integration, and bottleneck analytics.
 
 Built with **Next.js 16** (App Router) and a **NestJS** backend.
 
@@ -19,12 +19,18 @@ Built with **Next.js 16** (App Router) and a **NestJS** backend.
   - [Client Management](#client-management)
   - [Contacts](#contacts)
   - [Project Management](#project-management)
+  - [Addenda & Change Orders](#addenda--change-orders)
+  - [Project Comments](#project-comments)
   - [Quotes](#quotes)
+  - [Cost Breakdown & Estimating](#cost-breakdown--estimating)
+  - [Proposals](#proposals)
   - [Products & Services Catalog](#products--services-catalog)
   - [Service Items](#service-items)
   - [Tasks](#tasks)
   - [Calendar](#calendar)
   - [Time Tracking](#time-tracking)
+  - [Work Codes & Pay Grades](#work-codes--pay-grades)
+  - [PTO Management](#pto-management)
   - [Workflows & Automation](#workflows--automation)
   - [Forecast & Targets](#forecast--targets)
   - [Lead Capture Forms](#lead-capture-forms)
@@ -89,24 +95,28 @@ Built with **Next.js 16** (App Router) and a **NestJS** backend.
 │  ├──────────┤  ├──────────┤  ├──────────┤  ├───────────────┤  │
 │  │QuickBooks │  │ Time     │  │Bottleneck│  │ Service Items │  │
 │  │ (OAuth +  │  │ Tracking │  │(Analytics│  │ (Catalog +    │  │
-│  │  Sync)    │  │ (Entries)│  │  + AI)   │  │  Subtasks)    │  │
+│  │  Sync)    │  │ +WorkCode│  │  + AI)   │  │  Subtasks)    │  │
+│  ├──────────┤  ├──────────┤  ├──────────┤  ├───────────────┤  │
+│  │ Cost      │  │ Proposals│  │ Addenda  │  │ PTO           │  │
+│  │ Breakdown │  │ (DOCX    │  │ (Change  │  │ (Policies +   │  │
+│  │ (Estimate)│  │  + PDF)  │  │  Orders) │  │  Approvals)   │  │
 │  └─────┬─────┘  └──────────┘  └──────────┘  └───────────────┘  │
 │        │                                                        │
 │        ▼                                                        │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │  Prisma ORM  →  PostgreSQL (Docker / hosted)│  GCP Storage │  │
+│  │  Prisma ORM  →  PostgreSQL (Docker / hosted) │ GCP Storage │  │
 │  └──────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-| Layer    | Technology                                                                                                |
-| -------- | --------------------------------------------------------------------------------------------------------- |
-| Frontend | Next.js 16 (App Router), React 19, Tailwind CSS, Shadcn/Radix, React Query, Recharts, dnd-kit, react-big-calendar |
-| Backend  | NestJS, Passport.js (JWT), Prisma ORM, Resend (email), @nestjs/schedule (cron), pdfmake (PDF)             |
-| Database | PostgreSQL (Docker Compose or hosted)                                                                     |
-| Storage  | Google Cloud Storage (private buckets, signed-URL streaming)                                              |
-| AI       | Anthropic Claude, OpenAI GPT-4o, Google Gemini (runtime switch)                                           |
-| Integrations | QuickBooks Online (OAuth 2.0, bidirectional sync, webhooks)                                           |
+| Layer        | Technology                                                                                                         |
+| ------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Frontend     | Next.js 16 (App Router), React 19, Tailwind CSS, Shadcn/Radix, React Query, Recharts, dnd-kit, react-big-calendar |
+| Backend      | NestJS, Passport.js (JWT), Prisma ORM, Resend (email), @nestjs/schedule (cron), pdfmake (PDF)                     |
+| Database     | PostgreSQL (Docker Compose or hosted)                                                                              |
+| Storage      | Google Cloud Storage (private buckets, signed-URL streaming)                                                       |
+| AI           | Anthropic Claude, OpenAI GPT-4o, Google Gemini (runtime switch)                                                   |
+| Integrations | QuickBooks Online (OAuth 2.0, bidirectional sync, webhooks)                                                        |
 
 ---
 
@@ -117,12 +127,13 @@ Relon-Apex/
 ├── README.md
 ├── CLAUDE.md
 ├── apex-relon-strategy.md          # Full product strategy & roadmap
+├── PROGRESS.md                     # Implementation progress tracker
 ├── backend/                        # NestJS API server
 │   ├── prisma/
-│   │   ├── schema.prisma           # Full data schema
+│   │   ├── schema.prisma           # Full data schema (70+ models)
 │   │   ├── seed.ts                 # Base data seeder
 │   │   ├── seed.demo.ts            # Extended demo data seeder
-│   │   └── migrations/             # PostgreSQL migrations
+│   │   └── migrations/             # PostgreSQL migrations (versioned)
 │   ├── src/
 │   │   ├── main.ts                 # Entry: port 4000, /api prefix, CORS, validation
 │   │   ├── app.module.ts           # Root module — global guards (JWT + Permissions)
@@ -131,11 +142,16 @@ Relon-Apex/
 │   │   ├── clients/                # Client portfolio + AI health + upsell
 │   │   ├── contacts/               # Contact records scoped to clients/leads
 │   │   ├── projects/               # Active projects + cost tracking + crew assignments
+│   │   ├── addenda/                # Project change orders (addendum lines + approvals)
+│   │   ├── comments/               # Project team comments + @mentions
 │   │   ├── quotes/                 # Quote builder + PDF generation + lifecycle
+│   │   ├── cost-breakdown/         # Estimation tool (role hours + direct expenses + PDF)
+│   │   ├── proposal-templates/     # DOCX proposal template management
 │   │   ├── products/               # Product/service catalog for quoting
 │   │   ├── service-items/          # Service items + subtasks + role hour estimates
 │   │   ├── tasks/                  # Task management linked to any entity
-│   │   ├── time-tracking/          # Time entries + user rates + project budgets
+│   │   ├── time-tracking/          # Time entries + work codes + user rates + pay grades
+│   │   ├── pto/                    # PTO policies, requests, and approval workflow
 │   │   ├── workflows/              # Automation rules (triggers → conditions → actions)
 │   │   ├── forecast/               # Revenue forecasting + monthly targets
 │   │   ├── forms/                  # Public lead-capture forms
@@ -180,12 +196,17 @@ Relon-Apex/
 │   │       ├── quotes/             # Quote builder + list
 │   │       │   ├── new/            # New quote creation
 │   │       │   └── [id]/edit/      # Quote editor
+│   │       ├── cost-breakdown/     # Cost breakdown builder + list
+│   │       │   ├── new/            # New breakdown
+│   │       │   └── [id]/           # Edit breakdown
+│   │       ├── proposals/          # Proposal generation + list
 │   │       ├── tasks/              # Task list + detail
 │   │       ├── calendar/           # Calendar (month, week, agenda, crew views)
 │   │       ├── time-tracking/      # Time tracking + timesheets
+│   │       ├── pto/                # PTO request submission + history
 │   │       ├── analytics/          # Bottleneck analytics dashboard
 │   │       ├── reports/            # Tabbed analytics (4 categories)
-│   │       ├── admin/              # Admin sub-pages (20+ settings screens)
+│   │       ├── admin/              # Admin sub-pages (25+ settings screens)
 │   │       └── settings/           # User profile + password
 │   ├── components/
 │   │   ├── layout/                 # AppSidebar (collapsible, permission-filtered)
@@ -194,9 +215,12 @@ Relon-Apex/
 │   │   ├── clients/                # Client detail, health, metrics
 │   │   ├── projects/               # Kanban, costs, stage timeline, crew assignments
 │   │   ├── quotes/                 # Quote builder, line items, PDF preview
+│   │   ├── cost-breakdown/         # Breakdown builder, role estimates, direct expenses
+│   │   ├── proposals/              # Proposal generation dialogs + list
 │   │   ├── tasks/                  # Task list, detail dialog, filters, time picker
 │   │   ├── calendar/               # Month, week, agenda, crew calendar views
 │   │   ├── time-tracking/          # Time entries, timer widget, timesheets
+│   │   ├── pto/                    # PTO request form, list, approval panel
 │   │   ├── analytics/              # Bottleneck dashboard, stage dwell, AI reports
 │   │   ├── reports/                # 4 tab views + filters
 │   │   ├── contacts/               # Contact dialog, lead contacts section
@@ -209,8 +233,8 @@ Relon-Apex/
 │   ├── contexts/                   # Auth + Currency contexts
 │   ├── hooks/                      # Custom React hooks
 │   ├── lib/
-│   │   ├── api/                    # API client files (domain-split)
-│   │   ├── types.ts                # All TypeScript domain types
+│   │   ├── api/                    # API client files (domain-split, 35+ files)
+│   │   ├── types.ts                # All TypeScript domain types (250+ types)
 │   │   └── validations/            # Zod schemas for forms
 │   └── package.json
 │
@@ -350,11 +374,13 @@ Open [http://localhost:3000](http://localhost:3000). Log in with a seeded user a
           │    ┌───────────┘
           ▼    ▼
    ┌─────────────────┐
-   │ Ongoing Mgmt    │  Tasks, Activities, Files,
+   │ Ongoing Mgmt    │  Tasks, Activities, Files, Comments,
    │ AI Health Score │  Cost Tracking, Time Tracking,
-   │ Upsell Strategy │  Quotes, Contacts, Custom Fields,
-   │ Workflow Rules  │  Notifications, Forecast,
-   │ QB Sync         │  Bottleneck Analytics, Calendar
+   │ Upsell Strategy │  Addenda (Change Orders), Quotes,
+   │ Workflow Rules  │  Contacts, Custom Fields,
+   │ QB Sync         │  Notifications, Forecast,
+   │                 │  Bottleneck Analytics, Calendar,
+   │                 │  PTO, Work Codes
    └─────────────────┘
 ```
 
@@ -385,14 +411,16 @@ Browser → Next.js Middleware (check token cookie)
 5. **Stage progression** — Drag lead through pipeline stages (each transition recorded in StageHistory)
 6. **Workflow automation** — Rules fire automatically on stage change, sending notifications or assigning users
 7. **AI risk analysis** — System analyzes the lead and flags risks (no contact, stale pipeline, high value)
-8. **Quote generated** — Quote builder creates a line-item quote, PDF exported, sent to client
-9. **Deal won** — Lead moves to "Won", `dealClosedAt` + `contractedValue` captured via CloseWonDialog
-10. **Convert to Client + Project** — One-click conversion that creates/links a Client record and creates a Project with assignment carry-over
-11. **Project tracked** — Cost logs, time entries, status changes, crew assignments, activities, tasks, and files managed under the project
-12. **QuickBooks sync** — Client synced as QB customer, quote pushed as QB invoice, project costs synced as expenses
-13. **Client relationship** — Health score calculated, AI generates upsell strategies, contacts tracked, activity engagement tracked
-14. **Forecast** — Won revenue feeds monthly forecast charts; targets set per month for comparison
-15. **Bottleneck analytics** — Stage dwell times, task velocity, and stuck projects surfaced for optimization
+8. **Cost breakdown created** — Estimator builds a role-hour estimate with direct expenses; PDF exported for the proposal
+9. **Proposal generated** — DOCX template populated from cost breakdown and lead context, sent to client
+10. **Quote generated** — Quote builder creates a line-item quote, PDF exported, sent to client
+11. **Deal won** — Lead moves to "Won", `dealClosedAt` + `contractedValue` captured via CloseWonDialog
+12. **Convert to Client + Project** — One-click conversion that creates/links a Client record and creates a Project with assignment carry-over
+13. **Project tracked** — Cost logs, time entries, status changes, crew assignments, addenda (change orders), comments, activities, tasks, and files managed under the project
+14. **QuickBooks sync** — Client synced as QB customer, quote pushed as QB invoice, project costs synced as expenses
+15. **Client relationship** — Health score calculated, AI generates upsell strategies, contacts tracked, activity engagement tracked
+16. **Forecast** — Won revenue feeds monthly forecast charts; targets set per month for comparison
+17. **Bottleneck analytics** — Stage dwell times, task velocity, and stuck projects surfaced for optimization
 
 ---
 
@@ -455,7 +483,8 @@ The sales pipeline (`/leads`) manages opportunities from initial contact to clos
 - **Lead metrics** — Days in pipeline, days since last contact, activity count, file count, days to quotation
 - **Risk flags** — Automated detection: NO_CONTACT, LONG_PIPELINE, HIGH_VALUE_STALE, STALLED, NO_ACTIVITY
 - **AI risk analysis** — Per-lead AI-generated risk level, summary, and recommendations
-- **AI email drafting** — AI drafts follow-up emails based on lead context
+- **AI summary generation** — On-demand narrative summary with insights and suggested next actions
+- **AI email drafting** — AI drafts follow-up emails based on lead context (follow-up, negotiation, etc.)
 - **Stage history** — Full audit trail of all stage transitions with who/when
 - **Year filtering** — Filter leads by creation year
 - **Tasks** — Create and view tasks linked to the lead
@@ -497,7 +526,8 @@ A structured contact book that works across clients and leads:
 
 - **Client-scoped contacts** — Create and list contacts belonging to a specific client
 - **Lead contact linking** — Link existing contacts from a client's book to a lead, or unlink them
-- **Contact details** — Name, email, phone, job title, and notes per contact
+- **Contact details** — Name, email, phone, job title, department, LinkedIn URL, notes per contact
+- **Primary and decision-maker flags** — Mark contacts as primary or decision-maker for visibility
 - **Individual contact management** — View, update, and delete any contact record
 - **Reusable across entities** — One contact record can be linked to multiple leads
 
@@ -508,20 +538,47 @@ Active project tracking (`/projects`) covers delivery and cost management:
 - **Dual views** — Kanban board (by status) + sortable data table
 - **Project stats bar** — Total projects, active, completed, total contracted value, total costs
 - **Date range filters**
-- **Full project detail** — Status history timeline, cost logs, activities, files
+- **Full project detail** — Status history timeline, cost logs, activities, files, comments
 - **Status tracking** — Planning → Active → On Hold → Completed → Cancelled (each change recorded in ProjectStatusHistory)
 - **Complete project dialog** — Captures end-of-project value and completion date
 - **Bulk operations** — Bulk update and bulk delete across selected projects
 - **Cost logs** — Track expenses by date, category, description, and amount; auto-aggregates total cost on the project
-- **Profitability view** — Contracted value vs. cumulative costs
+- **Cost segments** — Named cost breakdown segments (e.g., Phase 1, Phase 2) for multi-phase cost tracking
+- **Profitability view** — Contracted value vs. cumulative costs with margin calculation
 - **Crew assignments** — Assign crew members to projects with role-specific positions; managed via ProjectAssignment records
+- **Service item linkage** — Attach service items from the catalog directly to a project for time tracking and billing reference
 - **Assignment** — Project manager, designer, and QS with role-based visibility
 - **Client linkage** — Every project belongs to a client; auto-updates client project counts
 - **Lead linkage** — Optional one-to-one link to the originating lead
+- **Job numbers** — Configurable job number field for internal reference tracking
 - **Tasks** — Create and view tasks linked to the project
 - **Time tracking** — Time entries logged against projects with service item and subtask breakdown
 - **Project budgets** — Set budgeted hours and cost per project; track actuals against budget
+- **Optional stages** — INDOT-specific workflow stages for government projects
 - **Custom fields** — Additional data fields configured per your business needs
+
+### Addenda & Change Orders
+
+A structured change order system integrated with project management:
+
+- **Addendum creation** — Create change orders linked to a project with title and description
+- **Line items** — Each addendum contains line items with role, service item link, estimated hours, billable rate, and line total
+- **Approval workflow** — Status tracking from DRAFT → APPROVED → INVOICED with `approvedAt` timestamp
+- **Cost rollup** — Line item totals aggregate to the addendum total
+- **Role-based pricing** — Each line item specifies the role performing the work and the billable rate
+- **Audit trail** — Full history of addendum creation, updates, and approvals
+- **Project integration** — Addenda visible directly from the project detail view in a dedicated tab
+
+### Project Comments
+
+Team collaboration tool for project discussions:
+
+- **Comment threads** — Post comments on any project visible to the team
+- **@mention support** — Tag team members with @username to trigger mention notifications
+- **Visibility levels** — Control whether comments are visible to the full team or specific users
+- **Real-time delivery** — Mention notifications delivered instantly via SSE
+- **Edit and delete** — Authors can edit or delete their own comments
+- **Inline display** — Comments appear in the project detail view in chronological order
 
 ### Quotes
 
@@ -542,6 +599,37 @@ A full quoting module (`/quotes`) covering the quote lifecycle from draft to PDF
 - **QuickBooks integration** — Quotes can be pushed as QB invoices; `qbInvoiceId` and `qbPaymentStatus` tracked
 - **Notifications** — Status changes trigger `QUOTE_STATUS` notifications to the quote owner
 
+### Cost Breakdown & Estimating
+
+A detailed estimating tool (`/cost-breakdown`) for building role-based cost estimates before quoting:
+
+- **Breakdown builder** — Create named cost breakdowns linked to a lead, job type, and status
+- **Line items** — Each breakdown contains service item lines representing scope components
+- **Role hour estimates** — Per line item, estimate hours broken down by role (e.g., Party Chief: 4 hrs, Survey Technician: 8 hrs) with configurable hourly rates
+- **Subtask exclusions** — Track which subtasks are excluded from scope per line item
+- **Direct expenses** — Add mileage, lodging, and per diem expenses with quantity and rate; auto-calculates totals
+- **Grand total rollup** — All role hours × rates + direct expenses + overhead calculates to a project cost estimate
+- **Benchmark locking** — Lock a breakdown at a point in time as a benchmark for comparison
+- **PDF generation** — Export the breakdown as a professional PDF for proposal attachment
+- **Role display names** — Customize how roles appear on the breakdown PDF
+- **Status tracking** — DRAFT, FINALIZED, ARCHIVED states
+- **Template-based workflow** — Reuse breakdowns as templates for similar project types
+- **Proposal linkage** — Cost breakdowns feed directly into the proposal generator
+
+### Proposals
+
+A proposal generation system (`/proposals`) that produces client-ready documents from templates:
+
+- **Template management** — Upload and manage DOCX proposal templates scoped to job types (admin)
+- **GCP template storage** — Templates stored in GCP Cloud Storage and retrieved for generation
+- **Proposal generation** — Populate a DOCX template with lead context and cost breakdown data via LibreOffice
+- **Form snapshot** — Proposal form field values are snapshotted at generation time for audit
+- **Status lifecycle** — DRAFT → ACCEPTED with `acceptedAt` timestamp
+- **Acceptance workflow** — Mark proposals as accepted; updates status and related lead
+- **Bulk operations** — Bulk update and delete across proposals
+- **Lead linkage** — Every proposal ties back to the originating lead and cost breakdown
+- **Admin template management** — Full CRUD on proposal templates with job type association
+
 ### Products & Services Catalog
 
 A product/service catalog (`/admin` → Products) used when building quotes:
@@ -556,11 +644,15 @@ A product/service catalog (`/admin` → Products) used when building quotes:
 A detailed service item catalog (`/admin` → Service Items) for managing surveying service offerings:
 
 - **Service item management** — Full CRUD for service items scoped to a service type
+- **INDOT flag** — Mark items as INDOT-specific for government project workflows
+- **Job type associations** — Link service items to one or more job types
 - **Subtasks** — Each service item has ordered subtasks with drag-to-reorder
 - **Role hour estimates** — Per-subtask hour estimates broken down by role (e.g., Party Chief: 4 hrs, Survey Technician: 8 hrs)
 - **QuickBooks item linkage** — Each service item can map to a QB item ID for sync
 - **Used in time tracking** — Time entries reference service items and subtasks for granular tracking
 - **Used in quotes** — Quote line items can link to service items
+- **Used in cost breakdowns** — Breakdown line items reference service items
+- **Used in projects** — Service items can be attached directly to projects
 
 ### Tasks
 
@@ -575,8 +667,9 @@ A cross-entity task management system (`/tasks`) for tracking follow-ups and wor
 - **Task types** — Categorize tasks by type, linked to service types for domain-specific task categorization
 - **Assignment** — Each task has an assignee and a creator; non-managers see only their own tasks unless they hold `tasks:view_all`
 - **Due dates and times** — Optional due date with time picker; overdue detection
+- **Estimated hours** — Set estimated hours on a task for planning
 - **Reminders** — Set reminder time for tasks
-- **Completion notes** — When marking a task DONE, a completion note is recorded; tasks can be uncompleted/reopened
+- **Completion notes** — When marking a task DONE, a completion note is recorded; tasks can be uncompleted/reopened with a reason
 - **Workflow integration** — Workflows can automatically create tasks as an action
 - **Calendar integration** — Tasks appear as events on the calendar, color-coded by priority
 - **Notifications** — `TASK_ASSIGNED`, `TASK_DUE`, and `TASK_OVERDUE` notifications are sent automatically via the scheduler
@@ -590,6 +683,7 @@ A multi-view calendar (`/calendar`) powered by react-big-calendar:
 - **Agenda view** — Chronological list of upcoming events
 - **Crew view** — Specialized crew/field scheduling view for managing field crew assignments by week
 - **Event sources** — Tasks (by due date, color-coded by priority) and projects (by start/end dates)
+- **Team filtering** — Filter calendar events by team membership
 - **Toggle visibility** — Show/hide tasks and projects independently
 - **Range-aware fetching** — Only queries data for the visible date range for performance
 - **Inline editing** — Click a task event to open the task dialog; click a project event to open the project detail dialog
@@ -603,10 +697,45 @@ A native time tracking system (`/time-tracking`) for labor cost management:
 - **Entry source** — Track whether entries are manual, timer-based, or imported
 - **Billable flag** — Mark entries as billable or non-billable
 - **User rates** — Configure per-user hourly rates (internal and billing types) with date-ranged validity
+- **Pay grade assignment** — Assign users to pay grades for structured rate management
 - **Project budgets** — Set budgeted hours and cost per project; track actuals vs. budget
 - **Weekly timesheet** — Weekly view of time entries for each user
 - **Project summary** — Aggregated time per project with hours and cost breakdown
 - **User summary** — Aggregated time per user across projects
+- **Submission workflow** — Submit time entries for manager review
+
+### Work Codes & Pay Grades
+
+A structured work code and compensation system supporting INDOT compliance:
+
+**Work Codes:**
+- **Hierarchical work code system** — Three-tier division structure (5000-series Field Work, 6000-series Office/Processing, 7000-series Admin)
+- **Parent/child codes** — Roll-up codes for summary reporting; child codes for granular entry
+- **INDOT compliance** — Work codes map to INDOT-required categories for government project billing
+- **Time entry linkage** — Time entries reference a specific work code for classification
+- **Admin management** — Full CRUD on the work code hierarchy via `/admin/work-codes`
+
+**Pay Grades:**
+- **Pay grade definitions** — Define named pay grades (Base Rate, INDOT Pay Grade 1-5, etc.) with associated hourly rates
+- **User rate assignment** — Assign each user to a pay grade with date-ranged validity for rate history
+- **INDOT pay zones** — Define geographic pay zones by county with zone-specific pay grade overrides (required for INDOT projects)
+- **Effective date tracking** — Rate changes tracked by effective date range for historical accuracy
+- **Admin pages** — Separate admin views for pay grades (`/admin/pay-grades`), user rates (`/admin/pay-rates`), and INDOT pay zones (`/admin/indot-pay-zones`)
+
+### PTO Management
+
+A full paid-time-off request and approval system (`/pto`):
+
+- **PTO request submission** — Employees submit time-off requests with type, start/end date, hours, and notes
+- **Request types** — Vacation, sick, personal, and other configurable leave types
+- **Manager approval workflow** — Requests routed to managers for APPROVE or DENY with optional response notes
+- **Accrual policies** — Admin-defined PTO policies specifying maximum days per year, accrual type (annual, monthly), and carryover limits
+- **Policy enforcement** — Requests validated against the applicable policy rules
+- **Balance tracking** — PTO balance calculated from accrual type and approved/used history
+- **Notification integration** — Notifications sent to employees on approval/denial and to managers on new requests
+- **Calendar integration** — Approved PTO appears on the team calendar
+- **Admin policy management** — Full CRUD on PTO policies via `/admin/pto`
+- **Approval panel** — Managers see pending requests with bulk approval/denial capability
 
 ### Workflows & Automation
 
@@ -718,26 +847,28 @@ A dedicated analytics page (`/analytics`) identifying process bottlenecks and in
 - **Stage dwell analysis** — Average, median, and max days spent in each pipeline stage (computed from StageHistory)
 - **Task velocity** — Per-user task completion rates and throughput
 - **Overdue breakdown** — Categorized view of overdue tasks and their impact
-- **Stuck projects** — Identify projects exceeding a configurable stall threshold
+- **Stuck projects** — Identify projects exceeding a configurable stall threshold (default: 14 days)
+- **Widget summary** — Dashboard-ready summary card of key bottleneck metrics
 - **AI-generated reports** — One-click AI analysis generating narrative reports on bottlenecks and recommendations; reports persisted to `AIAnalyticsReport` for history
+- **Latest report retrieval** — View the most recently generated AI bottleneck report without re-running the analysis
 - **Analytics snapshots** — `AnalyticsSnapshot` model for time-series metric tracking
 
 ### AI Integration
 
 Apex CRM integrates AI across the entire platform through a unified multi-provider abstraction:
 
-| AI Capability        | Trigger                        | Output                                                           |
-| -------------------- | ------------------------------ | ---------------------------------------------------------------- |
-| Lead Risk Analysis   | Button on lead detail          | Risk level (Low/Medium/High), summary, recommendations, confidence score |
-| Lead Summary         | Button on lead detail          | Insights and suggested next actions                              |
-| Email Drafting       | Button on lead detail          | Context-aware follow-up email draft (subject, body, tone)        |
-| Client Health Report | Button on client detail        | Health score (0-100), summary, risk factors, strengths, recommendations |
-| Upsell Strategy      | Button on client detail        | Opportunities with potential revenue values, approach, timing    |
-| Executive Summary    | Button/widget on dashboard     | What changed, what's at risk, what needs attention, key insights |
-| Pipeline Insights    | Button on dashboard            | Bottlenecks, win probability by stage, urgent leads, recommendations |
-| Bottleneck Report    | Button on analytics page       | AI narrative analysis of stage dwell, velocity, and recommendations |
-| AI Chat Assistant    | Floating widget (bottom-right) | Conversational CRM assistant with lead/client context + suggestions |
-| Freeform Generation  | Internal (bottleneck service)  | Raw prompt passthrough for custom AI analysis                    |
+| AI Capability        | Trigger                        | Output                                                                       |
+| -------------------- | ------------------------------ | ---------------------------------------------------------------------------- |
+| Lead Risk Analysis   | Button on lead detail          | Risk level (Low/Medium/High), summary, recommendations, confidence score     |
+| Lead Summary         | Button on lead detail          | Insights and suggested next actions                                          |
+| Email Drafting       | Button on lead detail          | Context-aware follow-up email draft (subject, body, tone)                    |
+| Client Health Report | Button on client detail        | Health score (0-100), summary, risk factors, strengths, recommendations      |
+| Upsell Strategy      | Button on client detail        | Opportunities with potential revenue values, approach, timing                |
+| Executive Summary    | Button/widget on dashboard     | What changed, what's at risk, what needs attention, key insights             |
+| Pipeline Insights    | Button on dashboard            | Bottlenecks, win probability by stage, urgent leads, recommendations         |
+| Bottleneck Report    | Button on analytics page       | AI narrative analysis of stage dwell, velocity, and recommendations          |
+| AI Chat Assistant    | Floating widget (bottom-right) | Conversational CRM assistant with lead/client context + suggestions          |
+| Freeform Generation  | Internal (bottleneck service)  | Raw prompt passthrough for custom AI analysis                                |
 
 **Provider selection** — Resolution priority: explicit API argument → per-feature DB override → DB default provider → env `AI_DEFAULT_PROVIDER` → OpenAI fallback. Each capability can use a different provider. Configured per-capability in the admin panel or globally via environment variable. All three providers implement the same `AIProvider` interface.
 
@@ -749,6 +880,7 @@ Full bidirectional integration with QuickBooks Online (`/admin` → QuickBooks):
 
 - **OAuth 2.0 connect/disconnect** — Standard Intuit OAuth flow with secure token storage
 - **Connection status** — Dashboard showing connection state, company info, and last sync time
+- **Token refresh automation** — Access tokens refreshed automatically before expiry
 - **Client ↔ Customer sync** — Sync CRM clients to/from QB customers
 - **Quote → Invoice** — Push accepted quotes as QB invoices with line items; `qbInvoiceId` tracked on the quote
 - **Payment sync** — Pull payment status from QB back to quotes (`qbPaymentStatus`)
@@ -756,6 +888,7 @@ Full bidirectional integration with QuickBooks Online (`/admin` → QuickBooks):
 - **Service item sync** — Map CRM service items to QB items via `qbItemId`
 - **Webhook endpoint** — Receive real-time updates from Intuit with signature verification
 - **Sync history** — Full audit trail of all sync operations (`QuickBooksSync` records)
+- **Scheduled sync** — Automated background sync via `@nestjs/schedule`
 - **Admin UI** — QuickBooks management page with connect/disconnect buttons, sync triggers, and sync history table
 
 ### Administration
@@ -781,6 +914,7 @@ The admin panel (`/admin/*`) provides full system configuration:
 - Create custom roles with auto-generated keys
 - Clone permissions from existing roles
 - Color coding for role badges
+- `showInCostBreakdown` flag to control which roles appear in cost breakdown estimates
 
 **Permission Matrix** (`/admin/permissions`):
 
@@ -799,12 +933,12 @@ The admin panel (`/admin/*`) provides full system configuration:
 **Dropdown Options** (`/admin/dropdown-options`):
 
 - Configure dynamic dropdowns used throughout the system
-- Categories: urgency, activity type, meeting type, file category, cost category, client segment, individual type, project status, project risk status
+- Categories: urgency, activity type, meeting type, file category, cost category, client segment, individual type, project status, project risk status, and more
 - Reorder, activate/deactivate, protect system options
 
-**Service Types** (`/admin/service-types`):
+**Service Types / Job Types** (`/admin/job-types`):
 
-- Manage the service type catalog (Topographic, Boundary, ROW Engineering, etc.)
+- Manage the service type catalog (Topographic, Boundary, ROW Engineering, Construction Staking, ALTA/NSPS, Cell Tower, Subdivision Plat, Environmental, etc.)
 - Name, description, active status, sort order
 
 **Service Items** (`/admin/service-items`):
@@ -819,10 +953,36 @@ The admin panel (`/admin/*`) provides full system configuration:
 - Define task types linked to service types
 - Name, description, active status, sort order
 
+**Work Codes** (`/admin/work-codes`):
+
+- Manage the full work code hierarchy (5000/6000/7000 series)
+- Parent and child code relationships
+- Used in time entries for labor classification and INDOT billing compliance
+
+**Pay Grades** (`/admin/pay-grades`):
+
+- Define pay grade levels with base hourly rates
+- Used to standardize compensation rates across roles
+
+**Pay Rates** (`/admin/pay-rates`):
+
+- Assign each user to a pay grade with effective date ranges
+- Historical rate tracking for accurate cost reporting
+
+**INDOT Pay Zones** (`/admin/indot-pay-zones`):
+
+- Define geographic pay zones mapped to Indiana counties
+- Each zone specifies a pay grade override for INDOT project billing compliance
+
 **Products** (`/admin/products`):
 
 - Manage the product/service catalog used in the quote builder
 - Create, update, activate/deactivate products
+
+**Proposal Templates** (`/admin/proposal-templates`):
+
+- Upload and manage DOCX proposal templates
+- Associate templates with job types for auto-selection during generation
 
 **Workflows** (`/admin/workflows`):
 
@@ -861,9 +1021,15 @@ The admin panel (`/admin/*`) provides full system configuration:
 - Trigger manual syncs (clients, payments, expenses, service items)
 - View sync history table
 
+**PTO Policies** (`/admin/pto`):
+
+- Create and manage PTO policies (max days, accrual type, carryover limits, requires-approval flag)
+- Assign policies to users or teams
+
 **General Settings** (`/admin/general-settings`):
 
 - Tenant-level configuration (e.g., client display mode: COMPANY or INDIVIDUAL)
+- Bottleneck stall threshold (days before a project is flagged as stuck)
 
 **Audit Logs** (`/admin/audit-logs`):
 
@@ -933,7 +1099,7 @@ Custom roles can be created via the admin panel with any combination of availabl
 | Workflows     | view, create, edit, delete                           |
 | Teams         | view, create, edit, delete, manage_members, be_manager |
 | Users         | view, create, edit, delete                           |
-| Dashboard     | edit                                                 |
+| Dashboard     | view, edit                                           |
 | AI Settings   | view, edit                                           |
 | Audit Logs    | view                                                 |
 | Permissions   | view, edit                                           |
@@ -941,6 +1107,7 @@ Custom roles can be created via the admin panel with any combination of availabl
 | Reports       | view, export, view_all                               |
 | Settings      | manage, view, edit                                   |
 | Notifications | view                                                 |
+| Bottleneck    | view                                                 |
 
 ### How Permissions Work
 
@@ -954,58 +1121,107 @@ Custom roles can be created via the admin panel with any combination of availabl
 
 ## Database Schema
 
-Prisma models powering the system:
+Prisma models powering the system (70+ models):
 
-| Model                      | Purpose                                              |
-| -------------------------- | ---------------------------------------------------- |
-| `User`                     | System users with role, team, hierarchy              |
-| `Lead`                     | Prospective projects in the sales pipeline           |
-| `LeadRep`                  | Contact representatives for a lead                   |
-| `Client`                   | Client portfolio with health/engagement              |
-| `Contact`                  | Structured contact book linked to clients            |
-| `LeadContact`              | Lead ↔ Contact join table                            |
-| `Project`                  | Active projects with cost tracking                   |
-| `ProjectAssignment`        | Crew member assignments to projects                  |
-| `CostLog`                  | Individual cost entries per project                  |
-| `ProjectStatusHistory`     | Project status change audit trail                    |
-| `Quote`                    | Quote records with line items and lifecycle          |
+### Core CRM
+
+| Model                   | Purpose                                              |
+| ----------------------- | ---------------------------------------------------- |
+| `User`                  | System users with role, team, hierarchy              |
+| `Role`                  | Role definitions (built-in + custom)                 |
+| `RolePermission`        | Role-permission mapping matrix                       |
+| `Team`                  | Organizational team structure                        |
+| `Lead`                  | Prospective projects in the sales pipeline           |
+| `LeadRep`               | Contact representatives for a lead                   |
+| `LeadTeamMember`        | Multi-user team assignments on a lead                |
+| `LeadContact`           | Lead ↔ Contact join table                            |
+| `StageHistory`          | Lead pipeline stage transitions with audit trail     |
+| `Client`                | Client portfolio with health/engagement              |
+| `Contact`               | Structured contact book linked to clients            |
+| `Activity`              | Polymorphic call/meeting log                         |
+| `File`                  | Polymorphic file metadata (GCP storage)              |
+
+### Projects & Work
+
+| Model                      | Purpose                                                  |
+| -------------------------- | -------------------------------------------------------- |
+| `Project`                  | Active projects with cost tracking and crew              |
+| `ProjectAssignment`        | Crew member assignments to projects (role-based)         |
+| `CostLog`                  | Individual cost entries per project                      |
+| `ProjectCostSegment`       | Named cost segments within a project                     |
+| `ProjectStatusHistory`     | Project status change audit trail                        |
+| `ProjectServiceItem`       | Service items attached to a project                      |
+| `ProjectAddendum`          | Change orders linked to a project                        |
+| `ProjectAddendumLine`      | Line items within a change order                         |
+| `ProjectComment`           | Team comments on a project with @mentions                |
+| `ProjectBudget`            | Budgeted hours + cost per project                        |
+
+### Quoting & Estimating
+
+| Model                      | Purpose                                                  |
+| -------------------------- | -------------------------------------------------------- |
+| `Quote`                    | Quote records with line items and lifecycle              |
 | `QuoteLineItem`            | Line items on a quote (product, service item, or ad-hoc) |
-| `QuoteSettings`            | Global quote defaults (company info, tax, terms)     |
-| `Product`                  | Product/service catalog for quoting                  |
-| `ServiceType`              | Configurable service type catalog                    |
-| `ServiceItem`              | Detailed service items with QB item ID               |
-| `ServiceItemSubtask`       | Subtasks within a service item                       |
-| `ServiceItemRoleEstimate`  | Per-role hour estimates per subtask                  |
-| `Task`                     | Tasks linked to any entity with status/priority      |
-| `TaskType`                 | Task type definitions linked to service types        |
-| `TimeEntry`                | Time entries (project, service item, subtask linkage)|
-| `UserRate`                 | Per-user hourly rates with date-ranged validity      |
-| `ProjectBudget`            | Budgeted hours + cost per project                    |
-| `WorkflowRule`             | Automation rules (trigger → conditions → actions)    |
-| `WorkflowExecution`        | Execution history for workflow rules                 |
-| `ForecastTarget`           | Monthly revenue targets                              |
-| `LeadForm`                 | Public lead capture form definitions                 |
-| `LeadFormSubmission`       | Submissions received via public forms                |
-| `Notification`             | In-app notifications per user                        |
-| `NotificationPreference`   | Per-user notification type preferences               |
-| `CustomFieldDefinition`    | Custom field schema per entity type                  |
-| `CustomFieldValue`         | Custom field values per entity instance              |
-| `Activity`                 | Polymorphic call/meeting log                         |
-| `File`                     | Polymorphic file metadata (GCP storage)              |
-| `StageHistory`             | Lead pipeline stage transitions                      |
-| `PipelineStage`            | Customizable pipeline stages (lead + project)        |
-| `DropdownOption`           | Dynamic dropdown configuration                       |
-| `DashboardLayout`          | Per-user customizable widget layout (JSON)           |
-| `AISettings`               | AI provider config + encrypted keys + prompts        |
-| `AIAnalyticsReport`        | Persisted AI-generated analytics reports             |
-| `AnalyticsSnapshot`        | Time-series metric snapshots for bottleneck analytics|
-| `AuditLog`                 | System action audit trail                            |
-| `RolePermission`           | Role-permission mapping matrix                       |
-| `Role`                     | Role definitions (built-in + custom)                 |
-| `Team`                     | Organizational team structure                        |
-| `TenantSettings`           | Singleton tenant configuration                       |
-| `QuickBooksConnection`     | QB OAuth tokens and connection state                 |
-| `QuickBooksSync`           | QB sync history records                              |
+| `QuoteSettings`            | Global quote defaults (company info, tax, terms)         |
+| `Product`                  | Product/service catalog for quoting                      |
+| `CostBreakdown`            | Role-based cost estimate for a project                   |
+| `CostBreakdownLine`        | Service item lines within a cost breakdown               |
+| `CostBreakdownRoleEstimate`| Per-role hour estimates per line item                    |
+| `Proposal`                 | Generated proposals linked to leads and cost breakdowns  |
+| `ProposalTemplate`         | DOCX proposal template definitions                       |
+
+### Service Catalog
+
+| Model                     | Purpose                                            |
+| ------------------------- | -------------------------------------------------- |
+| `ServiceType`             | Configurable service type catalog (Division/JobType) |
+| `ServiceItem`             | Detailed service items with QB item ID             |
+| `ServiceItemSubtask`      | Subtasks within a service item                     |
+| `ServiceItemRoleEstimate` | Per-role hour estimates per subtask                |
+
+### Tasks & Time
+
+| Model         | Purpose                                                   |
+| ------------- | --------------------------------------------------------- |
+| `Task`        | Tasks linked to any entity with status/priority           |
+| `TaskType`    | Task type definitions linked to service types             |
+| `TimeEntry`   | Time entries (project, service item, subtask linkage)     |
+| `WorkCode`    | Work code hierarchy (5000/6000/7000 series, INDOT)        |
+| `UserRate`    | Per-user hourly rates with date-ranged validity           |
+| `PayGrade`    | Pay grade definitions with base rates                     |
+| `IndotPayZone`| Geographic pay zones with county mapping (INDOT)          |
+| `PtoPolicy`   | PTO policy definitions (accrual, max days, carryover)     |
+| `PtoRequest`  | Employee PTO requests with approval workflow              |
+
+### Automation & Configuration
+
+| Model                    | Purpose                                              |
+| ------------------------ | ---------------------------------------------------- |
+| `WorkflowRule`           | Automation rules (trigger → conditions → actions)    |
+| `WorkflowExecution`      | Execution history for workflow rules                 |
+| `ForecastTarget`         | Monthly revenue targets                              |
+| `LeadForm`               | Public lead capture form definitions                 |
+| `LeadFormSubmission`     | Submissions received via public forms                |
+| `Notification`           | In-app notifications per user                        |
+| `NotificationPreference` | Per-user notification type preferences               |
+| `CustomFieldDefinition`  | Custom field schema per entity type                  |
+| `CustomFieldValue`       | Custom field values per entity instance              |
+| `PipelineStage`          | Customizable pipeline stages (lead + project)        |
+| `DropdownOption`         | Dynamic dropdown configuration                       |
+
+### System & Integrations
+
+| Model                  | Purpose                                              |
+| ---------------------- | ---------------------------------------------------- |
+| `DashboardLayout`      | Per-user customizable widget layout (JSON)           |
+| `AISettings`           | AI provider config + encrypted keys + prompts        |
+| `AIAnalyticsReport`    | Persisted AI-generated analytics reports             |
+| `AnalyticsSnapshot`    | Time-series metric snapshots for bottleneck analytics|
+| `AuditLog`             | System action audit trail                            |
+| `TenantSettings`       | Singleton tenant configuration                       |
+| `QuickBooksConnection` | QB OAuth tokens and connection state                 |
+| `QuickBooksSync`       | QB sync history records                              |
+| `UserPreference`       | Per-user key-value preference storage                |
 
 ### Key Relationships
 
@@ -1016,13 +1232,14 @@ User ─┬── manages → User[] (manager/report hierarchy)
       ├── assigned → Client[] (as account manager)
       ├── assigned → Project[] (as PM, designer, or QS)
       ├── has → TimeEntry[] (time tracked)
-      └── has → UserRate[] (hourly rates)
+      ├── has → UserRate[] (hourly rates / pay grade)
+      └── has → PtoRequest[] (time off requests)
 
 Lead ─┬── belongsTo → Client? (existing client relationship)
       ├── convertsTo → Client? (on conversion)
       ├── convertsTo → Project? (one-to-one)
       ├── has → LeadRep[], Contact[] (via LeadContact), Activity[], File[],
-      │         StageHistory[], Task[], Quote[]
+      │         StageHistory[], Task[], Quote[], Proposal[]
       └── linkedTo → ServiceType?, PipelineStage
 
 Client ─┬── has → Project[], Contact[], Activity[], File[], Task[], Quote[]
@@ -1032,15 +1249,33 @@ Client ─┬── has → Project[], Contact[], Activity[], File[], Task[], Qu
 Project ─┬── belongsTo → Client
          ├── originatesFrom → Lead? (one-to-one)
          ├── has → CostLog[], ProjectAssignment[], Activity[], File[],
-         │         ProjectStatusHistory[], Task[], TimeEntry[], ProjectBudget?
+         │         ProjectStatusHistory[], Task[], TimeEntry[], ProjectBudget?,
+         │         ProjectCostSegment[], ProjectServiceItem[],
+         │         ProjectAddendum[], ProjectComment[]
          └── assignedTo → User? (PM), User? (designer), User? (QS)
+
+ProjectAddendum ─┬── belongsTo → Project
+                 └── has → ProjectAddendumLine[]
 
 Quote ─┬── belongsTo → Lead? / Client?
        ├── has → QuoteLineItem[] (products, service items, or ad-hoc lines)
        ├── createdBy → User
        └── linkedTo → QuickBooks? (qbInvoiceId)
 
+CostBreakdown ─┬── linkedTo → Lead?
+               └── has → CostBreakdownLine[] → CostBreakdownRoleEstimate[]
+
+Proposal ─┬── linkedTo → Lead
+           └── linkedTo → CostBreakdown?
+
 ServiceType ─── has → ServiceItem[] → ServiceItemSubtask[] → ServiceItemRoleEstimate[]
+
+TimeEntry ─┬── belongsTo → Project
+           ├── linkedTo → ServiceItem?, ServiceItemSubtask?
+           ├── linkedTo → WorkCode?
+           └── enteredBy → User
+
+WorkCode ─── has → WorkCode[] (children, rollup hierarchy)
 
 WorkflowRule ─┬── trigger → event type
               ├── conditions → JSON field comparisons
@@ -1121,6 +1356,21 @@ WorkflowRule ─┬── trigger → event type
 | GET    | `/projects/:id/assignments`               | `projects:view`   | List crew assignments             |
 | POST   | `/projects/:id/assignments`               | `projects:edit`   | Add crew assignment               |
 | DELETE | `/projects/:id/assignments/:assignmentId` | `projects:edit`   | Remove crew assignment            |
+| GET    | `/projects/:id/service-items`             | `projects:view`   | List linked service items         |
+| POST   | `/projects/:id/service-items`             | `projects:edit`   | Add service item to project       |
+
+### Addenda (`/api/addenda`)
+
+| Method | Endpoint                          | Permission        | Description                    |
+| ------ | --------------------------------- | ----------------- | ------------------------------ |
+| GET    | `/addenda/:projectId`             | `projects:view`   | List addenda for a project     |
+| POST   | `/addenda`                        | `projects:edit`   | Create addendum                |
+| PATCH  | `/addenda/:id`                    | `projects:edit`   | Update addendum                |
+| DELETE | `/addenda/:id`                    | `projects:edit`   | Delete addendum                |
+| POST   | `/addenda/:id/lines`              | `projects:edit`   | Add line item to addendum      |
+| PATCH  | `/addenda/:id/lines/:lineId`      | `projects:edit`   | Update line item               |
+| DELETE | `/addenda/:id/lines/:lineId`      | `projects:edit`   | Delete line item               |
+| POST   | `/addenda/:id/approve`            | `projects:edit`   | Approve addendum               |
 
 ### Contacts (`/api/contacts`, `/api/clients/:id/contacts`, `/api/leads/:id/contacts`)
 
@@ -1137,19 +1387,52 @@ WorkflowRule ─┬── trigger → event type
 
 ### Quotes (`/api/quotes`)
 
-| Method | Endpoint              | Permission      | Description                               |
-| ------ | --------------------- | --------------- | ----------------------------------------- |
-| GET    | `/quotes`             | `quotes:view`   | List quotes (`?leadId=&clientId=&status=`)|
-| GET    | `/quotes/settings`    | `quotes:view`   | Get global quote settings                 |
-| PATCH  | `/quotes/settings`    | `quotes:edit`   | Update global quote settings              |
-| GET    | `/quotes/:id`         | `quotes:view`   | Get quote with line items                 |
-| GET    | `/quotes/:id/pdf`     | `quotes:view`   | Download quote as PDF                     |
-| POST   | `/quotes`             | `quotes:create` | Create quote                              |
-| PATCH  | `/quotes/:id`         | `quotes:edit`   | Update quote                              |
-| DELETE | `/quotes/:id`         | `quotes:delete` | Delete quote                              |
-| POST   | `/quotes/:id/send`    | `quotes:edit`   | Mark quote as sent                        |
-| POST   | `/quotes/:id/accept`  | `quotes:edit`   | Mark quote as accepted                    |
-| POST   | `/quotes/:id/reject`  | `quotes:edit`   | Mark quote as rejected                    |
+| Method | Endpoint              | Permission      | Description                                |
+| ------ | --------------------- | --------------- | ------------------------------------------ |
+| GET    | `/quotes`             | `quotes:view`   | List quotes (`?leadId=&clientId=&status=`) |
+| GET    | `/quotes/settings`    | `quotes:view`   | Get global quote settings                  |
+| PATCH  | `/quotes/settings`    | `quotes:edit`   | Update global quote settings               |
+| GET    | `/quotes/:id`         | `quotes:view`   | Get quote with line items                  |
+| GET    | `/quotes/:id/pdf`     | `quotes:view`   | Download quote as PDF                      |
+| POST   | `/quotes`             | `quotes:create` | Create quote                               |
+| PATCH  | `/quotes/:id`         | `quotes:edit`   | Update quote                               |
+| DELETE | `/quotes/:id`         | `quotes:delete` | Delete quote                               |
+| POST   | `/quotes/:id/send`    | `quotes:edit`   | Mark quote as sent                         |
+| POST   | `/quotes/:id/accept`  | `quotes:edit`   | Mark quote as accepted                     |
+| POST   | `/quotes/:id/reject`  | `quotes:edit`   | Mark quote as rejected                     |
+
+### Cost Breakdowns (`/api/cost-breakdowns`)
+
+| Method | Endpoint                                                      | Permission        | Description                          |
+| ------ | ------------------------------------------------------------- | ----------------- | ------------------------------------ |
+| GET    | `/cost-breakdowns`                                            | `quotes:view`     | List all breakdowns                  |
+| POST   | `/cost-breakdowns`                                            | `quotes:create`   | Create breakdown                     |
+| GET    | `/cost-breakdowns/:id`                                        | `quotes:view`     | Get breakdown with lines             |
+| PATCH  | `/cost-breakdowns/:id`                                        | `quotes:edit`     | Update breakdown                     |
+| DELETE | `/cost-breakdowns/:id`                                        | `quotes:delete`   | Delete breakdown                     |
+| GET    | `/cost-breakdowns/:id/pdf`                                    | `quotes:view`     | Download breakdown as PDF            |
+| POST   | `/cost-breakdowns/:id/lines`                                  | `quotes:edit`     | Add line item                        |
+| PATCH  | `/cost-breakdowns/:id/lines/:lineId`                          | `quotes:edit`     | Update line item                     |
+| DELETE | `/cost-breakdowns/:id/lines/:lineId`                          | `quotes:edit`     | Delete line item                     |
+| PUT    | `/cost-breakdowns/lines/:lineId/role-estimates`               | `quotes:edit`     | Upsert role estimate on a line       |
+| DELETE | `/cost-breakdowns/lines/:lineId/role-estimates/:subtaskId/:role` | `quotes:edit`  | Delete role estimate                 |
+
+### Proposals (`/api/proposals`)
+
+| Method | Endpoint                  | Permission        | Description                       |
+| ------ | ------------------------- | ----------------- | --------------------------------- |
+| GET    | `/proposals`              | `quotes:view`     | List proposals                    |
+| POST   | `/proposals`              | `quotes:create`   | Generate proposal from template   |
+| GET    | `/proposals/:id`          | `quotes:view`     | Get proposal                      |
+| PATCH  | `/proposals/:id`          | `quotes:edit`     | Update proposal                   |
+| DELETE | `/proposals/:id`          | `quotes:delete`   | Delete proposal                   |
+| POST   | `/proposals/:id/accept`   | `quotes:edit`     | Mark proposal as accepted         |
+| POST   | `/proposals/bulk-update`  | `quotes:edit`     | Bulk update proposals             |
+| POST   | `/proposals/bulk-delete`  | `quotes:delete`   | Bulk delete proposals             |
+| GET    | `/proposal-templates`     | `settings:view`   | List proposal templates           |
+| POST   | `/proposal-templates`     | `settings:manage` | Create proposal template          |
+| PATCH  | `/proposal-templates/:id` | `settings:manage` | Update proposal template          |
+| DELETE | `/proposal-templates/:id` | `settings:manage` | Delete proposal template          |
 
 ### Products (`/api/products`)
 
@@ -1163,17 +1446,17 @@ WorkflowRule ─┬── trigger → event type
 
 ### Service Items (`/api/service-items`)
 
-| Method | Endpoint                                        | Permission        | Description                          |
-| ------ | ----------------------------------------------- | ----------------- | ------------------------------------ |
+| Method | Endpoint                                        | Permission        | Description                            |
+| ------ | ----------------------------------------------- | ----------------- | -------------------------------------- |
 | GET    | `/service-items`                                | `settings:view`   | List service items (`?serviceTypeId=`) |
-| GET    | `/service-items/:id`                            | `settings:view`   | Get service item with subtasks       |
-| POST   | `/service-items`                                | `settings:manage` | Create service item                  |
-| PATCH  | `/service-items/:id`                            | `settings:manage` | Update service item                  |
-| DELETE | `/service-items/:id`                            | `settings:manage` | Delete service item                  |
-| POST   | `/service-items/:id/subtasks`                   | `settings:manage` | Add subtask                          |
-| PATCH  | `/service-items/:id/subtasks/:subtaskId`        | `settings:manage` | Update subtask                       |
-| DELETE | `/service-items/:id/subtasks/:subtaskId`        | `settings:manage` | Delete subtask                       |
-| POST   | `/service-items/:id/subtasks/reorder`           | `settings:manage` | Reorder subtasks                     |
+| GET    | `/service-items/:id`                            | `settings:view`   | Get service item with subtasks         |
+| POST   | `/service-items`                                | `settings:manage` | Create service item                    |
+| PATCH  | `/service-items/:id`                            | `settings:manage` | Update service item                    |
+| DELETE | `/service-items/:id`                            | `settings:manage` | Delete service item                    |
+| POST   | `/service-items/:id/subtasks`                   | `settings:manage` | Add subtask                            |
+| PATCH  | `/service-items/:id/subtasks/:subtaskId`        | `settings:manage` | Update subtask                         |
+| DELETE | `/service-items/:id/subtasks/:subtaskId`        | `settings:manage` | Delete subtask                         |
+| POST   | `/service-items/:id/subtasks/reorder`           | `settings:manage` | Reorder subtasks                       |
 
 ### Tasks (`/api/tasks`)
 
@@ -1191,19 +1474,42 @@ WorkflowRule ─┬── trigger → event type
 
 ### Time Tracking (`/api/time-tracking`)
 
-| Method | Endpoint                                     | Permission       | Description                         |
-| ------ | -------------------------------------------- | ---------------- | ----------------------------------- |
-| GET    | `/time-tracking/entries`                     | `tasks:view`     | List time entries (filtered)        |
-| POST   | `/time-tracking/entries`                     | `tasks:create`   | Create time entry                   |
-| PATCH  | `/time-tracking/entries/:id`                 | `tasks:edit`     | Update time entry                   |
-| DELETE | `/time-tracking/entries/:id`                 | `tasks:delete`   | Delete time entry                   |
-| GET    | `/time-tracking/user-rates`                  | `settings:view`  | Get user rates                      |
-| POST   | `/time-tracking/user-rates`                  | `settings:manage`| Create/update user rate             |
-| GET    | `/time-tracking/project-budgets/:projectId`  | `projects:view`  | Get project budget                  |
-| POST   | `/time-tracking/project-budgets`             | `projects:edit`  | Create/update project budget        |
-| GET    | `/time-tracking/project-summary/:projectId`  | `projects:view`  | Get project time summary            |
-| GET    | `/time-tracking/user-summary/:userId`        | `tasks:view`     | Get user time summary               |
-| GET    | `/time-tracking/weekly-timesheet`            | `tasks:view`     | Get weekly timesheet                |
+| Method | Endpoint                                     | Permission        | Description                         |
+| ------ | -------------------------------------------- | ----------------- | ----------------------------------- |
+| GET    | `/time-tracking/entries`                     | `tasks:view`      | List time entries (filtered)        |
+| POST   | `/time-tracking/entries`                     | `tasks:create`    | Create time entry                   |
+| PATCH  | `/time-tracking/entries/:id`                 | `tasks:edit`      | Update time entry                   |
+| DELETE | `/time-tracking/entries/:id`                 | `tasks:delete`    | Delete time entry                   |
+| GET    | `/time-tracking/user-rates`                  | `settings:view`   | Get user rates                      |
+| POST   | `/time-tracking/user-rates`                  | `settings:manage` | Create/update user rate             |
+| GET    | `/time-tracking/work-codes`                  | `settings:view`   | List work codes                     |
+| POST   | `/time-tracking/work-codes`                  | `settings:manage` | Create work code                    |
+| PATCH  | `/time-tracking/work-codes/:id`              | `settings:manage` | Update work code                    |
+| DELETE | `/time-tracking/work-codes/:id`              | `settings:manage` | Delete work code                    |
+| GET    | `/time-tracking/pay-grades`                  | `settings:view`   | List pay grades                     |
+| POST   | `/time-tracking/pay-grades`                  | `settings:manage` | Create pay grade                    |
+| GET    | `/time-tracking/indot-pay-zones`             | `settings:view`   | List INDOT pay zones                |
+| POST   | `/time-tracking/indot-pay-zones`             | `settings:manage` | Create INDOT pay zone               |
+| GET    | `/time-tracking/project-budgets/:projectId`  | `projects:view`   | Get project budget                  |
+| POST   | `/time-tracking/project-budgets`             | `projects:edit`   | Create/update project budget        |
+| GET    | `/time-tracking/project-summary/:projectId`  | `projects:view`   | Get project time summary            |
+| GET    | `/time-tracking/user-summary/:userId`        | `tasks:view`      | Get user time summary               |
+| GET    | `/time-tracking/weekly-timesheet`            | `tasks:view`      | Get weekly timesheet                |
+
+### PTO (`/api/pto`)
+
+| Method | Endpoint                        | Permission        | Description                    |
+| ------ | ------------------------------- | ----------------- | ------------------------------ |
+| GET    | `/pto/policies`                 | `settings:view`   | List PTO policies              |
+| POST   | `/pto/policies`                 | `settings:manage` | Create PTO policy              |
+| PATCH  | `/pto/policies/:id`             | `settings:manage` | Update PTO policy              |
+| DELETE | `/pto/policies/:id`             | `settings:manage` | Delete PTO policy              |
+| GET    | `/pto/requests`                 | `tasks:view`      | List PTO requests (role-scoped)|
+| POST   | `/pto/requests`                 | `tasks:create`    | Submit PTO request             |
+| GET    | `/pto/requests/:id`             | `tasks:view`      | Get PTO request                |
+| PATCH  | `/pto/requests/:id/approve`     | `tasks:edit`      | Approve PTO request            |
+| PATCH  | `/pto/requests/:id/deny`        | `tasks:edit`      | Deny PTO request               |
+| DELETE | `/pto/requests/:id`             | `tasks:delete`    | Delete PTO request             |
 
 ### Workflows (`/api/workflows`)
 
@@ -1228,14 +1534,15 @@ WorkflowRule ─┬── trigger → event type
 
 ### Bottleneck Analytics (`/api/bottleneck`)
 
-| Method | Endpoint                    | Permission       | Description                            |
-| ------ | --------------------------- | ---------------- | -------------------------------------- |
-| GET    | `/bottleneck/stage-dwell`   | `reports:view`   | Avg/median/max days per pipeline stage |
-| GET    | `/bottleneck/task-velocity` | `reports:view`   | Per-user task completion rates         |
-| GET    | `/bottleneck/overdue`       | `reports:view`   | Overdue task breakdown                 |
-| GET    | `/bottleneck/stuck-projects`| `reports:view`   | Projects exceeding stall threshold     |
-| POST   | `/bottleneck/ai-report`     | `reports:view`   | Generate AI bottleneck report          |
-| GET    | `/bottleneck/ai-report`     | `reports:view`   | Get latest AI analytics report         |
+| Method | Endpoint                    | Permission     | Description                            |
+| ------ | --------------------------- | -------------- | -------------------------------------- |
+| GET    | `/bottleneck/stage-dwell`   | `reports:view` | Avg/median/max days per pipeline stage |
+| GET    | `/bottleneck/task-velocity` | `reports:view` | Per-user task completion rates         |
+| GET    | `/bottleneck/overdue`       | `reports:view` | Overdue task breakdown                 |
+| GET    | `/bottleneck/stuck-projects`| `reports:view` | Projects exceeding stall threshold     |
+| GET    | `/bottleneck/widget-summary`| `reports:view` | Dashboard-ready bottleneck summary     |
+| POST   | `/bottleneck/ai-report`     | `reports:view` | Generate AI bottleneck report          |
+| GET    | `/bottleneck/ai-report`     | `reports:view` | Get latest AI analytics report         |
 
 ### QuickBooks (`/api/quickbooks`)
 
@@ -1292,19 +1599,19 @@ WorkflowRule ─┬── trigger → event type
 
 ### Dashboard (`/api/dashboard`)
 
-| Method | Endpoint                       | Permission       | Description                                     |
-| ------ | ------------------------------ | ---------------- | ----------------------------------------------- |
-| GET    | `/dashboard/metrics`           | `dashboard:view` | Full metrics (`?period=`)                       |
-| GET    | `/dashboard/executive-summary` | `dashboard:view` | AI executive summary (`?provider=`)             |
-| GET    | `/dashboard/revenue-breakdown` | `dashboard:view` | Revenue by client/project                       |
-| GET    | `/dashboard/project-analytics` | `dashboard:view` | Projects by status + at-risk                    |
-| GET    | `/dashboard/revenue-trend`     | `dashboard:view` | Monthly revenue (12 months)                     |
-| GET    | `/dashboard/lead-volume-trend` | `dashboard:view` | Weekly lead volume (12 weeks)                   |
-| GET    | `/dashboard/pipeline-insights` | `dashboard:view` | Pipeline breakdown + stale leads                |
-| GET    | `/dashboard/layout`            | `dashboard:view` | Get user's widget layout                        |
-| PUT    | `/dashboard/layout`            | `dashboard:edit` | Save widget layout                              |
-| DELETE | `/dashboard/layout`            | `dashboard:edit` | Reset layout to defaults                        |
-| GET    | `/dashboard/layout/defaults/:role` | `dashboard:view` | Get default layout for a role              |
+| Method | Endpoint                           | Permission       | Description                                     |
+| ------ | ---------------------------------- | ---------------- | ----------------------------------------------- |
+| GET    | `/dashboard/metrics`               | `dashboard:view` | Full metrics (`?period=`)                       |
+| GET    | `/dashboard/executive-summary`     | `dashboard:view` | AI executive summary (`?provider=`)             |
+| GET    | `/dashboard/revenue-breakdown`     | `dashboard:view` | Revenue by client/project                       |
+| GET    | `/dashboard/project-analytics`     | `dashboard:view` | Projects by status + at-risk                    |
+| GET    | `/dashboard/revenue-trend`         | `dashboard:view` | Monthly revenue (12 months)                     |
+| GET    | `/dashboard/lead-volume-trend`     | `dashboard:view` | Weekly lead volume (12 weeks)                   |
+| GET    | `/dashboard/pipeline-insights`     | `dashboard:view` | Pipeline breakdown + stale leads                |
+| GET    | `/dashboard/layout`                | `dashboard:view` | Get user's widget layout                        |
+| PUT    | `/dashboard/layout`                | `dashboard:edit` | Save widget layout                              |
+| DELETE | `/dashboard/layout`                | `dashboard:edit` | Reset layout to defaults                        |
+| GET    | `/dashboard/layout/defaults/:role` | `dashboard:view` | Get default layout for a role                   |
 
 ### Reports (`/api/reports`)
 
@@ -1455,11 +1762,11 @@ WorkflowRule ─┬── trigger → event type
 
 ### Supported Providers
 
-| Provider         | Model                        | Best For                             | API Key                                                 |
-| ---------------- | ---------------------------- | ------------------------------------ | ------------------------------------------------------- |
-| Anthropic Claude | `claude-sonnet-4-6`          | Complex reasoning, detailed analysis | [console.anthropic.com](https://console.anthropic.com/) |
-| OpenAI GPT       | `gpt-4o`                     | Structured JSON responses            | [platform.openai.com](https://platform.openai.com/)     |
-| Google Gemini    | `gemini-3-flash-preview`     | Fast responses, cost efficiency      | [ai.google.dev](https://ai.google.dev/)                 |
+| Provider         | Model                    | Best For                             | API Key                                                 |
+| ---------------- | ------------------------ | ------------------------------------ | ------------------------------------------------------- |
+| Anthropic Claude | `claude-sonnet-4-6`      | Complex reasoning, detailed analysis | [console.anthropic.com](https://console.anthropic.com/) |
+| OpenAI GPT       | `gpt-4o`                 | Structured JSON responses            | [platform.openai.com](https://platform.openai.com/)     |
+| Google Gemini    | `gemini-3-flash-preview` | Fast responses, cost efficiency      | [ai.google.dev](https://ai.google.dev/)                 |
 
 ### Configuration Methods
 
@@ -1487,26 +1794,26 @@ AI_DEFAULT_PROVIDER=anthropic  # or 'openai' or 'gemini'
 
 ### Backend (`backend/.env`)
 
-| Variable             | Required | Description                             |
-| -------------------- | -------- | --------------------------------------- |
-| `DATABASE_URL`       | Yes      | PostgreSQL connection string            |
-| `JWT_SECRET`         | Yes      | Secret key for JWT signing              |
-| `JWT_EXPIRES_IN`     | No       | Token expiry (default: `7d`)            |
-| `PORT`               | No       | Server port (default: `4000`)           |
-| `CORS_ORIGIN`        | No       | Allowed CORS origins                    |
-| `FRONTEND_URL`       | No       | Frontend URL for email links            |
-| `ANTHROPIC_API_KEY`  | No\*     | Anthropic API key                       |
-| `OPENAI_API_KEY`     | No\*     | OpenAI API key                          |
-| `GEMINI_API_KEY`     | No\*     | Google Gemini API key                   |
-| `AI_DEFAULT_PROVIDER`| No       | Default AI provider (anthropic/openai/gemini) |
-| `RESEND_API_KEY`     | No       | Resend email API key (console fallback) |
-| `GCP_PROJECT_ID`     | No       | Google Cloud project ID                 |
-| `GCP_STORAGE_BUCKET` | No       | GCP Storage bucket name                 |
-| `ENCRYPTION_KEY`     | No       | 32-char key for AI key encryption       |
-| `QB_CLIENT_ID`       | No       | QuickBooks OAuth client ID              |
-| `QB_CLIENT_SECRET`   | No       | QuickBooks OAuth client secret          |
-| `QB_REDIRECT_URI`    | No       | QuickBooks OAuth redirect URI           |
-| `QB_ENVIRONMENT`     | No       | QuickBooks environment (sandbox/production) |
+| Variable              | Required | Description                                  |
+| --------------------- | -------- | -------------------------------------------- |
+| `DATABASE_URL`        | Yes      | PostgreSQL connection string                 |
+| `JWT_SECRET`          | Yes      | Secret key for JWT signing                   |
+| `JWT_EXPIRES_IN`      | No       | Token expiry (default: `7d`)                 |
+| `PORT`                | No       | Server port (default: `4000`)                |
+| `CORS_ORIGIN`         | No       | Allowed CORS origins                         |
+| `FRONTEND_URL`        | No       | Frontend URL for email links                 |
+| `ANTHROPIC_API_KEY`   | No\*     | Anthropic API key                            |
+| `OPENAI_API_KEY`      | No\*     | OpenAI API key                               |
+| `GEMINI_API_KEY`      | No\*     | Google Gemini API key                        |
+| `AI_DEFAULT_PROVIDER` | No       | Default AI provider (anthropic/openai/gemini)|
+| `RESEND_API_KEY`      | No       | Resend email API key (console fallback)      |
+| `GCP_PROJECT_ID`      | No       | Google Cloud project ID                      |
+| `GCP_STORAGE_BUCKET`  | No       | GCP Storage bucket name                      |
+| `ENCRYPTION_KEY`      | No       | 32-char key for AI key encryption            |
+| `QB_CLIENT_ID`        | No       | QuickBooks OAuth client ID                   |
+| `QB_CLIENT_SECRET`    | No       | QuickBooks OAuth client secret               |
+| `QB_REDIRECT_URI`     | No       | QuickBooks OAuth redirect URI                |
+| `QB_ENVIRONMENT`      | No       | QuickBooks environment (sandbox/production)  |
 
 \* At least one AI API key is required for AI features to work.
 
@@ -1600,6 +1907,17 @@ npm run lint               # ESLint
 - Check `GCP_PROJECT_ID` and `GCP_STORAGE_BUCKET` are set
 - Ensure file is under 10MB
 
+### Cost breakdown PDF not generating
+
+- Verify pdfmake is installed in the backend dependencies
+- Check that all required fields (role estimates, line items) are populated before generating
+
+### Proposal generation failing
+
+- Ensure LibreOffice is installed on the server (required for DOCX conversion)
+- Verify the proposal template GCP path is correct and the file is accessible
+- Check that the cost breakdown linked to the proposal is finalized
+
 ---
 
 ## Tech Stack
@@ -1619,7 +1937,8 @@ npm run lint               # ESLint
 | Email        | Resend                                                                      |
 | AI           | Anthropic SDK, OpenAI SDK, Google Generative AI SDK                         |
 | Real-time    | Server-Sent Events (SSE)                                                    |
-| PDF          | pdfmake (quote + scope PDFs)                                                |
+| PDF          | pdfmake (quote + cost breakdown PDFs)                                       |
+| Documents    | LibreOffice (DOCX proposal generation)                                      |
 | Integrations | QuickBooks Online (OAuth 2.0, bidirectional sync, webhooks)                 |
 
 ---

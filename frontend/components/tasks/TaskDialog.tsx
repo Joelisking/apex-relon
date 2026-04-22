@@ -332,8 +332,9 @@ export function TaskDialog({
     if (!form.title.trim()) return;
     setSaving(true);
     try {
+      const { entityJobNumber: _derived, ...formFields } = form;
       const payload = {
-        ...form,
+        ...formFields,
         entityType: form.entityType || undefined,
         entityId: form.entityId || undefined,
         assignedToId: form.assignedToId || undefined,
