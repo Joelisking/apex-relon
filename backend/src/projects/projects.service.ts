@@ -72,7 +72,7 @@ export class ProjectsService {
    * Create a new project
    */
   async create(createProjectDto: CreateProjectDto, userId?: string) {
-    const { clientId, leadId, status, teamMemberIds, costSegments, ...projectData } =
+    const { clientId, leadId, status, teamMemberIds, costSegments, jobNumber: dtoJobNumber, ...projectData } =
       createProjectDto;
 
     // Verify client exists
@@ -99,7 +99,7 @@ export class ProjectsService {
       }
     }
 
-    const jobNumber = await generateJobNumber(this.prisma);
+    const jobNumber = dtoJobNumber || await generateJobNumber(this.prisma);
 
     // Create project (with optional cost segments via nested write)
     const project = await this.prisma.project.create({

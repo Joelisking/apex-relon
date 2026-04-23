@@ -701,6 +701,7 @@ model NotificationPreference {
   emailDigest      Boolean @default(true)
   commentMention   Boolean @default(true)
   ptoUpdate        Boolean @default(true)
+  taskCompleted    Boolean @default(true)
 
   @@map("notification_preferences")
 }

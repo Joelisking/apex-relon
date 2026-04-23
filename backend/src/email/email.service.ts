@@ -639,6 +639,55 @@ export class EmailService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
+  // Task Completed (PM notification)
+  // ─────────────────────────────────────────────────────────────────────────
+  async sendTaskCompletedEmail(
+    to: string,
+    pmName: string,
+    task: TaskEmailData,
+    completedByName: string,
+    projectName: string,
+    projectId: string,
+  ): Promise<void> {
+    const projectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/projects/${projectId}`;
+
+    const body = `
+      ${greeting(pmName)}
+      ${paragraph(`<strong>${completedByName}</strong> has marked a task as complete on project <strong>${projectName}</strong>.`)}
+      ${taskInfoCard(task)}
+      ${ctaButton('View Project', projectUrl)}
+      ${signature()}
+    `;
+
+    const html = shell({
+      preheader: `Task completed: "${task.title}" on ${projectName}`,
+      headerLabel: 'Task Completed',
+      headerIcon: '',
+      body,
+    });
+
+    const text = [
+      `Hello, ${pmName}.`,
+      '',
+      `${completedByName} completed a task on "${projectName}": "${task.title}"`,
+      task.dueDate ? `Due was: ${formatTaskDueDate(task.dueDate, task.dueTime)}` : '',
+      `Priority: ${task.priority}`,
+      '',
+      `View project: ${projectUrl}`,
+      '',
+      'Apex Consulting & Surveying, Inc.',
+    ].filter(Boolean).join('\n');
+
+    await this.send({
+      to,
+      subject: `Task Completed on "${projectName}": "${task.title}"`,
+      html,
+      text,
+      label: 'Task Completed',
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   // Workflow Automation Email
   // ─────────────────────────────────────────────────────────────────────────
   async sendWorkflowEmail(to: string, subject: string, body: string): Promise<void> {

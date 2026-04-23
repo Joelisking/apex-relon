@@ -151,6 +151,7 @@ export interface CreateProjectDto {
   activeOptionalStages?: string[];
   statusNote?: string | null;
   costSegments?: { name: string; amount: number; sortOrder?: number }[];
+  jobNumber?: string;
 }
 
 export interface SubtaskPerformance {

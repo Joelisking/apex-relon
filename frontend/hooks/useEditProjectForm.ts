@@ -33,6 +33,7 @@ export const editProjectSchema = z.object({
   folderPath: z.string().optional(),
   latitude: z.coerce.number().optional().nullable(),
   longitude: z.coerce.number().optional().nullable(),
+  jobNumber: z.string().optional(),
 });
 
 export type EditProjectFormValues = z.infer<typeof editProjectSchema>;
@@ -104,6 +105,7 @@ export function useEditProjectForm({ project, open, onOpenChange, onProjectUpdat
       folderPath: project.folderPath ?? '',
       latitude: project.latitude ?? undefined,
       longitude: project.longitude ?? undefined,
+      jobNumber: project.jobNumber ?? '',
     },
   });
 
@@ -130,6 +132,7 @@ export function useEditProjectForm({ project, open, onOpenChange, onProjectUpdat
       folderPath: project.folderPath ?? '',
       latitude: project.latitude ?? undefined,
       longitude: project.longitude ?? undefined,
+      jobNumber: project.jobNumber ?? '',
     });
     setGeocodedLat(project.latitude ?? null);
     setGeocodedLng(project.longitude ?? null);
@@ -239,6 +242,7 @@ export function useEditProjectForm({ project, open, onOpenChange, onProjectUpdat
         folderPath: values.folderPath || undefined,
         latitude: geocodedLat ?? (values.latitude ? Number(values.latitude) : undefined),
         longitude: geocodedLng ?? (values.longitude ? Number(values.longitude) : undefined),
+        jobNumber: values.jobNumber || undefined,
       });
       toast.success('Project updated successfully');
       onProjectUpdated(updated);

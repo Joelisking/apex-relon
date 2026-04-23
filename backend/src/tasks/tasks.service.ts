@@ -340,6 +340,8 @@ export class TasksService {
     }
 
     if (dto.status === DONE_STATUS) {
+      const completedBy = task.assignedTo ?? task.createdBy;
+      await this.notifyProjectManagerOfCompletion(task, userId, completedBy.name);
       this.workflowsService.triggerRules('TASK_COMPLETED', 'TASK', task.id, task as unknown as Record<string, unknown>);
     } else {
       this.workflowsService.triggerRules('TASK_UPDATED', 'TASK', task.id, task as unknown as Record<string, unknown>);
@@ -377,9 +379,73 @@ export class TasksService {
       },
     });
 
+    const completedByName = task.assignedTo?.name ?? task.createdBy.name;
+    await this.notifyProjectManagerOfCompletion(task, userId, completedByName);
     this.workflowsService.triggerRules('TASK_COMPLETED', 'TASK', task.id, task as unknown as Record<string, unknown>);
 
     return (await this.resolveEntityNames([task]))[0];
+  }
+
+  private async notifyProjectManagerOfCompletion(
+    task: {
+      id: string;
+      title: string;
+      dueDate: Date | null;
+      dueTime: string | null;
+      priority: string;
+      entityType: string | null;
+      entityId: string | null;
+    },
+    completedByUserId: string,
+    completedByName: string,
+  ): Promise<void> {
+    if (task.entityType !== 'PROJECT' || !task.entityId) return;
+
+    try {
+      const project = await this.prisma.project.findUnique({
+        where: { id: task.entityId },
+        select: {
+          name: true,
+          projectManagerId: true,
+          projectManager: { select: { id: true, name: true, email: true } },
+        },
+      });
+
+      const pm = project?.projectManager;
+      if (!pm || pm.id === completedByUserId) return;
+
+      const pref = await this.notificationsService.getPreferences(pm.id);
+      if (pref.taskCompleted) {
+        await this.notificationsService.create({
+          userId: pm.id,
+          type: NotificationType.TASK_COMPLETED,
+          title: 'Task completed',
+          message: `${completedByName} completed "${task.title}" on ${project!.name}`,
+          entityType: 'PROJECT',
+          entityId: task.entityId,
+          metadata: { actorId: completedByUserId, actorName: completedByName, projectName: project!.name },
+        });
+      }
+
+      await this.emailService.sendTaskCompletedEmail(
+        pm.email,
+        pm.name,
+        {
+          id: task.id,
+          title: task.title,
+          dueDate: task.dueDate,
+          dueTime: task.dueTime,
+          priority: task.priority,
+          entityType: 'Project',
+          entityName: project!.name,
+        },
+        completedByName,
+        project!.name,
+        task.entityId,
+      );
+    } catch (err) {
+      this.logger.warn(`Failed to notify project manager of task completion: ${err}`);
+    }
   }
 
   async remove(id: string) {

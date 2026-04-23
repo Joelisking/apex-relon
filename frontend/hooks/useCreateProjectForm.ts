@@ -31,6 +31,7 @@ export const createProjectSchema = z.object({
   address: z.string().optional(),
   latitude: z.coerce.number().optional().nullable(),
   longitude: z.coerce.number().optional().nullable(),
+  jobNumber: z.string().optional(),
 });
 
 export type CreateProjectFormValues = z.infer<typeof createProjectSchema>;
@@ -204,6 +205,7 @@ export function useCreateProjectForm({
         address: values.address || undefined,
         latitude: geocodedLat ?? (values.latitude ? Number(values.latitude) : undefined),
         longitude: geocodedLng ?? (values.longitude ? Number(values.longitude) : undefined),
+        jobNumber: values.jobNumber || undefined,
       });
       toast.success('Project created successfully');
       onProjectCreated();

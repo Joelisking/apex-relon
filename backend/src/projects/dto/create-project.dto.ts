@@ -124,4 +124,8 @@ export class CreateProjectDto {
   @IsBoolean()
   @IsOptional()
   isIndot?: boolean;
+
+  @IsString()
+  @IsOptional()
+  jobNumber?: string;
 }

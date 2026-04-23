@@ -162,6 +162,21 @@ export function ProjectCoreFields({
         )}
       />
 
+      {/* Job Number */}
+      <FormField
+        control={form.control}
+        name="jobNumber"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Job Number</FormLabel>
+            <FormControl>
+              <Input placeholder="Auto-assigned if left blank" {...field} value={field.value ?? ''} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
       {/* Stage + optional stages */}
       <ProjectStageSection
         projectStages={projectStages}

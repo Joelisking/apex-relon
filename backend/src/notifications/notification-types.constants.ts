@@ -15,6 +15,7 @@ export const NotificationType = {
   PTO_REQUESTED: 'PTO_REQUESTED',
   PTO_APPROVED: 'PTO_APPROVED',
   PTO_DENIED: 'PTO_DENIED',
+  TASK_COMPLETED: 'TASK_COMPLETED',
 } as const;
 
 export type NotificationTypeKey =
