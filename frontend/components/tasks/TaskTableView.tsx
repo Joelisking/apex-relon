@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   CheckCircle2,
   Circle,
@@ -8,6 +8,8 @@ import {
   MoreHorizontal,
   Trash2,
   Pencil,
+  Loader2,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +28,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import type { UserDirectoryItem } from '@/lib/api/users-client';
 import type { Task } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
@@ -43,11 +47,14 @@ interface TaskTableViewProps {
   canEdit: boolean;
   canEditAll?: boolean;
   canDelete: boolean;
+  canAssign?: boolean;
+  assignableUsers?: UserDirectoryItem[];
   currentUserId?: string;
   onComplete: (taskId: string, completionNote: string) => Promise<void>;
   onUncomplete: (taskId: string, reason: string) => Promise<void>;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
+  onBulkAssign?: (taskIds: string[], assignedToId: string) => Promise<void>;
 }
 
 function canCompleteTask(task: Task, currentUserId?: string): boolean {
@@ -68,14 +75,48 @@ export function TaskTableView({
   canEdit,
   canEditAll,
   canDelete,
+  canAssign,
+  assignableUsers = [],
   currentUserId,
   onComplete,
   onUncomplete,
   onEdit,
   onDelete,
+  onBulkAssign,
 }: TaskTableViewProps) {
   const [completeTarget, setCompleteTarget] = useState<Task | null>(null);
   const [uncompleteTarget, setUncompleteTarget] = useState<Task | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAssignUserId, setBulkAssignUserId] = useState('');
+  const [assigning, setAssigning] = useState(false);
+
+  const allSelected = tasks.length > 0 && selectedIds.size === tasks.length;
+  const someSelected = selectedIds.size > 0 && selectedIds.size < tasks.length;
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds(allSelected ? new Set() : new Set(tasks.map((t) => t.id)));
+  }, [allSelected, tasks]);
+
+  const toggleSelectRow = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleBulkAssign = useCallback(async () => {
+    if (!onBulkAssign || !bulkAssignUserId || selectedIds.size === 0) return;
+    setAssigning(true);
+    try {
+      await onBulkAssign(Array.from(selectedIds), bulkAssignUserId);
+      setSelectedIds(new Set());
+      setBulkAssignUserId('');
+    } finally {
+      setAssigning(false);
+    }
+  }, [onBulkAssign, bulkAssignUserId, selectedIds]);
 
   const handleCompleteClick = (task: Task) => {
     setCompleteTarget(task);
@@ -97,12 +138,57 @@ export function TaskTableView({
     setUncompleteTarget(null);
   };
 
+  const userOptions = assignableUsers.map((u) => ({ value: u.id, label: u.name }));
+
   return (
     <>
+      {canAssign && selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-muted/40 border border-border/60 rounded-lg">
+          <span className="text-sm text-muted-foreground shrink-0">
+            {selectedIds.size} task{selectedIds.size !== 1 ? 's' : ''} selected
+          </span>
+          <div className="flex items-center gap-2 ml-1">
+            <SearchableSelect
+              value={bulkAssignUserId}
+              onValueChange={setBulkAssignUserId}
+              options={userOptions}
+              placeholder="Assign to..."
+              searchPlaceholder="Search users..."
+              emptyMessage="No users found."
+              className="w-48 h-8 text-xs"
+            />
+            <Button
+              size="sm"
+              className="h-8"
+              disabled={!bulkAssignUserId || assigning}
+              onClick={handleBulkAssign}>
+              {assigning && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+              Assign
+            </Button>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 ml-auto text-muted-foreground"
+            onClick={() => setSelectedIds(new Set())}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
+
       <div className="rounded-xl border border-border/60 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
+              {canAssign && (
+                <TableHead className="w-10 px-3">
+                  <Checkbox
+                    checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all tasks"
+                  />
+                </TableHead>
+              )}
               <TableHead className="w-10" />
               <TableHead>Task</TableHead>
               <TableHead className="hidden md:table-cell">
@@ -131,6 +217,15 @@ export function TaskTableView({
                   key={task.id}
                   className={cn(isDone && 'opacity-60', 'cursor-pointer')}
                   onClick={() => onEdit(task)}>
+                  {canAssign && (
+                    <TableCell className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(task.id)}
+                        onCheckedChange={() => toggleSelectRow(task.id)}
+                        aria-label={`Select task ${task.title}`}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                     {isDone ? (
                       canComplete ? (

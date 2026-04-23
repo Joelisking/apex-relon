@@ -73,4 +73,10 @@ export const tasksApi = {
 
   delete: (id: string) =>
     apiFetch<void>(`/tasks/${id}`, { method: 'DELETE' }),
+
+  bulkAssign: (taskIds: string[], assignedToId: string) =>
+    apiFetch<{ count: number }>('/tasks/bulk-assign', {
+      method: 'POST',
+      body: JSON.stringify({ taskIds, assignedToId }),
+    }),
 };

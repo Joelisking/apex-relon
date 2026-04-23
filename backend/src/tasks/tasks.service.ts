@@ -13,6 +13,7 @@ import { PermissionsService } from '../permissions/permissions.service';
 import { EmailService } from '../email/email.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { BulkAssignTasksDto } from './dto/bulk-assign-tasks.dto';
 
 // Task status values — kept as plain strings to match the DB schema (no enum)
 const ACTIVE_STATUSES = ['OPEN', 'IN_PROGRESS'] as const;
@@ -541,5 +542,13 @@ export class TasksService {
           ? (jobNumberMap.get(t.entityId) ?? null)
           : null,
     }));
+  }
+
+  async bulkAssign(dto: BulkAssignTasksDto) {
+    const { count } = await this.prisma.task.updateMany({
+      where: { id: { in: dto.taskIds } },
+      data: { assignedToId: dto.assignedToId },
+    });
+    return { count };
   }
 }

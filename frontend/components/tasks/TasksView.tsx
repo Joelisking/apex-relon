@@ -47,6 +47,15 @@ export default function TasksView() {
   const canAssign = hasPermission('tasks:assign');
   const canViewAll = hasPermission('tasks:view_all');
 
+  // Eagerly load assignable users so they're ready for bulk assign
+  useEffect(() => {
+    if (!canAssign) return;
+    usersApi.getUsersDirectory().then(({ users: all }) => {
+      const filtered = canViewAll ? all : all.filter((u) => !u.teamId || u.teamId === user?.teamId);
+      setAssignableUsers(filtered);
+    }).catch(() => {});
+  }, [canAssign, canViewAll, user?.teamId]);
+
   const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
@@ -160,6 +169,11 @@ export default function TasksView() {
       console.error('Failed to delete task', err);
     }
   };
+
+  const handleBulkAssign = useCallback(async (taskIds: string[], assignedToId: string) => {
+    await tasksApi.bulkAssign(taskIds, assignedToId);
+    fetchTasks();
+  }, [fetchTasks]);
 
   const canCreate = hasPermission('tasks:create');
   const canEdit = hasPermission('tasks:edit');
@@ -415,11 +429,14 @@ export default function TasksView() {
           canEdit={canEdit}
           canEditAll={canEditAll}
           canDelete={canDelete}
+          canAssign={canAssign}
+          assignableUsers={assignableUsers}
           currentUserId={user?.id}
           onComplete={handleComplete}
           onUncomplete={handleUncomplete}
           onEdit={openEdit}
           onDelete={(id) => setDeleteId(id)}
+          onBulkAssign={handleBulkAssign}
         />
       )}
 

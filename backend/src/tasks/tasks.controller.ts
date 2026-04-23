@@ -11,6 +11,7 @@ import {
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { BulkAssignTasksDto } from './dto/bulk-assign-tasks.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Permissions } from '../permissions/permissions.decorator';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -128,6 +129,12 @@ export class TasksController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.tasksService.complete(id, body.completionNote, user.id);
+  }
+
+  @Post('bulk-assign')
+  @Permissions('tasks:assign')
+  bulkAssign(@Body() dto: BulkAssignTasksDto) {
+    return this.tasksService.bulkAssign(dto);
   }
 
   @Delete(':id')
