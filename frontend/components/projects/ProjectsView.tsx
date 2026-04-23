@@ -595,6 +595,7 @@ export default function ProjectsView({
           </div>
           <div className="h-5 w-px bg-border/60 shrink-0" />
           <span className="text-xs text-muted-foreground shrink-0">Start / Created:</span>
+
           <DatePresetFilter value={dateFilter} onChange={setDateFilter} label="All time" />
           <div className="ml-auto flex items-center gap-2 shrink-0">
             {isFiltered && (

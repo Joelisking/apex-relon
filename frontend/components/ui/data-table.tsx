@@ -33,6 +33,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   searchKey?: string;
   globalFilter?: boolean;
+  searchPlaceholder?: string;
   onRowClick?: (row: TData) => void;
   initialPageSize?: number;
   exportFilename?: string;
@@ -46,6 +47,7 @@ export function DataTable<TData, TValue>({
   data,
   searchKey,
   globalFilter = false,
+  searchPlaceholder,
   onRowClick,
   initialPageSize = 20,
   exportFilename,
@@ -106,6 +108,7 @@ export function DataTable<TData, TValue>({
         table={table}
         searchKey={searchKey}
         globalFilter={globalFilter}
+        searchPlaceholder={searchPlaceholder}
         exportFilename={exportFilename}
         filterConfigs={filterConfigs}
       />

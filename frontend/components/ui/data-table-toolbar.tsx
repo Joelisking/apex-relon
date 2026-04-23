@@ -19,6 +19,7 @@ interface DataTableToolbarProps<TData> {
   table: Table<TData>;
   searchKey?: string;
   globalFilter?: boolean;
+  searchPlaceholder?: string;
   exportFilename?: string;
   filterConfigs?: FilterConfig[];
 }
@@ -27,6 +28,7 @@ export function DataTableToolbar<TData>({
   table,
   searchKey,
   globalFilter = false,
+  searchPlaceholder,
   exportFilename,
   filterConfigs,
 }: DataTableToolbarProps<TData>) {
@@ -45,14 +47,14 @@ export function DataTableToolbar<TData>({
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           {globalFilter ? (
             <Input
-              placeholder="Search customers..."
+              placeholder={searchPlaceholder ?? 'Search...'}
               value={(table.getState().globalFilter as string) ?? ''}
               onChange={(e) => table.setGlobalFilter(e.target.value)}
               className="h-8 pl-8 w-[180px] lg:w-[220px] bg-muted/50 border-0 focus-visible:ring-1 text-sm"
             />
           ) : (
             <Input
-              placeholder={`Filter ${searchKey}...`}
+              placeholder={searchPlaceholder ?? `Filter ${searchKey}...`}
               value={(table.getColumn(searchKey!)?.getFilterValue() as string) ?? ''}
               onChange={(e) => table.getColumn(searchKey!)?.setFilterValue(e.target.value)}
               className="h-8 pl-8 w-[180px] lg:w-[220px] bg-muted/50 border-0 focus-visible:ring-1 text-sm"

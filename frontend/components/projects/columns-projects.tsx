@@ -69,7 +69,7 @@ export const projectColumns: ColumnDef<Project>[] = [
   },
   {
     accessorKey: 'name',
-    header: 'Project',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Project" />,
     cell: ({ row }) => (
       <div>
         <p className="font-medium">{row.original.name}</p>
@@ -83,7 +83,7 @@ export const projectColumns: ColumnDef<Project>[] = [
   },
   {
     accessorKey: 'status',
-    header: 'Status',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
     cell: ({ row }) => (
       <Badge className={STATUS_COLORS[row.original.status] || ''}>
         {row.original.status}
@@ -93,7 +93,7 @@ export const projectColumns: ColumnDef<Project>[] = [
   },
   {
     accessorKey: 'riskStatus',
-    header: 'Risk',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Risk" />,
     cell: ({ row }) => {
       const risk = row.original.riskStatus || 'On Track';
       return (
@@ -122,7 +122,7 @@ export const projectColumns: ColumnDef<Project>[] = [
   },
   {
     accessorKey: 'totalCost',
-    header: 'Cost',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Cost" />,
     cell: ({ row }) =>
       row.original.totalCost
         ? `$${row.original.totalCost.toLocaleString()}`
@@ -154,20 +154,20 @@ export const projectColumns: ColumnDef<Project>[] = [
   {
     id: 'jobType',
     accessorFn: (row) => row.jobType?.name || '',
-    header: 'Job Type',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Job Type" />,
     filterFn: (row, id, value) => value.includes(row.getValue(id)),
     cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.jobType?.name || '—'}</span>,
   },
   {
     id: 'county',
     accessorFn: (row) => (Array.isArray(row.county) ? row.county.join(', ') : row.county || ''),
-    header: 'County',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="County" />,
     filterFn: (row, id, value) => value.includes(row.getValue(id)),
     cell: ({ row }) => <span className="text-xs text-muted-foreground">{Array.isArray(row.original.county) ? row.original.county.join(', ') : row.original.county || '—'}</span>,
   },
   {
     accessorKey: 'estimatedDueDate',
-    header: 'Due Date',
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Due Date" />,
     cell: ({ row }) =>
       row.original.estimatedDueDate
         ? format(
