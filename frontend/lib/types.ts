@@ -1005,6 +1005,7 @@ export interface CostBreakdown {
   benchmarkLockedAt?: string | null;
   showDirectExpenses?: boolean;
   roleDisplayNames?: Record<string, string> | null;
+  isTemplate?: boolean;
   jobType?: { id: string; name: string } | null;
   project?: { id: string; name: string } | null;
   lead?: { id: string; company: string; contactName: string } | null;

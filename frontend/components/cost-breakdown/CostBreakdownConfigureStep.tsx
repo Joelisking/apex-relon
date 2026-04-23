@@ -310,6 +310,7 @@ function ServiceItemConfigCard({
 interface Props {
   allServiceItems: ServiceItem[];
   prePopulated: ServiceItem[];
+  initialItems?: ConfiguredItem[];
   onBack: () => void;
   onConfirm: (config: CbConfig) => void;
   creating: boolean;
@@ -318,11 +319,13 @@ interface Props {
 export default function CostBreakdownConfigureStep({
   allServiceItems,
   prePopulated,
+  initialItems,
   onBack,
   onConfirm,
   creating,
 }: Props) {
   const [items, setItems] = useState<ConfiguredItem[]>(() =>
+    initialItems ??
     prePopulated.map((si) => ({
       serviceItem: si,
       includedSubtaskIds: si.subtasks.map((s) => s.id),

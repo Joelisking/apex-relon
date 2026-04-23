@@ -16,6 +16,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { costBreakdownApi } from '@/lib/api/cost-breakdown-client';
 import { settingsApi, leadsApi, serviceItemsApi } from '@/lib/api/client';
@@ -82,6 +92,13 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
   const [allServiceItems, setAllServiceItems] = useState<ServiceItem[]>([]);
   const [prePopulated, setPrePopulated] = useState<ServiceItem[]>([]);
   const [fetchingItems, setFetchingItems] = useState(false);
+
+  // Template (create mode)
+  const [template, setTemplate] = useState<CostBreakdown | null>(null);
+  const [templateInitialItems, setTemplateInitialItems] = useState<import('./CostBreakdownConfigureStep').ConfiguredItem[] | undefined>(undefined);
+
+  // Template conflict confirmation (edit mode)
+  const [conflictingTemplate, setConflictingTemplate] = useState<string | null>(null);
 
   // Add Line (edit mode)
   const [showAddLine, setShowAddLine] = useState(false);
@@ -216,11 +233,28 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
     if (!title.trim()) return;
     setFetchingItems(true);
     try {
-      const filtered = jobTypeId
-        ? await serviceItemsApi.getAll(jobTypeId)
-        : await serviceItemsApi.getAll();
+      const [filtered, tmpl] = await Promise.all([
+        jobTypeId ? serviceItemsApi.getAll(jobTypeId) : serviceItemsApi.getAll(),
+        jobTypeId ? costBreakdownApi.getTemplateForJobType(jobTypeId) : Promise.resolve(null),
+      ]);
       setAllServiceItems(filtered);
       setPrePopulated(filtered);
+      setTemplate(tmpl ?? null);
+      if (tmpl) {
+        const initialItems = tmpl.lines
+          .map((tl) => {
+            const si = filtered.find((s) => s.id === tl.serviceItemId);
+            if (!si) return null;
+            const includedSubtaskIds = si.subtasks
+              .map((s) => s.id)
+              .filter((id) => !tl.excludedSubtaskIds.includes(id));
+            return { serviceItem: si, includedSubtaskIds, customSubtasks: [] as string[] };
+          })
+          .filter((x): x is NonNullable<typeof x> => x !== null);
+        setTemplateInitialItems(initialItems);
+      } else {
+        setTemplateInitialItems(undefined);
+      }
       setStep('configure');
     } catch {
       toast.error('Failed to load service items');
@@ -237,6 +271,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
         jobTypeId: jobTypeId || undefined,
         leadId: leadId || undefined,
         projectId: prefilledProjectId || undefined,
+        templateId: template?.id,
       });
 
       const lineByServiceItemId = new Map(created.lines.map((l) => [l.serviceItemId, l]));
@@ -285,7 +320,7 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
       toast.error('Failed to create cost breakdown');
       setSaving(false);
     }
-  }, [title, jobTypeId, leadId, router, returnTo, queryClient]);
+  }, [title, jobTypeId, leadId, template, router, returnTo, queryClient]);
 
   const handleStatusToggle = useCallback(async () => {
     if (!breakdown) return;
@@ -354,6 +389,39 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
     }
   }, [breakdown]);
 
+  const applyTemplateChange = useCallback(async () => {
+    if (!breakdown) return;
+    try {
+      const updated = await costBreakdownApi.update(breakdown.id, { isTemplate: !breakdown.isTemplate });
+      setBreakdown((prev) => (prev ? { ...prev, isTemplate: updated.isTemplate } : null));
+      toast.success(updated.isTemplate ? 'Set as template for this job type' : 'Template removed');
+    } catch {
+      toast.error('Failed to update template setting');
+    }
+  }, [breakdown]);
+
+  const handleToggleTemplate = useCallback(async () => {
+    if (!breakdown) return;
+    // Removing template needs no confirmation
+    if (breakdown.isTemplate) {
+      applyTemplateChange();
+      return;
+    }
+    // Check if another template already exists for this job type
+    if (breakdown.jobTypeId) {
+      try {
+        const existing = await costBreakdownApi.getTemplateForJobType(breakdown.jobTypeId);
+        if (existing && existing.id !== breakdown.id) {
+          setConflictingTemplate(existing.title);
+          return;
+        }
+      } catch {
+        // If the check fails, proceed anyway
+      }
+    }
+    applyTemplateChange();
+  }, [breakdown, applyTemplateChange]);
+
   if (loading) {
     return (
       <div className="space-y-4 animate-pulse">
@@ -369,13 +437,21 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
   if (!breakdownId) {
     if (step === 'configure') {
       return (
-        <CostBreakdownConfigureStep
-          allServiceItems={allServiceItems}
-          prePopulated={prePopulated}
-          onBack={() => setStep('form')}
-          onConfirm={handleConfirm}
-          creating={saving}
-        />
+        <>
+          {template && (
+            <div className="max-w-2xl mx-auto mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+              Template found for this job type — service items and estimates have been prefilled from an existing breakdown.
+            </div>
+          )}
+          <CostBreakdownConfigureStep
+            allServiceItems={allServiceItems}
+            prePopulated={prePopulated}
+            initialItems={templateInitialItems}
+            onBack={() => setStep('form')}
+            onConfirm={handleConfirm}
+            creating={saving}
+          />
+        </>
       );
     }
 
@@ -522,6 +598,30 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {breakdown.jobTypeId && (
+            breakdown.isTemplate ? (
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-violet-50 text-violet-700 border-violet-200 text-xs">
+                  Template for {breakdown.jobType?.name ?? 'this job type'}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground h-7 text-xs"
+                  onClick={handleToggleTemplate}>
+                  Remove
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={handleToggleTemplate}>
+                Set as Template
+              </Button>
+            )
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -891,6 +991,25 @@ export default function CostBreakdownEditor({ breakdownId }: Props) {
           </Button>
         </div>
       </div>
+
+      <AlertDialog open={!!conflictingTemplate} onOpenChange={(open) => { if (!open) setConflictingTemplate(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace existing template?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>&ldquo;{conflictingTemplate}&rdquo;</strong> is currently the template for{' '}
+              {breakdown?.jobType?.name ?? 'this job type'}. Setting this breakdown as the template
+              will replace it. This only affects future new breakdowns — existing ones are unchanged.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setConflictingTemplate(null); applyTemplateChange(); }}>
+              Replace Template
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

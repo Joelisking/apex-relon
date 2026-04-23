@@ -39,6 +39,11 @@ export class CostBreakdownController {
     return this.service.findAll(TENANT_ID, { leadId, projectId });
   }
 
+  @Get('job-type-template/:jobTypeId')
+  getTemplateForJobType(@Param('jobTypeId') jobTypeId: string) {
+    return this.service.getTemplateForJobType(jobTypeId, TENANT_ID);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id, TENANT_ID);

@@ -78,8 +78,46 @@ export class CostBreakdownService {
       },
     });
 
-    // Auto-populate lines from ServiceItems linked to this JobType
-    if (dto.jobTypeId) {
+    if (dto.templateId) {
+      // Clone lines + role estimates from the template
+      const tmpl = await this.prisma.costBreakdown.findFirst({
+        where: { id: dto.templateId, tenantId },
+        include: { lines: { include: LINE_INCLUDE, orderBy: { sortOrder: 'asc' } } },
+      });
+      if (tmpl) {
+        for (const tl of tmpl.lines) {
+          const newLine = await this.prisma.costBreakdownLine.create({
+            data: {
+              costBreakdownId: breakdown.id,
+              serviceItemId: tl.serviceItemId,
+              sortOrder: tl.sortOrder,
+              excludedSubtaskIds: tl.excludedSubtaskIds,
+            },
+          });
+          for (const est of tl.roleEstimates) {
+            await this.prisma.costBreakdownRoleEstimate.create({
+              data: {
+                lineId: newLine.id,
+                subtaskId: est.subtaskId,
+                role: est.role,
+                estimatedHours: est.estimatedHours,
+                hourlyRate: est.hourlyRate,
+              },
+            });
+          }
+        }
+        // Copy direct expense rates (not quantities — those are job-specific)
+        await this.prisma.costBreakdown.update({
+          where: { id: breakdown.id },
+          data: {
+            mileageRate: tmpl.mileageRate,
+            lodgingRate: tmpl.lodgingRate,
+            perDiemRate: tmpl.perDiemRate,
+          },
+        });
+      }
+    } else if (dto.jobTypeId) {
+      // Auto-populate lines from ServiceItems linked to this JobType
       const serviceItems = await this.prisma.serviceItem.findMany({
         where: {
           jobTypeIds: { has: dto.jobTypeId },
@@ -110,7 +148,14 @@ export class CostBreakdownService {
   }
 
   async update(id: string, dto: UpdateCostBreakdownDto, tenantId: string) {
-    await this.findOne(id, tenantId);
+    const breakdown = await this.findOne(id, tenantId);
+    // When promoting to template, demote any existing template for the same job type
+    if (dto.isTemplate && breakdown.jobTypeId) {
+      await this.prisma.costBreakdown.updateMany({
+        where: { tenantId, jobTypeId: breakdown.jobTypeId as string, isTemplate: true, id: { not: id } },
+        data: { isTemplate: false },
+      });
+    }
     const { roleDisplayNames, ...rest } = dto;
     const data: Prisma.CostBreakdownUpdateInput = { ...rest };
     const sanitized = this.sanitizeRoleDisplayNames(roleDisplayNames);
@@ -270,6 +315,19 @@ export class CostBreakdownService {
         data: { expectedValue: total },
       });
     }
+  }
+
+  async getTemplateForJobType(jobTypeId: string, tenantId: string) {
+    const tmpl = await this.prisma.costBreakdown.findFirst({
+      where: { tenantId, jobTypeId, isTemplate: true },
+      include: {
+        lines: {
+          orderBy: { sortOrder: 'asc' },
+          include: LINE_INCLUDE,
+        },
+      },
+    });
+    return tmpl ?? null;
   }
 
   private withTotals(breakdown: any) {

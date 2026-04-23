@@ -19,4 +19,8 @@ export class CreateCostBreakdownDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsUUID()
+  @IsOptional()
+  templateId?: string;
 }

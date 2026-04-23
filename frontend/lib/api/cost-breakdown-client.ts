@@ -9,6 +9,7 @@ export interface CreateCostBreakdownDto {
   projectId?: string;
   leadId?: string;
   notes?: string;
+  templateId?: string;
 }
 
 export interface UpdateCostBreakdownDto {
@@ -25,6 +26,7 @@ export interface UpdateCostBreakdownDto {
   roundedFee?: number | null;
   showDirectExpenses?: boolean;
   roleDisplayNames?: Record<string, string> | null;
+  isTemplate?: boolean;
 }
 
 export interface UpsertRoleEstimateDto {
@@ -69,6 +71,8 @@ export const costBreakdownApi = {
       method: 'POST',
       body: JSON.stringify({ serviceItemId }),
     }),
+  getTemplateForJobType: (jobTypeId: string) =>
+    apiFetch<import('../types').CostBreakdown | null>(`/cost-breakdowns/job-type-template/${jobTypeId}`),
   downloadPdf: async (id: string): Promise<Blob> => {
     const token = getTokenFromClientCookies();
     const response = await fetch(`${API_URL}/cost-breakdowns/${id}/pdf`, {

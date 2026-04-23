@@ -68,4 +68,8 @@ export class UpdateCostBreakdownDto {
   @IsObject()
   @IsOptional()
   roleDisplayNames?: Record<string, string> | null;
+
+  @IsBoolean()
+  @IsOptional()
+  isTemplate?: boolean;
 }
