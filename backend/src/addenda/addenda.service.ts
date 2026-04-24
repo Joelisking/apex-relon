@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateAddendumDto } from './dto/create-addendum.dto';
 import { UpdateAddendumDto, UpsertAddendumLineDto } from './dto/update-addendum.dto';
+import { handlePrismaError } from '../common/prisma-error.handler';
 
 const LINE_INCLUDE = {
   orderBy: { sortOrder: 'asc' as const },
@@ -19,6 +20,8 @@ const ADDENDUM_INCLUDE = {
 
 @Injectable()
 export class AddendaService {
+  private readonly logger = new Logger(AddendaService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async findAllForProject(projectId: string) {
@@ -34,7 +37,10 @@ export class AddendaService {
       where: { id },
       include: ADDENDUM_INCLUDE,
     });
-    if (!addendum) throw new NotFoundException(`Addendum ${id} not found`);
+    if (!addendum) {
+      this.logger.warn(`findOne: addendum ${id} not found`);
+      throw new NotFoundException(`Addendum ${id} not found`);
+    }
     return addendum;
   }
 
@@ -42,28 +48,34 @@ export class AddendaService {
     const lines = dto.lines ?? [];
     const lineTotal = lines.reduce((s, l) => s + l.estimatedHours * l.billableRate, 0);
 
-    return this.prisma.projectAddendum.create({
-      data: {
-        projectId,
-        createdById,
-        title: dto.title,
-        description: dto.description,
-        total: lineTotal,
-        lines: {
-          create: lines.map((l, i) => ({
-            description: l.description,
-            role: l.role,
-            serviceItemId: l.serviceItemId || null,
-            serviceItemSubtaskId: l.serviceItemSubtaskId || null,
-            estimatedHours: l.estimatedHours,
-            billableRate: l.billableRate,
-            lineTotal: l.estimatedHours * l.billableRate,
-            sortOrder: l.sortOrder ?? i,
-          })),
+    try {
+      const addendum = await this.prisma.projectAddendum.create({
+        data: {
+          projectId,
+          createdById,
+          title: dto.title,
+          description: dto.description,
+          total: lineTotal,
+          lines: {
+            create: lines.map((l, i) => ({
+              description: l.description,
+              role: l.role,
+              serviceItemId: l.serviceItemId || null,
+              serviceItemSubtaskId: l.serviceItemSubtaskId || null,
+              estimatedHours: l.estimatedHours,
+              billableRate: l.billableRate,
+              lineTotal: l.estimatedHours * l.billableRate,
+              sortOrder: l.sortOrder ?? i,
+            })),
+          },
         },
-      },
-      include: ADDENDUM_INCLUDE,
-    });
+        include: ADDENDUM_INCLUDE,
+      });
+      this.logger.log(`Addendum created for project ${projectId} by user ${createdById}`);
+      return addendum;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'create.create');
+    }
   }
 
   async update(id: string, dto: UpdateAddendumDto) {
@@ -80,70 +92,96 @@ export class AddendaService {
     if (dto.roleDisplayNames !== undefined) {
       data.roleDisplayNames = sanitizeRoleDisplayNames(dto.roleDisplayNames);
     }
-    return this.prisma.projectAddendum.update({
-      where: { id },
-      data,
-      include: ADDENDUM_INCLUDE,
-    });
+
+    try {
+      const addendum = await this.prisma.projectAddendum.update({
+        where: { id },
+        data,
+        include: ADDENDUM_INCLUDE,
+      });
+      this.logger.log(`Addendum ${id} updated`);
+      return addendum;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'update.update');
+    }
   }
 
   async upsertLines(addendumId: string, lines: UpsertAddendumLineDto[]) {
     await this.findOne(addendumId);
 
-    // Delete lines not in the new set
     const keepIds = lines.map((l) => l.id).filter(Boolean) as string[];
-    await this.prisma.projectAddendumLine.deleteMany({
-      where: { addendumId, id: { notIn: keepIds } },
-    });
 
-    // Upsert each line
-    const upserted = await Promise.all(
-      lines.map((l, i) =>
-        this.prisma.projectAddendumLine.upsert({
-          where: { id: l.id ?? '' },
-          create: {
-            addendumId,
-            description: l.description,
-            role: l.role,
-            serviceItemId: l.serviceItemId || null,
-            serviceItemSubtaskId: l.serviceItemSubtaskId || null,
-            estimatedHours: l.estimatedHours,
-            billableRate: l.billableRate,
-            lineTotal: l.estimatedHours * l.billableRate,
-            sortOrder: l.sortOrder ?? i,
-          },
-          update: {
-            description: l.description,
-            role: l.role,
-            serviceItemId: l.serviceItemId || null,
-            serviceItemSubtaskId: l.serviceItemSubtaskId || null,
-            estimatedHours: l.estimatedHours,
-            billableRate: l.billableRate,
-            lineTotal: l.estimatedHours * l.billableRate,
-            sortOrder: l.sortOrder ?? i,
-          },
-        }),
-      ),
-    );
+    try {
+      await this.prisma.projectAddendumLine.deleteMany({
+        where: { addendumId, id: { notIn: keepIds } },
+      });
+      this.logger.log(`Stale lines removed for addendum ${addendumId}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'upsertLines.deleteMany');
+    }
 
-    // Recompute total
-    const total = upserted.reduce((s, l) => s + l.lineTotal, 0);
-    return this.prisma.projectAddendum.update({
-      where: { id: addendumId },
-      data: { total },
-      include: ADDENDUM_INCLUDE,
-    });
+    let upserted: Awaited<ReturnType<typeof this.prisma.projectAddendumLine.upsert>>[];
+    try {
+      upserted = await Promise.all(
+        lines.map((l, i) =>
+          this.prisma.projectAddendumLine.upsert({
+            where: { id: l.id ?? '' },
+            create: {
+              addendumId,
+              description: l.description,
+              role: l.role,
+              serviceItemId: l.serviceItemId || null,
+              serviceItemSubtaskId: l.serviceItemSubtaskId || null,
+              estimatedHours: l.estimatedHours,
+              billableRate: l.billableRate,
+              lineTotal: l.estimatedHours * l.billableRate,
+              sortOrder: l.sortOrder ?? i,
+            },
+            update: {
+              description: l.description,
+              role: l.role,
+              serviceItemId: l.serviceItemId || null,
+              serviceItemSubtaskId: l.serviceItemSubtaskId || null,
+              estimatedHours: l.estimatedHours,
+              billableRate: l.billableRate,
+              lineTotal: l.estimatedHours * l.billableRate,
+              sortOrder: l.sortOrder ?? i,
+            },
+          }),
+        ),
+      );
+      this.logger.log(`${upserted.length} lines upserted for addendum ${addendumId}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'upsertLines.upsert');
+    }
+
+    const total = upserted!.reduce((s, l) => s + l.lineTotal, 0);
+
+    try {
+      const addendum = await this.prisma.projectAddendum.update({
+        where: { id: addendumId },
+        data: { total },
+        include: ADDENDUM_INCLUDE,
+      });
+      this.logger.log(`Addendum ${addendumId} total updated to ${total}`);
+      return addendum;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'upsertLines.updateTotal');
+    }
   }
 
   async delete(id: string) {
     await this.findOne(id);
-    return this.prisma.projectAddendum.delete({ where: { id } });
+
+    try {
+      const addendum = await this.prisma.projectAddendum.delete({ where: { id } });
+      this.logger.log(`Addendum ${id} deleted`);
+      return addendum;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'delete.delete');
+    }
   }
 
-  /**
-   * Returns approved addendum lines for a project, optionally filtered by subtask and role.
-   * Used by time-tracking to include addendum hours in budget calculations.
-   */
   async getApprovedLinesForProject(
     projectId: string,
     filters?: { serviceItemSubtaskId?: string; roles?: string[] },

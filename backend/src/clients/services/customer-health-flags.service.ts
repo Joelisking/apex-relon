@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { CustomerMetrics } from './customer-metrics.service';
 
 export interface CustomerHealthFlag {
@@ -10,6 +10,7 @@ export interface CustomerHealthFlag {
 
 @Injectable()
 export class CustomerHealthFlagsService {
+  private readonly logger = new Logger(CustomerHealthFlagsService.name);
   detectHealthFlags(metrics: CustomerMetrics, lifetimeRevenue?: number): CustomerHealthFlag[] {
     const flags: CustomerHealthFlag[] = [];
 

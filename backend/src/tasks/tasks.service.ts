@@ -11,9 +11,19 @@ import { NotificationType } from '../notifications/notification-types.constants'
 import { WorkflowsService } from '../workflows/workflows.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { EmailService } from '../email/email.service';
+import { Prisma } from '@prisma/client';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { BulkAssignTasksDto } from './dto/bulk-assign-tasks.dto';
+import { handlePrismaError } from '../common/prisma-error.handler';
+
+const TASK_WITH_RELATIONS = {
+  assignedTo: { select: { id: true, name: true, email: true, role: true } },
+  createdBy: { select: { id: true, name: true, email: true } },
+  taskType: { select: { id: true, name: true } },
+} as const;
+
+type TaskWithRelations = Prisma.TaskGetPayload<{ include: typeof TASK_WITH_RELATIONS }>;
 
 // Task status values — kept as plain strings to match the DB schema (no enum)
 const ACTIVE_STATUSES = ['OPEN', 'IN_PROGRESS'] as const;
@@ -118,37 +128,40 @@ export class TasksService {
   async create(dto: CreateTaskDto, userId: string, userRole?: string) {
     if (dto.assignedToId && dto.assignedToId !== userId && userRole) {
       const canAssign = await this.permissionsService.hasPermission(userRole, 'tasks:assign');
-      if (!canAssign) throw new ForbiddenException('Cannot assign tasks to other users');
+      if (!canAssign) {
+        this.logger.warn(`[create] User ${userId} lacks tasks:assign permission`);
+        throw new ForbiddenException('Cannot assign tasks to other users');
+      }
     }
 
-    const task = await this.prisma.task.create({
-      data: {
-        title: dto.title,
-        description: dto.description,
-        dueDate: dto.dueDate ? new Date(dto.dueDate + 'T12:00:00.000Z') : undefined,
-        dueTime: dto.dueTime,
-        priority: dto.priority || 'MEDIUM',
-        entityType: dto.entityType,
-        entityId: dto.entityId,
-        assignedToId: dto.assignedToId || userId,
-        createdById: userId,
-        reminderAt: dto.reminderAt
-          ? new Date(dto.reminderAt)
-          : undefined,
-        taskTypeId: dto.taskTypeId,
-        estimatedHours: dto.estimatedHours,
-        costBreakdownLineId: dto.costBreakdownLineId,
-        serviceItemId: dto.serviceItemId,
-        serviceItemSubtaskId: dto.serviceItemSubtaskId,
-      },
-      include: {
-        assignedTo: {
-          select: { id: true, name: true, email: true, role: true },
+    let task!: TaskWithRelations;
+    try {
+      task = await this.prisma.task.create({
+        data: {
+          title: dto.title,
+          description: dto.description,
+          dueDate: dto.dueDate ? new Date(dto.dueDate + 'T12:00:00.000Z') : undefined,
+          dueTime: dto.dueTime,
+          priority: dto.priority || 'MEDIUM',
+          entityType: dto.entityType,
+          entityId: dto.entityId,
+          assignedToId: dto.assignedToId || userId,
+          createdById: userId,
+          reminderAt: dto.reminderAt
+            ? new Date(dto.reminderAt)
+            : undefined,
+          taskTypeId: dto.taskTypeId,
+          estimatedHours: dto.estimatedHours,
+          costBreakdownLineId: dto.costBreakdownLineId,
+          serviceItemId: dto.serviceItemId,
+          serviceItemSubtaskId: dto.serviceItemSubtaskId,
         },
-        createdBy: { select: { id: true, name: true, email: true } },
-        taskType: { select: { id: true, name: true } },
-      },
-    });
+        include: TASK_WITH_RELATIONS,
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'create.task');
+    }
+    this.logger.log(`[create] Task created: ${task.id} by user ${userId}`);
     // Notify assignee if different from creator
     if (task.assignedToId && task.assignedToId !== userId) {
       try {
@@ -224,13 +237,17 @@ export class TasksService {
         ? userId === existing.assignedToId
         : userId === existing.createdById;
       if (!isOwner) {
+        this.logger.warn(`[update] User ${userId} attempted to edit task ${id} without ownership`);
         throw new ForbiddenException('You can only edit tasks assigned to you');
       }
     }
 
     if (dto.assignedToId && dto.assignedToId !== userId && userRole) {
       const canAssign = await this.permissionsService.hasPermission(userRole, 'tasks:assign');
-      if (!canAssign) throw new ForbiddenException('Cannot assign tasks to other users');
+      if (!canAssign) {
+        this.logger.warn(`[update] User ${userId} lacks tasks:assign permission`);
+        throw new ForbiddenException('Cannot assign tasks to other users');
+      }
     }
 
     // Validate completion rules when marking as DONE — only when task is not already DONE.
@@ -240,6 +257,7 @@ export class TasksService {
         ? userId !== existing.assignedToId
         : userId !== existing.createdById;
       if (isUnauthorised) {
+        this.logger.warn(`[update] User ${userId} attempted to complete task ${id} without assignment`);
         throw new ForbiddenException(
           'Only the assigned user can mark this task as done',
         );
@@ -249,6 +267,7 @@ export class TasksService {
     // Validate revert rules when un-completing a DONE task
     if (existing.status === DONE_STATUS && dto.status && dto.status !== DONE_STATUS) {
       if (!dto.uncompleteReason) {
+        this.logger.warn(`[update] Revert attempt on task ${id} missing uncompleteReason`);
         throw new BadRequestException(
           'A reason is required when reverting a completed task',
         );
@@ -269,17 +288,17 @@ export class TasksService {
       if (!data.completionNote) data.completionNote = null;
     }
 
-    const task = await this.prisma.task.update({
-      where: { id },
-      data,
-      include: {
-        assignedTo: {
-          select: { id: true, name: true, email: true, role: true },
-        },
-        createdBy: { select: { id: true, name: true, email: true } },
-        taskType: { select: { id: true, name: true } },
-      },
-    });
+    let task!: TaskWithRelations;
+    try {
+      task = await this.prisma.task.update({
+        where: { id },
+        data,
+        include: TASK_WITH_RELATIONS,
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'update.task');
+    }
+    this.logger.log(`[update] Task updated: ${task.id} by user ${userId}`);
 
     // Notify new assignee when task is reassigned to a different person
     const assigneeChanged =
@@ -358,26 +377,27 @@ export class TasksService {
       ? userId !== existing.assignedToId
       : userId !== existing.createdById;
     if (isUnauthorised) {
+      this.logger.warn(`[complete] User ${userId} attempted to complete task ${id} without assignment`);
       throw new ForbiddenException(
         'Only the assigned user can mark this task as done',
       );
     }
 
-    const task = await this.prisma.task.update({
-      where: { id },
-      data: {
-        status: DONE_STATUS,
-        completedAt: new Date(),
-        completionNote: completionNote || null,
-      },
-      include: {
-        assignedTo: {
-          select: { id: true, name: true, email: true, role: true },
+    let task!: TaskWithRelations;
+    try {
+      task = await this.prisma.task.update({
+        where: { id },
+        data: {
+          status: DONE_STATUS,
+          completedAt: new Date(),
+          completionNote: completionNote || null,
         },
-        createdBy: { select: { id: true, name: true, email: true } },
-        taskType: { select: { id: true, name: true } },
-      },
-    });
+        include: TASK_WITH_RELATIONS,
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'complete.task');
+    }
+    this.logger.log(`[complete] Task completed: ${task.id} by user ${userId}`);
 
     const completedByName = task.assignedTo?.name ?? task.createdBy.name;
     await this.notifyProjectManagerOfCompletion(task, userId, completedByName);
@@ -450,7 +470,13 @@ export class TasksService {
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.task.delete({ where: { id } });
+    try {
+      const deleted = await this.prisma.task.delete({ where: { id } });
+      this.logger.log(`[remove] Task deleted: ${id}`);
+      return deleted;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'remove.task');
+    }
   }
 
   async getMyTasksSummary(userId: string) {
@@ -611,10 +637,15 @@ export class TasksService {
   }
 
   async bulkAssign(dto: BulkAssignTasksDto) {
-    const { count } = await this.prisma.task.updateMany({
-      where: { id: { in: dto.taskIds } },
-      data: { assignedToId: dto.assignedToId },
-    });
-    return { count };
+    try {
+      const { count } = await this.prisma.task.updateMany({
+        where: { id: { in: dto.taskIds } },
+        data: { assignedToId: dto.assignedToId },
+      });
+      this.logger.log(`[bulkAssign] Assigned ${count} task(s) to user ${dto.assignedToId}`);
+      return { count };
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'bulkAssign.task');
+    }
   }
 }

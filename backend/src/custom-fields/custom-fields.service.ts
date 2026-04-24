@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -9,9 +10,12 @@ import {
   CreateCustomFieldDefinitionDto,
   UpdateCustomFieldDefinitionDto,
 } from './dto/custom-fields.dto';
+import { handlePrismaError } from '../common/prisma-error.handler';
 
 @Injectable()
 export class CustomFieldsService {
+  private readonly logger = new Logger(CustomFieldsService.name);
+
   constructor(private prisma: PrismaService) {}
 
   // ─── Definitions ───────────────────────────────
@@ -30,41 +34,44 @@ export class CustomFieldsService {
     const def = await this.prisma.customFieldDefinition.findUnique({
       where: { id },
     });
-    if (!def)
-      throw new NotFoundException(
-        'Custom field definition not found',
-      );
+    if (!def) {
+      this.logger.warn(`getDefinition: custom field definition ${id} not found`);
+      throw new NotFoundException('Custom field definition not found');
+    }
     return def;
   }
 
   async createDefinition(dto: CreateCustomFieldDefinitionDto) {
-    // Validate fieldKey uniqueness per entityType
-    const exists = await this.prisma.customFieldDefinition.findUnique(
-      {
-        where: {
-          entityType_fieldKey: {
-            entityType: dto.entityType,
-            fieldKey: dto.fieldKey,
-          },
+    const exists = await this.prisma.customFieldDefinition.findUnique({
+      where: {
+        entityType_fieldKey: {
+          entityType: dto.entityType,
+          fieldKey: dto.fieldKey,
         },
       },
-    );
+    });
     if (exists)
       throw new BadRequestException(
         `Field key "${dto.fieldKey}" already exists for ${dto.entityType}`,
       );
 
-    return this.prisma.customFieldDefinition.create({
-      data: {
-        entityType: dto.entityType,
-        label: dto.label,
-        fieldKey: dto.fieldKey,
-        fieldType: dto.fieldType,
-        options: dto.options || undefined,
-        required: dto.required ?? false,
-        sortOrder: dto.sortOrder ?? 0,
-      },
-    });
+    try {
+      const def = await this.prisma.customFieldDefinition.create({
+        data: {
+          entityType: dto.entityType,
+          label: dto.label,
+          fieldKey: dto.fieldKey,
+          fieldType: dto.fieldType,
+          options: dto.options || undefined,
+          required: dto.required ?? false,
+          sortOrder: dto.sortOrder ?? 0,
+        },
+      });
+      this.logger.log(`Custom field definition created: ${dto.fieldKey} for ${dto.entityType}`);
+      return def;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'createDefinition.create');
+    }
   }
 
   async updateDefinition(
@@ -72,18 +79,31 @@ export class CustomFieldsService {
     dto: UpdateCustomFieldDefinitionDto,
   ) {
     await this.getDefinition(id);
-    return this.prisma.customFieldDefinition.update({
-      where: { id },
-      data: dto,
-    });
+
+    try {
+      const def = await this.prisma.customFieldDefinition.update({
+        where: { id },
+        data: dto,
+      });
+      this.logger.log(`Custom field definition ${id} updated`);
+      return def;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'updateDefinition.update');
+    }
   }
 
   async deleteDefinition(id: string) {
     await this.getDefinition(id);
-    // Cascade deletes values automatically
-    return this.prisma.customFieldDefinition.delete({
-      where: { id },
-    });
+
+    try {
+      const def = await this.prisma.customFieldDefinition.delete({
+        where: { id },
+      });
+      this.logger.log(`Custom field definition ${id} deleted`);
+      return def;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'deleteDefinition.delete');
+    }
   }
 
   async reorderDefinitions(entityType: string, orderedIds: string[]) {
@@ -93,7 +113,14 @@ export class CustomFieldsService {
         data: { sortOrder: index },
       }),
     );
-    await this.prisma.$transaction(updates);
+
+    try {
+      await this.prisma.$transaction(updates);
+      this.logger.log(`Reordered ${orderedIds.length} custom field definitions for ${entityType}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'reorderDefinitions.$transaction');
+    }
+
     return this.getDefinitions(entityType);
   }
 
@@ -105,7 +132,6 @@ export class CustomFieldsService {
       include: { definition: true },
     });
 
-    // Return as a map: fieldKey → value
     const result: Record<string, unknown> = {};
     for (const v of values) {
       result[v.definition.fieldKey] = {
@@ -134,43 +160,51 @@ export class CustomFieldsService {
         );
       }
 
-      // Validate required
       if (
         def.required &&
         (field.value === null ||
           field.value === undefined ||
           field.value === '')
       ) {
-        throw new BadRequestException(
-          `Field "${def.label}" is required`,
-        );
+        throw new BadRequestException(`Field "${def.label}" is required`);
       }
 
-      const result = await this.prisma.customFieldValue.upsert({
-        where: {
-          definitionId_entityType_entityId: {
+      try {
+        const result = await this.prisma.customFieldValue.upsert({
+          where: {
+            definitionId_entityType_entityId: {
+              definitionId: field.definitionId,
+              entityType,
+              entityId,
+            },
+          },
+          update: { value: field.value as Prisma.InputJsonValue },
+          create: {
             definitionId: field.definitionId,
             entityType,
             entityId,
+            value: field.value as Prisma.InputJsonValue,
           },
-        },
-        update: { value: field.value as Prisma.InputJsonValue },
-        create: {
-          definitionId: field.definitionId,
-          entityType,
-          entityId,
-          value: field.value as Prisma.InputJsonValue,
-        },
-      });
-      results.push(result);
+        });
+        results.push(result);
+      } catch (error) {
+        handlePrismaError(error, this.logger, 'setValuesForEntity.upsert');
+      }
     }
 
+    this.logger.log(`Set ${results.length} custom field values for ${entityType} ${entityId}`);
     return results;
   }
 
   async deleteValuesForEntity(entityType: string, entityId: string) {
-    return this.prisma.customFieldValue.deleteMany({
-      where: { entityType, entityId },
-    });
+    try {
+      const result = await this.prisma.customFieldValue.deleteMany({
+        where: { entityType, entityId },
+      });
+      this.logger.log(`Deleted custom field values for ${entityType} ${entityId}`);
+      return result;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'deleteValuesForEntity.deleteMany');
+    }
   }
 }

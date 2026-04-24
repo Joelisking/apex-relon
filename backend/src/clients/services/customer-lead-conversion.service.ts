@@ -1,11 +1,14 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../../audit/audit.service';
 import { WorkflowsService } from '../../workflows/workflows.service';
 import { generateJobNumber } from '../../projects/projects.util';
+import { handlePrismaError } from '../../common/prisma-error.handler';
 
 @Injectable()
 export class CustomerLeadConversionService {
+  private readonly logger = new Logger(CustomerLeadConversionService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
@@ -37,7 +40,10 @@ export class CustomerLeadConversionService {
       },
     });
 
-    if (!lead) throw new NotFoundException('Lead not found');
+    if (!lead) {
+      this.logger.warn(`Lead not found for conversion: ${leadId}`);
+      throw new NotFoundException('Lead not found');
+    }
     if (lead.stage !== 'Closed Won' && lead.stage !== 'Won') throw new BadRequestException('Only Closed Won leads can be converted to a project');
     if (lead.convertedToClientId) throw new BadRequestException('Lead has already been converted');
     if (!lead.clientId || !lead.client) throw new BadRequestException('Lead must have an associated client before conversion');
@@ -69,26 +75,32 @@ export class CustomerLeadConversionService {
 
     const jobNumber = await generateJobNumber(this.prisma);
 
-    const project = await this.prisma.project.create({
-      data: {
-        name: projectData?.name || `${lead.company} - ${lead.jobType?.name || lead.projectName || 'Project'}`,
-        jobNumber,
-        clientId: customer.id,
-        leadId: lead.id,
-        status: resolvedStatus,
-        riskStatus: projectData?.riskStatus || 'On Track',
-        contractedValue: projectData?.contractedValue ?? lead.contractedValue ?? lead.expectedValue,
-        endOfProjectValue: projectData?.endOfProjectValue ?? undefined,
-        startDate: projectData?.startDate ? new Date(projectData.startDate) : undefined,
-        estimatedDueDate: projectData?.estimatedDueDate ? new Date(projectData.estimatedDueDate) : undefined,
-        closedDate: projectData?.closedDate ? new Date(projectData.closedDate) : undefined,
-        description: projectData?.description ?? lead.notes ?? undefined,
-        jobTypeId: lead.jobTypeId || undefined,
-        categoryIds: lead.categoryIds ?? [],
-        jobTypeIds: lead.jobTypeIds ?? [],
-        county: lead.county ?? undefined,
-      },
-    });
+    let project: Awaited<ReturnType<typeof this.prisma.project.create>>;
+    try {
+      project = await this.prisma.project.create({
+        data: {
+          name: projectData?.name || `${lead.company} - ${lead.jobType?.name || lead.projectName || 'Project'}`,
+          jobNumber,
+          clientId: customer.id,
+          leadId: lead.id,
+          status: resolvedStatus,
+          riskStatus: projectData?.riskStatus || 'On Track',
+          contractedValue: projectData?.contractedValue ?? lead.contractedValue ?? lead.expectedValue,
+          endOfProjectValue: projectData?.endOfProjectValue ?? undefined,
+          startDate: projectData?.startDate ? new Date(projectData.startDate) : undefined,
+          estimatedDueDate: projectData?.estimatedDueDate ? new Date(projectData.estimatedDueDate) : undefined,
+          closedDate: projectData?.closedDate ? new Date(projectData.closedDate) : undefined,
+          description: projectData?.description ?? lead.notes ?? undefined,
+          jobTypeId: lead.jobTypeId || undefined,
+          categoryIds: lead.categoryIds ?? [],
+          jobTypeIds: lead.jobTypeIds ?? [],
+          county: lead.county ?? undefined,
+        },
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'CustomerLeadConversionService.convertLeadToClient.createProject');
+    }
+    this.logger.log(`Project created from lead ${leadId}: ${project.id}`);
 
     // Add PM as a ProjectAssignment if provided or fall back to lead's assigned user
     const resolvedPmId = pmUserId || lead.assignedToId;
@@ -104,31 +116,43 @@ export class CustomerLeadConversionService {
       });
     }
 
-    // Link any cost breakdowns for this lead to the new project
-    await this.prisma.costBreakdown.updateMany({
-      where: { leadId },
-      data: { projectId: project.id },
-    });
+    try {
+      await this.prisma.costBreakdown.updateMany({
+        where: { leadId },
+        data: { projectId: project.id },
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'CustomerLeadConversionService.convertLeadToClient.linkCostBreakdowns');
+    }
+    this.logger.log(`Cost breakdowns linked to project ${project.id}`);
 
-    // Mark lead as converted
-    await this.prisma.lead.update({
-      where: { id: leadId },
-      data: { convertedToClientId: customer.id },
-    });
+    try {
+      await this.prisma.lead.update({
+        where: { id: leadId },
+        data: { convertedToClientId: customer.id },
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'CustomerLeadConversionService.convertLeadToClient.markLeadConverted');
+    }
+    this.logger.log(`Lead ${leadId} marked as converted`);
 
     // Recompute project counts accurately
     await this.recomputeClientProjectCounts(customer.id);
 
-    // Record initial status history
     const actorId = userId || resolvedPmId || 'system';
-    await this.prisma.projectStatusHistory.create({
-      data: {
-        projectId: project.id,
-        fromStatus: null,
-        toStatus: project.status,
-        changedBy: actorId,
-      },
-    });
+    try {
+      await this.prisma.projectStatusHistory.create({
+        data: {
+          projectId: project.id,
+          fromStatus: null,
+          toStatus: project.status,
+          changedBy: actorId,
+        },
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'CustomerLeadConversionService.convertLeadToClient.createStatusHistory');
+    }
+    this.logger.log(`Initial status history recorded for project ${project.id}`);
 
     await this.auditService.log({
       userId: actorId,
@@ -161,9 +185,14 @@ export class CustomerLeadConversionService {
     const active = await this.prisma.project.count({
       where: { clientId, status: { notIn: ['Completed', 'Cancelled'] } },
     });
-    await this.prisma.client.update({
-      where: { id: clientId },
-      data: { totalProjectCount: total, activeProjectCount: active },
-    });
+    try {
+      await this.prisma.client.update({
+        where: { id: clientId },
+        data: { totalProjectCount: total, activeProjectCount: active },
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'CustomerLeadConversionService.recomputeClientProjectCounts');
+    }
+    this.logger.log(`Project counts recomputed for client ${clientId}: total=${total}, active=${active}`);
   }
 }

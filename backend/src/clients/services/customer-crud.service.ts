@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { getClientDisplayName } from '../client-display.helper';
@@ -7,9 +7,12 @@ import { WorkflowsService } from '../../workflows/workflows.service';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { CustomerMetricsService } from './customer-metrics.service';
 import { CustomerHealthFlagsService } from './customer-health-flags.service';
+import { handlePrismaError } from '../../common/prisma-error.handler';
 
 @Injectable()
 export class CustomerCrudService {
+  private readonly logger = new Logger(CustomerCrudService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
@@ -113,7 +116,10 @@ export class CustomerCrudService {
       },
     });
 
-    if (!customer || customer.isDeleted) throw new NotFoundException('Client not found');
+    if (!customer || customer.isDeleted) {
+      this.logger.warn(`Client not found: ${id}`);
+      throw new NotFoundException('Client not found');
+    }
 
     if (userRole && userId) {
       const canViewAll = await this.permissionsService.hasPermission(userRole, 'clients:view_all');
@@ -130,28 +136,38 @@ export class CustomerCrudService {
   }
 
   async create(data: Record<string, unknown>, userId?: string) {
-    const customer = await this.prisma.client.create({
-      data: data as Prisma.ClientCreateInput,
-    });
+    let customer: Awaited<ReturnType<typeof this.prisma.client.create>>;
+    try {
+      customer = await this.prisma.client.create({
+        data: data as Prisma.ClientCreateInput,
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'CustomerCrudService.create');
+    }
+    this.logger.log(`Client created: ${customer.id}`);
 
-    // Auto-create primary Contact from flat fields if individualName is provided
     const individualName = data.individualName as string | undefined;
     if (individualName?.trim()) {
       const nameParts = individualName.trim().split(/\s+/);
       const firstName = nameParts[0];
       const lastName = nameParts.slice(1).join(' ') || '';
-      await this.prisma.contact.create({
-        data: {
-          clientId: customer.id,
-          firstName,
-          lastName,
-          email: (data.email as string | undefined) || undefined,
-          phone: (data.phone as string | undefined) || undefined,
-          jobTitle: (data.individualType as string | undefined) || undefined,
-          isPrimary: true,
-          isDecisionMaker: true,
-        },
-      });
+      try {
+        await this.prisma.contact.create({
+          data: {
+            clientId: customer.id,
+            firstName,
+            lastName,
+            email: (data.email as string | undefined) || undefined,
+            phone: (data.phone as string | undefined) || undefined,
+            jobTitle: (data.individualType as string | undefined) || undefined,
+            isPrimary: true,
+            isDecisionMaker: true,
+          },
+        });
+      } catch (error) {
+        handlePrismaError(error, this.logger, 'CustomerCrudService.create.primaryContact');
+      }
+      this.logger.log(`Primary contact created for client: ${customer.id}`);
     }
 
     await this.auditService.log({
@@ -175,12 +191,17 @@ export class CustomerCrudService {
         : { disconnect: true };
     }
 
-    const customer = await this.prisma.client.update({
-      where: { id },
-      data: prismaData as Prisma.ClientUpdateInput,
-    });
+    let customer: Awaited<ReturnType<typeof this.prisma.client.update>>;
+    try {
+      customer = await this.prisma.client.update({
+        where: { id },
+        data: prismaData as Prisma.ClientUpdateInput,
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'CustomerCrudService.update');
+    }
+    this.logger.log(`Client updated: ${id}`);
 
-    // Sync flat field changes to the primary Contact record
     const contactUpdates: Record<string, unknown> = {};
     if ('email' in data) contactUpdates.email = data.email;
     if ('phone' in data) contactUpdates.phone = data.phone;
@@ -198,10 +219,15 @@ export class CustomerCrudService {
         select: { id: true },
       });
       if (primaryContact) {
-        await this.prisma.contact.update({
-          where: { id: primaryContact.id },
-          data: contactUpdates as Prisma.ContactUpdateInput,
-        });
+        try {
+          await this.prisma.contact.update({
+            where: { id: primaryContact.id },
+            data: contactUpdates as Prisma.ContactUpdateInput,
+          });
+        } catch (error) {
+          handlePrismaError(error, this.logger, 'CustomerCrudService.update.primaryContact');
+        }
+        this.logger.log(`Primary contact synced for client: ${id}`);
       }
     }
 
@@ -222,12 +248,21 @@ export class CustomerCrudService {
       select: { id: true, name: true, segment: true, industry: true },
     });
 
-    if (!customer) throw new NotFoundException('Client not found');
+    if (!customer) {
+      this.logger.warn(`Client not found for removal: ${id}`);
+      throw new NotFoundException('Client not found');
+    }
 
-    const archived = await this.prisma.client.update({
-      where: { id },
-      data: { isDeleted: true, deletedAt: new Date() },
-    });
+    let archived: Awaited<ReturnType<typeof this.prisma.client.update>>;
+    try {
+      archived = await this.prisma.client.update({
+        where: { id },
+        data: { isDeleted: true, deletedAt: new Date() },
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'CustomerCrudService.remove');
+    }
+    this.logger.log(`Client archived: ${id}`);
 
     await this.auditService.log({
       userId: userId || 'system',
@@ -260,10 +295,16 @@ export class CustomerCrudService {
       : ids;
 
     const { accountManager: _rel, accountManagerId: _mgr, ...rest } = data;
-    const result = await this.prisma.client.updateMany({
-      where: { id: { in: accessibleIds } },
-      data: rest,
-    });
+    let result: Awaited<ReturnType<typeof this.prisma.client.updateMany>>;
+    try {
+      result = await this.prisma.client.updateMany({
+        where: { id: { in: accessibleIds } },
+        data: rest,
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'CustomerCrudService.bulkUpdate');
+    }
+    this.logger.log(`Bulk updated ${result.count} clients`);
 
     await this.auditService.log({
       userId: userId || 'system',
@@ -281,10 +322,16 @@ export class CustomerCrudService {
       ? await this.scopeToAccessible(ids, userId, userRole)
       : ids;
 
-    const result = await this.prisma.client.updateMany({
-      where: { id: { in: accessibleIds } },
-      data: { isDeleted: true, deletedAt: new Date() },
-    });
+    let result: Awaited<ReturnType<typeof this.prisma.client.updateMany>>;
+    try {
+      result = await this.prisma.client.updateMany({
+        where: { id: { in: accessibleIds } },
+        data: { isDeleted: true, deletedAt: new Date() },
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'CustomerCrudService.bulkDelete');
+    }
+    this.logger.log(`Bulk archived ${result.count} clients`);
 
     await this.auditService.log({
       userId: userId || 'system',

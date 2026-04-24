@@ -1,11 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/notification-types.constants';
 import { CreatePtoPolicyDto, UpdatePtoPolicyDto, CreatePtoRequestDto, ReviewPtoRequestDto } from './dto/pto.dto';
+import { handlePrismaError } from '../common/prisma-error.handler';
 
 @Injectable()
 export class PtoService {
+  private readonly logger = new Logger(PtoService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -18,22 +21,43 @@ export class PtoService {
   }
 
   async createPolicy(dto: CreatePtoPolicyDto) {
-    return this.prisma.ptoPolicy.create({ data: dto });
+    try {
+      const policy = await this.prisma.ptoPolicy.create({ data: dto });
+      this.logger.log(`[createPolicy] PTO policy created: id=${policy.id}`);
+      return policy;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'createPolicy.create');
+    }
   }
 
   async updatePolicy(id: string, dto: UpdatePtoPolicyDto) {
     await this.findPolicyOrThrow(id);
-    return this.prisma.ptoPolicy.update({ where: { id }, data: dto });
+    try {
+      const policy = await this.prisma.ptoPolicy.update({ where: { id }, data: dto });
+      this.logger.log(`[updatePolicy] PTO policy updated: id=${id}`);
+      return policy;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'updatePolicy.update');
+    }
   }
 
   async deletePolicy(id: string) {
     await this.findPolicyOrThrow(id);
-    return this.prisma.ptoPolicy.delete({ where: { id } });
+    try {
+      const result = await this.prisma.ptoPolicy.delete({ where: { id } });
+      this.logger.log(`[deletePolicy] PTO policy deleted: id=${id}`);
+      return result;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'deletePolicy.delete');
+    }
   }
 
   private async findPolicyOrThrow(id: string) {
     const policy = await this.prisma.ptoPolicy.findUnique({ where: { id } });
-    if (!policy) throw new NotFoundException(`PTO policy ${id} not found`);
+    if (!policy) {
+      this.logger.warn(`[findPolicyOrThrow] PTO policy not found: id=${id}`);
+      throw new NotFoundException(`PTO policy ${id} not found`);
+    }
     return policy;
   }
 
@@ -73,7 +97,10 @@ export class PtoService {
   async createRequest(userId: string, dto: CreatePtoRequestDto) {
     const start = new Date(dto.startDate);
     const end = new Date(dto.endDate);
-    if (end < start) throw new BadRequestException('End date must be on or after start date');
+    if (end < start) {
+      this.logger.warn(`[createRequest] Invalid date range: start=${dto.startDate}, end=${dto.endDate}`);
+      throw new BadRequestException('End date must be on or after start date');
+    }
 
     const request = await this.prisma.ptoRequest.create({
       data: {
@@ -86,9 +113,12 @@ export class PtoService {
         policyId: dto.policyId,
       },
       include: { user: { select: { id: true, name: true } } },
+    }).catch((error: unknown) => {
+      handlePrismaError(error, this.logger, 'createRequest.create');
     });
 
-    // Notify managers (users who have approved PTO requests before, or all users with managerId === null)
+    this.logger.log(`[createRequest] PTO request created: id=${request.id}, userId=${userId}`);
+
     const managers = await this.prisma.user.findMany({
       where: { managerId: null, id: { not: userId } },
       select: { id: true, notificationPreferences: { select: { ptoUpdate: true } } },
@@ -115,11 +145,16 @@ export class PtoService {
       where: { id: requestId },
       include: { user: { select: { id: true, notificationPreferences: { select: { ptoUpdate: true } } } } },
     });
-    if (!request) throw new NotFoundException(`PTO request ${requestId} not found`);
+    if (!request) {
+      this.logger.warn(`[reviewRequest] PTO request not found: id=${requestId}`);
+      throw new NotFoundException(`PTO request ${requestId} not found`);
+    }
     if (request.status !== 'PENDING') {
+      this.logger.warn(`[reviewRequest] Request is not pending: id=${requestId}, status=${request.status}`);
       throw new BadRequestException('Only PENDING requests can be reviewed');
     }
     if (dto.action !== 'APPROVE' && dto.action !== 'DENY') {
+      this.logger.warn(`[reviewRequest] Invalid action: ${dto.action}`);
       throw new BadRequestException('Action must be APPROVE or DENY');
     }
     if (request.userId === reviewerId) {
@@ -128,17 +163,22 @@ export class PtoService {
 
     const newStatus = dto.action === 'APPROVE' ? 'APPROVED' : 'DENIED';
 
-    const updated = await this.prisma.ptoRequest.update({
-      where: { id: requestId },
-      data: {
-        status: newStatus,
-        approvedById: reviewerId,
-        approvedAt: new Date(),
-        deniedReason: dto.action === 'DENY' ? (dto.deniedReason ?? null) : null,
-      },
-    });
+    let updated: Awaited<ReturnType<typeof this.prisma.ptoRequest.update>>;
+    try {
+      updated = await this.prisma.ptoRequest.update({
+        where: { id: requestId },
+        data: {
+          status: newStatus,
+          approvedById: reviewerId,
+          approvedAt: new Date(),
+          deniedReason: dto.action === 'DENY' ? (dto.deniedReason ?? null) : null,
+        },
+      });
+      this.logger.log(`[reviewRequest] PTO request reviewed: id=${requestId}, status=${newStatus}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'reviewRequest.update');
+    }
 
-    // Notify the requester if they haven't opted out
     if (request.user.notificationPreferences?.ptoUpdate !== false) {
       const notifType = newStatus === 'APPROVED' ? NotificationType.PTO_APPROVED : NotificationType.PTO_DENIED;
       await this.notifications.create({
@@ -158,18 +198,29 @@ export class PtoService {
 
   async cancelRequest(requestId: string, userId: string) {
     const request = await this.prisma.ptoRequest.findUnique({ where: { id: requestId } });
-    if (!request) throw new NotFoundException(`PTO request ${requestId} not found`);
+    if (!request) {
+      this.logger.warn(`[cancelRequest] PTO request not found: id=${requestId}`);
+      throw new NotFoundException(`PTO request ${requestId} not found`);
+    }
     if (request.userId !== userId) throw new ForbiddenException('You can only cancel your own requests');
     if (request.status === 'CANCELLED') {
+      this.logger.warn(`[cancelRequest] Request already cancelled: id=${requestId}`);
       throw new BadRequestException('Request is already cancelled');
     }
     if (request.status === 'DENIED') {
+      this.logger.warn(`[cancelRequest] Cannot cancel denied request: id=${requestId}`);
       throw new BadRequestException('Cannot cancel a denied request');
     }
-    return this.prisma.ptoRequest.update({
-      where: { id: requestId },
-      data: { status: 'CANCELLED' },
-    });
+    try {
+      const result = await this.prisma.ptoRequest.update({
+        where: { id: requestId },
+        data: { status: 'CANCELLED' },
+      });
+      this.logger.log(`[cancelRequest] PTO request cancelled: id=${requestId}`);
+      return result;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'cancelRequest.update');
+    }
   }
 
   async getApprovedForDateRange(startDate: string, endDate: string) {

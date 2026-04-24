@@ -1,10 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateCostLogDto } from './dto/create-cost-log.dto';
 import { ProjectsProfitabilityService } from './projects-profitability.service';
+import { handlePrismaError } from '../common/prisma-error.handler';
 
 @Injectable()
 export class ProjectsCostService {
+  private readonly logger = new Logger(ProjectsCostService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly profitabilityService: ProjectsProfitabilityService,
@@ -35,19 +38,25 @@ export class ProjectsCostService {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
 
-    const costLog = await this.prisma.costLog.create({
-      data: {
-        projectId,
-        date: new Date(dto.date),
-        category: dto.category,
-        description: dto.description,
-        amount: dto.amount,
-        createdBy: userId,
-      },
-      include: {
-        user: { select: { id: true, name: true } },
-      },
-    });
+    let costLog: Awaited<ReturnType<typeof this.prisma.costLog.create>>;
+    try {
+      costLog = await this.prisma.costLog.create({
+        data: {
+          projectId,
+          date: new Date(dto.date),
+          category: dto.category,
+          description: dto.description,
+          amount: dto.amount,
+          createdBy: userId,
+        },
+        include: {
+          user: { select: { id: true, name: true } },
+        },
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'addCostLog.create');
+    }
+    this.logger.log(`Cost log created for project ${projectId}`);
 
     await this.profitabilityService.recalculateProjectCost(projectId);
 
@@ -60,10 +69,16 @@ export class ProjectsCostService {
     });
 
     if (!costLog) {
+      this.logger.warn(`removeCostLog: Cost log ${costId} not found on project ${projectId}`);
       throw new NotFoundException(`Cost log not found`);
     }
 
-    await this.prisma.costLog.delete({ where: { id: costId } });
+    try {
+      await this.prisma.costLog.delete({ where: { id: costId } });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'removeCostLog.delete');
+    }
+    this.logger.log(`Cost log ${costId} deleted from project ${projectId}`);
 
     await this.profitabilityService.recalculateProjectCost(projectId);
 

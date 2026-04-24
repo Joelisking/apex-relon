@@ -1,13 +1,17 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateQuoteDto, UpdateQuoteDto } from './dto/quotes.dto';
+import { handlePrismaError } from '../common/prisma-error.handler';
 
 @Injectable()
 export class QuotesService {
+  private readonly logger = new Logger(QuotesService.name);
+
   constructor(private prisma: PrismaService) {}
 
   private calculateTotals(
@@ -77,7 +81,10 @@ export class QuotesService {
         lineItems: { orderBy: { sortOrder: 'asc' } },
       },
     });
-    if (!quote) throw new NotFoundException('Quote not found');
+    if (!quote) {
+      this.logger.warn(`[findOne] Quote not found: id=${id}`);
+      throw new NotFoundException('Quote not found');
+    }
     return quote;
   }
 
@@ -111,42 +118,46 @@ export class QuotesService {
       validUntil.setDate(validUntil.getDate() + days);
     }
 
-    return this.prisma.quote.create({
-      data: {
-        leadId: dto.leadId,
-        clientId: dto.clientId,
-        projectId: dto.projectId,
-        validUntil,
-        notes: dto.notes,
-        termsAndConditions: dto.termsAndConditions,
-        taxRate,
-        discount,
-        subtotal,
-        taxAmount,
-        total,
-        currency: dto.currency || 'USD',
-        createdById: userId,
-        lineItems: {
-          create: lineItemsData,
+    try {
+      const quote = await this.prisma.quote.create({
+        data: {
+          leadId: dto.leadId,
+          clientId: dto.clientId,
+          projectId: dto.projectId,
+          validUntil,
+          notes: dto.notes,
+          termsAndConditions: dto.termsAndConditions,
+          taxRate,
+          discount,
+          subtotal,
+          taxAmount,
+          total,
+          currency: dto.currency || 'USD',
+          createdById: userId,
+          lineItems: {
+            create: lineItemsData,
+          },
         },
-      },
-      include: {
-        lead: {
-          select: { id: true, contactName: true, company: true, stage: true },
+        include: {
+          lead: {
+            select: { id: true, contactName: true, company: true, stage: true },
+          },
+          client: { select: { id: true, name: true } },
+          project: { select: { id: true, name: true } },
+          createdBy: { select: { id: true, name: true, email: true } },
+          lineItems: { orderBy: { sortOrder: 'asc' } },
         },
-        client: { select: { id: true, name: true } },
-        project: { select: { id: true, name: true } },
-        createdBy: { select: { id: true, name: true, email: true } },
-        lineItems: { orderBy: { sortOrder: 'asc' } },
-      },
-    });
+      });
+      this.logger.log(`[create] Quote created: id=${quote.id}`);
+      return quote;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'create.quote');
+    }
   }
 
   async update(id: string, dto: UpdateQuoteDto) {
     const existing = await this.findOne(id);
 
-    // Content edits (line items, financial, metadata) require DRAFT status.
-    // Status-only transitions (send/accept/reject) are allowed on any status.
     const isContentEdit =
       dto.leadId !== undefined ||
       dto.clientId !== undefined ||
@@ -160,6 +171,7 @@ export class QuotesService {
       dto.lineItems !== undefined;
 
     if (isContentEdit && existing.status !== 'DRAFT') {
+      this.logger.warn(`[update] Attempt to edit non-draft quote: id=${id}, status=${existing.status}`);
       throw new BadRequestException(
         'Only draft quotes can be edited',
       );
@@ -191,7 +203,6 @@ export class QuotesService {
       lineItems: { orderBy: { sortOrder: 'asc' } },
     } as const;
 
-    // Handle line items update (replace all) — wrapped in a transaction
     if (dto.lineItems) {
       const taxRate = dto.taxRate ?? existing.taxRate;
       const discount = dto.discount ?? existing.discount;
@@ -216,17 +227,22 @@ export class QuotesService {
       data.taxAmount = taxAmount;
       data.total = total;
 
-      return this.prisma.$transaction(async (tx) => {
-        await tx.quoteLineItem.deleteMany({ where: { quoteId: id } });
-        await tx.quoteLineItem.createMany({
-          data: lineItemsData.map((item) => ({ ...item, quoteId: id })),
+      try {
+        const result = await this.prisma.$transaction(async (tx) => {
+          await tx.quoteLineItem.deleteMany({ where: { quoteId: id } });
+          await tx.quoteLineItem.createMany({
+            data: lineItemsData.map((item) => ({ ...item, quoteId: id })),
+          });
+          return tx.quote.update({ where: { id }, data, include });
         });
-        return tx.quote.update({ where: { id }, data, include });
-      });
+        this.logger.log(`[update] Quote updated with line items: id=${id}`);
+        return result;
+      } catch (error) {
+        handlePrismaError(error, this.logger, 'update.transaction');
+      }
     }
 
     if (dto.taxRate !== undefined || dto.discount !== undefined) {
-      // Recalculate with existing line items
       const lineItems = await this.prisma.quoteLineItem.findMany({
         where: { quoteId: id },
       });
@@ -244,17 +260,30 @@ export class QuotesService {
       data.total = total;
     }
 
-    return this.prisma.quote.update({ where: { id }, data, include });
+    try {
+      const result = await this.prisma.quote.update({ where: { id }, data, include });
+      this.logger.log(`[update] Quote updated: id=${id}, status=${result.status}`);
+      return result;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'update.quote');
+    }
   }
 
   async delete(id: string) {
     const quote = await this.findOne(id);
     if (quote.status !== 'DRAFT') {
+      this.logger.warn(`[delete] Attempt to delete non-draft quote: id=${id}, status=${quote.status}`);
       throw new BadRequestException(
         'Only draft quotes can be deleted',
       );
     }
-    return this.prisma.quote.delete({ where: { id } });
+    try {
+      const result = await this.prisma.quote.delete({ where: { id } });
+      this.logger.log(`[delete] Quote deleted: id=${id}`);
+      return result;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'delete.quote');
+    }
   }
 
   async send(id: string) {

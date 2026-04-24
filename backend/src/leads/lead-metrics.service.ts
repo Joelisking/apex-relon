@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 
 export interface StageTimelineEntry {
@@ -32,6 +32,8 @@ export interface RiskFlag {
 
 @Injectable()
 export class LeadMetricsService {
+  private readonly logger = new Logger(LeadMetricsService.name);
+
   constructor(private prisma: PrismaService) {}
 
   /**

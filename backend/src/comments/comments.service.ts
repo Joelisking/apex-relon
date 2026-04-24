@@ -1,10 +1,12 @@
 import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
 import { NotificationType } from '../notifications/notification-types.constants';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
+import { handlePrismaError } from '../common/prisma-error.handler';
 
 const MENTION_RE = /@\[([^\]]+)\]\(([a-f0-9-]{36})\)/g;
 
@@ -43,24 +45,28 @@ export class CommentsService {
   async create(projectId: string, authorId: string, dto: CreateCommentDto) {
     const mentionedIds = dto.mentionedIds ?? extractMentions(dto.content);
 
-    const comment = await this.prisma.projectComment.create({
-      data: {
-        projectId,
-        authorId,
-        content: dto.content,
-        mentionedIds,
-        visibility: dto.visibility ?? 'TEAM',
-      },
-      include: { author: { select: { id: true, name: true, role: true } } },
-    });
+    let comment: Prisma.ProjectCommentGetPayload<{ include: { author: { select: { id: true; name: true; role: true } } } }>;
+    try {
+      comment = await this.prisma.projectComment.create({
+        data: {
+          projectId,
+          authorId,
+          content: dto.content,
+          mentionedIds,
+          visibility: dto.visibility ?? 'TEAM',
+        },
+        include: { author: { select: { id: true, name: true, role: true } } },
+      });
+      this.logger.log(`Comment created on project ${projectId} by user ${authorId}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'create.create');
+    }
 
-    // Get the project name for the notification message
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       select: { name: true },
     });
 
-    // Notify mentioned users (filter out author)
     const toNotify = mentionedIds.filter((id) => id !== authorId);
     if (toNotify.length > 0 && project) {
       const prefs = await this.prisma.notificationPreference.findMany({
@@ -75,14 +81,13 @@ export class CommentsService {
           userId,
           type: NotificationType.COMMENT_MENTION,
           title: `You were mentioned in a comment`,
-          message: `${comment.author.name} mentioned you on project "${project.name}"`,
+          message: `${comment!.author.name} mentioned you on project "${project.name}"`,
           entityType: 'PROJECT',
           entityId: projectId,
         }));
 
       await this.notifications.createMany(dtos);
 
-      // Send email to mentioned users
       const mentionedUsers = await this.prisma.user.findMany({
         where: { id: { in: dtos.map((d) => d.userId) } },
         select: { id: true, name: true, email: true },
@@ -92,37 +97,55 @@ export class CommentsService {
           .sendCommentMentionEmail(
             mu.email,
             mu.name,
-            comment.author.name,
+            comment!.author.name,
             project.name,
             projectId,
-            comment.content,
+            comment!.content,
           )
           .catch((err) => this.logger.error(`Failed to send mention email to ${mu.email}`, err));
       }
     }
 
-    return comment;
+    return comment!;
   }
 
   async update(commentId: string, requesterId: string, dto: UpdateCommentDto) {
     const existing = await this.prisma.projectComment.findUnique({ where: { id: commentId } });
-    if (!existing) throw new NotFoundException(`Comment ${commentId} not found`);
+    if (!existing) {
+      this.logger.warn(`update: comment ${commentId} not found`);
+      throw new NotFoundException(`Comment ${commentId} not found`);
+    }
     if (existing.authorId !== requesterId) {
       throw new ForbiddenException('You can only edit your own comments');
     }
-    return this.prisma.projectComment.update({
-      where: { id: commentId },
-      data: { content: dto.content },
-      include: { author: { select: { id: true, name: true, role: true } } },
-    });
+    try {
+      const updated = await this.prisma.projectComment.update({
+        where: { id: commentId },
+        data: { content: dto.content },
+        include: { author: { select: { id: true, name: true, role: true } } },
+      });
+      this.logger.log(`Comment ${commentId} updated by user ${requesterId}`);
+      return updated;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'update.update');
+    }
   }
 
   async delete(commentId: string, requesterId: string) {
     const existing = await this.prisma.projectComment.findUnique({ where: { id: commentId } });
-    if (!existing) throw new NotFoundException(`Comment ${commentId} not found`);
+    if (!existing) {
+      this.logger.warn(`delete: comment ${commentId} not found`);
+      throw new NotFoundException(`Comment ${commentId} not found`);
+    }
     if (existing.authorId !== requesterId) {
       throw new ForbiddenException('You can only delete your own comments');
     }
-    return this.prisma.projectComment.delete({ where: { id: commentId } });
+    try {
+      const deleted = await this.prisma.projectComment.delete({ where: { id: commentId } });
+      this.logger.log(`Comment ${commentId} deleted by user ${requesterId}`);
+      return deleted;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'delete.delete');
+    }
   }
 }

@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
@@ -12,9 +13,12 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { generateJobNumber } from './projects.util';
 import { getClientDisplayName } from '../clients/client-display.helper';
+import { handlePrismaError } from '../common/prisma-error.handler';
 
 @Injectable()
 export class ProjectsService {
+  private readonly logger = new Logger(ProjectsService.name);
+
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService,
@@ -146,7 +150,7 @@ export class ProjectsService {
             : 'Could not generate a unique job number — please try again',
         );
       }
-      throw error;
+      handlePrismaError(error, this.logger, 'create');
     }
 
     // Create team member assignments if provided
@@ -160,6 +164,8 @@ export class ProjectsService {
         skipDuplicates: true,
       });
     }
+
+    this.logger.log(`Project ${project.id} created (job: ${project.jobNumber})`);
 
     // Update client project counts
     await this.updateClientProjectCounts(clientId);
@@ -272,6 +278,7 @@ export class ProjectsService {
     });
 
     if (!existingProject) {
+      this.logger.warn(`update: Project ${id} not found`);
       throw new NotFoundException(`Project with ID ${id} not found`);
     }
 
@@ -296,11 +303,17 @@ export class ProjectsService {
       (projectUpdateData as Record<string, unknown>).completedDate = new Date();
     }
 
-    const project = await this.prisma.project.update({
-      where: { id },
-      data: projectUpdateData,
-      include: this.projectInclude,
-    });
+    let project: Awaited<ReturnType<typeof this.prisma.project.update>>;
+    try {
+      project = await this.prisma.project.update({
+        where: { id },
+        data: projectUpdateData,
+        include: this.projectInclude,
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'update');
+    }
+    this.logger.log(`Project ${id} updated`);
 
     // Replace cost segments if provided (undefined = leave untouched, [] = clear all)
     if (costSegments !== undefined) {
@@ -404,12 +417,19 @@ export class ProjectsService {
     });
 
     if (!project) {
+      this.logger.warn(`remove: Project ${id} not found`);
       throw new NotFoundException(`Project with ID ${id} not found`);
     }
 
-    await this.prisma.project.delete({
-      where: { id },
-    });
+    try {
+      await this.prisma.project.delete({
+        where: { id },
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'remove');
+    }
+
+    this.logger.log(`Project ${id} deleted`);
 
     // Update client project counts
     await this.updateClientProjectCounts(project.clientId);

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { CreateUserRateDto } from './dto/create-user-rate.dto';
@@ -6,9 +6,12 @@ import { UpdateUserRateDto } from './dto/update-user-rate.dto';
 import { CreateProjectBudgetDto } from './dto/create-project-budget.dto';
 import { ProjectsProfitabilityService } from '../projects/projects-profitability.service';
 import { AuditService } from '../audit/audit.service';
+import { handlePrismaError } from '../common/prisma-error.handler';
 
 @Injectable()
 export class TimeTrackingService {
+  private readonly logger = new Logger(TimeTrackingService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly profitabilityService: ProjectsProfitabilityService,
@@ -18,7 +21,6 @@ export class TimeTrackingService {
   // ─── Time Entries ─────────────────────────────────────────────────────────
 
   async createEntry(dto: CreateTimeEntryDto & { userId: string; submittedById?: string }) {
-    // When a proxy entry is being created, verify the target user actually exists
     if (dto.submittedById) {
       const targetExists = await this.prisma.user.findUnique({
         where: { id: dto.userId },
@@ -29,8 +31,6 @@ export class TimeTrackingService {
       }
     }
 
-    // Validate that the user's role is assigned to the selected service item subtask
-    // in the project's cost breakdown (prevents unauthorized time logging)
     if (dto.projectId && dto.serviceItemId && dto.serviceItemSubtaskId) {
       await this.validateRoleForServiceItem(
         dto.userId,
@@ -44,30 +44,36 @@ export class TimeTrackingService {
     const hourlyRate = dto.hourlyRate ?? rate?.rate ?? 0;
     const totalCost = dto.hours * hourlyRate;
 
-    const entry = await this.prisma.timeEntry.create({
-      data: {
-        userId: dto.userId,
-        submittedById: dto.submittedById ?? null,
-        projectId: dto.projectId,
-        taskId: dto.taskId,
-        workCodeId: dto.workCodeId,
-        date: new Date(`${dto.date.split('T')[0]}T12:00:00.000Z`),
-        hours: dto.hours,
-        description: dto.description,
-        billable: dto.billable ?? true,
-        hourlyRate,
-        totalCost,
-        source: dto.source ?? 'manual',
-        serviceItemId: dto.serviceItemId,
-        serviceItemSubtaskId: dto.serviceItemSubtaskId,
-      },
-      include: {
-        user: { select: { id: true, name: true } },
-        submittedBy: { select: { id: true, name: true } },
-        project: { select: { id: true, name: true } },
-        workCode: { select: { id: true, code: true, name: true, parentCode: true, isMainTask: true } },
-      },
-    });
+    let entry: Awaited<ReturnType<typeof this.prisma.timeEntry.create>>;
+    try {
+      entry = await this.prisma.timeEntry.create({
+        data: {
+          userId: dto.userId,
+          submittedById: dto.submittedById ?? null,
+          projectId: dto.projectId,
+          taskId: dto.taskId,
+          workCodeId: dto.workCodeId,
+          date: new Date(`${dto.date.split('T')[0]}T12:00:00.000Z`),
+          hours: dto.hours,
+          description: dto.description,
+          billable: dto.billable ?? true,
+          hourlyRate,
+          totalCost,
+          source: dto.source ?? 'manual',
+          serviceItemId: dto.serviceItemId,
+          serviceItemSubtaskId: dto.serviceItemSubtaskId,
+        },
+        include: {
+          user: { select: { id: true, name: true } },
+          submittedBy: { select: { id: true, name: true } },
+          project: { select: { id: true, name: true } },
+          workCode: { select: { id: true, code: true, name: true, parentCode: true, isMainTask: true } },
+        },
+      });
+      this.logger.log(`createEntry: time entry created id=${entry.id} userId=${dto.userId}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'createEntry');
+    }
 
     if (dto.projectId) {
       await this.profitabilityService.recalculateProjectCost(dto.projectId);
@@ -78,21 +84,24 @@ export class TimeTrackingService {
       action: 'time_entry.created',
       targetUserId: dto.submittedById ? dto.userId : undefined,
       details: {
-        entryId: entry.id,
-        hours: entry.hours,
+        entryId: entry!.id,
+        hours: entry!.hours,
         date: dto.date,
         projectId: dto.projectId ?? null,
         serviceItemId: dto.serviceItemId ?? null,
-        billable: entry.billable,
+        billable: entry!.billable,
       },
     });
 
-    return entry;
+    return entry!;
   }
 
   async getEntryById(id: string) {
     const entry = await this.prisma.timeEntry.findUnique({ where: { id } });
-    if (!entry) throw new NotFoundException(`Time entry ${id} not found`);
+    if (!entry) {
+      this.logger.warn(`getEntryById: time entry not found id=${id}`);
+      throw new NotFoundException(`Time entry ${id} not found`);
+    }
     return entry;
   }
 
@@ -133,23 +142,28 @@ export class TimeTrackingService {
     const hours = data.hours ?? entry.hours;
     const hourlyRate = data.hourlyRate ?? entry.hourlyRate ?? 0;
 
-    const updated = await this.prisma.timeEntry.update({
-      where: { id },
-      data: {
-        ...(data.date && { date: new Date(`${data.date.split('T')[0]}T12:00:00.000Z`) }),
-        ...(data.hours !== undefined && { hours: data.hours }),
-        ...(data.description !== undefined && { description: data.description }),
-        ...(data.billable !== undefined && { billable: data.billable }),
-        ...(data.hourlyRate !== undefined && { hourlyRate: data.hourlyRate }),
-        ...(data.projectId !== undefined && { projectId: data.projectId }),
-        ...(data.workCodeId !== undefined && { workCodeId: data.workCodeId }),
-        ...(data.serviceItemId !== undefined && { serviceItemId: data.serviceItemId }),
-        ...(data.serviceItemSubtaskId !== undefined && { serviceItemSubtaskId: data.serviceItemSubtaskId }),
-        totalCost: hours * hourlyRate,
-      },
-    });
+    let updated: Awaited<ReturnType<typeof this.prisma.timeEntry.update>>;
+    try {
+      updated = await this.prisma.timeEntry.update({
+        where: { id },
+        data: {
+          ...(data.date && { date: new Date(`${data.date.split('T')[0]}T12:00:00.000Z`) }),
+          ...(data.hours !== undefined && { hours: data.hours }),
+          ...(data.description !== undefined && { description: data.description }),
+          ...(data.billable !== undefined && { billable: data.billable }),
+          ...(data.hourlyRate !== undefined && { hourlyRate: data.hourlyRate }),
+          ...(data.projectId !== undefined && { projectId: data.projectId }),
+          ...(data.workCodeId !== undefined && { workCodeId: data.workCodeId }),
+          ...(data.serviceItemId !== undefined && { serviceItemId: data.serviceItemId }),
+          ...(data.serviceItemSubtaskId !== undefined && { serviceItemSubtaskId: data.serviceItemSubtaskId }),
+          totalCost: hours * hourlyRate,
+        },
+      });
+      this.logger.log(`updateEntry: time entry updated id=${id}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'updateEntry');
+    }
 
-    // Recalculate cost for old project (if projectId changed) and new project
     const affectedProjectId = data.projectId ?? entry.projectId;
     if (affectedProjectId) {
       await this.profitabilityService.recalculateProjectCost(affectedProjectId);
@@ -167,7 +181,7 @@ export class TimeTrackingService {
       });
     }
 
-    return updated;
+    return updated!;
   }
 
   async deleteEntry(id: string, actorId?: string) {
@@ -175,7 +189,14 @@ export class TimeTrackingService {
       where: { id },
       select: { projectId: true, userId: true, hours: true },
     });
-    await this.prisma.timeEntry.delete({ where: { id } });
+
+    try {
+      await this.prisma.timeEntry.delete({ where: { id } });
+      this.logger.log(`deleteEntry: time entry deleted id=${id}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'deleteEntry');
+    }
+
     if (entry?.projectId) {
       await this.profitabilityService.recalculateProjectCost(entry.projectId);
     }
@@ -192,16 +213,22 @@ export class TimeTrackingService {
   // ─── User Rates ───────────────────────────────────────────────────────────
 
   async createRate(dto: CreateUserRateDto) {
-    return this.prisma.userRate.create({
-      data: {
-        userId: dto.userId,
-        rate: dto.rate,
-        effectiveFrom: new Date(dto.effectiveFrom),
-        effectiveTo: dto.effectiveTo ? new Date(dto.effectiveTo) : null,
-        payGradeId: dto.payGradeId,
-      },
-      include: { payGrade: { select: { id: true, name: true, code: true } } },
-    });
+    try {
+      const rate = await this.prisma.userRate.create({
+        data: {
+          userId: dto.userId,
+          rate: dto.rate,
+          effectiveFrom: new Date(dto.effectiveFrom),
+          effectiveTo: dto.effectiveTo ? new Date(dto.effectiveTo) : null,
+          payGradeId: dto.payGradeId,
+        },
+        include: { payGrade: { select: { id: true, name: true, code: true } } },
+      });
+      this.logger.log(`createRate: user rate created id=${rate.id} userId=${dto.userId}`);
+      return rate;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'createRate');
+    }
   }
 
   async getAllRates() {
@@ -230,26 +257,29 @@ export class TimeTrackingService {
     if (dto.effectiveTo !== undefined) {
       data.effectiveTo = dto.effectiveTo ? new Date(dto.effectiveTo) : null;
     }
-    return this.prisma.userRate.update({
-      where: { id },
-      data,
-      include: { payGrade: { select: { id: true, name: true, code: true } } },
-    });
+
+    try {
+      const rate = await this.prisma.userRate.update({
+        where: { id },
+        data,
+        include: { payGrade: { select: { id: true, name: true, code: true } } },
+      });
+      this.logger.log(`updateRate: user rate updated id=${id}`);
+      return rate;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'updateRate');
+    }
   }
 
   async deleteRate(id: string) {
-    await this.prisma.userRate.delete({ where: { id } });
+    try {
+      await this.prisma.userRate.delete({ where: { id } });
+      this.logger.log(`deleteRate: user rate deleted id=${id}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'deleteRate');
+    }
   }
 
-  /**
-   * Resolves the effective hourly rate for a user on a given project.
-   * For INDOT projects: looks up the project's county → IndotPayZone → PayGrade → UserRate.
-   * Fallback: uses the user's default-grade rate.
-   */
-  /**
-   * Validates that the user's role has an estimate for the given service item subtask
-   * in the project's cost breakdown (or an approved addendum). Throws if not authorized.
-   */
   private async validateRoleForServiceItem(
     userId: string,
     projectId: string,
@@ -260,11 +290,10 @@ export class TimeTrackingService {
       where: { id: userId },
       select: { role: true },
     });
-    if (!user) return; // user not found — let the entry fail on FK constraint
+    if (!user) return;
 
     const userRole = user.role;
 
-    // Check primary cost breakdown
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       select: { primaryCostBreakdownId: true },
@@ -289,9 +318,8 @@ export class TimeTrackingService {
           },
         });
 
-        if (estimate) return; // authorized via CB
+        if (estimate) return;
 
-        // Check approved addenda for this project
         const addendumLine = await this.prisma.projectAddendumLine.findFirst({
           where: {
             addendum: {
@@ -305,15 +333,13 @@ export class TimeTrackingService {
           },
         });
 
-        if (addendumLine) return; // authorized via addendum
+        if (addendumLine) return;
 
         throw new BadRequestException(
           `Role '${userRole}' is not assigned to this service item subtask in the project's cost breakdown.`,
         );
       }
-      // No CB line for this service item — no restriction applies
     }
-    // No primary CB on project — no restriction applies
   }
 
   private async resolveRate(userId: string, projectId?: string | null) {
@@ -324,7 +350,6 @@ export class TimeTrackingService {
       });
 
       if (project?.isIndot && project.county?.length) {
-        // Find a zone that covers any of the project counties
         const zone = await this.prisma.indotPayZone.findFirst({
           where: { counties: { hasSome: project.county } },
           select: { payGradeId: true },
@@ -341,7 +366,6 @@ export class TimeTrackingService {
             orderBy: { effectiveFrom: 'desc' },
           });
           if (indotRate) return indotRate;
-          // Fall through to default if no INDOT rate configured for this user
         }
       }
     }
@@ -357,18 +381,11 @@ export class TimeTrackingService {
     });
   }
 
-  /**
-   * Returns whether the user has a configured pay rate (for pre-flight check before time logging).
-   */
   async checkUserRate(userId: string, projectId?: string): Promise<{ hasRate: boolean }> {
     const rate = await this.resolveRate(userId, projectId ?? null);
     return { hasRate: rate !== null && rate.rate > 0 };
   }
 
-  /**
-   * Returns budget vs. actual hours for a given user + project + subtask.
-   * Matches the user's role against the CB role estimate for the subtask.
-   */
   async getSubtaskBudget(
     userId: string,
     projectId: string,
@@ -377,8 +394,6 @@ export class TimeTrackingService {
     const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
     const userRole = user?.role ?? null;
 
-    // CB role estimates may store the role key OR the role label.
-    // Build a set of matchers so we match regardless of which form was used.
     const roleMatchers: string[] = [];
     if (userRole) {
       roleMatchers.push(userRole);
@@ -414,7 +429,6 @@ export class TimeTrackingService {
         0,
       ) ?? 0;
 
-    // Also include hours from approved/invoiced addendum lines for the same subtask + role
     const addendumLines = await this.prisma.projectAddendumLine.findMany({
       where: {
         addendum: { projectId, status: { in: ['APPROVED', 'INVOICED'] } },
@@ -438,18 +452,24 @@ export class TimeTrackingService {
   // ─── Project Budget ───────────────────────────────────────────────────────
 
   async upsertBudget(dto: CreateProjectBudgetDto) {
-    return this.prisma.projectBudget.upsert({
-      where: { projectId: dto.projectId },
-      update: {
-        budgetedHours: dto.budgetedHours,
-        budgetedCost: dto.budgetedCost,
-      },
-      create: {
-        projectId: dto.projectId,
-        budgetedHours: dto.budgetedHours ?? 0,
-        budgetedCost: dto.budgetedCost ?? 0,
-      },
-    });
+    try {
+      const budget = await this.prisma.projectBudget.upsert({
+        where: { projectId: dto.projectId },
+        update: {
+          budgetedHours: dto.budgetedHours,
+          budgetedCost: dto.budgetedCost,
+        },
+        create: {
+          projectId: dto.projectId,
+          budgetedHours: dto.budgetedHours ?? 0,
+          budgetedCost: dto.budgetedCost ?? 0,
+        },
+      });
+      this.logger.log(`upsertBudget: budget upserted projectId=${dto.projectId}`);
+      return budget;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'upsertBudget');
+    }
   }
 
   // ─── Summary Endpoints ────────────────────────────────────────────────────
@@ -598,7 +618,6 @@ export class TimeTrackingService {
       orderBy: [{ userId: 'asc' }, { date: 'asc' }],
     });
 
-    // Group by userId → day
     const byUser: Record<string, any> = {};
     for (const entry of entries) {
       const uid = entry.userId;

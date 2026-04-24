@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { AiService } from '../../ai/ai.service';
 import { CustomerCrudService } from './customer-crud.service';
 import { CustomerMetricsService } from './customer-metrics.service';
@@ -6,6 +6,8 @@ import { CustomerHealthFlagsService } from './customer-health-flags.service';
 
 @Injectable()
 export class CustomerAiService {
+  private readonly logger = new Logger(CustomerAiService.name);
+
   constructor(
     private readonly aiService: AiService,
     private readonly crudService: CustomerCrudService,

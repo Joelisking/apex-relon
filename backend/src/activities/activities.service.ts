@@ -1,9 +1,12 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
+import { handlePrismaError } from '../common/prisma-error.handler';
 
 @Injectable()
 export class ActivitiesService {
+  private readonly logger = new Logger(ActivitiesService.name);
+
   constructor(private prisma: PrismaService) {}
 
   // ==================== LEAD ACTIVITIES ====================
@@ -13,32 +16,37 @@ export class ActivitiesService {
     userId: string,
     createActivityDto: CreateActivityDto,
   ) {
-    // Validate meeting type is provided for meetings
     if (createActivityDto.type === 'meeting' && !createActivityDto.meetingType) {
       throw new BadRequestException('meetingType is required for meeting activities');
     }
 
-    return this.prisma.activity.create({
-      data: {
-        leadId,
-        userId,
-        type: createActivityDto.type,
-        activityDate: new Date(createActivityDto.activityDate),
-        activityTime: createActivityDto.activityTime,
-        reason: createActivityDto.reason,
-        notes: createActivityDto.notes,
-        meetingType: createActivityDto.meetingType,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    try {
+      const activity = await this.prisma.activity.create({
+        data: {
+          leadId,
+          userId,
+          type: createActivityDto.type,
+          activityDate: new Date(createActivityDto.activityDate),
+          activityTime: createActivityDto.activityTime,
+          reason: createActivityDto.reason,
+          notes: createActivityDto.notes,
+          meetingType: createActivityDto.meetingType,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
-      },
-    });
+      });
+      this.logger.log(`Activity created for lead ${leadId} by user ${userId}`);
+      return activity;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'createActivity.create');
+    }
   }
 
   async getActivitiesByLead(leadId: string) {
@@ -61,12 +69,12 @@ export class ActivitiesService {
   }
 
   async deleteActivity(activityId: string, userId: string) {
-    // Verify the activity belongs to the user
     const activity = await this.prisma.activity.findUnique({
       where: { id: activityId },
     });
 
     if (!activity) {
+      this.logger.warn(`deleteActivity: activity ${activityId} not found`);
       throw new BadRequestException('Activity not found');
     }
 
@@ -74,9 +82,15 @@ export class ActivitiesService {
       throw new BadRequestException('You can only delete your own activities');
     }
 
-    return this.prisma.activity.delete({
-      where: { id: activityId },
-    });
+    try {
+      const deleted = await this.prisma.activity.delete({
+        where: { id: activityId },
+      });
+      this.logger.log(`Activity ${activityId} deleted by user ${userId}`);
+      return deleted;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'deleteActivity.delete');
+    }
   }
 
   // ==================== CLIENT ACTIVITIES ====================
@@ -86,40 +100,43 @@ export class ActivitiesService {
     userId: string,
     createActivityDto: CreateActivityDto,
   ) {
-    // Validate meeting type is provided for meetings
     if (createActivityDto.type === 'meeting' && !createActivityDto.meetingType) {
       throw new BadRequestException('meetingType is required for meeting activities');
     }
 
-    const activity = await this.prisma.activity.create({
-      data: {
-        clientId,
-        userId,
-        type: createActivityDto.type,
-        activityDate: new Date(createActivityDto.activityDate),
-        activityTime: createActivityDto.activityTime,
-        reason: createActivityDto.reason,
-        notes: createActivityDto.notes,
-        meetingType: createActivityDto.meetingType,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    try {
+      const activity = await this.prisma.activity.create({
+        data: {
+          clientId,
+          userId,
+          type: createActivityDto.type,
+          activityDate: new Date(createActivityDto.activityDate),
+          activityTime: createActivityDto.activityTime,
+          reason: createActivityDto.reason,
+          notes: createActivityDto.notes,
+          meetingType: createActivityDto.meetingType,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
-      },
-    });
+      });
+      this.logger.log(`Activity created for client ${clientId} by user ${userId}`);
 
-    // Update client's lastContactDate
-    await this.prisma.client.update({
-      where: { id: clientId },
-      data: { lastContactDate: new Date() },
-    });
+      await this.prisma.client.update({
+        where: { id: clientId },
+        data: { lastContactDate: new Date() },
+      });
 
-    return activity;
+      return activity;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'createActivityForClient.create');
+    }
   }
 
   async getActivitiesByClient(clientId: string) {
@@ -148,32 +165,37 @@ export class ActivitiesService {
     userId: string,
     createActivityDto: CreateActivityDto,
   ) {
-    // Validate meeting type is provided for meetings
     if (createActivityDto.type === 'meeting' && !createActivityDto.meetingType) {
       throw new BadRequestException('meetingType is required for meeting activities');
     }
 
-    return this.prisma.activity.create({
-      data: {
-        projectId,
-        userId,
-        type: createActivityDto.type,
-        activityDate: new Date(createActivityDto.activityDate),
-        activityTime: createActivityDto.activityTime,
-        reason: createActivityDto.reason,
-        notes: createActivityDto.notes,
-        meetingType: createActivityDto.meetingType,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    try {
+      const activity = await this.prisma.activity.create({
+        data: {
+          projectId,
+          userId,
+          type: createActivityDto.type,
+          activityDate: new Date(createActivityDto.activityDate),
+          activityTime: createActivityDto.activityTime,
+          reason: createActivityDto.reason,
+          notes: createActivityDto.notes,
+          meetingType: createActivityDto.meetingType,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
-      },
-    });
+      });
+      this.logger.log(`Activity created for project ${projectId} by user ${userId}`);
+      return activity;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'createActivityForProject.create');
+    }
   }
 
   async getActivitiesByProject(projectId: string) {

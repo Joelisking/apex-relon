@@ -1,12 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { ProjectsService } from './projects.service';
 import { Prisma } from '@prisma/client';
+import { handlePrismaError } from '../common/prisma-error.handler';
 
 @Injectable()
 export class ProjectsBulkService {
+  private readonly logger = new Logger(ProjectsBulkService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
@@ -34,6 +37,10 @@ export class ProjectsBulkService {
           select: { id: true },
         });
         accessibleIds = accessible.map((r) => r.id);
+        if (accessibleIds.length === 0) {
+          this.logger.warn(`bulkUpdate: user ${userId} has no access to any of the requested project IDs`);
+          throw new NotFoundException('None of the requested projects were found or accessible');
+        }
       }
     }
 
@@ -50,10 +57,16 @@ export class ProjectsBulkService {
       });
     }
 
-    const result = await this.prisma.project.updateMany({
-      where: { id: { in: accessibleIds } },
-      data: data as Prisma.ProjectUpdateManyMutationInput,
-    });
+    let result: Prisma.BatchPayload;
+    try {
+      result = await this.prisma.project.updateMany({
+        where: { id: { in: accessibleIds } },
+        data: data as Prisma.ProjectUpdateManyMutationInput,
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'bulkUpdate.updateMany');
+    }
+    this.logger.log(`Bulk updated ${result.count} projects`);
 
     if (data.status && projectSnapshots.length > 0) {
       const newStatus = data.status as string;
@@ -110,6 +123,10 @@ export class ProjectsBulkService {
           select: { id: true },
         });
         accessibleIds = accessible.map((r) => r.id);
+        if (accessibleIds.length === 0) {
+          this.logger.warn(`bulkDelete: user ${userId} has no access to any of the requested project IDs`);
+          throw new NotFoundException('None of the requested projects were found or accessible');
+        }
       }
     }
 
@@ -122,9 +139,15 @@ export class ProjectsBulkService {
       ...new Set(projectsToDelete.map((p) => p.clientId)),
     ];
 
-    const result = await this.prisma.project.deleteMany({
-      where: { id: { in: accessibleIds } },
-    });
+    let result: Prisma.BatchPayload;
+    try {
+      result = await this.prisma.project.deleteMany({
+        where: { id: { in: accessibleIds } },
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'bulkDelete.deleteMany');
+    }
+    this.logger.log(`Bulk deleted ${result.count} projects`);
 
     for (const clientId of affectedClientIds) {
       await this.projectsService.updateClientProjectCounts(clientId);

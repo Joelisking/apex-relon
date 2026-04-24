@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateCostBreakdownDto } from './dto/create-cost-breakdown.dto';
 import { UpdateCostBreakdownDto } from './dto/update-cost-breakdown.dto';
 import { UpsertRoleEstimateDto } from './dto/upsert-role-estimate.dto';
+import { handlePrismaError } from '../common/prisma-error.handler';
 
 const LINE_INCLUDE = {
   serviceItem: {
@@ -16,6 +17,8 @@ const LINE_INCLUDE = {
 
 @Injectable()
 export class CostBreakdownService {
+  private readonly logger = new Logger(CostBreakdownService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(tenantId: string, filters?: { leadId?: string; projectId?: string }) {
@@ -60,64 +63,82 @@ export class CostBreakdownService {
       },
     });
 
-    if (!breakdown) throw new NotFoundException('Cost breakdown not found');
+    if (!breakdown) {
+      this.logger.warn(`[findOne] Cost breakdown not found: id=${id}`);
+      throw new NotFoundException('Cost breakdown not found');
+    }
     return this.withTotals(breakdown);
   }
 
   async create(dto: CreateCostBreakdownDto, tenantId: string, userId: string) {
-    const breakdown = await this.prisma.costBreakdown.create({
-      data: {
-        tenantId,
-        createdById: userId,
-        title: dto.title,
-        jobTypeId: dto.jobTypeId,
-        projectId: dto.projectId,
-        leadId: dto.leadId,
-        notes: dto.notes,
-        status: 'DRAFT',
-      },
-    });
+    let breakdown: Awaited<ReturnType<typeof this.prisma.costBreakdown.create>>;
+    try {
+      breakdown = await this.prisma.costBreakdown.create({
+        data: {
+          tenantId,
+          createdById: userId,
+          title: dto.title,
+          jobTypeId: dto.jobTypeId,
+          projectId: dto.projectId,
+          leadId: dto.leadId,
+          notes: dto.notes,
+          status: 'DRAFT',
+        },
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'create.costBreakdown');
+    }
 
     if (dto.templateId) {
-      // Clone lines + role estimates from the template
       const tmpl = await this.prisma.costBreakdown.findFirst({
         where: { id: dto.templateId, tenantId },
         include: { lines: { include: LINE_INCLUDE, orderBy: { sortOrder: 'asc' } } },
       });
       if (tmpl) {
         for (const tl of tmpl.lines) {
-          const newLine = await this.prisma.costBreakdownLine.create({
-            data: {
-              costBreakdownId: breakdown.id,
-              serviceItemId: tl.serviceItemId,
-              sortOrder: tl.sortOrder,
-              excludedSubtaskIds: tl.excludedSubtaskIds,
-            },
-          });
-          for (const est of tl.roleEstimates) {
-            await this.prisma.costBreakdownRoleEstimate.create({
+          let newLine: Awaited<ReturnType<typeof this.prisma.costBreakdownLine.create>>;
+          try {
+            newLine = await this.prisma.costBreakdownLine.create({
               data: {
-                lineId: newLine.id,
-                subtaskId: est.subtaskId,
-                role: est.role,
-                estimatedHours: est.estimatedHours,
-                hourlyRate: est.hourlyRate,
+                costBreakdownId: breakdown.id,
+                serviceItemId: tl.serviceItemId,
+                sortOrder: tl.sortOrder,
+                excludedSubtaskIds: tl.excludedSubtaskIds,
               },
             });
+          } catch (error) {
+            handlePrismaError(error, this.logger, 'create.templateLine');
+          }
+          for (const est of tl.roleEstimates) {
+            try {
+              await this.prisma.costBreakdownRoleEstimate.create({
+                data: {
+                  lineId: newLine.id,
+                  subtaskId: est.subtaskId,
+                  role: est.role,
+                  estimatedHours: est.estimatedHours,
+                  hourlyRate: est.hourlyRate,
+                },
+              });
+            } catch (error) {
+              handlePrismaError(error, this.logger, 'create.templateRoleEstimate');
+            }
           }
         }
-        // Copy direct expense rates (not quantities — those are job-specific)
-        await this.prisma.costBreakdown.update({
-          where: { id: breakdown.id },
-          data: {
-            mileageRate: tmpl.mileageRate,
-            lodgingRate: tmpl.lodgingRate,
-            perDiemRate: tmpl.perDiemRate,
-          },
-        });
+        try {
+          await this.prisma.costBreakdown.update({
+            where: { id: breakdown.id },
+            data: {
+              mileageRate: tmpl.mileageRate,
+              lodgingRate: tmpl.lodgingRate,
+              perDiemRate: tmpl.perDiemRate,
+            },
+          });
+        } catch (error) {
+          handlePrismaError(error, this.logger, 'create.copyRates');
+        }
       }
     } else if (dto.jobTypeId) {
-      // Auto-populate lines from ServiceItems linked to this JobType
       const serviceItems = await this.prisma.serviceItem.findMany({
         where: {
           jobTypeIds: { has: dto.jobTypeId },
@@ -127,19 +148,23 @@ export class CostBreakdownService {
       });
 
       for (let i = 0; i < serviceItems.length; i++) {
-        await this.prisma.costBreakdownLine.create({
-          data: {
-            costBreakdownId: breakdown.id,
-            serviceItemId: serviceItems[i].id,
-            sortOrder: i,
-          },
-        });
+        try {
+          await this.prisma.costBreakdownLine.create({
+            data: {
+              costBreakdownId: breakdown.id,
+              serviceItemId: serviceItems[i].id,
+              sortOrder: i,
+            },
+          });
+        } catch (error) {
+          handlePrismaError(error, this.logger, 'create.autoLine');
+        }
       }
     }
 
     const result = await this.findOne(breakdown.id, tenantId);
+    this.logger.log(`[create] Cost breakdown created: id=${breakdown.id}`);
 
-    // Auto-sync ProjectServiceItems if projectId is set
     if (dto.projectId) {
       await this.syncProjectServiceItems(breakdown.id, dto.projectId);
     }
@@ -149,7 +174,6 @@ export class CostBreakdownService {
 
   async update(id: string, dto: UpdateCostBreakdownDto, tenantId: string) {
     const breakdown = await this.findOne(id, tenantId);
-    // When promoting to template, demote any existing template for the same job type
     if (dto.isTemplate && breakdown.jobTypeId) {
       await this.prisma.costBreakdown.updateMany({
         where: { tenantId, jobTypeId: breakdown.jobTypeId as string, isTemplate: true, id: { not: id } },
@@ -162,11 +186,16 @@ export class CostBreakdownService {
     if (sanitized !== undefined) {
       data.roleDisplayNames = sanitized;
     }
-    const updated = await this.prisma.costBreakdown.update({
-      where: { id },
-      data,
-    });
-    // If projectId is being set, sync ProjectServiceItems
+    let updated: Awaited<ReturnType<typeof this.prisma.costBreakdown.update>>;
+    try {
+      updated = await this.prisma.costBreakdown.update({
+        where: { id },
+        data,
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'update.costBreakdown');
+    }
+    this.logger.log(`[update] Cost breakdown updated: id=${id}`);
     if (dto.projectId) {
       await this.syncProjectServiceItems(id, dto.projectId);
     }
@@ -189,17 +218,21 @@ export class CostBreakdownService {
   async addLine(costBreakdownId: string, serviceItemId: string, tenantId: string) {
     const breakdown = await this.findOne(costBreakdownId, tenantId);
 
-    // Check the service item isn't already a line
     const existing = breakdown.lines.find((l: any) => l.serviceItemId === serviceItemId);
     if (existing) return existing;
 
     const sortOrder = breakdown.lines.length;
-    const line = await this.prisma.costBreakdownLine.create({
-      data: { costBreakdownId, serviceItemId, sortOrder },
-      include: LINE_INCLUDE,
-    });
+    let line: Awaited<ReturnType<typeof this.prisma.costBreakdownLine.create>>;
+    try {
+      line = await this.prisma.costBreakdownLine.create({
+        data: { costBreakdownId, serviceItemId, sortOrder },
+        include: LINE_INCLUDE,
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'addLine.create');
+    }
+    this.logger.log(`[addLine] Line added to breakdown id=${costBreakdownId}, serviceItemId=${serviceItemId}`);
 
-    // If the CB is linked to a project, sync the new service item
     if (breakdown.projectId) {
       await this.addProjectServiceItem(breakdown.projectId as string, serviceItemId);
     }
@@ -207,7 +240,6 @@ export class CostBreakdownService {
     return line;
   }
 
-  /** Syncs ProjectServiceItem records from a cost breakdown's lines. */
   async syncProjectServiceItems(costBreakdownId: string, projectId: string) {
     const lines = await this.prisma.costBreakdownLine.findMany({
       where: { costBreakdownId },
@@ -224,29 +256,48 @@ export class CostBreakdownService {
       where: { projectId, serviceItemId },
     });
     if (!existing) {
-      await this.prisma.projectServiceItem.create({
-        data: { projectId, serviceItemId },
-      });
+      try {
+        await this.prisma.projectServiceItem.create({
+          data: { projectId, serviceItemId },
+        });
+      } catch (error) {
+        handlePrismaError(error, this.logger, 'addProjectServiceItem.create');
+      }
     }
   }
 
   async remove(id: string, tenantId: string) {
     await this.findOne(id, tenantId);
-    return this.prisma.costBreakdown.delete({ where: { id } });
+    try {
+      const result = await this.prisma.costBreakdown.delete({ where: { id } });
+      this.logger.log(`[remove] Cost breakdown deleted: id=${id}`);
+      return result;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'remove.delete');
+    }
   }
 
   async upsertRoleEstimate(lineId: string, dto: UpsertRoleEstimateDto, tenantId: string) {
     const line = await this.prisma.costBreakdownLine.findFirst({
       where: { id: lineId, costBreakdown: { tenantId } },
     });
-    if (!line) throw new NotFoundException('Cost breakdown line not found');
+    if (!line) {
+      this.logger.warn(`[upsertRoleEstimate] Cost breakdown line not found: id=${lineId}`);
+      throw new NotFoundException('Cost breakdown line not found');
+    }
 
     const { subtaskId, role, estimatedHours, hourlyRate } = dto;
-    const result = await this.prisma.costBreakdownRoleEstimate.upsert({
-      where: { lineId_subtaskId_role: { lineId, subtaskId, role } },
-      update: { estimatedHours, hourlyRate },
-      create: { lineId, subtaskId, role, estimatedHours, hourlyRate },
-    });
+    let result: Awaited<ReturnType<typeof this.prisma.costBreakdownRoleEstimate.upsert>>;
+    try {
+      result = await this.prisma.costBreakdownRoleEstimate.upsert({
+        where: { lineId_subtaskId_role: { lineId, subtaskId, role } },
+        update: { estimatedHours, hourlyRate },
+        create: { lineId, subtaskId, role, estimatedHours, hourlyRate },
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'upsertRoleEstimate.upsert');
+    }
+    this.logger.log(`[upsertRoleEstimate] Role estimate upserted: lineId=${lineId}, role=${role}`);
 
     await this.syncLeadExpectedValue(line.costBreakdownId);
     return result;
@@ -256,20 +307,38 @@ export class CostBreakdownService {
     const line = await this.prisma.costBreakdownLine.findFirst({
       where: { id: lineId, costBreakdown: { tenantId } },
     });
-    if (!line) throw new NotFoundException('Cost breakdown line not found');
+    if (!line) {
+      this.logger.warn(`[updateLine] Cost breakdown line not found: id=${lineId}`);
+      throw new NotFoundException('Cost breakdown line not found');
+    }
 
-    return this.prisma.costBreakdownLine.update({
-      where: { id: lineId },
-      data: dto,
-    });
+    try {
+      const result = await this.prisma.costBreakdownLine.update({
+        where: { id: lineId },
+        data: dto,
+      });
+      this.logger.log(`[updateLine] Line updated: id=${lineId}`);
+      return result;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'updateLine.update');
+    }
   }
 
   async deleteLine(lineId: string, tenantId: string) {
     const line = await this.prisma.costBreakdownLine.findFirst({
       where: { id: lineId, costBreakdown: { tenantId } },
     });
-    if (!line) throw new NotFoundException('Cost breakdown line not found');
-    const result = await this.prisma.costBreakdownLine.delete({ where: { id: lineId } });
+    if (!line) {
+      this.logger.warn(`[deleteLine] Cost breakdown line not found: id=${lineId}`);
+      throw new NotFoundException('Cost breakdown line not found');
+    }
+    let result: Awaited<ReturnType<typeof this.prisma.costBreakdownLine.delete>>;
+    try {
+      result = await this.prisma.costBreakdownLine.delete({ where: { id: lineId } });
+      this.logger.log(`[deleteLine] Line deleted: id=${lineId}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'deleteLine.delete');
+    }
     await this.syncLeadExpectedValue(line.costBreakdownId);
     return result;
   }
@@ -278,20 +347,22 @@ export class CostBreakdownService {
     const line = await this.prisma.costBreakdownLine.findFirst({
       where: { id: lineId, costBreakdown: { tenantId } },
     });
-    if (!line) throw new NotFoundException('Cost breakdown line not found');
+    if (!line) {
+      this.logger.warn(`[deleteRoleEstimate] Cost breakdown line not found: id=${lineId}`);
+      throw new NotFoundException('Cost breakdown line not found');
+    }
 
+    let result: Awaited<ReturnType<typeof this.prisma.costBreakdownRoleEstimate.delete>>;
     try {
-      const result = await this.prisma.costBreakdownRoleEstimate.delete({
+      result = await this.prisma.costBreakdownRoleEstimate.delete({
         where: { lineId_subtaskId_role: { lineId, subtaskId, role } },
       });
-      await this.syncLeadExpectedValue(line.costBreakdownId);
-      return result;
-    } catch (err) {
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
-        throw new NotFoundException(`Role estimate not found (lineId=${lineId}, subtaskId=${subtaskId}, role=${role})`);
-      }
-      throw err;
+      this.logger.log(`[deleteRoleEstimate] Role estimate deleted: lineId=${lineId}, role=${role}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'deleteRoleEstimate.delete');
     }
+    await this.syncLeadExpectedValue(line.costBreakdownId);
+    return result;
   }
 
   private async syncLeadExpectedValue(costBreakdownId: string): Promise<void> {
@@ -310,10 +381,14 @@ export class CostBreakdownService {
       .reduce((s, r) => (r.hourlyRate != null ? s + r.estimatedHours * r.hourlyRate : s), 0);
 
     if (total > 0) {
-      await this.prisma.lead.update({
-        where: { id: breakdown.leadId },
-        data: { expectedValue: total },
-      });
+      try {
+        await this.prisma.lead.update({
+          where: { id: breakdown.leadId },
+          data: { expectedValue: total },
+        });
+      } catch (error) {
+        handlePrismaError(error, this.logger, 'syncLeadExpectedValue.update');
+      }
     }
   }
 

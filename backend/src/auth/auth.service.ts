@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../database/prisma.service';
@@ -12,9 +13,12 @@ import { randomBytes } from 'crypto';
 import { RegisterDto } from './dto/register.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { PermissionsService } from '../permissions/permissions.service';
+import { handlePrismaError } from '../common/prisma-error.handler';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private database: PrismaService,
     private jwtService: JwtService,
@@ -52,15 +56,18 @@ export class AuthService {
   }
 
   async login(user: Record<string, unknown>) {
-    // Update last login time
-    await this.database.user.update({
-      where: { id: user.id as string },
-      data: { lastLogin: new Date() },
-    });
+    try {
+      await this.database.user.update({
+        where: { id: user.id as string },
+        data: { lastLogin: new Date() },
+      });
+      this.logger.log(`login: last login updated userId=${user.id as string}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'login.updateLastLogin');
+    }
 
     const permissions = await this.permissionsService.getPermissionsForRole(user.role as string);
 
-    // Include permissions in the JWT so server components can check them without an extra API call
     const payload = {
       email: user.email as string,
       sub: user.id as string,
@@ -102,23 +109,27 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
-    const user = await this.database.user.create({
-      data: {
-        email: registerDto.email,
-        password: hashedPassword,
-        name: registerDto.name,
-        role: registerDto.role || 'SALES',
-        status: 'Active',
-      },
-    });
+    let user: Awaited<ReturnType<typeof this.database.user.create>>;
+    try {
+      user = await this.database.user.create({
+        data: {
+          email: registerDto.email,
+          password: hashedPassword,
+          name: registerDto.name,
+          role: registerDto.role || 'SALES',
+          status: 'Active',
+        },
+      });
+      this.logger.log(`register: user created id=${user.id} email=${user.email}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'register');
+    }
 
-    // Send welcome email
-    await this.emailService.sendWelcomeEmail(user.email, user.name);
+    await this.emailService.sendWelcomeEmail(user!.email, user!.name);
 
-    const { password: _, ...userWithoutPassword } = user;
+    const { password: _, ...userWithoutPassword } = user!;
 
-    // Generate JWT token
-    const payload = { email: user.email, sub: user.id, role: user.role };
+    const payload = { email: user!.email, sub: user!.id, role: user!.role };
 
     return {
       access_token: this.jwtService.sign(payload),
@@ -137,27 +148,28 @@ export class AuthService {
     });
 
     if (!user) {
-      // Don't reveal if user exists - security best practice
       return { message: 'If an account exists, a password reset email has been sent' };
     }
 
-    // Generate reset token
     const resetToken = randomBytes(32).toString('hex');
     const hashedToken = await bcrypt.hash(resetToken, 10);
 
-    // Token expires in 1 hour
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 1);
 
-    await this.database.user.update({
-      where: { id: user.id },
-      data: {
-        resetPasswordToken: hashedToken,
-        resetPasswordExpires: expiresAt,
-      },
-    });
+    try {
+      await this.database.user.update({
+        where: { id: user.id },
+        data: {
+          resetPasswordToken: hashedToken,
+          resetPasswordExpires: expiresAt,
+        },
+      });
+      this.logger.log(`forgotPassword: reset token stored userId=${user.id}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'forgotPassword.storeToken');
+    }
 
-    // Send reset email
     await this.emailService.sendPasswordResetEmail(
       user.email,
       resetToken,
@@ -168,7 +180,6 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string) {
-    // Find all users with non-null reset tokens
     const users = await this.database.user.findMany({
       where: {
         resetPasswordToken: { not: null },
@@ -176,7 +187,6 @@ export class AuthService {
       },
     });
 
-    // Find the user with matching token
     let matchedUser = null;
     for (const user of users) {
       if (user.resetPasswordToken) {
@@ -192,20 +202,22 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired reset token');
     }
 
-    // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update password and clear reset token
-    await this.database.user.update({
-      where: { id: matchedUser.id },
-      data: {
-        password: hashedPassword,
-        resetPasswordToken: null,
-        resetPasswordExpires: null,
-      },
-    });
+    try {
+      await this.database.user.update({
+        where: { id: matchedUser.id },
+        data: {
+          password: hashedPassword,
+          resetPasswordToken: null,
+          resetPasswordExpires: null,
+        },
+      });
+      this.logger.log(`resetPassword: password reset userId=${matchedUser.id}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'resetPassword.updatePassword');
+    }
 
-    // Send confirmation email
     await this.emailService.sendPasswordChangedEmail(
       matchedUser.email,
       matchedUser.name,
@@ -223,7 +235,6 @@ export class AuthService {
       throw new BadRequestException('User not found');
     }
 
-    // Verify current password
     const isCurrentPasswordValid = await bcrypt.compare(
       changePasswordDto.currentPassword,
       user.password,
@@ -233,16 +244,18 @@ export class AuthService {
       throw new UnauthorizedException('Current password is incorrect');
     }
 
-    // Hash new password
     const hashedPassword = await bcrypt.hash(changePasswordDto.newPassword, 10);
 
-    // Update password
-    await this.database.user.update({
-      where: { id: userId },
-      data: { password: hashedPassword },
-    });
+    try {
+      await this.database.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword },
+      });
+      this.logger.log(`changePassword: password changed userId=${userId}`);
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'changePassword.updatePassword');
+    }
 
-    // Send confirmation email
     await this.emailService.sendPasswordChangedEmail(user.email, user.name);
 
     return { message: 'Password changed successfully' };
@@ -273,26 +286,30 @@ export class AuthService {
   }
 
   async updateProfile(userId: string, updateData: { name?: string; phone?: string }) {
-    const user = await this.database.user.update({
-      where: { id: userId },
-      data: {
-        ...updateData,
-        mustCompleteProfile: false,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        phone: true,
-        mustCompleteProfile: true,
-        status: true,
-        isEmailVerified: true,
-        lastLogin: true,
-        createdAt: true,
-      },
-    });
-
-    return user;
+    try {
+      const user = await this.database.user.update({
+        where: { id: userId },
+        data: {
+          ...updateData,
+          mustCompleteProfile: false,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          phone: true,
+          mustCompleteProfile: true,
+          status: true,
+          isEmailVerified: true,
+          lastLogin: true,
+          createdAt: true,
+        },
+      });
+      this.logger.log(`updateProfile: profile updated userId=${userId}`);
+      return user;
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'updateProfile');
+    }
   }
 }

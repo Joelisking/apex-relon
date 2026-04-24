@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { LeadMetricsService } from './lead-metrics.service';
@@ -9,6 +10,8 @@ import { PermissionsService } from '../permissions/permissions.service';
 
 @Injectable()
 export class LeadsQueryService {
+  private readonly logger = new Logger(LeadsQueryService.name);
+
   constructor(
     private prisma: PrismaService,
     private leadMetricsService: LeadMetricsService,

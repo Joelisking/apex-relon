@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { handlePrismaError } from '../common/prisma-error.handler';
 
 export interface SubtaskPerformance {
   subtaskId: string;
@@ -33,6 +34,8 @@ export interface ProjectProfitability {
 
 @Injectable()
 export class ProjectsProfitabilityService {
+  private readonly logger = new Logger(ProjectsProfitabilityService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async compute(projectId: string): Promise<ProjectProfitability> {
@@ -222,9 +225,14 @@ export class ProjectsProfitabilityService {
     const laborCost = laborAgg._sum.totalCost ?? 0;
     const directCost = directAgg._sum.amount ?? 0;
 
-    await this.prisma.project.update({
-      where: { id: projectId },
-      data: { totalCost: laborCost + directCost },
-    });
+    try {
+      await this.prisma.project.update({
+        where: { id: projectId },
+        data: { totalCost: laborCost + directCost },
+      });
+    } catch (error) {
+      handlePrismaError(error, this.logger, 'recalculateProjectCost.update');
+    }
+    this.logger.log(`Project ${projectId} totalCost recalculated`);
   }
 }
