@@ -1,6 +1,7 @@
 import {
   Injectable,
   NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -99,30 +100,54 @@ export class ProjectsService {
       }
     }
 
+    // If manual job number provided, check it isn't already taken before hitting the DB
+    if (dtoJobNumber) {
+      const existing = await this.prisma.project.findUnique({ where: { jobNumber: dtoJobNumber } });
+      if (existing) {
+        throw new ConflictException(`Job number "${dtoJobNumber}" is already in use`);
+      }
+    }
+
     const jobNumber = dtoJobNumber || await generateJobNumber(this.prisma);
 
     // Create project (with optional cost segments via nested write)
-    const project = await this.prisma.project.create({
-      data: {
-        ...projectData,
-        clientId,
-        leadId: leadId || null,
-        status,
-        jobNumber,
-        ...(costSegments?.length && {
-          costSegments: {
-            createMany: {
-              data: costSegments.map((s, i) => ({
-                name: s.name,
-                amount: s.amount,
-                sortOrder: s.sortOrder ?? i,
-              })),
+    let project: Awaited<ReturnType<typeof this.prisma.project.create>>;
+    try {
+      project = await this.prisma.project.create({
+        data: {
+          ...projectData,
+          clientId,
+          leadId: leadId || null,
+          status,
+          jobNumber,
+          ...(costSegments?.length && {
+            costSegments: {
+              createMany: {
+                data: costSegments.map((s, i) => ({
+                  name: s.name,
+                  amount: s.amount,
+                  sortOrder: s.sortOrder ?? i,
+                })),
+              },
             },
-          },
-        }),
-      },
-      include: this.projectInclude,
-    });
+          }),
+        },
+        include: this.projectInclude,
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002' &&
+        (error.meta?.target as string[] | undefined)?.includes('jobNumber')
+      ) {
+        throw new ConflictException(
+          dtoJobNumber
+            ? `Job number "${dtoJobNumber}" is already in use`
+            : 'Could not generate a unique job number — please try again',
+        );
+      }
+      throw error;
+    }
 
     // Create team member assignments if provided
     if (teamMemberIds?.length) {

@@ -211,8 +211,12 @@ export function useCreateProjectForm({
       onProjectCreated();
       onOpenChange(false);
       reset();
-    } catch (error) {
-      toast.error('Failed to create project');
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? (error as { response?: { data?: { message?: string } } }).response?.data?.message ?? error.message
+          : 'Failed to create project';
+      toast.error(message);
       console.error(error);
     } finally {
       setLoading(false);
